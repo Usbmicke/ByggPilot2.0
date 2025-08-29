@@ -23,7 +23,7 @@ AI-Motor: Google Gemini API. Alla anrop till AI:n ska gå via en säker backend-
 
 Hantering av Hemligheter:
 
-Frontend (Firebase-nycklar): Laddas från en .env.local-fil i projektets rot. Nycklarna måste vara prefixade med NEXT_PUBLIC_. I produktion hanteras dessa som miljövariabler i Netlify.
+Frontend (Firebase-nycklar): Laddas från firebase (Servivce nyckeln?)
 
 Backend (Google/Gemini API-nycklar): Lagras uteslutande i Google Cloud Secret Manager. Backend-funktioner ska hämta dessa vid behov.
 
