@@ -1,6 +1,4 @@
-import React from 'react';
-
-// ...existing code...import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "./providers/AuthContext";
@@ -20,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="sv">
-      <body className={inter.className}>
+      <body className={`${inter.className} bg-gray-900 text-gray-200`}>
         <AuthProvider>
           <AuthGuard>
             {children}

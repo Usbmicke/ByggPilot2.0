@@ -5,9 +5,5 @@ export default function PublicLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="bg-gray-900 text-gray-300">
-      {children}
-    </div>
-  );
+  return <>{children}</>;
 }

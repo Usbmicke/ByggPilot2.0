@@ -3,10 +3,6 @@ import type { Config } from "tailwindcss";
 const config: Config = {
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./app/(public)/**/*.{js,ts,jsx,tsx,mdx}",
-    "./app/(private)/**/*.{js,ts,jsx,tsx,mdx}",
-    "./app/(private)/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./app/(private)/dashboard/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
@@ -21,7 +17,13 @@ const config: Config = {
         'brand-light': '#415A77',
         'brand-accent': '#778DA9',
         'brand-text': '#E0E1DD',
-      }
+      },
+      boxShadow: {
+        'cyan-glow': '0 0 15px rgba(56, 189, 248, 0.5), 0 0 25px rgba(56, 189, 248, 0.3)',
+      },
+      animation: {
+        'pulse-glow': 'pulse-glow 4s infinite ease-in-out',
+      },
     },
   },
   plugins: [],

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { auth } from '@/firebase/init';
-import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User, getRedirectResult, OAuthCredential } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 
 interface AuthContextType {
   user: User | null;
@@ -21,55 +21,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async () => {
     const provider = new GoogleAuthProvider();
+    // Add all necessary scopes for Google APIs
     provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
     provider.addScope('https://www.googleapis.com/auth/calendar.events');
     provider.addScope('https://www.googleapis.com/auth/drive');
     provider.addScope('https://www.googleapis.com/auth/tasks');
+    
     try {
       const result = await signInWithPopup(auth, provider);
+      // The onAuthStateChanged listener will handle the user and token state updates.
+      // We can get the credential here if needed, but it's handled more robustly by the listener.
       const credential = GoogleAuthProvider.credentialFromResult(result);
       if (credential?.accessToken) {
         setAccessToken(credential.accessToken);
       }
     } catch (error) {
-      console.error("Fel vid inloggning", error);
+      console.error("Error during sign-in with popup", error);
     }
   };
 
   const logout = async () => {
     try {
       await signOut(auth);
-      setAccessToken(null);
+      // The onAuthStateChanged listener will clear the user and token.
     } catch (error) {
-      console.error("Fel vid utloggning", error);
+      console.error("Error during sign-out", error);
     }
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      // Detta är ett förenklat sätt. I en riktig app skulle du vilja
-      // hämta en ny token om den gamla har gått ut.
-      if (!currentUser) {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        try {
+          const token = await currentUser.getIdToken();
+          setAccessToken(token);
+        } catch (error) {
+          console.error("Error getting ID token", error);
+          setAccessToken(null);
+        }
+      } else {
+        setUser(null);
         setAccessToken(null);
       }
       setLoading(false);
     });
 
-    // Hantera redirect-resultat för att fånga upp accessToken
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result) {
-          const credential = GoogleAuthProvider.credentialFromResult(result) as OAuthCredential;
-          if (credential?.accessToken) {
-            setAccessToken(credential.accessToken);
-          }
-        }
-      }).catch((error) => {
-        console.error("Fel vid hantering av redirect", error);
-      });
-
-
+    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []);
 
