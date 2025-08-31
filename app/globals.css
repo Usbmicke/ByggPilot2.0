@@ -2,7 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background-color: #0D1B2A;
-  color: #E0E1DD;
+/* Detta är den kritiska biten som fixar layouten.
+  Den ser till att html, body och Next.js-appen kan använda hela skärmens höjd,
+  vilket gör att `min-h-screen` fungerar som det ska.
+*/
+html,
+body,
+:root {
+  height: 100%;
 }
+

@@ -24,9 +24,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(user);
       setLoading(false);
       // CRITICAL FIX: Only redirect if a user exists
-      if (user) {
-        router.push('/dashboard');
-      }
+      // if (user) {
+      //   router.push('/dashboard');
+      // }
     });
 
     return () => unsubscribe();
