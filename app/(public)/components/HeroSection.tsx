@@ -1,43 +1,24 @@
 'use client';
-
-import { useAuth } from '../../providers/AuthContext';
+import { useAuth } from '@/app/providers/AuthContext';
 import React from 'react';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg {...props} viewBox="0 0 48 48">
-        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
-        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
-        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
-        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
-        <path fill="none" d="M0 0h48v48H0z"></path>
-    </svg>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24px" height="24px" {...props}><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z" /><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z" /><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z" /><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C39.901,36.625,44,31.023,44,24C44,22.659,43.862,21.35,43.611,20.083z" /></svg>
 );
 
-export const HeroSection = () => {
+export default function HeroSection() {
     const { login } = useAuth();
     return (
-        <section className="text-center py-24 md:py-32">
-            <div className="container mx-auto px-6">
-                <h1 className="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-4">
-                    Mindre papperskaos.<br/>Mer tid att bygga.
-                </h1>
-                <p className="max-w-3xl mx-auto text-lg md:text-xl text-gray-400 mb-8">
-                    ByggPilot är din nya digitala kollega som förvandlar administration till en automatiserad process, direkt i ditt befintliga Google-konto. Frigör tid, eliminera papperskaos och fokusera på det som verkligen driver din firma framåt.
-                </p>
-                <button
-                    onClick={login}
-                    className="inline-flex items-center justify-center gap-3 bg-white text-gray-800 font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-200 transition-all duration-300 transform hover:scale-105"
-                >
-                    <GoogleIcon className="w-6 h-6" />
+        <section className="flex flex-col items-center justify-center text-center min-h-[calc(100vh-68px)] bg-brand-dark text-brand-text px-6">
+            <div className="max-w-4xl">
+                <h1 className="text-5xl md:text-7xl font-extrabold leading-tight mb-6">Mindre papperskaos. <span className="text-cyan-400">Mer tid att bygga.</span></h1>
+                <p className="text-lg md:text-xl text-brand-accent mb-10">ByggPilot är din nya digitala kollega som förvandlar administration till en automatiserad process, direkt i ditt befintliga Google-konto. Frigör tid, eliminera papperskaos och fokusera på det som verkligen driver din firma framåt.</p>
+                <button onClick={login} className="flex items-center justify-center mx-auto bg-white text-gray-800 font-bold py-4 px-8 rounded-lg text-lg hover:bg-gray-200 transition-transform duration-300 hover:scale-105 shadow-lg">
+                    <GoogleIcon className="mr-3" />
                     Logga in med Google
                 </button>
-                <p className="text-xs text-gray-500 mt-4">
-                    ByggPilot är byggt för Googles kraftfulla och kostnadsfria verktyg. 
-                    <a href="https://accounts.google.com/signup" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline ml-1">
-                        Skaffa ett konto här.
-                    </a>
-                </p>
+                <p className="text-xs text-brand-light mt-4">ByggPilot är byggd för Googles kraftfulla och kostnadsfria verktyg.</p>
             </div>
         </section>
     );
-}
+};

@@ -1,3 +1,4 @@
+import { AuthProvider } from "@/app/providers/AuthContext";
 import React from "react";
 
 export default function PublicLayout({
@@ -5,5 +6,5 @@ export default function PublicLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return <AuthProvider>{children}</AuthProvider>;
 }

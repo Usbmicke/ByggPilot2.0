@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth } from '../../firebase/init'; // Assuming firebase/init.ts is in the root
+import { auth } from '@/firebase/init'; // Assuming firebase/init.ts is in the root
 import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 
 interface AuthContextType {
