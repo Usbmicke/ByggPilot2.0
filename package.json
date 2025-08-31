@@ -1,7 +1,8 @@
 {
   "scripts": {
     "dev": "next dev",
-    "start": "next dev -p 3000"
+    "start": "next dev -p 3000",
+    "build": "next build"
   },
   "dependencies": {
     "firebase": "^12.0.0",
