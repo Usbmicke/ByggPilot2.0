@@ -2,18 +2,12 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: [
-    "./app/**/*.{js,ts,jsx,tsx,mdx}", // Denna rad täcker ALLA komponenter i din app
+    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
-    extend: {
-      colors: {
-        'brand-dark': '#0D1B2A',
-        'brand-medium': '#1B263B',
-        'brand-light': '#415A77',
-        'brand-accent': '#778DA9',
-        'brand-text': '#E0E1DD',
-      }
-    },
+    extend: {},
   },
   plugins: [],
 };

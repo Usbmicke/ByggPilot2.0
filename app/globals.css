@@ -2,13 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Detta är den kritiska biten som fixar layouten.
-  Den ser till att html, body och Next.js-appen kan använda hela skärmens höjd,
-  vilket gör att `min-h-screen` fungerar som det ska.
-*/
-html,
-body,
-:root {
-  height: 100%;
+html, body {
+  scroll-behavior: smooth;
 }
-
