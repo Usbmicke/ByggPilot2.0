@@ -1,0 +1,931 @@
+﻿En Strategisk Blueprint för ByggPilot med Next.js och Firebase
+
+
+
+
+Del I: Etablering av en Skottsäker Utvecklingsgrund
+
+
+Denna inledande sektion är det mest kritiska och omedelbara steget. Den adresserar direkt den centrala orsaken till att projektet misslyckas: en instabil och korrupt utvecklingsmiljö. Målet är att övergå från ett tillstånd av kaos till ett av kontroll och förutsägbarhet, vilket är en förutsättning för all framgångsrik utveckling.
+
+
+Diagnos: Roten till "White Screen of Death"
+
+
+En analys av den tillhandahållna felsökningshistoriken avslöjar ett mönster av ett projekt som plågas av ihållande och förbryllande fel.1 Applikationen kraschar omedelbart vid start och visar en helt vit skärm, ett klassiskt tecken på ett fundamentalt JavaScript-fel som inträffar innan React-ramverket ens hinner rendera något innehåll.1 Denna typ av fel är ofta det mest frustrerande, eftersom det inte ger några omedelbara ledtrådar i webbläsarens konsol.
+Felsökningsloggen visar att initiala problem, såsom en vit bakgrundsblixt vid laddning, åtgärdades på kodnivå. Korrigeringar gjordes i app/layout.tsx för att hantera temat och i app/providers/AuthGuard.tsx samt app/providers/AuthContext.tsx för att stabilisera autentiseringslogiken. En betydande upptäckt gjordes i firebase/init.ts, där kod som försökte ansluta till lokala Firebase-emulatorer identifierades som den ursprungliga källan till kraschen. Denna kod är avsedd för en lokal testmiljö och misslyckas oundvikligen när den körs i en molnmiljö där emulatorerna inte är tillgängliga, vilket leder till att Firebase-biblioteket kraschar direkt.1
+Trots att denna grundorsak i koden identifierades och åtgärdades, kvarstod den vita skärmen. Detta är en avgörande punkt. När koden är verifierad som korrekt men applikationen fortfarande kraschar, måste misstankarna flyttas från källkoden till själva miljön den exekveras i. Hypotesen om en "korrupt miljö" är därför inte bara trolig, den är nästan oundviklig.1
+Denna situation förvärras ofta när man använder AI-drivna kodningsassistenter. Som noterats i den ursprungliga förfrågan blev "allt bara värre o värre". Detta beror sannolikt på en negativ återkopplingsloop: AI-assistenten, som saknar kontext om den korrupta miljön, föreslår kodändringar för att åtgärda symptom. Dessa ändringar, även om de teoretiskt är korrekta, implementeras i en trasig miljö och misslyckas, vilket leder till nya fel och ytterligare förvirrande förslag från AI:n. Ingen kodändring kan reparera en skadad cache eller ett korrupt beroendeträd. För att bryta denna cykel måste man först sanera miljön.
+De tre huvudmisstänkta i en korrupt Next.js-miljö är:
+1. node_modules: Denna katalog innehåller alla tredjepartsbibliotek som projektet är beroende av. Om en installation avbryts, eller om olika versioner av paket installeras inkonsekvent, kan katalogen hamna i ett trasigt tillstånd där paket saknas eller är inkompatibla.
+2. .next: Next.js skapar denna katalog för att lagra byggartefakter, cachade sidor och serverkomponent-resultat. Om denna cache blir korrupt kan det leda till att gamla, felaktiga versioner av komponenter eller data serveras, vilket orsakar oförklarliga fel som inte återspeglar den nuvarande källkoden.1
+3. package-lock.json: Denna fil låser de exakta versionerna av alla beroenden. Även om den är avsedd att skapa reproducerbara byggen, kan den ibland hamna i osynk med package.json eller innehålla referenser till korrupta paketversioner.
+
+
+Det Definitiva Rengörings- och Initialiseringsflödet
+
+
+För att garantera ett absolut rent och förutsägbart projekttillstånd är följande arbetsflöde inte en rekommendation, utan ett obligatoriskt steg. Det bygger på och expanderar den åtgärd som föreslogs i felsökningsanalysen.1 Kommandot ska köras i projektets rotkatalog från terminalen.
+Kommando:
+
+
+Bash
+
+
+
+
+rm -rf.next node_modules package-lock.json && npm install && npm run dev
+
+En detaljerad förklaring av varje del av detta kommando är nödvändig för att förstå dess kraft och syfte:
+* rm -rf.next node_modules package-lock.json: Detta är den mest grundliga rengöringen som är möjlig.
+   * rm -rf.next: Raderar med tvång (-f) och rekursivt (-r) hela Next.js-cachen. Detta eliminerar alla gamla byggfiler, cachade serverkomponent-resultat och andra artefakter som kan orsaka de ihållande serverfelen som observerats.1
+   * rm -rf node_modules: Raderar alla installerade paket. Detta säkerställer att inga korrupta, inkompatibla eller ofullständigt installerade bibliotek finns kvar.
+   * rm -rf package-lock.json: Raderar låsfilen. Detta är ett avgörande steg. Genom att ta bort denna fil tvingas npm install att bygga ett nytt, rent beroendeträd baserat på de semantiska versionsreglerna i package.json, vilket löser eventuella djupt rotade beroendekonflikter.
+* &&: Denna operator säkerställer att nästa kommando endast körs om det föregående lyckades. Detta skapar en säker och sekventiell process.
+* npm install: Efter att allt gammalt har raderats, installerar detta kommando om alla projektets beroenden från grunden och skapar en ny, frisk package-lock.json-fil.
+* npm run dev: Startar utvecklingsservern. Eftersom miljön nu är garanterat ren, kommer eventuella kvarstående fel att vara genuint relaterade till källkoden, vilket gör felsökning meningsfull igen.
+Detta kommando bör betraktas som det första steget varje gång oförklarliga fel uppstår. Det återställer projektet till ett känt, gott tillstånd och eliminerar timmar av frustrerande felsökning av miljörelaterade problem.
+
+
+Konfigurering av Utvecklingsmiljön för Stabilitet
+
+
+Engångsrengöring är en reaktiv åtgärd; för långsiktig framgång krävs proaktiva vanor och en stabil konfiguration. Följande metoder omvandlar den tidigare rengöringsprocessen till en del av ett professionellt och hållbart arbetsflöde.
+* Versionskontroll med Git: Innan några betydande ändringar görs – vare sig det är att installera ett nytt stort beroende, refaktorera en central del av applikationen eller följa en komplex guide – skapa en commit i Git. Detta skapar en säker återställningspunkt. Om ändringarna leder till problem kan man enkelt återgå till ett känt fungerande tillstånd med git checkout eller git reset.
+* Striktare Skript i package.json: Förbättra dev-skriptet för att undvika portkonflikter, ett problem som identifierades när servern startade på port 3001 på grund av en "zombie"-process.1 Genom att använda
+npm install -g kill-port kan man skapa ett skript som säkerställer att porten är ledig innan servern startas:
+JSON
+"scripts": {
+ "dev": "kill-port 3000 && next dev",
+ "build": "next build",
+ "start": "next start",
+ "lint": "next lint"
+}
+
+* Kodformatering och Linting: Installera och konfigurera VS Code-tillägg för ESLint och Prettier. Detta säkerställer att koden följer konsekventa stilregler och fångar vanliga fel innan de ens körs. En konsekvent kodbas är enklare att felsöka och underhålla.
+* Hantering av "Zombie"-processer: Om utvecklingsservern kraschar kan processen ibland fortsätta att köra i bakgrunden och blockera porten. Lär dig kommandot för att hitta och stoppa processer som upptar en specifik port (t.ex. lsof -i :3000 på macOS/Linux följt av kill -9 <PID>). kill-port-skriptet ovan automatiserar detta.
+Genom att adoptera dessa metoder minskar risken för miljökorruption dramatiskt och skapar en stabil plattform där fokus kan ligga på att bygga funktioner, inte på att bekämpa verktygen.
+
+
+Del II: Arkitektur för din Next.js-applikation: App Router-paradigmet
+
+
+Med en stabil grund på plats är det dags att adressera den fundamentala arkitektoniska övergången från en traditionell React Single-Page Application (SPA) till Next.js App Router. Denna sektion är konceptuell men förankrad i de specifika strukturerna som beskrivs för ByggPilot-projektet.1 Att förstå dessa koncept är avgörande för att undvika de fel och den frustration som uppstår när man försöker applicera gamla mönster på en ny arkitektur.
+
+
+Server- vs. Klientkomponenter: En Praktisk Guide för ByggPilot
+
+
+Den enskilt största mentala omställningen med App Router är introduktionen av React Server Components (RSCs). I en traditionell React-applikation körs all komponentkod i webbläsaren. I Next.js App Router är standardbeteendet det motsatta: alla komponenter är som standard Serverkomponenter.2
+   * Serverkomponenter (Standard):
+   * Exekvering: Dessa komponenter renderas uteslutande på servern. Deras JavaScript-kod skickas aldrig till webbläsaren. Detta resulterar i mindre JavaScript-buntar och snabbare initiala sidladdningar.
+   * Funktionalitet: De kan direkt använda async/await för att hämta data från databaser eller API:er. De har direkt tillgång till servermiljön (t.ex. filsystem, miljövariabler).
+   * Begränsningar: De kan inte använda React-hooks som useState, useEffect eller useContext, eftersom dessa är beroende av klientens tillstånd och livscykel. De kan inte heller hantera webbläsarhändelser som onClick.
+   * Exempel i ByggPilot: Komponenter som Footer.tsx eller ProblemSection.tsx 1 är utmärkta kandidater för att förbli Serverkomponenter. De visar statisk eller server-hämtad data och kräver ingen interaktivitet från användaren.
+   * Klientkomponenter (Opt-in):
+   * Deklaration: För att göra en komponent till en Klientkomponent måste man placera direktivet 'use client' högst upp i filen.
+   * Exekvering: Dessa komponenter renderas initialt på servern (för Server-Side Rendering, SSR) och "hydreras" sedan i webbläsaren, där de blir fullt interaktiva. Deras JavaScript-kod skickas till klienten.
+   * Funktionalitet: De kan använda alla traditionella React-hooks (useState, useEffect, etc.) och hantera webbläsarhändelser.
+   * Exempel i ByggPilot: AnimatedBackground.tsx 1 är ett perfekt exempel. Den måste vara en Klientkomponent eftersom den använder
+useRef och useEffect för att interagera med webbläsarens canvas-API och window-objektet, vilka inte existerar på servern.
+Denna uppdelning kräver ett medvetet arkitektoniskt beslut för varje komponent. En vanlig fallgrop är att slentrianmässigt lägga till 'use client' överallt, vilket i praktiken återskapar en gammaldags SPA och går miste om fördelarna med Serverkomponenter. En bästa praxis är att hålla Klientkomponenter så små och specifika som möjligt ("löv" i komponentträdet) och låta Serverkomponenter hantera datahämtning och layout.
+
+
+Strukturering av Projektet: Layouts och Route Groups
+
+
+Next.js App Router använder en filsystembaserad router som är både kraftfull och intuitiv. Projektstrukturen som beskrivs i kontextdokumenten är ett utmärkt exempel på hur man utnyttjar detta system effektivt.1
+      * Rotlayout (app/layout.tsx): Detta är den översta layouten som omsluter hela applikationen. Den måste innehålla <html>- och <body>-taggarna. Det är här man typiskt placerar globala providers, som den AuthProvider som kommer att diskuteras senare.3
+      * Route Groups (app/(public) och app/(private)): Parenteserna runt ett mappnamn, (public), skapar en "Route Group". Detta är en organisationsmekanism som inte påverkar URL-strukturen.1 Detta är extremt användbart för att:
+      1. Organisera relaterade rutter: Alla offentliga sidor kan samlas i (public), och alla sidor som kräver inloggning i (private).
+      2. Applicera olika layouter: Man kan skapa en app/(private)/layout.tsx. Denna layout kommer då att omsluta alla sidor inom (private)-gruppen, men inte de i (public). Detta är idealiskt för att skapa en instrumentpanelslayout med sidomeny och header som bara visas för inloggade användare.
+      * Sidor och Komponenter:
+      * app/(public)/page.tsx: Detta är landningssidan för ByggPilot, som definierad i 1. Filnamnet page.tsx definierar den publika URL:en för en ruttsegment.
+      * components/landing/: Att samla UI-komponenter i en components-mapp, organiserad efter funktion (t.ex. landing, dashboard), är en starkt rekommenderad konvention. Det håller app-katalogen ren och fokuserad på routing och layouter.1
+
+
+Firebase SDK:erna: En Kritisk Åtskillnad
+
+
+En av de mest kritiska källorna till fel i en Next.js/Firebase-applikation är sammanblandningen av de två olika Firebase Software Development Kits (SDK). De är designade för helt olika miljöer och har olika säkerhetsimplikationer.
+      * Firebase JS SDK (för klienten):
+      * Syfte: Detta är det vanliga SDK:t som är avsett att köras i webbläsaren. Det är designat för att interagera med Firebase-tjänster från en slutanvändares perspektiv.
+      * Användning: Används för att hantera UI-flöden för autentisering (t.ex. signInWithPopup), prenumerera på realtidsuppdateringar från Firestore (onSnapshot) och utföra dataoperationer som respekterar de säkerhetsregler som definierats.
+      * Säkerhet: Alla operationer som utförs med detta SDK valideras mot Firestore Security Rules. Det är säkert att exponera konfigurationsnycklarna (apiKey, authDomain, etc.) för detta SDK, eftersom säkerheten upprätthålls av reglerna på serversidan.5
+      * Placering i Next.js: Detta SDK används uteslutande i Klientkomponenter (filer med 'use client').
+      * Firebase Admin SDK (för servern):
+      * Syfte: Detta är ett privilegierat, server-exklusivt SDK som är avsett att köras i en betrodd miljö som Node.js.
+      * Användning: Används för administrativa uppgifter. Ett primärt användningsfall i en Next.js-app är att verifiera ID-tokens som skickas från klienten för att autentisera en användare på serversidan. Det kan också användas för att utföra dataoperationer som ignorerar alla säkerhetsregler, t.ex. för att skapa en ny användarprofil eller utföra systemunderhåll.
+      * Säkerhet: Admin SDK kräver en tjänstekontonyckel (service account key), som innehåller en privat nyckel. Denna information är extremt känslig och får aldrig någonsin exponeras för webbläsaren. Om den läcker kan en angripare få fullständig, obegränsad administrativ åtkomst till hela Firebase-projektet.7
+      * Placering i Next.js: Detta SDK används uteslutande på serversidan: i Server Actions, API Routes och Serverkomponenter. Paketet server-only kan användas för att säkerställa att kod som importerar Admin SDK orsakar ett byggfel om den av misstag importeras i en Klientkomponent.7
+Den krasch som uppstod på grund av anslutningsförsök till lokala emulatorer 1 är ett klassiskt symptom på denna sammanblandning. Troligtvis importerades en initialiseringsfil avsedd för servermiljön (som kan ansluta till emulatorer) i en kontext där den paketerades för klienten, vilket ledde till ett omedelbart fel. En strikt åtskillnad mellan dessa två SDK:er är grundläggande för både applikationens stabilitet och säkerhet.
+För att ge en otvetydig referens presenteras följande guide.
+Tabell 1: Valguide för Firebase SDK i Next.js App Router
+Egenskap
+	Firebase JS SDK (Client)
+	Firebase Admin SDK (Server)
+	Exekveringsmiljö
+	Klient (Webbläsare)
+	Server (Node.js)
+	Primära Användningsfall
+	Hantera inloggnings-UI (signInWithPopup), realtidslyssnare (onSnapshot), datahämtning från klienten.
+	Verifiera användartokens, utföra administrativa uppgifter (t.ex. skapa anpassade tokens), kringgå säkerhetsregler för backend-logik.
+	Säkerhetskontext
+	Lyder under Firestore Security Rules.
+	Privilegierad administratörsåtkomst, ignorerar säkerhetsregler. Kräver hemlig tjänstekontonyckel.
+	Exempelplacering
+	Klientkomponenter (filer med 'use client').
+	Server Actions, API Routes, Serverkomponenter.
+	
+
+Del III: Implementering av ett Säkert och Sömlöst Firebase Autentiseringsflöde
+
+
+Med de arkitektoniska principerna etablerade, bygger denna del ett komplett och modernt autentiseringssystem. Vi går vidare från det initiala försöket med en AuthGuard-komponent 1 till en robust, flerskiktad lösning som utnyttjar styrkorna hos både klient- och serverkomponenter i Next.js.
+
+
+Initialisering av Firebase: Rätt Sätt för App Router
+
+
+En korrekt och säker initialisering av Firebase är grunden för hela autentiseringssystemet. Det är avgörande att separera klient- och serverinitialiseringen för att undvika att känsliga nycklar läcker och för att förhindra vanliga fel vid hot-reloading under utveckling.
+Klient-sidans Initialisering:
+Skapa en fil, exempelvis lib/firebase/config.ts, för att hantera initialiseringen av Firebase JS SDK. Detta mönster säkerställer att Firebase-appen bara initialiseras en gång, även om koden återanvänds eller laddas om.6 Miljövariablerna som används här måste vara prefixade med
+NEXT_PUBLIC_ för att vara tillgängliga i webbläsaren.9
+
+
+TypeScript
+
+
+
+
+// lib/firebase/config.ts
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+
+const firebaseConfig = {
+ apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+ authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+ projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+ storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+ messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+ appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+};
+
+// Initialisera Firebase för SSR
+const app =!getApps().length? initializeApp(firebaseConfig) : getApp();
+const firestore = getFirestore(app);
+const auth = getAuth(app);
+
+export { app, firestore, auth };
+
+Server-sidans Initialisering:
+För Firebase Admin SDK skapas en separat fil, t.ex. lib/firebase/adminConfig.ts. Denna fil använder miljövariabler som inte är prefixade med NEXT_PUBLIC_ och är därför endast tillgängliga på servern. Användningen av paketet server-only är en stark rekommendation för att förhindra att denna fil av misstag importeras i en klientkomponent.7
+
+
+TypeScript
+
+
+
+
+// lib/firebase/adminConfig.ts
+import 'server-only';
+import admin from 'firebase-admin';
+
+const serviceAccount = {
+ projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+ clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+ privateKey: (process.env.FIREBASE_PRIVATE_KEY |
+
+| '').replace(/\\n/g, '\n'),
+};
+
+// Initialisera Firebase Admin
+if (!admin.apps.length) {
+ admin.initializeApp({
+   credential: admin.credential.cert(serviceAccount),
+ });
+}
+
+export const adminAuth = admin.auth();
+export const adminFirestore = admin.firestore();
+
+Notera replace(/\\n/g, '\n') för privateKey. Detta är en vanlig nödvändighet eftersom miljövariabler ofta inte hanterar flerradiga strängar korrekt, och den privata nyckeln från Firebase innehåller radbrytningar.7
+
+
+Bygga AuthContext: En Centraliserad Hubb för Användarstatus
+
+
+För att hantera och dela användarens autentiseringsstatus över alla klientkomponenter i applikationen är en React Context den etablerade bästa praxisen.3 Detta eliminerar behovet av "prop drilling" och ger en central plats för all klientrelaterad autentiseringslogik.
+Skapa en AuthProvider-komponent i app/providers/AuthContext.tsx. Denna komponent kommer att använda onAuthStateChanged-lyssnaren från Firebase JS SDK för att hålla ett lokalt tillstånd synkroniserat med Firebase-sessionen.
+
+
+TypeScript
+
+
+
+
+// app/providers/AuthContext.tsx
+'use client';
+
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '@/lib/firebase/config';
+
+interface AuthContextType {
+ user: User | null;
+ loading: boolean;
+}
+
+const AuthContext = createContext<AuthContextType>({ user: null, loading: true });
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+ const [user, setUser] = useState<User | null>(null);
+ const [loading, setLoading] = useState(true);
+
+ useEffect(() => {
+   const unsubscribe = onAuthStateChanged(auth, (user) => {
+     setUser(user);
+     setLoading(false);
+   });
+
+   // Rensa prenumerationen vid unmount
+   return () => unsubscribe();
+ },);
+
+ return (
+   <AuthContext.Provider value={{ user, loading }}>
+     {children}
+   </AuthContext.Provider>
+ );
+};
+
+export const useAuth = () => useContext(AuthContext);
+
+För att göra denna kontext tillgänglig i hela applikationen, omslut children i rotlayouten app/layout.tsx med <AuthProvider>.
+
+
+TypeScript
+
+
+
+
+// app/layout.tsx
+import { AuthProvider } from './providers/AuthContext';
+import './globals.css';
+
+export default function RootLayout({
+ children,
+}: {
+ children: React.ReactNode;
+}) {
+ return (
+   <html lang="sv">
+     <body>
+       <AuthProvider>{children}</AuthProvider>
+     </body>
+   </html>
+ );
+}
+
+
+
+Skydda Rutter: Från Klient-sidans Guards till Server-sidans Middleware
+
+
+Att skydda rutter från obehörig åtkomst är en grundläggande säkerhetsåtgärd. Den initiala lösningen med en AuthGuard-komponent är ett klient-sidans mönster som har betydande nackdelar i Next.js App Router-arkitekturen.
+Klient-sidans AuthGuard (Det mindre optimala tillvägagångssättet):
+En AuthGuard-komponent skulle använda useAuth-hooken för att kontrollera användarstatus och omdirigera om användaren inte är inloggad.
+
+
+TypeScript
+
+
+
+
+// app/providers/AuthGuard.tsx (Exempel på det mindre optimala mönstret)
+'use client';
+import { useAuth } from './AuthContext';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+
+export default function AuthGuard({ children }: { children: React.ReactNode }) {
+ const { user, loading } = useAuth();
+ const router = useRouter();
+
+ useEffect(() => {
+   if (!loading &&!user) {
+     router.push('/login');
+   }
+ }, [user, loading, router]);
+
+ if (loading ||!user) {
+   return <div>Laddar...</div>; // Eller en spinner-komponent
+ }
+
+ return <>{children}</>;
+}
+
+Problemet med detta mönster är att den skyddade sidan initialt renderas på servern och skickas till klienten. Först när JavaScript laddas och useEffect körs sker omdirigeringen. Detta leder till en "flash of unauthenticated content" där oskyddat innehåll kan visas kortvarigt, och det är även en säkerhetsrisk eftersom serverkomponenter inom den skyddade rutten kan ha exekverats och läckt data.11
+Den Överlägsna Lösningen: Next.js Middleware
+Den moderna och rekommenderade metoden för att skydda rutter i Next.js är att använda Middleware.13 En
+middleware.ts-fil i projektets rot exekveras på servern innan en förfrågan når sidkomponenterna. Detta gör det möjligt att validera autentisering och utföra omdirigeringar innan någon rendering av den skyddade sidan påbörjas, vilket eliminerar både innehållsflimmer och säkerhetsrisker.
+Middleware interagerar vanligtvis med en sessionscookie som sätts vid inloggning.
+
+
+TypeScript
+
+
+
+
+// middleware.ts
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+export function middleware(request: NextRequest) {
+ const sessionCookie = request.cookies.get('session'); // Antag att en cookie 'session' sätts vid inloggning
+
+ const { pathname } = request.nextUrl;
+
+ // Skydda alla rutter under /dashboard
+ if (pathname.startsWith('/dashboard')) {
+   if (!sessionCookie) {
+     // Omdirigera till inloggningssidan om ingen session finns
+     const loginUrl = new URL('/login', request.url);
+     return NextResponse.redirect(loginUrl);
+   }
+ }
+
+ // Om användaren är inloggad och försöker nå inloggningssidan, omdirigera till dashboard
+ if (pathname === '/login' && sessionCookie) {
+   const dashboardUrl = new URL('/dashboard', request.url);
+   return NextResponse.redirect(dashboardUrl);
+ }
+
+ return NextResponse.next();
+}
+
+// Konfigurera vilka rutter som middleware ska köras på
+export const config = {
+ matcher: ['/dashboard/:path*', '/login'],
+};
+
+Denna strategi är överlägsen eftersom säkerhetskontrollen flyttas till serverkanten ("the edge"). Den skyddade sidan renderas aldrig för en oautentiserad användare. AuthContext på klientsidan kompletterar detta genom att tillhandahålla användarstatus till UI-komponenter för de användare som har passerat middleware-kontrollen, vilket skapar en komplett och säker lösning.
+
+
+Del IV: Skapandet av ByggPilots Användargränssnitt med Komponentdriven Design
+
+
+Denna sektion är en praktisk implementeringsguide som tar de detaljerade komponentspecifikationerna från projektets dokumentation 1 och visar hur man bygger dem korrekt inom den nya, stabila arkitekturen. Fokus ligger på att översätta den befintliga visionen till robusta och optimerade Next.js-komponenter.
+
+
+Översättning av Visionen: Implementering av Landningssidans Komponenter
+
+
+Projektet har redan en tydlig och väldefinierad uppsättning komponenter för landningssidan. Processen involverar att ta den befintliga koden för varje komponent, placera den i den korrekta filstrukturen och göra nödvändiga anpassningar för Next.js App Router-miljön.
+Följande komponenter, specificerade i 1, kommer att implementeras:
+      * Header.tsx
+      * HeroSection.tsx
+      * ProblemSection.tsx
+      * FeaturesSection.tsx
+      * TestimonialSection.tsx
+      * Footer.tsx
+      * AnimatedBackground.tsx
+För varje komponent måste ett medvetet val göras mellan Server- och Klientkomponent.
+      * Header.tsx: Denna komponent innehåller interaktiva element som "Logga in med Google"-knappen. Därför måste själva <button>-elementen och deras händelsehanterare finnas i en Klientkomponent. En bra strategi är att dela upp komponenten: huvudlayouten för Header kan vara en Serverkomponent, som sedan importerar en mindre, specifik Klientkomponent för knapparna. Detta maximerar server-rendering samtidigt som interaktivitet möjliggörs.
+      * HeroSection.tsx: Liknande Header, innehåller denna sektion en "Logga in"-knapp och måste därför vara, eller innehålla, en Klientkomponent.
+      * ProblemSection.tsx, FeaturesSection.tsx, Footer.tsx: Dessa komponenter, så som de är definierade i 1, visar endast statiskt innehåll. De har inga onClick-hanterare eller useState-hooks. De är därför idealiska kandidater för att förbli Serverkomponenter. Detta minskar mängden JavaScript som skickas till klienten och förbättrar prestandan.
+      * AnimatedBackground.tsx: Som tidigare diskuterat, använder denna komponent useEffect och useRef för att manipulera ett <canvas>-element. Den måste vara en Klientkomponent, deklarerad med 'use client' högst upp i filen.1
+Slutligen sätts allt samman i huvudsidan app/(public)/page.tsx. Denna sida, som är en Serverkomponent, kommer att importera och rendera alla ovanstående sektionskomponenter i rätt ordning, precis som specificerat i 1.
+
+
+TypeScript
+
+
+
+
+// app/(public)/page.tsx
+import React from 'react';
+import Header from '@/components/landing/Header';
+import HeroSection from '@/components/landing/HeroSection';
+import ProblemSection from '@/components/landing/ProblemSection';
+import FeaturesSection from '@/components/landing/FeaturesSection';
+import TestimonialSection from '@/components/landing/TestimonialSection';
+import Footer from '@/components/landing/Footer';
+import AnimatedBackground from '@/components/landing/AnimatedBackground';
+
+export default function LandingPage() {
+ return (
+   <div className="bg-gray-900 text-gray-200 font-sans antialiased relative">
+     <AnimatedBackground />
+     <div className="relative z-10">
+       <Header />
+       <main>
+         <HeroSection />
+         <ProblemSection />
+         <FeaturesSection />
+         <TestimonialSection />
+       </main>
+       <Footer />
+     </div>
+   </div>
+ );
+}
+
+
+
+Styling med Tailwind CSS
+
+
+Tailwind CSS är valt som styling-ramverk, och den grundläggande konfigurationen är redan på plats.1 För att arbeta effektivt med Tailwind i en komponentdriven Next.js-applikation bör följande bästa praxis följas:
+      * Grundläggande Konfiguration: Filen globals.css ska innehålla de tre @tailwind-direktiven. Dessa är ingångspunkterna där Tailwind injicerar sina basstilar, komponentklasser och hjälpklasser.1
+CSS
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+      * Temakonfiguration: Filen tailwind.config.ts är central för att anpassa designsystemet. Här definieras projektets färger, typsnitt, brytpunkter och andra design-tokens. Detta säkerställer att hela applikationen följer en konsekvent visuell identitet och gör det enklare att underhålla designen över tid.1
+      * Komponentspecifika Stilar: Alla stilar är definierade direkt i komponenternas JSX med hjälp av Tailwinds klassnamn. Detta är kärnan i Tailwinds filosofi och håller HTML och stilar tätt sammankopplade, vilket gör komponenterna självförsörjande och enkla att flytta och återanvända.
+      * Responsiv Design: Tailwind använder ett "mobile-first"-tillvägagångssätt. Stilar utan prefix (t.ex. p-4) gäller för alla skärmstorlekar. Prefix som sm:, md:, lg: används för att applicera stilar på större skärmar (t.ex. md:p-8). Detta syns tydligt i komponentkoden från 1, där klasser som sm:text-5xl och lg:text-6xl används för att anpassa textstorleken för olika enheter.
+
+
+Hantering av Statiska Tillgångar och Bilder
+
+
+Komponenterna Header.tsx och TestimonialSection.tsx refererar till bildfiler som /byggpilot-logo.png och /images/mickebild.png.1 Korrekt hantering av dessa tillgångar är avgörande för prestanda.
+         * Placering av Filer: Alla statiska tillgångar som bilder, ikoner och typsnitt som ska vara offentligt tillgängliga placeras i public-katalogen i projektets rot. Next.js serverar automatiskt filer från denna katalog under rot-URL:en. En fil placerad som public/byggpilot-logo.png kan alltså nås via URL:en /byggpilot-logo.png.
+         * Optimering med next/image: En av de mest kraftfulla funktionerna i Next.js är den inbyggda bildoptimeringskomponenten, <Image>. Det är en stark rekommendation att ersätta alla standard <img>-taggar med denna komponent.1
+Före (Standard HTML):
+
+
+HTML
+
+
+
+
+<img src="/byggpilot-logo.png" alt="ByggPilot Logo" className="h-8 w-auto mr-3" />
+
+Efter (Optimerad med next/image):
+
+
+TypeScript
+
+
+
+
+import Image from 'next/image';
+import logo from '/public/byggpilot-logo.png'; // Importera bilden för att få dimensioner automatiskt
+
+//... inuti komponenten
+<Image 
+ src={logo} 
+ alt="ByggPilot Logo" 
+ height={32} // Specifiera höjd (eller använd 'fill' prop)
+ width={120} // Uppskattad bredd för att undvika layout shift
+ className="w-auto h-8 mr-3" // Tailwind-klasser kan fortfarande användas
+/>
+
+Fördelarna med att använda <Image> är betydande:
+         1. Automatisk Bildoptimering: Next.js serverar automatiskt bilder i moderna format som WebP, även om originalfilen är en PNG eller JPG.
+         2. Storleksanpassning: Bilderna anpassas för olika enhetsstorlekar, så att en mobil enhet inte behöver ladda ner en onödigt stor skrivbordsbild.
+         3. Lazy Loading: Bilder laddas endast när de är på väg att rulla in i användarens synfält, vilket drastiskt förbättrar den initiala sidladdningstiden.
+         4. Förebyggande av Cumulative Layout Shift (CLS): Genom att kräva dimensioner (width och height) ser komponenten till att utrymme reserveras för bilden innan den laddas, vilket förhindrar att innehållet "hoppar" när bilden visas. Detta är en viktig faktor för Core Web Vitals och användarupplevelsen.
+
+
+Del V: Driv Funktionalitet med Server Actions och Firestore
+
+
+Denna sektion introducerar det moderna sättet att hantera datamutationer i Next.js. Genom att använda Server Actions kan man flytta logik för att skapa, uppdatera och radera data till servern på ett säkert och effektivt sätt, vilket minskar beroendet av traditionella API-routes för formulärhantering och direkt ansluter till Firestore-backend.
+
+
+Introduktion till Server Actions
+
+
+Server Actions är en av de mest transformerande funktionerna i Next.js App Router. De är asynkrona funktioner som deklareras med direktivet 'use server' och exekveras säkert på servern, men kan anropas direkt från klientkomponenter, till exempel från ett formulärs action-attribut eller en onClick-händelsehanterare.15
+Detta paradigm förenklar datahantering avsevärt:
+         * Inget Behov av API Routes: För många vanliga mutationer (t.ex. skapa ett inlägg, uppdatera en profil) behöver man inte längre manuellt skapa en API-route (app/api/.../route.ts), definiera en POST-hanterare och göra ett fetch-anrop från klienten. Server Action-funktionen blir den direkta kopplingen.
+         * Säkerhet: Eftersom koden körs på servern kan den säkert interagera med databaser och använda hemliga nycklar (som Firebase Admin SDK-credentials) utan risk för att de exponeras för klienten.
+         * Progressive Enhancement: När en Server Action används med ett <form>-element fungerar formuläret även om JavaScript är inaktiverat eller inte har laddats än. Detta ger en mer robust användarupplevelse.15
+En bästa praxis är att centralisera Server Actions i en dedikerad fil, till exempel app/actions.ts, för att göra dem återanvändbara i hela applikationen.15
+
+
+Interaktion med Firestore via Server Actions
+
+
+För att ByggPilot ska kunna hantera projektdata, kvitton eller annan information, måste applikationen kunna skriva till Firestore. Server Actions är den idealiska platsen för denna logik.
+En exempel-Server Action för att skapa ett nytt projekt skulle se ut så här:
+
+
+TypeScript
+
+
+
+
+// app/actions.ts
+'use server';
+
+import { adminFirestore } from '@/lib/firebase/adminConfig';
+import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
+
+// Anta att vi har en Zod-schema för validering
+import { z } from 'zod';
+
+const CreateProjectSchema = z.object({
+ projectName: z.string().min(3, { message: 'Projektnamn måste vara minst 3 tecken.' }),
+ // userId måste hämtas från en autentiserad session, inte från formuläret
+});
+
+export async function createProject(prevState: any, formData: FormData) {
+ // 1. Validera indata
+ const validatedFields = CreateProjectSchema.safeParse({
+   projectName: formData.get('projectName'),
+ });
+
+ if (!validatedFields.success) {
+   return {
+     errors: validatedFields.error.flatten().fieldErrors,
+   };
+ }
+ 
+ // 2. Hämta autentiserad användare (exempel, kräver sessionshantering)
+ // const userId = await getUserIdFromSession(); 
+ // if (!userId) { return { message: 'Obehörig' }; }
+
+ // 3. Utför databasoperation med Admin SDK
+ try {
+   const projectData = {
+     name: validatedFields.data.projectName,
+     // ownerId: userId,
+     createdAt: new Date(),
+   };
+   
+   await adminFirestore.collection('projects').add(projectData);
+
+ } catch (error) {
+   return {
+     message: 'Databasfel: Kunde inte skapa projektet.',
+   };
+ }
+
+ // 4. Rensa cachen och omdirigera
+ revalidatePath('/dashboard'); // Ser till att projektlistan uppdateras
+ redirect('/dashboard');
+}
+
+Denna funktion använder Firebase Admin SDK för att skriva till databasen, vilket är säkert och kringgår klient-sidans säkerhetsregler.17 Dessutom används
+revalidatePath för att instruera Next.js att invalidera cachen för instrumentpanelssidan, så att det nya projektet visas omedelbart efter omdirigering.18
+Parallellt med detta måste Firestore Security Rules konfigureras för att ge ett extra lager av skydd. Även om Admin SDK ignorerar reglerna, kommer dessa regler att skydda databasen från otillåtna anrop som görs via klient-SDK:t. En regel kan säkerställa att en användare endast kan skapa ett projekt där ownerId matchar deras eget autentiserade UID.19
+
+
+Klient-sidans UX: Hantering av Laddnings-, Fel- och Framgångsstatus
+
+
+Ett anrop till en Server Action är en asynkron nätverksförfrågan. Användargränssnittet måste ge tydlig återkoppling under denna process. React tillhandahåller hooks specifikt för detta ändamål, useTransition och useActionState, som integreras sömlöst med Server Actions.15
+En formulärkomponent på klientsidan som använder createProject-action kan implementeras på följande sätt:
+
+
+TypeScript
+
+
+
+
+// components/dashboard/CreateProjectForm.tsx
+'use client';
+
+import { useActionState } from 'react';
+import { createProject } from '@/app/actions';
+import { SubmitButton } from './SubmitButton'; // Separat komponent för laddningsstatus
+
+export function CreateProjectForm() {
+ const initialState = { message: null, errors: {} };
+ const [state, formAction] = useActionState(createProject, initialState);
+
+ return (
+   <form action={formAction}>
+     <div>
+       <label htmlFor="projectName">Projektnamn</label>
+       <input id="projectName" name="projectName" type="text" />
+       {state.errors?.projectName &&
+         state.errors.projectName.map((error: string) => (
+           <p className="text-red-500" key={error}>{error}</p>
+         ))}
+     </div>
+     
+     <SubmitButton />
+
+     {state.message && <p className="text-red-500">{state.message}</p>}
+   </form>
+ );
+}
+
+// components/dashboard/SubmitButton.tsx
+'use client';
+import { useFormStatus } from 'react-dom';
+
+export function SubmitButton() {
+ const { pending } = useFormStatus();
+
+ return (
+   <button type="submit" aria-disabled={pending}>
+     {pending? 'Skapar...' : 'Skapa Projekt'}
+   </button>
+ );
+}
+
+Denna implementering ger en komplett användarupplevelse:
+         * useActionState: Denna hook tar emot Server Action och ett initialt tillstånd. Den returnerar det senaste tillståndet (som kan innehålla felmeddelanden) och en ny formAction som ska kopplas till formuläret. Detta gör det möjligt att visa valideringsfel från servern direkt i UI:t.15
+         * useFormStatus: Denna hook, som måste användas i en separat komponent inuti <form>, ger en pending-boolean. Detta gör det enkelt att visa en laddningsindikator och inaktivera knappen medan formuläret skickas, vilket förhindrar dubbla inskick.23
+Tillsammans skapar dessa verktyg en modern, SPA-liknande upplevelse för datamutationer, där all känslig logik förblir säkert på servern.
+
+
+Del VI: Avancerade Integrationer: Anslutning av ByggPilot till Google Workspace-ekosystemet
+
+
+ByggPilots kärnvärde ligger i att automatisera administration genom att djupt integrera med Google Workspace. Denna sektion tillhandahåller den tekniska planen för att realisera denna centrala funktionalitet, med fokus på att utöka autentiseringen och säkert hantera API-anrop.
+
+
+Utökad Autentisering: Begäran om API-omfattningar för Google Drive och Calendar
+
+
+Standardinloggning med Google via Firebase ger endast grundläggande profilinformation (namn, e-post, profilbild). För att applikationen ska kunna interagera med andra Google-tjänster, som att skapa händelser i användarens kalender eller organisera filer i deras Drive, måste den explicit begära tillstånd. Detta görs genom OAuth 2.0-omfattningar (scopes).24
+Processen innebär att man anpassar Firebase-autentiseringsflödet på klientsidan. När man skapar GoogleAuthProvider kan man lägga till ytterligare omfattningar med metoden addScope.
+
+
+TypeScript
+
+
+
+
+// Exempel på en inloggningsfunktion i en klientkomponent
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { auth } from '@/lib/firebase/config';
+
+const provider = new GoogleAuthProvider();
+
+// Lägg till de nödvändiga omfattningarna för Calendar och Drive API
+provider.addScope('https://www.googleapis.com/auth/calendar.events');
+provider.addScope('https://www.googleapis.com/auth/drive.file');
+
+export const signInWithGoogle = async () => {
+ try {
+   const result = await signInWithPopup(auth, provider);
+   // Hantera resultatet...
+   return result;
+ } catch (error) {
+   console.error("Fel vid Google-inloggning:", error);
+ }
+};
+
+När en användare loggar in för första gången med denna konfiguration, kommer Googles medgivandeskärm (consent screen) att tydligt specificera att "ByggPilot" begär tillstånd att "visa, redigera, skapa och radera händelser i dina Google-kalendrar" och "visa, redigera, skapa och radera dina filer i Google Drive".24 Detta är avgörande för användarens förtroende och en förutsättning för att få applikationen godkänd av Google om den ska vara offentlig.25
+
+
+Säker Hantering och Användning av OAuth Access Tokens
+
+
+Det är avgörande att förstå skillnaden mellan två typer av tokens i detta flöde:
+         1. Firebase ID Token: Ett JSON Web Token (JWT) som utfärdas av Firebase Authentication. Dess syfte är att bevisa vem användaren är för din egen backend (t.ex. dina Server Actions). Firebase SDK:erna hanterar förnyelsen av detta token automatiskt.26
+         2. Google API Access Token: Ett token som utfärdas av Google Identity Platform. Dess syfte är att ge din applikation tillstånd att agera på användarens vägnar och anropa Google API:er som Calendar eller Drive. Detta token är kortlivat (vanligtvis en timme) och måste hanteras säkert.27
+När signInWithPopup slutförs framgångsrikt innehåller result-objektet ett credential-objekt, som i sin tur innehåller detta värdefulla accessToken.29
+Den säkra processen för att använda detta token är som följer:
+         1. Extrahera på Klienten: Direkt efter en lyckad inloggning på klientsidan, extrahera accessToken från result.credential. Detta token ska aldrig lagras i localStorage eller sessionStorage, eftersom det gör det sårbart för Cross-Site Scripting (XSS)-attacker. Det bör endast hållas i minnet under en kort tid.
+         2. Skicka till Server Action: När användaren initierar en åtgärd som kräver ett Google API-anrop (t.ex. klickar på "Skapa kalenderhändelse"), anropa en Server Action och skicka med accessToken som ett argument. Eftersom kommunikationen mellan klienten och en Server Action är en säker RPC-liknande anrop, är detta en säker metod för att överföra tokenet till servermiljön.30
+         3. Använd på Servern: Server Action-funktionen tar emot accessToken och använder det för att göra ett autentiserat fetch-anrop direkt till Google API-slutpunkten. All interaktion med det externa API:et sker från den säkra servermiljön.
+
+
+Exempel: Skapa en Kalenderhändelse via en Server Action
+
+
+Följande är ett komplett, end-to-end-exempel som demonstrerar hela flödet.
+1. Klientkomponent med knapp och anrop:
+
+
+TypeScript
+
+
+
+
+// components/dashboard/CreateEventButton.tsx
+'use client';
+
+import { useAuth } from '@/app/providers/AuthContext';
+import { createCalendarEvent } from '@/app/actions';
+import { GoogleAuthProvider, signInWithPopup, getAdditionalUserInfo } from 'firebase/auth';
+import { auth } from '@/lib/firebase/config';
+
+export function CreateEventButton() {
+ const { user } = useAuth();
+
+ const handleCreateEvent = async () => {
+   if (!user) {
+     alert('Du måste vara inloggad.');
+     return;
+   }
+
+   // Detta är en förenkling. I en riktig app skulle du lagra access token
+   // säkert i minnet efter inloggning, eller återautentisera för att få ett nytt.
+   // Här återautentiserar vi för att säkerställa ett färskt token.
+   const provider = new GoogleAuthProvider();
+   provider.addScope('https://www.googleapis.com/auth/calendar.events');
+
+   try {
+     const result = await signInWithPopup(auth, provider);
+     const credential = GoogleAuthProvider.credentialFromResult(result);
+     const accessToken = credential?.accessToken;
+
+     if (!accessToken) {
+       throw new Error('Kunde inte hämta access token.');
+     }
+
+     const eventData = {
+       summary: 'Nytt ByggPilot Projektmöte',
+       description: 'Diskussion om projektets tidslinje.',
+       start: { dateTime: new Date().toISOString(), timeZone: 'Europe/Stockholm' },
+       end: { dateTime: new Date(Date.now() + 60 * 60 * 1000).toISOString(), timeZone: 'Europe/Stockholm' },
+     };
+
+     const response = await createCalendarEvent(accessToken, eventData);
+     alert(response.message);
+
+   } catch (error) {
+     console.error(error);
+     alert('Ett fel uppstod vid skapandet av händelsen.');
+   }
+ };
+
+ return <button onClick={handleCreateEvent}>Skapa Kalenderhändelse</button>;
+}
+
+2. Server Action som anropar Google Calendar API:
+
+
+TypeScript
+
+
+
+
+// app/actions.ts
+'use server';
+
+export async function createCalendarEvent(accessToken: string, eventData: any) {
+ const CALENDAR_API_URL = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+
+ try {
+   const response = await fetch(CALENDAR_API_URL, {
+     method: 'POST',
+     headers: {
+       'Authorization': `Bearer ${accessToken}`,
+       'Content-Type': 'application/json',
+     },
+     body: JSON.stringify(eventData),
+   });
+
+   if (!response.ok) {
+     const errorData = await response.json();
+     console.error('Google Calendar API Error:', errorData);
+     throw new Error(`Fel från Google API: ${errorData.error.message}`);
+   }
+
+   const createdEvent = await response.json();
+   console.log('Händelse skapad:', createdEvent.htmlLink);
+   
+   return { success: true, message: 'Händelsen har skapats i din kalender!' };
+
+ } catch (error) {
+   console.error('Internt fel i createCalendarEvent:', error);
+   return { success: false, message: 'Kunde inte skapa händelsen.' };
+ }
+}
+
+Detta exempel visar hur man säkert använder ett kortlivat accessToken från klienten för att utföra en privilegierad operation på servern, med anrop till Google Calendar API:s events.insert-slutpunkt.32
+Tabell 2: Google API-omfattningar (Scopes) för ByggPilot
+Omfattning (Scope URI)
+	API
+	Motivering för ByggPilot
+	Känslighet
+	.../auth/userinfo.email
+	Google Sign-In
+	Grundläggande inloggning och kontoidentifiering.
+	Icke-känslig
+	.../auth/calendar.events
+	Google Calendar API
+	För att skapa, visa och redigera projektrelaterade händelser och påminnelser i användarens kalender.
+	Känslig
+	.../auth/drive.file
+	Google Drive API
+	För att skapa projektmappar och lagra projektdokument (ritningar, avtal, foton) i användarens Drive.
+	Känslig
+	
+
+Del VII: Drift och Operational Excellence
+
+
+Den sista delen av denna blueprint fokuserar på att flytta den nu fungerande applikationen till en produktionsmiljö, med tonvikt på säkerhet, prestanda och en smidig driftsprocess.
+
+
+Val av Plattform: En Detaljerad Jämförelse mellan Vercel och Firebase Hosting
+
+
+Valet av driftsättningsplattform är ett strategiskt beslut som påverkar prestanda, utvecklarupplevelse och kostnader. För en Next.js-applikation med en Firebase-backend står valet främst mellan Vercel och Firebase Hosting (inklusive dess mer avancerade version, App Hosting).
+         * Vercel: Som skaparna av Next.js erbjuder Vercel en oöverträffad och friktionsfri integration. Plattformen är byggd från grunden för att optimera Next.js-applikationer.
+         * Styrkor: Oslagbar utvecklarupplevelse med "Preview Deployments" för varje git-push, ett globalt Edge Network för extremt snabb leverans av både statiskt och dynamiskt innehåll, och automatiska prestandaoptimeringar.35 Det är den främsta plattformen för prestandakritiska, frontend-tunga applikationer.
+         * Svagheter: Kostnaderna kan bli oförutsägbara vid trafiktoppar om de inte hanteras noggrant. Backend-integrationen är mindre djup än Firebase Hostings, även om den är fullt kapabel.35
+         * Firebase Hosting & App Hosting: Dessa plattformar erbjuder den djupaste möjliga integrationen med resten av Firebase-ekosystemet.
+         * Styrkor: Sömlös koppling till Firebase Functions, Authentication och Firestore. Firebase App Hosting är en nyare, mer enhetlig lösning som är specifikt utformad för att hantera fullstack-ramverk som Next.js, vilket förenklar hela backend- och frontend-driften.38 Prismodellen är ofta mer förutsägbar (pay-as-you-go).
+         * Svagheter: Utvecklarupplevelsen, särskilt när det gäller förhandsgranskningar och CI/CD, anses generellt vara mindre polerad än Vercels. Prestandan på deras CDN är utmärkt, men Vercels Edge Network är ofta ansett som ledande för dynamiskt innehåll.
+Rekommendation för ByggPilot:
+En hybridstrategi är ofta den optimala lösningen. Driftsätt Next.js-frontend till Vercel för att dra nytta av dess överlägsna prestanda och utvecklarupplevelse. Samtidigt fortsätter Firebase att agera som den dedikerade backend-tjänsten (Auth, Firestore, Storage). Denna arkitektur kombinerar styrkorna från båda plattformarna: en blixtsnabb frontend från Vercel som kommunicerar med en robust och skalbar backend från Firebase.36
+Tabell 3: Jämförelse av Driftsättningsplattformar för ByggPilot
+Funktion
+	Vercel
+	Firebase Hosting / App Hosting
+	Next.js Integration
+	Oöverträffad. Byggd av samma team. Alla funktioner stöds direkt.
+	Mycket bra. App Hosting är specifikt designad för Next.js.
+	Prestanda (CDN)
+	Globalt Edge Network, optimerat för dynamiskt innehåll och funktioner.
+	Globalt CDN, mycket snabbt för statiska tillgångar och väl integrerat.
+	Utvecklarupplevelse
+	Branschledande med Preview Deployments, sömlös Git-integration.
+	Bra, men generellt sett mindre avancerad CI/CD och förhandsgranskning.
+	Backend Integration
+	Ansluter till valfri backend.
+	Djupast möjliga integration med Firebase-ekosystemet.
+	Skalbarhet
+	Automatisk skalning, bevisad för mycket hög trafik.
+	Bygger på Google Clouds infrastruktur, extremt skalbar.
+	Kostnadsmodell
+	Generös gratisnivå. Pro-planer kan bli dyra vid hög användning.
+	Generös gratisnivå. Pay-as-you-go (Blaze-plan) är flexibel och förutsägbar.
+	
+
+Hantering av Miljövariabler och Hemligheter
+
+
+Detta är ett kritiskt säkerhetssteg. Felaktig hantering av miljövariabler kan leda till att hela databasen komprometteras.
+         * Offentliga vs. Server-variabler: Next.js gör en strikt åtskillnad. Variabler som ska vara tillgängliga i webbläsaren (som Firebase JS SDK-konfigurationen) måste ha prefixet NEXT_PUBLIC_. Alla andra variabler är endast tillgängliga på servern.9
+         * Firebase Admin SDK-credentials: Tjänstekontonyckeln som används för Admin SDK är den mest känsliga informationen i hela projektet. Den innehåller client_email och, framför allt, en private_key. Dessa värden måste hanteras som hemligheter.
+         * Lokal Utveckling: Lagra dessa värden i en .env.local-fil, som är inkluderad i .gitignore och aldrig checkas in i Git.
+         * Produktion (Vercel): I Vercels instrumentpanel, navigera till projektets inställningar och sedan "Environment Variables". Lägg till FIREBASE_CLIENT_EMAIL och FIREBASE_PRIVATE_KEY här. Vercel krypterar dessa värden och injicerar dem säkert i servermiljön vid bygg- och körtid.41
+         * Formatering av Privat Nyckel: Den privata nyckeln i JSON-filen från Firebase är en flerradig sträng. När den kopieras till en .env-fil eller Vercels gränssnitt, måste radbrytningarna (\n) ofta bevaras. Det är vanligt att man måste omsluta hela nyckeln med citattecken (") i .env.local och säkerställa att Vercels gränssnitt tolkar den korrekt. Koden som visades tidigare för adminConfig.ts (.replace(/\\n/g, '\n')) är en robust metod för att hantera detta programmatiskt.7
+
+
+Driftsättningsprocessen: En Steg-för-Steg Guide
+
+
+Med en fungerande applikation och en vald plattform är den sista fasen att gå live. Följande checklista säkerställer en smidig och säker driftsättning.
+         1. Slutför Firestore Security Rules: Gå igenom alla säkerhetsregler. Byt från det öppna "test mode" (allow read, write: if true;) till strikta, produktionsklara regler. Säkerställ att användare endast kan komma åt sin egen data (allow read, write: if request.auth.uid == resource.data.userId;) och att all indata valideras.19
+         2. Konfigurera Miljövariabler i Vercel: Dubbelkolla att alla NEXT_PUBLIC_-variabler och alla serverhemligheter (särskilt Admin SDK-nycklarna) är korrekt inlagda i Vercels instrumentpanel för produktionsmiljön.41
+         3. Anslut GitHub-förvaret: I Vercels instrumentpanel, importera projektet från dess GitHub-förvar. Vercel kommer automatiskt att upptäcka att det är en Next.js-applikation och konfigurera bygginställningarna.
+         4. Starta en Produktions-build: En push till main-grenen (eller den gren som konfigurerats som produktionsgren) kommer automatiskt att trigga en ny driftsättning på Vercel.
+         5. Verifiera Driftsättningen: Följ byggloggarna i Vercels instrumentpanel. När driftsättningen är klar, besök produktions-URL:en. Genomför en fullständig testrunda:
+         * Registrera en ny användare.
+         * Logga in och logga ut.
+         * Testa alla interaktiva element.
+         * Utför en data-mutation (t.ex. skapa ett projekt via en Server Action).
+         * Verifiera att skyddade rutter är oåtkomliga för utloggade användare.
+Genom att följa denna omfattande blueprint, från att sanera utvecklingsmiljön till att driftsätta en säker och prestandaoptimerad applikation, kan ByggPilot-projektet transformeras från en källa till frustration till en framgångsrik, produktionsklar plattform byggd på en modern och skalbar teknologistack.
+Citerade verk
+         1. prompt.docx
+         2. Is firebase bad for nextjs app? - Reddit, hämtad augusti 31, 2025, https://www.reddit.com/r/nextjs/comments/1eqnyx4/is_firebase_bad_for_nextjs_app/
+         3. Next.js 14 Firebase Authentication (Google, GitHub, Email) Tutorial, hämtad augusti 31, 2025, https://www.djamware.com/post/68996d7b4abd2d3e44c0ac8b/nextjs-14-firebase-authentication-google-github-email-tutorial
+         4. Authenticated server-side rendering with Next.js and Firebase - Colin McDonnell, hämtad augusti 31, 2025, https://colinhacks.com/essays/nextjs-firebase-authentication
+         5. Firebase Authentication Client- or Serverside? : r/nextjs - Reddit, hämtad augusti 31, 2025, https://www.reddit.com/r/nextjs/comments/p4abss/firebase_authentication_client_or_serverside/
+         6. Firebase and Next14: Firestore and Authentication complete tutorial using Next14 | by Shivesh Tiwari, hämtad augusti 31, 2025, https://mrknown404.medium.com/firebase-and-next14-firestore-and-authentication-complete-tutorial-using-next14-4c6f8978758e
+         7. Using Firebase Admin SDK with Next.js 13 | James Shopland, hämtad augusti 31, 2025, https://www.jamesshopland.com/blog/nextjs-firebase-admin-sdk/
+         8. fetching data from firebase on server side on app router : r/nextjs - Reddit, hämtad augusti 31, 2025, https://www.reddit.com/r/nextjs/comments/1b9kfa5/fetching_data_from_firebase_on_server_side_on_app/
+         9. Guides: Environment Variables - Next.js, hämtad augusti 31, 2025, https://nextjs.org/docs/pages/guides/environment-variables
+         10. NextJS Authentication Flow Using Firebase Auth Tutorial | by Shivam Bhalla | Medium, hämtad augusti 31, 2025, https://medium.com/@shivambh28/nextjs-authentication-flow-using-firebase-auth-tutorial-56299f93a8fd
+         11. How can I improve my AuthGuard for NextJS : r/Firebase - Reddit, hämtad augusti 31, 2025, https://www.reddit.com/r/Firebase/comments/1fk5igz/how_can_i_improve_my_authguard_for_nextjs/
+         12. Next JS and Firebase authentication protected routes - Stack Overflow, hämtad augusti 31, 2025, https://stackoverflow.com/questions/69135229/next-js-and-firebase-authentication-protected-routes
+         13. Middleware - Firebase Authentication for Next.js 14 - Vercel, hämtad augusti 31, 2025, https://next-firebase-auth-edge-docs.vercel.app/docs/usage/middleware
+         14. Guides: Authentication - Next.js, hämtad augusti 31, 2025, https://nextjs.org/docs/app/guides/authentication
+         15. Server Actions and Mutations - Data Fetching - Next.js, hämtad augusti 31, 2025, https://nextjs.org/docs/14/app/building-your-application/data-fetching/server-actions-and-mutations
+         16. Nextjs 15 — Actions Best Practice | by Lior Amsalem - Medium, hämtad augusti 31, 2025, https://medium.com/@lior_amsalem/nextjs-15-actions-best-practice-bf5cc023301e
+         17. How do I update my Next.js server component based on a Firestore document?, hämtad augusti 31, 2025, https://stackoverflow.com/questions/79502296/how-do-i-update-my-next-js-server-component-based-on-a-firestore-document
+         18. Getting Started: Updating Data - Next.js, hämtad augusti 31, 2025, https://nextjs.org/docs/app/getting-started/updating-data
+         19. Writing conditions for Cloud Firestore Security Rules - Firebase - Google, hämtad augusti 31, 2025, https://firebase.google.com/docs/firestore/security/rules-conditions
+         20. Secure and Efficient Data Access with Firebase Firestore Rules | by Rishi Singh - Medium, hämtad augusti 31, 2025, https://medium.com/@rishi_singh/secure-and-efficient-data-access-with-firebase-firestore-rules-95b6aead6d95
+         21. Getting Started: Error Handling | Next.js, hämtad augusti 31, 2025, https://nextjs.org/docs/app/getting-started/error-handling
+         22. App Router: Handling Errors - Next.js, hämtad augusti 31, 2025, https://nextjs.org/learn/dashboard-app/error-handling
+         23. How to display form loading state in NextJs Server Action - Stack Overflow, hämtad augusti 31, 2025, https://stackoverflow.com/questions/77608564/how-to-display-form-loading-state-in-nextjs-server-action
+         24. Choose Google Calendar API scopes, hämtad augusti 31, 2025, https://developers.google.com/workspace/calendar/api/auth
+         25. OAuth 2.0 Scopes for Google APIs, hämtad augusti 31, 2025, https://developers.google.com/identity/protocols/oauth2/scopes
+         26. Manage User Sessions | Firebase Authentication - Google, hämtad augusti 31, 2025, https://firebase.google.com/docs/auth/admin/manage-sessions
+         27. Using OAuth 2.0 to Access Google APIs | Authorization, hämtad augusti 31, 2025, https://developers.google.com/identity/protocols/oauth2
+         28. Authenticate REST Requests | Firebase Realtime Database - Google, hämtad augusti 31, 2025, https://firebase.google.com/docs/database/rest/auth
+         29. Get Google access token - firebase - Stack Overflow, hämtad augusti 31, 2025, https://stackoverflow.com/questions/44484440/get-google-access-token
+         30. Best way to handle JWT in Next.js 14 with a separate Express backend : r/nextjs - Reddit, hämtad augusti 31, 2025, https://www.reddit.com/r/nextjs/comments/1fjt5dy/best_way_to_handle_jwt_in_nextjs_14_with_a/
+         31. Next.js Secure Authentication using cookies and server actions - Stackademic, hämtad augusti 31, 2025, https://stackademic.com/blog/next-js-secure-authentication-using-cookies-and-server-actions-b24b8b31e01b
+         32. Create events | Google Calendar, hämtad augusti 31, 2025, https://developers.google.com/workspace/calendar/api/guides/create-events
+         33. Google Calendar API | Documentation | Postman API Network, hämtad augusti 31, 2025, https://www.postman.com/postman/google-api-workspace/documentation/54xuf9z/google-calendar-api
+         34. How to use Google Calendar API: cost, limits, examples - Elfsight, hämtad augusti 31, 2025, https://elfsight.com/blog/how-to-use-google-calendar-api-v3-cost-limits-examples/
+         35. Best Places to Host Next.js Apps in 2025: A Comprehensive Guide - Wisp CMS, hämtad augusti 31, 2025, https://www.wisp.blog/blog/best-places-to-host-nextjs-apps-in-2025-a-comprehensive-guide
+         36. Vercel vs Firebase in 2025: Ultimate Comparison for Developers | UI Bakery Blog, hämtad augusti 31, 2025, https://uibakery.io/blog/vercel-vs-firebase
+         37. What are the benefits of Next.js13 on Vercel? : r/nextjs - Reddit, hämtad augusti 31, 2025, https://www.reddit.com/r/nextjs/comments/14w0hcw/what_are_the_benefits_of_nextjs13_on_vercel/
+         38. Integrate Next.js | Firebase Hosting - Google, hämtad augusti 31, 2025, https://firebase.google.com/docs/hosting/frameworks/nextjs
+         39. Deploy Next.js to Firebase App Hosting – Step-by-Step in Just 5 Minutes - YouTube, hämtad augusti 31, 2025, https://www.youtube.com/watch?v=QOwtPwir0yE
+         40. Firebase App Hosting vs Vercel for JS Web App - Reddit, hämtad augusti 31, 2025, https://www.reddit.com/r/Firebase/comments/1i5ly6t/firebase_app_hosting_vs_vercel_for_js_web_app/
+         41. Environment variables - Vercel, hämtad augusti 31, 2025, https://vercel.com/docs/environment-variables
+         42. Setting up Environment Variables and Hosting on Vercel | NEXTJS | by Sanyam - Medium, hämtad augusti 31, 2025, https://medium.com/@sanyamm/setting-up-environment-variables-and-hosting-on-vercel-nextjs-54194eae0165
+         43. Fix insecure rules | Firestore in Native mode - Google Cloud, hämtad augusti 31, 2025, https://cloud.google.com/firestore/native/docs/security/insecure-rules
