@@ -1,7 +1,7 @@
 {
   "scripts": {
     "dev": "next dev",
-    "start": "next dev -p 3000",
+    "start": "next start",
     "build": "next build"
   },
   "dependencies": {
