@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/app/providers/AuthContext';
 
@@ -78,11 +78,23 @@ const CustomAnimationsStyle = () => (
 );
 
 const AnimatedBackground = () => {
-    const particles = Array.from({ length: 50 }).map((_, i) => {
-        const size = Math.random() * 2 + 1;
-        const style = { width: `${size}px`, height: `${size}px`, left: `${Math.random() * 100}%`, animationDelay: `${Math.random() * 20}s`, animationDuration: `${Math.random() * 15 + 10}s` };
-        return <div key={i} className="particle" style={style}></div>;
-    });
+    const [particles, setParticles] = useState([]);
+
+    useEffect(() => {
+        const newParticles = Array.from({ length: 50 }).map((_, i) => {
+            const size = Math.random() * 2 + 1;
+            const style = { 
+                width: `${size}px`, 
+                height: `${size}px`, 
+                left: `${Math.random() * 100}%`, 
+                animationDelay: `${Math.random() * 20}s`, 
+                animationDuration: `${Math.random() * 15 + 10}s` 
+            };
+            return <div key={i} className="particle" style={style}></div>;
+        });
+        setParticles(newParticles);
+    }, []);
+
     return (
         <div className="absolute inset-0 -z-10 overflow-hidden bg-gray-900">
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:3rem_3rem]"></div>
