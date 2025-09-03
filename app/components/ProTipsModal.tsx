@@ -48,18 +48,17 @@ const IconScale = (props) => (
         <path d="M16 16.5l4-4L14.5 8"></path><path d="M8 8.5l-4 4 5.5 4.5"></path><path d="M12 22V2"></path><path d="M5 12H2"></path><path d="M19 12h3"></path>
     </svg>
 );
-const IconLightbulb = (props) => (
+export const IconLightbulb = (props) => (
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M15.09 16.05a1 1 0 0 1-.9.55H9.81a1 1 0 0 1-.9-.55L6.23 8.32a.5.5 0 0 1 .5-.62h10.54a.5.5 0 0 1 .5.62l-2.68 7.73z"></path>
         <path d="M12 16.6v2.24m-3.5-3.83.9-1.56m7.2 1.56-.9-1.56m-3.7-6.2v-3.8M5.88 8.32h12.24"></path>
     </svg>
 );
 
-
 const TipCard = ({ icon, title, children, className }) => (
     <div className={`bg-gray-900/50 p-6 rounded-lg border border-gray-700 flex flex-col ${className}`}>
         <div className="flex items-center gap-3 mb-4">
-            <div className="flex-shrink-0 text-cyan-400">{icon}</div>
+            <div className="flex-shrink-0 text-yellow-400">{icon}</div>
             <h3 className="text-lg font-bold text-white">{title}</h3>
         </div>
         <div className="text-gray-300 text-sm space-y-3 leading-relaxed">
@@ -67,7 +66,6 @@ const TipCard = ({ icon, title, children, className }) => (
         </div>
     </div>
 );
-
 
 const ProTipsModal = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
@@ -126,12 +124,12 @@ const ProTipsModal = ({ isOpen, onClose }) => {
                                 </ul>
                             </div>
                             
-                            <div className="mt-4 p-4 bg-cyan-900/30 border border-cyan-700/50 rounded-lg">
+                            <div className="mt-4 p-4 bg-yellow-900/30 border border-yellow-700/50 rounded-lg">
                                  <div className="flex items-center gap-3 mb-2">
-                                    <IconTrendingUp className="w-5 h-5 text-cyan-300"/>
+                                    <IconTrendingUp className="w-5 h-5 text-yellow-300"/>
                                     <h4 className="text-md font-bold text-white">Framtidssäkra ditt företag: Nya regler 2025</h4>
                                 </div>
-                                <p className="text-cyan-200/90 text-xs">Stora förändringar är på väg i branschens viktigaste regelverk. Företag som förbereder sig nu kommer att ha ett stort försprång.</p>
+                                <p className="text-yellow-200/90 text-xs">Stora förändringar är på väg i branschens viktigaste regelverk. Företag som förbereder sig nu kommer att ha ett stort försprång.</p>
                                 <ul className="list-disc list-inside pl-2 mt-2 space-y-1 text-gray-400 text-xs">
                                     <li><strong>AB 25 ersätter AB 04/ABT 06:</strong> De nya standardavtalen, AB 25 och ABPU 25, håller på att färdigställas.</li>
                                     <li><strong>Fokus: Eliminera otydliga "ÄTA-jobb":</strong> Begreppet ÄTA ersätts med "ändring av entreprenaden" för att tvinga fram bättre och mer kompletta förfrågningsunderlag från start.</li>
@@ -153,7 +151,7 @@ const ProTipsModal = ({ isOpen, onClose }) => {
                              <ul className="list-disc list-inside pl-2 mt-3 space-y-2 text-gray-400">
                                 <li><strong>Börja med en SWOT-analys:</strong> Identifiera snabbt projektets Styrkor, Svagheter, Möjligheter och Hot.</li>
                                 <li><strong>Gör en enkel riskanalys:</strong> "Svagheter" och "Hot" från din SWOT blir underlaget. Bedöm sannolikhet och konsekvens.</li>
-                                <li><strong>Använd en mall:</strong> Du behöver inte uppfinna hjulet. <a href="https://www.projektmallar.se/riskanalys/" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">Gratis mall för enkel riskhantering</a></li>
+                                <li><strong>Använd en mall:</strong> Du behöver inte uppfinna hjulet. <a href="https://www.projektmallar.se/riskanalys/" target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:underline">Gratis mall för enkel riskhantering</a></li>
                             </ul>
                         </TipCard>
                         
@@ -165,8 +163,8 @@ const ProTipsModal = ({ isOpen, onClose }) => {
                             <p>Boverket är myndigheten för byggande och boende, och deras hemsida är en guldgruva med gratis information som kan ge dig ett försprång. Genom att lägga två timmar på en av Boverkets gratis e-utbildningar kan du stoltsera mot kunder att du är uppdaterad.</p>
                              <ul className="list-disc list-inside pl-2 mt-3 space-y-2 text-gray-400">
                                 <li><strong>Kunskapsbanken:</strong> Här finns guider och checklistor som förklarar byggreglerna (BBR) på ett enkelt sätt. Använd den för att snabbt få svar på tekniska frågor.</li>
-                                <li><a href="https://www.boverket.se/sv/PBL-kunskapsbanken/" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">Boverkets Kunskapsbank</a></li>
-                                <li><a href="https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/plan-och-bygglag-2010900_sfs-2010-900/" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">Plan- och bygglagen (PBL)</a></li>
+                                <li><a href="https://www.boverket.se/sv/PBL-kunskapsbanken/" target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:underline">Boverkets Kunskapsbank</a></li>
+                                <li><a href="https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/plan-och-bygglag-2010900_sfs-2010-900/" target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:underline">Plan- och bygglagen (PBL)</a></li>
                             </ul>
                         </TipCard>
                         

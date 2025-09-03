@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/app/providers/AuthContext';
 import Link from 'next/link';
-import ProTipsModal from '@/app/components/ProTipsModal';
+import ProTipsModal, { IconLightbulb } from '@/app/components/ProTipsModal';
 
 // --- IKONER --- 
 
@@ -38,18 +38,10 @@ const IconWalletMinus = (props) => (
     </svg>
 );
 
-const IconLightbulb = (props) => (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M15.09 16.05a1 1 0 0 1-.9.55H9.81a1 1 0 0 1-.9-.55L6.23 8.32a.5.5 0 0 1 .5-.62h10.54a.5.5 0 0 1 .5.62l-2.68 7.73z"></path>
-        <path d="M12 16.6v2.24m-3.5-3.83.9-1.56m7.2 1.56-.9-1.56m-3.7-6.2v-3.8M5.88 8.32h12.24"></path>
-    </svg>
-);
-
-
 // --- ÅTERANVÄNDBARA KOMPONENTER --- 
 
 const cardBaseStyle = "bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-6 transition-all duration-300";
-const cardHoverEffect = "hover:scale-105 hover:shadow-[0_0_25px_rgba(34,211,238,0.3)] hover:border-cyan-400/50";
+const cardHoverEffect = "hover:scale-105 hover:shadow-[0_0_25px_rgba(233,213,128,0.3)] hover:border-yellow-300/50";
 
 const ProblemCard = ({ icon, title, problem, solution }) => (
     <div className={`${cardBaseStyle} ${cardHoverEffect}`}>
@@ -210,33 +202,33 @@ export default function LandingPage() {
 
                     {/* --- PRO TIPS SECTION --- */}
                     <section className="py-16 md:py-24">
-              <div className="container mx-auto px-6">
-                  <button 
-                      onClick={() => setIsProTipsModalOpen(true)}
-                      className="group max-w-4xl mx-auto bg-gray-800/50 border border-gray-700 rounded-xl p-8 md:p-12 grid md:grid-cols-12 gap-8 items-center w-full text-left hover:border-cyan-400/50 hover:shadow-lg hover:shadow-cyan-500/10 transition-all duration-300"
-                  >
-                      <div className="md:col-span-2 flex justify-center">
-                          <div className="bg-cyan-900/40 p-4 rounded-full border border-cyan-700 group-hover:scale-110 transition-transform duration-300">
-                              <IconLightbulb className="w-12 h-12 text-cyan-300"/>
-                          </div>
-                      </div>
-                      <div className="md:col-span-10 text-center md:text-left">
-                          <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Vässa ditt företag – Tips för proffs</h2>
-                          <p className="text-gray-400">
-                              Få tillgång till vår kunskapsbank med guider för att arbeta smartare, undvika vanliga fallgropar och bygga ett mer lönsamt byggföretag.
-                          </p>
-                          <span className="mt-4 inline-block text-cyan-400 font-semibold group-hover:underline">Öppna guiden &rarr;</span>
-                      </div>
-                  </button>
-              </div>
-          </section>
+                        <div className="container mx-auto px-6">
+                            <button 
+                                onClick={() => setIsProTipsModalOpen(true)}
+                                className="group max-w-4xl mx-auto bg-gray-800/50 border border-gray-700 rounded-xl p-8 md:p-12 grid md:grid-cols-12 gap-8 items-center w-full text-left hover:border-yellow-400/50 hover:shadow-lg hover:shadow-yellow-500/10 transition-all duration-300"
+                            >
+                                <div className="md:col-span-2 flex justify-center">
+                                    <div className="bg-yellow-900/40 p-4 rounded-full border border-yellow-700 group-hover:scale-110 transition-transform duration-300">
+                                        <IconLightbulb className="w-12 h-12 text-yellow-300"/>
+                                    </div>
+                                </div>
+                                <div className="md:col-span-10 text-center md:text-left">
+                                    <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Vässa ditt företag – Tips för proffs</h2>
+                                    <p className="text-gray-400">
+                                        Få tillgång till vår kunskapsbank med guider för att arbeta smartare, undvika vanliga fallgropar och bygga ett mer lönsamt byggföretag.
+                                    </p>
+                                    <span className="mt-4 inline-block text-yellow-400 font-semibold group-hover:underline">Öppna guiden &rarr;</span>
+                                </div>
+                            </button>
+                        </div>
+                    </section>
 
             {/* --- GRUNDAREN --- */}
             <section className="py-16 md:py-24">
               <div className="container mx-auto px-6">
               <div className="max-w-4xl mx-auto bg-gray-800/50 border border-gray-700 rounded-xl p-8 md:p-12 grid md:grid-cols-3 gap-8 items-center">
     <div className="md:col-span-1 flex justify-center">
-    <Image src="/images/mickebild.png" alt="Mikael, grundare av ByggPilot" width={160} height={160} className="w-40 h-40 rounded-full object-cover border-4 border-cyan-400 shadow-lg"/>
+    <Image src="/images/micke.jpg" alt="Mikael, grundare av ByggPilot" width={160} height={160} className="w-40 h-40 rounded-full object-cover border-4 border-white shadow-lg"/>
     </div>
     <div className="md:col-span-2 text-center md:text-left">
     <h2 className="text-3xl font-bold text-white mb-3">Byggd av en hantverkare, för hantverkare.</h2>
@@ -259,7 +251,10 @@ export default function LandingPage() {
         </footer>
       </div>
 
-      {isProTipsModalOpen && <ProTipsModal onClose={() => setIsProTipsModalOpen(false)} />}
+      <ProTipsModal 
+        isOpen={isProTipsModalOpen} 
+        onClose={() => setIsProTipsModalOpen(false)} 
+      />
     </div>
   );
 }
