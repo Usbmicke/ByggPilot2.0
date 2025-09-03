@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/app/providers/AuthContext';
 import Link from 'next/link';
+import ProTipsModal from '@/app/components/ProTipsModal';
 
 // --- IKONER --- 
 
@@ -106,58 +107,6 @@ const AnimatedBackground = () => {
 
 
 // --- HUVUDLAYOUT --- 
-
-const ProTipsModal = ({ onClose }) => {
-  return (
-    <div 
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-center items-center"
-      onClick={onClose}
-    >
-      <div 
-        className="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl w-full max-w-2xl m-4 text-gray-300 transform transition-all duration-300 ease-out animate-fade-in-up"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-6 border-b border-gray-700 flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-white">Kunskapsbanken för Byggproffs</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white">&times;</button>
-        </div>
-        <div className="p-6 max-h-[70vh] overflow-y-auto">
-          <p className="mb-4">Här är några snabba tips för att driva ett mer lönsamt och professionellt byggföretag.</p>
-          
-          <h3 className="font-bold text-cyan-400 mt-6 mb-2">1. ÄTA-arbeten: Din dolda vinstmaskin</h3>
-          <p className="text-sm">Var stenhård med ÄTA (Ändrings-, Tilläggs-, och Avgående arbeten). Dokumentera ALLT skriftligt, även om det bara är ett snabbt SMS. Få kundens godkännande INNAN du påbörjar arbetet. En enkel app eller ett digitalt formulär för detta kan spara dig tiotusentals kronor per projekt.</p>
-
-          <h3 className="font-bold text-cyan-400 mt-6 mb-2">2. Digitalisera din KMA-pärm</h3>
-          <p className="text-sm">Byt ut den fysiska pärmen mot en digital mappstruktur i Google Drive eller OneDrive. Skapa en mallstruktur som du återanvänder för varje nytt projekt. Inkludera mappar för avtal, ritningar, egenkontroller, foton och riskbedömningar. Det sparar tid och ser extremt proffsigt ut.</p>
-
-          <h3 className="font-bold text-cyan-400 mt-6 mb-2">3. Ta betalt för din expertis, inte bara din tid</h3>
-          <p className="text-sm">När du skriver offerter, specificera inte bara material och timmar. Inkludera rader för "Projektledning & Planering", "Kvalitetssäkring" och "Dokumentation". Det synliggör värdet du tillför utöver själva byggandet och motiverar ett högre pris.</p>
-
-          <h3 className="font-bold text-cyan-400 mt-6 mb-2">4. Veckovisa pulsmöten med kunden</h3>
-          <p className="text-sm">Ett kort 15-minuters videomöte eller telefonsamtal varje fredag kan göra underverk för kundrelationen. Gå igenom vad som har hänt under veckan, vad som händer nästa vecka och stäm av eventuella frågor. Det bygger förtroende och minimerar missförstånd.</p>
-        </div>
-        <div className="p-4 bg-gray-900/50 border-t border-gray-700 text-right">
-          <button 
-            onClick={onClose}
-            className="bg-cyan-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-cyan-600 transition-all duration-300"
-          >
-            Stäng
-          </button>
-        </div>
-      </div>
-      <style>{`
-        @keyframes fade-in-up {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in-up {
-          animation: fade-in-up 0.3s ease-out forwards;
-        }
-      `}</style>
-    </div>
-  );
-};
-
 export default function LandingPage() {
   const { login } = useAuth();
   const [isProTipsModalOpen, setIsProTipsModalOpen] = useState(false);
@@ -259,41 +208,44 @@ export default function LandingPage() {
               </div>
           </section>
 
-          {/* --- PRO TIPS SECTION --- */}
-            <section className="py-16 md:py-24">
-                <div className="container mx-auto px-6">
-                    <div onClick={() => setIsProTipsModalOpen(true)} className="cursor-pointer group relative block bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-8 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_35px_rgba(233,213,128,0.3)] hover:border-yellow-300/50">
-                        <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-                            <div className="flex items-center gap-6">
-                                <IconLightbulb className="w-12 h-12 text-yellow-300/80 group-hover:text-yellow-300 transition-colors"/>
-                                <div>
-                                    <h3 className="text-xl md:text-2xl font-bold text-white">Vässa ditt företag – Tips för proffs</h3>
-                                    <p className="text-gray-400 max-w-2xl mt-1">En samling guider om allt från avtal och regler till hur du bygger starkare kundrelationer. Undvik fallgropar och arbeta mer professionellt.</p>
-                                </div>
-                            </div>
-                            <div className="font-semibold text-white bg-gray-700/80 group-hover:bg-yellow-400/20 group-hover:text-yellow-200 transition-all rounded-md px-4 py-2">Öppna kunskapsbanken &rarr;</div>
-                        </div>
-                    </div>
-                </div>
-            </section>
+                    {/* --- PRO TIPS SECTION --- */}
+                    <section className="py-16 md:py-24">
+              <div className="container mx-auto px-6">
+                  <button 
+                      onClick={() => setIsProTipsModalOpen(true)}
+                      className="group max-w-4xl mx-auto bg-gray-800/50 border border-gray-700 rounded-xl p-8 md:p-12 grid md:grid-cols-12 gap-8 items-center w-full text-left hover:border-cyan-400/50 hover:shadow-lg hover:shadow-cyan-500/10 transition-all duration-300"
+                  >
+                      <div className="md:col-span-2 flex justify-center">
+                          <div className="bg-cyan-900/40 p-4 rounded-full border border-cyan-700 group-hover:scale-110 transition-transform duration-300">
+                              <IconLightbulb className="w-12 h-12 text-cyan-300"/>
+                          </div>
+                      </div>
+                      <div className="md:col-span-10 text-center md:text-left">
+                          <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Vässa ditt företag – Tips för proffs</h2>
+                          <p className="text-gray-400">
+                              Få tillgång till vår kunskapsbank med guider för att arbeta smartare, undvika vanliga fallgropar och bygga ett mer lönsamt byggföretag.
+                          </p>
+                          <span className="mt-4 inline-block text-cyan-400 font-semibold group-hover:underline">Öppna guiden &rarr;</span>
+                      </div>
+                  </button>
+              </div>
+          </section>
 
             {/* --- GRUNDAREN --- */}
             <section className="py-16 md:py-24">
               <div className="container mx-auto px-6">
-                <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 md:gap-12">
-                  <div className="flex-shrink-0">
-                    <Image src="/images/mickebild.png" alt="Mikael, grundare av ByggPilot" width={160} height={160} className="rounded-full object-cover border-4 border-gray-600 shadow-lg"/>
-                  </div>
-                  <div className="flex-grow">
-                    <h2 className="text-3xl font-bold text-white mb-3">Från en byggare, för byggare</h2>
-                    <p className="text-gray-400 mb-4">
-                      Jag heter Mikael och har drivit ett framgångsrikt byggföretag i över 10 år. Jag vet exakt hur mycket tid och energi som går åt till administration – tid som jag hellre hade lagt på att vara ute på fältet, planera projekt och umgås med familjen. Jag letade efter ett enkelt, digitalt verktyg som kunde automatisera mitt pappersarbete utan att kosta en förmögenhet eller kräva en IT-examen.
-                    </p>
-                    <p className="text-gray-400">
-                      När jag inte hittade det bestämde jag mig för att bygga det själv, med hjälp av de verktyg jag redan använde varje dag: Google Drive, Gmail och Kalkylark. Resultatet är ByggPilot. Det är inget komplicerat system, utan en smart och automatiserad kollega som tar hand om administrationen så att du kan fokusera på det du är bäst på – att bygga.
-                    </p>
-                  </div>
-                </div>
+              <div className="max-w-4xl mx-auto bg-gray-800/50 border border-gray-700 rounded-xl p-8 md:p-12 grid md:grid-cols-3 gap-8 items-center">
+    <div className="md:col-span-1 flex justify-center">
+    <Image src="/images/mickebild.png" alt="Mikael, grundare av ByggPilot" width={160} height={160} className="w-40 h-40 rounded-full object-cover border-4 border-cyan-400 shadow-lg"/>
+    </div>
+    <div className="md:col-span-2 text-center md:text-left">
+    <h2 className="text-3xl font-bold text-white mb-3">Byggd av en hantverkare, för hantverkare.</h2>
+    <blockquote className="text-gray-400 italic mb-4">
+        "Jag har spenderat snart 20 år i branschen – från snickare och arbetsledare till egenföretagare. Jag vet att administration är avgörande för ett lyckat projekt, men jag har också sett hur den kan växa till ett pappersmonster som stjäl både kvällar och lönsamhet. Jag skapade ByggPilot för att lösa den frustrationen. Det är ett verktyg byggt med verklig insikt, för att ge dig tillbaka kontrollen och tiden att fokusera på det du gör bäst: att bygga."
+    </blockquote>
+    <p className="text-gray-300 font-semibold">- Michael Ekengren Fogelström, Grundare av ByggPilot</p>
+    </div>
+</div>
               </div>
             </section>
 
