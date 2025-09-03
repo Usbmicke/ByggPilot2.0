@@ -8,7 +8,8 @@ interface AuthContextType {
   user: User | null;
   accessToken: string | null;
   loading: boolean;
-  login: () => Promise<void>;
+  isDemo: boolean;
+  login: (isDemoMode?: boolean) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -18,8 +19,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isDemo, setIsDemo] = useState(false);
 
-  const login = async () => {
+  const login = async (isDemoMode = false) => {
+    setLoading(true);
+    setIsDemo(isDemoMode);
+
+    if (isDemoMode) {
+      // Skapa en mock-användare för demoläget
+      const mockUser = {
+        displayName: 'Demo Användare',
+        email: 'demo@byggpilot.se',
+        photoURL: '/images/mickebild.png', // Använd en placeholder-bild
+        uid: 'demouser',
+      } as User;
+      setUser(mockUser);
+      setAccessToken('demotoken'); // Använd en mock-token
+      setLoading(false);
+      return;
+    }
+
     const provider = new GoogleAuthProvider();
     provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
     provider.addScope('https://www.googleapis.com/auth/calendar.events');
@@ -31,15 +50,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (credential?.accessToken) {
         setAccessToken(credential.accessToken);
       }
+      setUser(result.user);
     } catch (error) {
       console.error("Fel vid inloggning", error);
+      setIsDemo(false); // Återställ om inloggningen misslyckas
+    } finally {
+      setLoading(false);
     }
   };
 
   const logout = async () => {
     try {
       await signOut(auth);
+      setUser(null);
       setAccessToken(null);
+      setIsDemo(false); // Återställ demoläge vid utloggning
     } catch (error) {
       console.error("Fel vid utloggning", error);
     }
@@ -47,16 +72,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (isDemo) return; // Ignorera onAuthStateChanged om vi är i demoläge
       setUser(currentUser);
-      // Detta är ett förenklat sätt. I en riktig app skulle du vilja
-      // hämta en ny token om den gamla har gått ut.
       if (!currentUser) {
         setAccessToken(null);
       }
       setLoading(false);
     });
 
-    // Hantera redirect-resultat för att fånga upp accessToken
     getRedirectResult(auth)
       .then((result) => {
         if (result) {
@@ -69,11 +92,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.error("Fel vid hantering av redirect", error);
       });
 
-
     return () => unsubscribe();
-  }, []);
+  }, [isDemo]); // Kör om effekten om isDemo ändras
 
-  const value = { user, accessToken, loading, login, logout };
+  const value = { user, accessToken, loading, isDemo, login, logout };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
