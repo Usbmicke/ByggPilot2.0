@@ -138,12 +138,10 @@ export default function LandingPage() {
                 <span className="hidden sm:inline text-sm">Logga in med Google</span>
                 <span className="sm:hidden text-sm">Logga in</span>
               </button>
-              <Link href="/dashboard">
-                <button className="bg-cyan-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-cyan-600 transition-all duration-300 animate-pulse-glow">
+              <button onClick={() => handleLogin(true)} className="bg-cyan-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-cyan-600 transition-all duration-300 animate-pulse-glow">
                   <span className="hidden sm:inline">Testa ByggPilot Gratis</span>
                   <span className="sm:hidden">Testa Gratis</span>
-                </button>
-              </Link>
+              </button>
             </nav>
           </div>
         </header>

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useEffect } from 'react';
 
 export const AuthGuard = ({ children }: { children: ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, isDemo, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -13,18 +13,26 @@ export const AuthGuard = ({ children }: { children: ReactNode }) => {
     if (!loading) {
       const isPrivateRoute = pathname.startsWith('/dashboard');
       
-      if (user && !isPrivateRoute) {
+      // Omdirigera till dashboard om användaren är inloggad eller i demoläge
+      if ((user || isDemo) && !isPrivateRoute) {
         router.push('/dashboard');
       }
       
-      if (!user && isPrivateRoute) {
+      // Omdirigera till startsidan om varken inloggad eller i demoläge försöker nå en privat route
+      if (!user && !isDemo && isPrivateRoute) {
         router.push('/');
       }
     }
-  }, [user, loading, pathname, router]);
+  }, [user, isDemo, loading, pathname, router]);
 
-  if (loading) {
-    return <div>Laddar...</div>;
+  // Visa en laddningsindikator medan vi verifierar status
+  // Detta förhindrar att en skyddad sida kort visas innan omdirigering
+  if (loading || (!user && !isDemo && pathname.startsWith('/dashboard'))) {
+    return (
+        <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
+            <p>Laddar...</p>
+        </div>
+    );
   }
 
   return <>{children}</>;

@@ -27,12 +27,10 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, active, onClick }) => (
 
 interface SidebarProps {
     activeView: View;
-    onSettingsClick: () => void;
     onNavClick: (view: View) => void;
-    onProTipsClick: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, onSettingsClick, onNavClick, onProTipsClick }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavClick }) => {
   const { user, logout } = useAuth();
 
   return (
@@ -46,10 +44,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onSettingsClick, onNavCli
         <NavItem icon={<IconProjects className="w-6 h-6" />} label="Projekt" active={activeView === 'PROJECTS'} onClick={() => onNavClick('PROJECTS')} />
         <NavItem icon={<IconDocuments className="w-6 h-6" />} label="Dokument" active={activeView === 'DOCUMENTS'} onClick={() => onNavClick('DOCUMENTS')} />
         <NavItem icon={<IconCustomers className="w-6 h-6" />} label="Kunder" active={activeView === 'CUSTOMERS'} onClick={() => onNavClick('CUSTOMERS')} />
-        
-        <div className="pt-4 mt-4 border-t border-gray-700/50">
-            <NavItem icon={<IconLightbulb className="w-6 h-6" />} label="Tips för proffs" onClick={onProTipsClick} />
-        </div>
       </nav>
       <div className="px-4 py-4 space-y-4">
         <button className="w-full flex items-center justify-center gap-2 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40">
@@ -58,7 +52,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onSettingsClick, onNavCli
         </button>
       </div>
       <div className="border-t border-gray-700 p-4">
-         <button onClick={onSettingsClick} className="flex items-center w-full px-4 py-2.5 rounded-lg text-gray-400 hover:bg-gray-700/50 hover:text-white transition-colors duration-200 mb-2">
+         <button className="flex items-center w-full px-4 py-2.5 rounded-lg text-gray-400 hover:bg-gray-700/50 hover:text-white transition-colors duration-200 mb-2">
             <IconSettings className="w-6 h-6" />
             <span className="ml-4 font-medium">Inställningar</span>
         </button>

@@ -6,7 +6,6 @@ import Header from '@/app/components/Header';
 import Chat from '@/app/components/chat/Chat';
 import { Notification } from '@/app/types';
 // import SettingsModal from '@/app/components/layout/SettingsModal'; // Skapas senare
-// import ProTipsModal from '@/app/components/ProTipsModal'; // Finns på landningssidan
 import { mockData } from '@/app/services/mockData';
 import DashboardView from '@/app/components/views/DashboardView';
 import ProjectsView from '@/app/components/views/ProjectsView';
@@ -25,8 +24,6 @@ export default function DashboardPage() {
     const { isDemo } = useAuth();
 
     const [activeView, setActiveView] = useState<View>('DASHBOARD');
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [isProTipsOpen, setIsProTipsOpen] = useState(false);
     const [isChatExpanded, setIsChatExpanded] = useState(false);
 
     // Settings state (kan flyttas till context senare)
@@ -125,8 +122,6 @@ export default function DashboardPage() {
             <Sidebar 
                 activeView={activeView}
                 onNavClick={handleNavClick} 
-                onSettingsClick={() => alert('Inställningar kommer snart!')} //setIsSettingsOpen(true)
-                onProTipsClick={() => alert('ProTips kommer snart!')} //setIsProTipsOpen(true)
             />
             <div className="flex-1 flex flex-col overflow-hidden">
                 <Header 
@@ -148,20 +143,7 @@ export default function DashboardPage() {
                 </main>
                 <Chat isExpanded={isChatExpanded} setExpanded={setIsChatExpanded} />
             </div>
-            {/* Modaler kommer implementeras senare
-            <SettingsModal 
-                isOpen={isSettingsOpen} 
-                onClose={() => setIsSettingsOpen(false)}
-                showWeather={showWeatherWidget}
-                setShowWeather={setShowWeatherWidget}
-                showTodo={showTodoWidget}
-                setShowTodo={setShowTodoWidget}
-            />
-             <ProTipsModal 
-                isOpen={isProTipsOpen} 
-                onClose={() => setIsProTipsOpen(false)}
-            />
-            */}
+            {/* Modaler kan implementeras senare för inställningar */}
         </div>
     );
 };
