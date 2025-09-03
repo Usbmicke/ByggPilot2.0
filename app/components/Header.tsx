@@ -3,7 +3,7 @@ import React, { useRef, useEffect } from 'react';
 import { useAuth } from '@/app/providers/AuthContext';
 import { IconSearch, IconBell } from '@/app/constants';
 import { Notification } from '@/app/types';
-import SearchResults from './SearchResults';
+import SearchResults from './layout/SearchResults';
 
 interface HeaderProps {
     notifications: Notification[];

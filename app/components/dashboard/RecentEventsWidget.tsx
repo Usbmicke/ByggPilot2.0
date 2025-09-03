@@ -14,7 +14,7 @@ const recentEvents = [
     {
         id: 2,
         icon: <IconMessageSquare className="w-5 h-5 text-purple-400" />,
-        text: 'Röstmemo transkriberat: "Kom ihåg att beställa mer 12mm armeringsjärn till BRF Utsikten.",
+        text: 'Röstmemo transkriberat: "Kom ihåg att beställa mer 12mm armeringsjärn till BRF Utsikten.',
         actionText: 'Lägg till som uppgift',
     },
      {

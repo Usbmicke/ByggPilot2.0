@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/app/providers/AuthContext';
 import Sidebar from '@/app/components/layout/Sidebar';
-import Header from '@/app/components/layout/Header';
+import Header from '@/app/components/Header';
 import Chat from '@/app/components/chat/Chat';
 import { Notification } from '@/app/types';
 // import SettingsModal from '@/app/components/layout/SettingsModal'; // Skapas senare

@@ -4,9 +4,21 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/app/providers/AuthContext';
 import Link from 'next/link';
-import ProTipsModal, { IconLightbulb } from '@/app/components/ProTipsModal';
+import ProTipsModal from '@/app/components/ProTipsModal';
 
 // --- IKONER --- 
+
+const IconTrophy = (props) => (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+        <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+        <path d="M4 22h16"/>
+        <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.87 18.75 7 20.24 7 22"/>
+        <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.13 18.75 17 20.24 17 22"/>
+        <path d="M8 12h8"/>
+        <path d="M8 9h8v4.66a4 4 0 0 1-1.17 2.83L12 19l-2.83-2.51A4 4 0 0 1 8 13.66V9z"/>
+    </svg>
+);
 
 const GoogleIcon = (props) => (
     <svg {...props} viewBox="0 0 48 48">
@@ -209,7 +221,7 @@ export default function LandingPage() {
                             >
                                 <div className="md:col-span-2 flex justify-center">
                                     <div className="bg-yellow-900/40 p-4 rounded-full border border-yellow-700 group-hover:scale-110 transition-transform duration-300">
-                                        <IconLightbulb className="w-12 h-12 text-yellow-300"/>
+                                        <IconTrophy className="w-12 h-12 text-yellow-300"/>
                                     </div>
                                 </div>
                                 <div className="md:col-span-10 text-center md:text-left">
