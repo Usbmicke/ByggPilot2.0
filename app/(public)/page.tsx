@@ -78,8 +78,8 @@ const CustomAnimationsStyle = () => (
   <style>{`
     @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 12px 0px rgba(56, 189, 248, 0.3); } 50% { box-shadow: 0 0 20px 3px rgba(56, 189, 248, 0.5); } }
     .animate-pulse-glow { animation: pulse-glow 4s infinite ease-in-out; }
-    @keyframes float-up { 0% { transform: translateY(0); opacity: 0; } 10%, 90% { opacity: 1; } 100% { transform: translateY(-100vh); opacity: 0; } }
-    .particle { position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.3); animation-name: float-up; animation-timing-function: linear; animation-iteration-count: infinite; }
+    @keyframes float-up { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: 0.7; } 90% { opacity: 0.7; } 100% { transform: translateY(-100vh); opacity: 0; } }
+    .particle { position: absolute; border-radius: 50%; background: white; animation-name: float-up; animation-timing-function: linear; animation-iteration-count: infinite; }
   `}</style>
 );
 
@@ -87,14 +87,14 @@ const AnimatedBackground = () => {
     const [particles, setParticles] = useState([]);
 
     useEffect(() => {
-        const newParticles = Array.from({ length: 50 }).map((_, i) => {
-            const size = Math.random() * 2 + 1;
+        const newParticles = Array.from({ length: 150 }).map((_, i) => {
+            const size = Math.random() * 1.5 + 0.5;
             const style = { 
                 width: `${size}px`, 
                 height: `${size}px`, 
                 left: `${Math.random() * 100}%`, 
-                animationDelay: `${Math.random() * 20}s`, 
-                animationDuration: `${Math.random() * 15 + 10}s` 
+                animationDelay: `${Math.random() * 40}s`, 
+                animationDuration: `${Math.random() * 20 + 20}s` 
             };
             return <div key={i} className="particle" style={style}></div>;
         });
@@ -102,8 +102,7 @@ const AnimatedBackground = () => {
     }, []);
 
     return (
-        <div className="absolute inset-0 -z-10 overflow-hidden bg-gray-900">
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:3rem_3rem]"></div>
+        <div className="fixed inset-0 -z-10 overflow-hidden bg-[#0B2545]">
             {particles}
         </div>
     );
@@ -120,11 +119,11 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="bg-gray-900 text-gray-200 font-sans">
+    <div className="text-gray-200 font-sans">
       <CustomAnimationsStyle />
       <AnimatedBackground />
       
-      <div className="relative z-10 flex flex-col min-h-screen">
+      <div className="relative z-10 flex flex-col min-h-screen bg-transparent">
         {/* --- HEADER --- */}
         <header className="sticky top-0 z-50 bg-gray-900/80 backdrop-blur-sm border-b border-white/10">
           <div className="container mx-auto px-4 sm:px-6 py-3 flex justify-between items-center">
@@ -170,7 +169,7 @@ export default function LandingPage() {
           </section>
 
           {/* --- PROBLEM SECTION --- */}
-          <section className="py-16 md:py-24 bg-black/20">
+          <section className="py-16 md:py-24">
             <div className="container mx-auto px-6">
               <h2 className="text-3xl md:text-4xl font-bold text-center text-white mb-12">Det administrativa kaoset som stjäl din lönsamhet</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -193,7 +192,7 @@ export default function LandingPage() {
           </section>
 
           {/* --- FEATURES SECTION --- */}
-          <section className="py-16 md:py-24 bg-black/20">
+          <section className="py-16 md:py-24">
               <div className="container mx-auto px-6">
                   <div className="text-center max-w-3xl mx-auto">
                       <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Planeringen är A och O – men vem har tid?</h2>
@@ -254,7 +253,7 @@ export default function LandingPage() {
         </main>
         
         {/* --- FOOTER --- */}
-        <footer className="bg-gray-900/80 border-t border-white/10 mt-16">
+        <footer className="border-t border-white/10 mt-16">
           <div className="container mx-auto px-6 py-6 text-center text-gray-500 text-sm">
             © {new Date().getFullYear()} ByggPilot AB | Integritetspolicy | Användarvillkor
           </div>
@@ -262,8 +261,8 @@ export default function LandingPage() {
       </div>
 
       <ProTipsModal 
-        isOpen={isProTipsModalOpen} 
-        onClose={() => setIsProTipsModalOpen(false)} 
+        isOpen={isProTipsModalOpen}
+        onClose={() => setIsProTipsModalOpen(false)}
       />
     </div>
   );
