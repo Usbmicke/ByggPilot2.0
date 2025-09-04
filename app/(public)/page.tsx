@@ -53,7 +53,7 @@ const IconWalletMinus = (props) => (
 // --- ÅTERANVÄNDBARA KOMPONENTER --- 
 
 const cardBaseStyle = "bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-6 transition-all duration-300";
-const cardHoverEffect = "hover:scale-105 hover:shadow-[0_0_25px_rgba(233,213,128,0.3)] hover:border-yellow-300/50";
+const cardHoverEffect = "hover:scale-105 hover:shadow-[0_0_25px_rgba(156,163,175,0.2)] hover:border-gray-400/50";
 
 const ProblemCard = ({ icon, title, problem, solution }) => (
     <div className={`${cardBaseStyle} ${cardHoverEffect}`}>
