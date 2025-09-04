@@ -186,7 +186,7 @@ export default function LandingPage() {
             <div className="container mx-auto px-6 text-center">
                 <h2 className="text-3xl md:text-4xl font-bold text-white mb-8">Se hur din digitala kollega tar hand om administrationen.</h2>
                 <div className="max-w-4xl mx-auto aspect-video bg-gray-800 border border-gray-700 rounded-lg flex items-center justify-center text-gray-500 overflow-hidden relative">
-                    <Image src="/images/byggpilot.png" alt="Arbetsflödet i ByggPilot" fill style={{ objectFit: 'cover' }} />
+                    <Image src="/images/byggpilot.png" alt="Arbetsflödet i ByggPilot" fill sizes="100vw" style={{ objectFit: 'cover' }} />
                 </div>
             </div>
           </section>

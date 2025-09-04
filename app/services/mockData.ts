@@ -1,93 +1,110 @@
-import { Project, Customer, Contact, Document, ProjectStatus } from '@/app/types';
+import { Project, TodoItem, Notification, ProjectStatus, Customer, Contact, Document } from '@/app/types';
 
-const customers: Customer[] = [
-    { id: 'c1', name: 'Familjen Nilsson', contactPerson: 'Lars Nilsson', email: 'lars.nilsson@privat.se', phone: '070-123 45 67' },
-    { id: 'c2', name: 'BRF Utsikten', contactPerson: 'Anna Lind', email: 'anna.lind@brfutsikten.se', phone: '072-234 56 78' },
-    { id: 'c3', name: 'Erik Johansson', contactPerson: 'Erik Johansson', email: 'erik.j@gmail.com', phone: '073-345 67 89' },
-    { id: 'c4', name: 'Lena Berggren', contactPerson: 'Lena Berggren', email: 'lena.b@work.se', phone: '076-456 78 90' },
+// --- Kunder ---
+const customerPersson: Customer = {
+    id: 'cust_01',
+    name: 'Familjen Persson',
+    contactPerson: 'Lars Persson',
+    email: 'lars.persson@example.com',
+    phone: '070-123 45 67'
+};
+
+const customerBrf: Customer = {
+    id: 'cust_02',
+    name: 'BRF Utsikten',
+    contactPerson: 'Anna Andersson',
+    email: 'anna.andersson@brfutsikten.se',
+    phone: '070-987 65 43'
+};
+
+const customerNilsson: Customer = {
+    id: 'cust_03',
+    name: 'Karin Nilsson',
+    contactPerson: 'Karin Nilsson',
+    email: 'karin.nilsson@gmail.com',
+    phone: '070-555 12 12'
+};
+
+export const mockCustomers: Customer[] = [customerPersson, customerBrf, customerNilsson];
+
+// --- Kontakter ---
+const contactsVillaPersson: Contact[] = [
+    { id: 'con_01', name: 'Elfirman AB', role: 'Elektriker', email: 'kontakt@elfirman.se', phone: '08-111 222' },
+    { id: 'con_02', name: 'Rörmokarn', role: 'VVS', email: 'info@rormokarn.nu', phone: '08-333 444' },
 ];
 
-const contacts: Contact[] = [
-    { id: 'ct1', name: 'Elfirman AB', role: 'Elektriker', email: 'kontakt@elfirman.se', phone: '08-111 22 33' },
-    { id: 'ct2', name: 'Rörmokarn i Stan', role: 'VVS', email: 'info@rormokarnistan.se', phone: '08-444 55 66' },
-    { id: 'ct3', name: 'Måleri & Färg', role: 'Målare', email: 'order@maleri.se', phone: '08-777 88 99' },
-    { id: 'ct4', name: 'Arkitektbyrån Vision', role: 'Arkitekt', email: 'kontakt@visionark.se', phone: '08-999 88 77'},
+const contactsBrf: Contact[] = [
+    { id: 'con_03', name: 'Stål & Betong AB', role: 'Konstruktör', email: 'info@stalochbetong.se', phone: '08-555 666' },
 ];
 
-const projects: Project[] = [
-  { 
-    id: 'p1', 
-    name: 'Villa Ekhagen', 
-    customer: customers[0], 
-    address: 'Ekvägen 12, 123 45 Storstad', 
-    status: ProjectStatus.ONGOING, 
-    progress: 75, 
-    lat: 59.3293, 
+// --- Dokument ---
+const documentsVillaPersson: Document[] = [
+    { id: 'doc_01', name: '01_Kunder & Anbud', type: 'folder', lastModified: '2023-10-10' },
+    { id: 'doc_02', name: 'Ritning A-12.pdf', type: 'file', lastModified: '2023-10-12' },
+    { id: 'doc_03', name: 'Offert_Villa_Persson.pdf', type: 'file', lastModified: '2023-09-28' },
+];
+
+const documentsBrf: Document[] = [
+     { id: 'doc_04', name: '02_Pågående Projekt', type: 'folder', lastModified: '2023-11-01' },
+];
+
+// --- Projekt ---
+export const mockProjects: Project[] = [
+  {
+    id: 'proj_01',
+    name: 'Villa Persson - Tillbyggnad',
+    customer: customerPersson,
+    address: 'Parkvägen 12, 123 45, Stockholm',
+    status: ProjectStatus.ONGOING,
+    progress: 75,
+    lat: 59.3293,
     lon: 18.0686,
     entreprenadform: 'Generalentreprenad',
     ansvarig: 'Micke',
-    contacts: [contacts[0], contacts[1], contacts[2]],
-    documents: [
-        { id: 'd1-1', name: 'Förfrågningsunderlag', type: 'document', lastModified: '2024-05-10' },
-        { id: 'd1-2', name: 'Ritningar', type: 'folder', lastModified: '2024-05-11' },
-        { id: 'd1-3', name: 'Bilder', type: 'folder', lastModified: '2024-06-20' },
-        { id: 'd1-4', name: 'Offert från Elfirman AB', type: 'document', lastModified: '2024-05-15' },
-    ]
+    contacts: contactsVillaPersson,
+    documents: documentsVillaPersson,
   },
-  { 
-    id: 'p2', 
-    name: 'BRF Utsikten Fasadrenovering', 
-    customer: customers[1], 
-    address: 'Bergsgatan 1, 123 45 Storstad', 
-    status: ProjectStatus.ONGOING, 
-    progress: 40, 
-    lat: 59.3320, 
-    lon: 18.0551,
+  {
+    id: 'proj_02',
+    name: 'BRF Utsikten - Balkongrenovering',
+    customer: customerBrf,
+    address: 'Sjögatan 8, 111 22, Stockholm',
+    status: ProjectStatus.PLANNING,
+    progress: 15,
+    lat: 59.3323,
+    lon: 18.0746,
     entreprenadform: 'Totalentreprenad',
     ansvarig: 'Micke',
-    contacts: [contacts[3]],
-    documents: [
-        { id: 'd2-1', name: 'Avtal', type: 'document', lastModified: '2024-04-01' },
-        { id: 'd2-2', name: 'KMA-Plan', type: 'document', lastModified: '2024-04-20' },
-    ]
+    contacts: contactsBrf,
+    documents: documentsBrf,
   },
-  { 
-    id: 'p3', 
-    name: 'Attefallshus', 
-    customer: customers[2], 
-    address: 'Sjöstigen 8, 123 45 Storstad', 
-    status: ProjectStatus.PLANNING, 
-    progress: 10, 
-    lat: 59.3345, 
-    lon: 18.0632,
+  {
+    id: 'proj_03',
+    name: 'Köksrenovering hos Nilsson',
+    customer: customerNilsson,
+    address: 'Gamla Vägen 3, 543 21, Uppsala',
+    status: ProjectStatus.COMPLETED,
+    progress: 100,
+    lat: 59.8586,
+    lon: 17.6389,
     entreprenadform: 'Delad entreprenad',
     ansvarig: 'Micke',
-    contacts: [contacts[0]],
-    documents: [
-         { id: 'd3-1', name: 'Bygglovsansökan', type: 'document', lastModified: '2024-06-05' },
-    ]
-  },
-  { 
-    id: 'p4', 
-    name: 'Takbyte Sommarstugan', 
-    customer: customers[3], 
-    address: 'Skogsvägen 22, 678 90 Småby', 
-    status: ProjectStatus.COMPLETED, 
-    progress: 100, 
-    lat: 58.4108, 
-    lon: 15.6214,
-    entreprenadform: 'Generalentreprenad',
-    ansvarig: 'Micke',
     contacts: [],
-    documents: [
-        { id: 'd4-1', name: 'Slutfaktura', type: 'spreadsheet', lastModified: '2024-05-30' },
-        { id: 'd4-2', name: 'Besiktningsprotokoll', type: 'document', lastModified: '2024-05-28' },
-    ]
+    documents: [],
   },
 ];
 
-export const mockData = {
-    projects,
-    customers,
-    contacts,
-}
+// --- Att Göra-lista ---
+export const mockTodos: TodoItem[] = [
+    { id: 'todo_01', text: 'Beställa fönster till Villa Persson', completed: false },
+    { id: 'todo_02', text: 'Skicka in KMA-pärm för BRF Utsikten', completed: false },
+    { id: 'todo_03', text: 'Fakturera Nilsson för köksrenovering', completed: true },
+    { id: 'todo_04', text: 'Boka uppstartsmöte med Elfirman AB', completed: false },
+];
+
+// --- Notifikationer ---
+export const mockNotifications: Notification[] = [
+    { id: 1, text: 'Nytt ÄTA-arbete tillagt för Villa Persson', read: false },
+    { id: 2, text: 'Ritning A-13 har laddats upp för BRF Utsikten', read: false },
+    { id: 3, text: 'Påminnelse: Projektbesiktning för Nilsson imorgon kl 10:00', read: true },
+];

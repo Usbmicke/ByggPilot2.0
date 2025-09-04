@@ -3,7 +3,7 @@ import React from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/app/providers/AuthContext';
 import { IconDashboard, IconProjects, IconDocuments, IconCustomers, IconPlus, IconSettings, IconLightbulb } from '@/app/constants';
-import { View } from '@/app/dashboard/page'; // This will need to be created
+import { View } from '@/app/dashboard/page';
 
 interface NavItemProps {
     icon: React.ReactNode;
@@ -28,9 +28,10 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, active, onClick }) => (
 interface SidebarProps {
     activeView: View;
     onNavClick: (view: View) => void;
+    onStartQuoteFlow: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavClick }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavClick, onStartQuoteFlow }) => {
   const { user, logout } = useAuth();
 
   return (
@@ -46,9 +47,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavClick }) => {
         <NavItem icon={<IconCustomers className="w-6 h-6" />} label="Kunder" active={activeView === 'CUSTOMERS'} onClick={() => onNavClick('CUSTOMERS')} />
       </nav>
       <div className="px-4 py-4 space-y-4">
-        <button className="w-full flex items-center justify-center gap-2 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40">
+        <button 
+            onClick={onStartQuoteFlow}
+            className="w-full flex items-center justify-center gap-2 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40">
           <IconPlus className="w-5 h-5" />
-          <span>Nytt Projekt</span>
+          <span>Skapa Offert</span>
         </button>
       </div>
       <div className="border-t border-gray-700 p-4">

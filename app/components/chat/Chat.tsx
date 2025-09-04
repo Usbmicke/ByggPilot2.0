@@ -3,61 +3,51 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/app/providers/AuthContext';
 import { ChatMessage, MessageSender } from '@/app/types';
-import { IconSend, IconChevronDown, IconChevronUp, IconPaperclip, IconMic, IconFolder, IconMail } from '@/app/constants';
+import { IconSend, IconChevronDown, IconChevronUp, IconPaperclip, IconMic } from '@/app/constants';
+import { quoteFlowScript } from '@/app/services/quoteFlowScript';
 
 interface ChatProps {
     isExpanded: boolean;
     setExpanded: (expanded: boolean) => void;
+    startQuoteFlow: boolean;
+    onQuoteFlowComplete: () => void;
 }
 
-const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded }) => {
-    const { accessToken } = useAuth();
+const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded, startQuoteFlow, onQuoteFlowComplete }) => {
+    const { isDemo } = useAuth();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [isApiCallInProgress, setIsApiCallInProgress] = useState(false);
     const [placeholder, setPlaceholder] = useState('Ställ en fråga till ByggPilot...');
     const chatEndRef = useRef<HTMLDivElement>(null);
-
-    const handleCreateStructure = async () => {
-        if (isApiCallInProgress) return;
-        setIsApiCallInProgress(true);
-        try {
-            await fetch('/api/google/create-drive-structure', { method: 'POST' });
-            alert('Försöker skapa mappstruktur i Google Drive!');
-        } catch (error) {
-            console.error("Fel vid skapande av mappstruktur", error);
-            alert('Kunde inte skapa mappstruktur.');
-        } finally {
-            setIsApiCallInProgress(false);
-        }
-    };
-
-    const handleReadMail = async () => {
-        if (isApiCallInProgress) return;
-        if (!accessToken) {
-            alert('Access token saknas!');
-            return;
-        }
-        setIsApiCallInProgress(true);
-        try {
-            await fetch('/api/google', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ accessToken }),
-            });
-            alert('Försöker läsa mail och skapa kalenderhändelse!');
-        } catch (error) {
-            console.error("Fel vid läsning av mail", error);
-            alert('Kunde inte läsa mail.');
-        } finally {
-            setIsApiCallInProgress(false);
-        }
-    };
 
     const scrollToBottom = () => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
+
+    // Effekt för att hantera start av offert-flöde
+    useEffect(() => {
+        if (startQuoteFlow && isDemo) {
+            setMessages([]); // Rensa tidigare meddelanden
+            setIsLoading(true);
+
+            let scriptIndex = 0;
+            const runScript = () => {
+                if (scriptIndex < quoteFlowScript.length) {
+                    const item = quoteFlowScript[scriptIndex];
+                    setMessages(prev => [...prev, item.message]);
+                    scriptIndex++;
+                    setTimeout(runScript, item.delay);
+                } else {
+                    setIsLoading(false);
+                    onQuoteFlowComplete(); // Meddela att flödet är klart
+                }
+            };
+
+            setTimeout(runScript, 500); // Starta flödet efter en kort paus
+        }
+    }, [startQuoteFlow, isDemo, onQuoteFlowComplete]);
+
 
     useEffect(() => {
         if (isExpanded) {
@@ -65,8 +55,9 @@ const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded }) => {
         }
     }, [messages, isExpanded]);
     
+    // Välkomstmeddelande
     useEffect(() => {
-        if(isExpanded && messages.length === 0){
+        if(isExpanded && messages.length === 0 && !startQuoteFlow){
             setIsLoading(true);
             setTimeout(() => {
                  setMessages([
@@ -76,8 +67,9 @@ const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded }) => {
                 setIsLoading(false);
             }, 1000);
         }
-    }, [isExpanded, messages.length]);
+    }, [isExpanded, messages.length, startQuoteFlow]);
 
+    // Roterande placeholders
     useEffect(() => {
         const placeholders = [
             "Skapa en riskanalys för Villa Ekhagen...",
@@ -95,7 +87,7 @@ const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded }) => {
     }, []);
 
     const handleSend = useCallback(async () => {
-        if (input.trim() === '' || isLoading) return;
+        if (input.trim() === '' || isLoading || (startQuoteFlow && isDemo)) return; // Inaktivera sändning under demo-flöde
     
         const userMessage: ChatMessage = {
           id: `user-${Date.now()}`,
@@ -105,8 +97,8 @@ const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded }) => {
     
         setMessages(prev => [...prev, userMessage]);
         setInput('');
-        // Removed AI call logic
-    }, [input, isLoading]);
+        // Här skulle logik för att anropa AI finnas i live-läge
+    }, [input, isLoading, startQuoteFlow, isDemo]);
 
     const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
@@ -130,11 +122,10 @@ const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded }) => {
                                     : 'bg-gray-700 text-gray-200 rounded-bl-none'
                                 }`}>
                                     <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
-                                    {msg.isStreaming && <span className="inline-block w-2 h-2 ml-1 bg-gray-400 rounded-full animate-pulse"></span>}
                                 </div>
                             </div>
                         ))}
-                        {isLoading && messages[messages.length-1]?.sender !== MessageSender.AI && (
+                        {isLoading && (
                             <div className="flex items-end gap-2 justify-start">
                                 <Image src="/images/byggpilotlogga1.png" alt="BP" width={32} height={32} className="w-8 h-8 p-1.5 rounded-full bg-gray-700 flex-shrink-0"/>
                                 <div className="px-4 py-3 bg-gray-700 rounded-2xl rounded-bl-none">
@@ -148,16 +139,7 @@ const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded }) => {
                         )}
                         <div ref={chatEndRef} />
                     </div>
-                    <div className="p-3 border-t border-gray-700">
-                        <div className="flex items-center justify-center gap-2">
-                            <button onClick={handleCreateStructure} disabled={isApiCallInProgress} className="flex-1 flex items-center justify-center gap-2 bg-gray-700/80 text-gray-200 text-xs font-semibold py-2 px-3 rounded-md hover:bg-cyan-500 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                                <IconFolder className="w-4 h-4"/> Skapa Mappstruktur
-                            </button>
-                            <button onClick={handleReadMail} disabled={isApiCallInProgress} className="flex-1 flex items-center justify-center gap-2 bg-gray-700/80 text-gray-200 text-xs font-semibold py-2 px-3 rounded-md hover:bg-cyan-500 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                                <IconMail className="w-4 h-4"/> Läs Mail & Skapa Event
-                            </button>
-                        </div>
-                    </div>
+                    {/* Borttagna knappar för mappstruktur och mail-läsning under chatten */}
                 </div>
             </div>
 
@@ -175,10 +157,10 @@ const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded }) => {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyPress={handleKeyPress}
-                        onFocus={() => setExpanded(true)}
+                        onFocus={() => { if(!startQuoteFlow) setExpanded(true) }}
                         placeholder={placeholder}
                         className="flex-grow bg-transparent p-2 text-sm text-gray-200 focus:outline-none"
-                        disabled={isLoading}
+                        disabled={isLoading || (startQuoteFlow && isDemo)}
                     />
                     <button className="p-2 text-gray-400 hover:text-cyan-400 transition-colors" aria-label="Bifoga fil">
                         <IconPaperclip className="w-5 h-5"/>
@@ -188,7 +170,7 @@ const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded }) => {
                     </button>
                     <button 
                         onClick={handleSend}
-                        disabled={isLoading || input.trim() === ''}
+                        disabled={isLoading || input.trim() === '' || (startQuoteFlow && isDemo)}
                         className="p-3 text-cyan-500 disabled:text-gray-500 hover:text-cyan-400 transition-colors"
                         aria-label="Skicka meddelande"
                     >

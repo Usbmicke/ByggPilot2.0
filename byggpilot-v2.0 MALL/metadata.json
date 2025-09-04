@@ -1,8 +1,0 @@
-{
-  "name": "ByggPilot v2.0 - AI Project Assistant",
-  "description": "An AI-powered project management assistant for small construction companies in Sweden, designed to integrate with Google Workspace and automate administrative tasks.",
-  "requestFramePermissions": [
-    "microphone"
-  ],
-  "prompt": ""
-}

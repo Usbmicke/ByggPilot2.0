@@ -2,11 +2,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/app/providers/AuthContext';
 import Sidebar from '@/app/components/layout/Sidebar';
-import Header from '@/app/components/Header';
+import Header from '@/app/components/layout/Header';
 import Chat from '@/app/components/chat/Chat';
 import { Notification } from '@/app/types';
-// import SettingsModal from '@/app/components/layout/SettingsModal'; // Skapas senare
-import { mockData } from '@/app/services/mockData';
+import { mockProjects, mockTodos, mockNotifications, mockCustomers } from '@/app/services/mockData';
 import DashboardView from '@/app/components/views/DashboardView';
 import ProjectsView from '@/app/components/views/ProjectsView';
 import DocumentsView from '@/app/components/views/DocumentsView';
@@ -25,8 +24,9 @@ export default function DashboardPage() {
 
     const [activeView, setActiveView] = useState<View>('DASHBOARD');
     const [isChatExpanded, setIsChatExpanded] = useState(false);
+    const [startQuoteFlow, setStartQuoteFlow] = useState(false);
 
-    // Settings state (kan flyttas till context senare)
+    // Settings state
     const [showWeatherWidget, setShowWeatherWidget] = useState(true);
     const [showTodoWidget, setShowTodoWidget] = useState(true);
 
@@ -38,27 +38,27 @@ export default function DashboardPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState<{ type: string; data: any }[]>([]);
 
+    useEffect(() => {
+        if (isDemo) {
+            setNotifications(mockNotifications);
+        }
+    }, [isDemo]);
+
     const handleNavClick = (view: View) => {
         setActiveView(view);
         setIsChatExpanded(false);
-        setSearchTerm(''); // Rensa sökning vid vybyte
+        setSearchTerm('');
     };
 
-    // Simulera nya notiser för demo
-    useEffect(() => {
-        if (isDemo) {
-            const interval = setInterval(() => {
-                const newNotification: Notification = {
-                    id: Date.now(),
-                    text: `Familjen Nilsson har mailat om ev. ändringar kring kaklet i badrum 2.`,
-                    read: false,
-                };
-                setNotifications(prev => [newNotification, ...prev]);
-            }, 30000); // Ny notis var 30:e sekund
-
-            return () => clearInterval(interval);
+    const handleStartQuoteFlow = () => {
+        if (!isDemo) {
+            // Hantera live-läge senare
+            alert('Denna funktion är endast tillgänglig i demoläget just nu.');
+            return;
         }
-    }, [isDemo]);
+        setStartQuoteFlow(true);
+        setIsChatExpanded(true);
+    };
     
     const markNotificationsAsRead = () => {
         setTimeout(() => {
@@ -66,10 +66,9 @@ export default function DashboardPage() {
         }, 2000);
     };
 
-    // Hantera sökning
     const handleSearch = useCallback((term: string) => {
         setSearchTerm(term);
-        if (term.length < 2 || !isDemo) { // Sökning fungerar bara i demoläge
+        if (term.length < 2 || !isDemo) {
             setSearchResults([]);
             return;
         }
@@ -77,19 +76,20 @@ export default function DashboardPage() {
         const lowerCaseTerm = term.toLowerCase();
         const results: { type: string; data: any }[] = [];
 
-        mockData.projects.forEach(p => {
+        mockProjects.forEach(p => {
             if (p.name.toLowerCase().includes(lowerCaseTerm) || p.customer.name.toLowerCase().includes(lowerCaseTerm)) {
                 results.push({ type: 'Projekt', data: p });
             }
+            p.documents.forEach(d => {
+                if (d.name.toLowerCase().includes(lowerCaseTerm)) {
+                     results.push({ type: 'Dokument', data: { ...d, projectName: p.name } });
+                }
+            });
         });
-        mockData.customers.forEach(c => {
+
+        mockCustomers.forEach(c => {
             if (c.name.toLowerCase().includes(lowerCaseTerm) || c.contactPerson.toLowerCase().includes(lowerCaseTerm)) {
                 results.push({ type: 'Kund', data: c });
-            }
-        });
-        mockData.projects.flatMap(p => p.documents).forEach(d => {
-            if (d.name.toLowerCase().includes(lowerCaseTerm)) {
-                 results.push({ type: 'Dokument', data: d });
             }
         });
 
@@ -97,7 +97,9 @@ export default function DashboardPage() {
     }, [isDemo]);
 
     const renderView = () => {
-        const data = isDemo ? mockData : { projects: [], customers: [], contacts: [] };
+        const data = isDemo 
+            ? { projects: mockProjects, customers: mockCustomers, todos: mockTodos } 
+            : { projects: [], customers: [], todos: [] };
 
         switch (activeView) {
             case 'PROJECTS':
@@ -110,6 +112,7 @@ export default function DashboardPage() {
             default:
                 return <DashboardView 
                             projects={data.projects} 
+                            todos={data.todos}
                             showWeather={showWeatherWidget}
                             showTodo={showTodoWidget}
                         />;
@@ -122,6 +125,7 @@ export default function DashboardPage() {
             <Sidebar 
                 activeView={activeView}
                 onNavClick={handleNavClick} 
+                onStartQuoteFlow={handleStartQuoteFlow}
             />
             <div className="flex-1 flex flex-col overflow-hidden">
                 <Header 
@@ -141,9 +145,13 @@ export default function DashboardPage() {
                 <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-8 relative">
                     {renderView()}
                 </main>
-                <Chat isExpanded={isChatExpanded} setExpanded={setIsChatExpanded} />
+                <Chat 
+                    isExpanded={isChatExpanded} 
+                    setExpanded={setIsChatExpanded}
+                    startQuoteFlow={startQuoteFlow}
+                    onQuoteFlowComplete={() => setStartQuoteFlow(false)}
+                />
             </div>
-            {/* Modaler kan implementeras senare för inställningar */}
         </div>
     );
 };
