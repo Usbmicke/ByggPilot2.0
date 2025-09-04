@@ -4,17 +4,14 @@ import Image from 'next/image';
 import { useAuth } from '@/app/providers/AuthContext';
 import { ChatMessage, MessageSender } from '@/app/types';
 import { IconSend, IconChevronDown, IconChevronUp, IconPaperclip, IconMic } from '@/app/constants';
-import { quoteFlowScript } from '@/app/services/quoteFlowScript';
 
 interface ChatProps {
     isExpanded: boolean;
     setExpanded: (expanded: boolean) => void;
-    startQuoteFlow: boolean;
-    onQuoteFlowComplete: () => void;
 }
 
-const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded, startQuoteFlow, onQuoteFlowComplete }) => {
-    const { isDemo } = useAuth();
+const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded }) => {
+    const { isDemo, user } = useAuth(); // Hämta användarinfo
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -25,49 +22,36 @@ const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded, startQuoteFlow, on
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
-    // Effekt för att hantera start av offert-flöde
-    useEffect(() => {
-        if (startQuoteFlow && isDemo) {
-            setMessages([]); // Rensa tidigare meddelanden
-            setIsLoading(true);
-
-            let scriptIndex = 0;
-            const runScript = () => {
-                if (scriptIndex < quoteFlowScript.length) {
-                    const item = quoteFlowScript[scriptIndex];
-                    setMessages(prev => [...prev, item.message]);
-                    scriptIndex++;
-                    setTimeout(runScript, item.delay);
-                } else {
-                    setIsLoading(false);
-                    onQuoteFlowComplete(); // Meddela att flödet är klart
-                }
-            };
-
-            setTimeout(runScript, 500); // Starta flödet efter en kort paus
-        }
-    }, [startQuoteFlow, isDemo, onQuoteFlowComplete]);
-
-
     useEffect(() => {
         if (isExpanded) {
             scrollToBottom();
         }
     }, [messages, isExpanded]);
     
-    // Välkomstmeddelande
+    // Anpassat välkomstmeddelande
     useEffect(() => {
-        if(isExpanded && messages.length === 0 && !startQuoteFlow){
+        if(isExpanded && messages.length === 0){
             setIsLoading(true);
             setTimeout(() => {
-                 setMessages([
-                    { id: 'welcome-1', sender: MessageSender.AI, text: "Välkommen till ByggPilot! Jag är din digitala kollega." },
-                    { id: 'welcome-2', sender: MessageSender.AI, text: "Hur kan jag hjälpa dig idag?" }
-                ]);
+                let welcomeMessages: ChatMessage[];
+                if (user) {
+                    // Inloggad användare
+                    welcomeMessages = [
+                        { id: 'welcome-1', sender: MessageSender.AI, text: `Hej ${user.name || 'igen'}! Välkommen tillbaka till ByggPilot.` },
+                        { id: 'welcome-2', sender: MessageSender.AI, text: "Behöver du skapa ett nytt projekt, eller kanske sammanfatta ett mail? Säg bara till!" }
+                    ];
+                } else {
+                    // Oinloggad (demo) användare
+                    welcomeMessages = [
+                        { id: 'welcome-1', sender: MessageSender.AI, text: "Välkommen till ByggPilot! Jag är din digitala kollega." },
+                        { id: 'welcome-2', sender: MessageSender.AI, text: "Detta är ett demoläge. Logga in för att låsa upp full funktionalitet." }
+                    ];
+                }
+                setMessages(welcomeMessages);
                 setIsLoading(false);
-            }, 1000);
+            }, 500);
         }
-    }, [isExpanded, messages.length, startQuoteFlow]);
+    }, [isExpanded, messages.length, user]);
 
     // Roterande placeholders
     useEffect(() => {
@@ -87,7 +71,7 @@ const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded, startQuoteFlow, on
     }, []);
 
     const handleSend = useCallback(async () => {
-        if (input.trim() === '' || isLoading || (startQuoteFlow && isDemo)) return; // Inaktivera sändning under demo-flöde
+        if (input.trim() === '' || isLoading) return;
     
         const userMessage: ChatMessage = {
           id: `user-${Date.now()}`,
@@ -97,8 +81,8 @@ const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded, startQuoteFlow, on
     
         setMessages(prev => [...prev, userMessage]);
         setInput('');
-        // Här skulle logik för att anropa AI finnas i live-läge
-    }, [input, isLoading, startQuoteFlow, isDemo]);
+        // TODO: Här ska logik för att anropa AI finnas i live-läge
+    }, [input, isLoading]);
 
     const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
@@ -139,7 +123,6 @@ const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded, startQuoteFlow, on
                         )}
                         <div ref={chatEndRef} />
                     </div>
-                    {/* Borttagna knappar för mappstruktur och mail-läsning under chatten */}
                 </div>
             </div>
 
@@ -157,10 +140,10 @@ const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded, startQuoteFlow, on
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyPress={handleKeyPress}
-                        onFocus={() => { if(!startQuoteFlow) setExpanded(true) }}
+                        onFocus={() => setExpanded(true)}
                         placeholder={placeholder}
                         className="flex-grow bg-transparent p-2 text-sm text-gray-200 focus:outline-none"
-                        disabled={isLoading || (startQuoteFlow && isDemo)}
+                        disabled={isLoading}
                     />
                     <button className="p-2 text-gray-400 hover:text-cyan-400 transition-colors" aria-label="Bifoga fil">
                         <IconPaperclip className="w-5 h-5"/>
@@ -170,7 +153,7 @@ const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded, startQuoteFlow, on
                     </button>
                     <button 
                         onClick={handleSend}
-                        disabled={isLoading || input.trim() === '' || (startQuoteFlow && isDemo)}
+                        disabled={isLoading || input.trim() === ''}
                         className="p-3 text-cyan-500 disabled:text-gray-500 hover:text-cyan-400 transition-colors"
                         aria-label="Skicka meddelande"
                     >
