@@ -85,7 +85,7 @@ const ProTipsModal = ({ isOpen, onClose }) => {
                 }
             `}</style>
             <div
-                className="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl w-full max-w-6xl relative max-h-[90vh] flex flex-col"
+                className="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl w-full max-w-4xl relative max-h-[90vh] flex flex-col"
                 onClick={e => e.stopPropagation()}
             >
                 <div className="p-6 md:p-8 border-b border-gray-700 flex-shrink-0">
@@ -102,7 +102,7 @@ const ProTipsModal = ({ isOpen, onClose }) => {
                 </div>
 
                 <div className="overflow-y-auto p-6 md:p-8">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="flex flex-col gap-6">
 
                         <TipCard icon={<IconGavel className="w-6 h-6" />} title="Rätt avtal för rätt jobb – En snabbguide">
                             <p>Visste du att många i branschen blandar ihop entreprenadformer och upphandlingsformer? Att ha koll på detta visar på professionalism och säkerställer att du och din beställare har samsyn kring ansvaret.</p>
