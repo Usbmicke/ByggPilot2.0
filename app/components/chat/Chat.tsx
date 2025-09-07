@@ -1,116 +1,167 @@
+
 'use client';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
-import { useAuth } from '@/app/providers/AuthContext';
-import { ChatMessage, MessageSender } from '@/app/types';
-import { IconSend, IconChevronDown, IconChevronUp, IconPaperclip, IconMic } from '@/app/constants';
+import { ChatMessage } from '@/app/types';
+import { IconSend, IconChevronDown, IconPaperclip, IconMic } from '@/app/constants';
 
+// 1. Uppdatera Props
 interface ChatProps {
     isExpanded: boolean;
     setExpanded: (expanded: boolean) => void;
+    startQuoteFlow: boolean; // Behållen för bakåtkompatibilitet
+    onQuoteFlowComplete: () => void; // Behållen för bakåtkompatibilitet
+    startOnboardingFlow: boolean;
+    onOnboardingComplete: () => void;
 }
 
-const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded }) => {
-    const { isDemo, user } = useAuth(); // Hämta användarinfo
+const MessageRenderer: React.FC<{ content: string; onButtonClick: (text: string) => void; isAssistant: boolean }> = ({ content, onButtonClick, isAssistant }) => {
+    const buttonRegex = /\\\[(.*?)\\]/g;
+    const parts = content.split(buttonRegex);
+
+    if (parts.length <= 1) {
+        return <p className="text-sm whitespace-pre-wrap">{content}</p>;
+    }
+
+    const messageContent = parts.filter((_, i) => i % 2 === 0).join('').trim();
+    const buttons = parts.filter((_, i) => i % 2 !== 0);
+
+    return (
+        <div>
+            {messageContent && <p className="text-sm whitespace-pre-wrap mb-3">{messageContent}</p>}
+            {isAssistant && buttons.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                    {buttons.map((buttonText, index) => (
+                        <button 
+                            key={index} 
+                            onClick={() => onButtonClick(buttonText)}
+                            className="bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-semibold py-1.5 px-3 rounded-lg transition-all duration-150 ease-in-out shadow-md"
+                        >
+                            {buttonText}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded, startQuoteFlow, onQuoteFlowComplete, startOnboardingFlow, onOnboardingComplete }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [placeholder, setPlaceholder] = useState('Ställ en fråga till ByggPilot...');
+    const [error, setError] = useState<string | null>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
 
-    const scrollToBottom = () => {
-        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
-
     useEffect(() => {
-        if (isExpanded) {
-            scrollToBottom();
-        }
+        if (isExpanded) chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isExpanded]);
     
-    // Anpassat välkomstmeddelande
+    // Effekt för standard välkomstmeddelande
     useEffect(() => {
-        if(isExpanded && messages.length === 0){
+        if(isExpanded && messages.length === 0 && !startOnboardingFlow){
             setIsLoading(true);
             setTimeout(() => {
-                let welcomeMessages: ChatMessage[];
-                if (user) {
-                    // Inloggad användare
-                    welcomeMessages = [
-                        { id: 'welcome-1', sender: MessageSender.AI, text: `Hej ${user.name || 'igen'}! Välkommen tillbaka till ByggPilot.` },
-                        { id: 'welcome-2', sender: MessageSender.AI, text: "Behöver du skapa ett nytt projekt, eller kanske sammanfatta ett mail? Säg bara till!" }
-                    ];
-                } else {
-                    // Oinloggad (demo) användare
-                    welcomeMessages = [
-                        { id: 'welcome-1', sender: MessageSender.AI, text: "Välkommen till ByggPilot! Jag är din digitala kollega." },
-                        { id: 'welcome-2', sender: MessageSender.AI, text: "Detta är ett demoläge. Logga in för att låsa upp full funktionalitet." }
-                    ];
-                }
-                setMessages(welcomeMessages);
+                setMessages([{
+                    id: 'welcome-1',
+                    role: 'assistant',
+                    content: "Hej! ByggPilot här, din digitala kollega. Vad kan jag hjälpa dig med idag?"
+                }]);
                 setIsLoading(false);
             }, 500);
         }
-    }, [isExpanded, messages.length, user]);
+    }, [isExpanded, messages.length, startOnboardingFlow]);
 
-    // Roterande placeholders
+    const sendMessage = useCallback(async (messageContent: string, isInitialOnboardingMessage = false) => {
+        if (messageContent.trim() === '' || isLoading) return;
+
+        let newMessages: ChatMessage[];
+        // Om det är det första onboarding-meddelandet, visa det inte i chatten.
+        if (isInitialOnboardingMessage) {
+            newMessages = [...messages];
+        } else {
+            const userMessage: ChatMessage = { id: `user-${Date.now()}`, role: 'user', content: messageContent };
+            newMessages = [...messages, userMessage];
+        }
+
+        setMessages(newMessages);
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const response = await fetch('/api/orchestrator', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: newMessages, trigger: isInitialOnboardingMessage ? 'onboarding_start' : undefined }),
+            });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error || 'Något gick fel med anropet till servern.');
+            }
+
+            const data = await response.json();
+            const assistantMessage: ChatMessage = { id: `assistant-${Date.now()}`, role: 'assistant', content: data.reply.content };
+            setMessages(prev => [...prev, assistantMessage]);
+
+        } catch (err: any) {
+            setError(err.message || 'Kunde inte få ett svar. Försök igen.');
+        } finally {
+            setIsLoading(false);
+            if (isInitialOnboardingMessage) {
+                onOnboardingComplete(); // 4. Återställ state
+            }
+        }
+    }, [isLoading, messages, onOnboardingComplete]);
+
+    // 2. Skapa useEffect-hook för onboarding
     useEffect(() => {
-        const placeholders = [
-            "Skapa en riskanalys för Villa Ekhagen...",
-            "Vilka uppgifter är kritiska den här veckan?",
-            "Sammanfatta senaste mailet från 'Elfirman AB'...",
-            "Vad är status på BRF Utsikten?",
-        ];
-        let placeholderIndex = 0;
-        const intervalId = setInterval(() => {
-            placeholderIndex = (placeholderIndex + 1) % placeholders.length;
-            setPlaceholder(placeholders[placeholderIndex]);
-        }, 5000);
+        if (startOnboardingFlow) {
+            setMessages([]); // Rensa historiken
+            // 3. Skicka startmeddelande till orchestratorn
+            sendMessage('@onboarding_start', true);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [startOnboardingFlow]);
 
-        return () => clearInterval(intervalId);
-    }, []);
-
-    const handleSend = useCallback(async () => {
-        if (input.trim() === '' || isLoading) return;
-    
-        const userMessage: ChatMessage = {
-          id: `user-${Date.now()}`,
-          sender: MessageSender.USER,
-          text: input,
-        };
-    
-        setMessages(prev => [...prev, userMessage]);
+    const handleSend = () => {
+        sendMessage(input);
         setInput('');
-        // TODO: Här ska logik för att anropa AI finnas i live-läge
-    }, [input, isLoading]);
+    };
+
+    const handleButtonClick = (buttonText: string) => {
+        sendMessage(buttonText);
+    };
 
     const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-            handleSend();
-        }
-    }
+        if (e.key === 'Enter') handleSend();
+    };
 
     return (
-        <div className="bg-gray-800 border-t border-gray-700 flex-shrink-0 z-10">
-            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'max-h-[80vh]' : 'max-h-0'}`}>
-                <div className="h-[80vh] flex flex-col">
+        <div className="bg-gray-800 border-t border-gray-700 flex-shrink-0 z-20 shadow-2xl">
+            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'max-h-[70vh]' : 'max-h-0'}`}>
+                <div className="h-[70vh] flex flex-col">
                     <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-gray-900/70">
-                        {messages.map(msg => (
-                            <div key={msg.id} className={`flex items-end gap-2 ${msg.sender === MessageSender.USER ? 'justify-end' : 'justify-start'}`}>
-                                {msg.sender === MessageSender.AI && (
-                                    <Image src="/images/byggpilotlogga1.png" alt="BP" width={32} height={32} className="w-8 h-8 p-1.5 rounded-full bg-gray-700 flex-shrink-0"/>
+                         {messages.map(msg => (
+                            <div key={msg.id} className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                {msg.role === 'assistant' && (
+                                    <Image src="/images/byggpilotlogga1.png" alt="BP" width={32} height={32} className="w-8 h-8 p-1.5 rounded-full bg-gray-700 flex-shrink-0 self-start"/>
                                 )}
-                                <div className={`max-w-xs md:max-w-sm px-4 py-2 rounded-2xl ${
-                                    msg.sender === MessageSender.USER 
+                                <div className={`max-w-xs md:max-w-md px-4 py-2 rounded-2xl ${
+                                    msg.role === 'user' 
                                     ? 'bg-cyan-500 text-white rounded-br-none' 
                                     : 'bg-gray-700 text-gray-200 rounded-bl-none'
                                 }`}>
-                                    <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                                   <MessageRenderer 
+                                        content={msg.content} 
+                                        onButtonClick={handleButtonClick} 
+                                        isAssistant={msg.role === 'assistant'}
+                                    />
                                 </div>
                             </div>
                         ))}
                         {isLoading && (
-                            <div className="flex items-end gap-2 justify-start">
+                           <div className="flex items-end gap-2 justify-start">
                                 <Image src="/images/byggpilotlogga1.png" alt="BP" width={32} height={32} className="w-8 h-8 p-1.5 rounded-full bg-gray-700 flex-shrink-0"/>
                                 <div className="px-4 py-3 bg-gray-700 rounded-2xl rounded-bl-none">
                                     <div className="flex items-center space-x-1">
@@ -121,44 +172,35 @@ const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded }) => {
                                 </div>
                             </div>
                         )}
+                         {error && (
+                            <div className="flex justify-center">
+                                <div className="text-center p-3 bg-red-900/50 border border-red-700 text-red-300 rounded-lg">
+                                    <p className="text-sm font-semibold">Ett fel uppstod</p>
+                                    <p className="text-xs">{error}</p>
+                                </div>
+                            </div>
+                        )}
                         <div ref={chatEndRef} />
                     </div>
                 </div>
             </div>
 
-            <div className="p-3">
+            <div className="p-3 border-t border-gray-700/50">
                 <div className="flex items-center bg-gray-700 rounded-lg">
-                    <button 
-                        onClick={() => setExpanded(!isExpanded)}
-                        className="p-3 text-gray-400 hover:text-cyan-400 transition-colors"
-                        aria-label={isExpanded ? "Minimera chatt" : "Expandera chatt"}
-                    >
-                        {isExpanded ? <IconChevronDown className="w-6 h-6" /> : <IconChevronUp className="w-6 h-6" />}
-                    </button>
+                    <button onClick={() => setExpanded(!isExpanded)} className="p-3 text-gray-400 hover:text-cyan-400"><IconChevronDown className={`w-6 h-6 transition-transform ${isExpanded ? '' : 'rotate-180'}`} /></button>
                     <input
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyPress={handleKeyPress}
                         onFocus={() => setExpanded(true)}
-                        placeholder={placeholder}
+                        placeholder="Ställ en fråga till ByggPilot..."
                         className="flex-grow bg-transparent p-2 text-sm text-gray-200 focus:outline-none"
                         disabled={isLoading}
                     />
-                    <button className="p-2 text-gray-400 hover:text-cyan-400 transition-colors" aria-label="Bifoga fil">
-                        <IconPaperclip className="w-5 h-5"/>
-                    </button>
-                    <button className="p-2 text-gray-400 hover:text-cyan-400 transition-colors" aria-label="Spela in röstmemo">
-                        <IconMic className="w-5 h-5"/>
-                    </button>
-                    <button 
-                        onClick={handleSend}
-                        disabled={isLoading || input.trim() === ''}
-                        className="p-3 text-cyan-500 disabled:text-gray-500 hover:text-cyan-400 transition-colors"
-                        aria-label="Skicka meddelande"
-                    >
-                        <IconSend className="w-6 h-6" />
-                    </button>
+                    <button className="p-2 text-gray-400 hover:text-cyan-400"><IconPaperclip className="w-5 h-5"/></button>
+                    <button className="p-2 text-gray-400 hover:text-cyan-400"><IconMic className="w-5 h-5"/></button>
+                    <button onClick={handleSend} disabled={isLoading || input.trim() === ''} className="p-3 text-cyan-500 disabled:text-gray-500"><IconSend className="w-6 h-6" /></button>
                 </div>
             </div>
         </div>

@@ -1,6 +1,6 @@
+
 import './globals.css';
-import { AuthProvider } from '@/app/providers/AuthContext';
-import { AuthGuard } from '@/app/providers/AuthGuard';
+import NextAuthProvider from '@/app/providers/NextAuthProvider'; // Uppdaterad import
 
 export const metadata = {
   title: 'ByggPilot',
@@ -11,11 +11,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="sv">
       <body>
-        <AuthProvider>
-          <AuthGuard>
-            {children}
-          </AuthGuard>
-        </AuthProvider>
+        <NextAuthProvider> 
+          {children}
+        </NextAuthProvider>
       </body>
     </html>
   );

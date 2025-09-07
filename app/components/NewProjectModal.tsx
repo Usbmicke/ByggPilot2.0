@@ -1,8 +1,9 @@
+
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { IconX } from '@/app/constants';
-import { Project } from '@/app/types';
+import { Project, Customer } from '@/app/types';
 
 type NewProjectModalProps = {
   isOpen: boolean;
@@ -12,31 +13,72 @@ type NewProjectModalProps = {
 
 export default function NewProjectModal({ isOpen, onClose, onProjectCreated }: NewProjectModalProps) {
   const [projectName, setProjectName] = useState('');
-  const [customerName, setCustomerName] = useState('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [status, setStatus] = useState<'Anbud' | 'Pågående' | 'Avslutat'>('Anbud');
+  
+  // State för att hålla kundlistan och dess laddningsstatus
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!isOpen) return null;
+  // Effekt för att hämta kunder när modalen öppnas
+  useEffect(() => {
+    if (isOpen) {
+      // Återställ formuläret varje gång modalen öppnas
+      setProjectName('');
+      setSelectedCustomerId('');
+      setStatus('Anbud');
+      setError(null);
+      
+      const fetchCustomers = async () => {
+        setIsLoadingCustomers(true);
+        try {
+          const response = await fetch('/api/customers/list');
+          if (!response.ok) {
+            throw new Error('Kunde inte hämta kundlistan');
+          }
+          const data: Customer[] = await response.json();
+          setCustomers(data);
+        } catch (err: any) {
+          setError(err.message);
+        }
+        setIsLoadingCustomers(false);
+      };
+
+      fetchCustomers();
+    }
+  }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
 
-    if (!projectName || !customerName) {
-      setError('Projektnamn och kundnamn får inte vara tomma.');
+    if (!projectName || !selectedCustomerId) {
+      setError('Projektnamn och kund måste väljas.');
       setIsSubmitting(false);
       return;
+    }
+    
+    const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+    if (!selectedCustomer) {
+        setError('Den valda kunden är ogiltig.');
+        setIsSubmitting(false);
+        return;
     }
 
     try {
       const response = await fetch('/api/projects', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name: projectName, customerName, status }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: projectName,
+          customerId: selectedCustomer.id,
+          customerName: selectedCustomer.name,
+          status
+        }),
       });
 
       if (!response.ok) {
@@ -46,26 +88,22 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated }: N
 
       const newProject = await response.json();
       onProjectCreated(newProject);
-      onClose(); // Stäng modalen vid framgång
-    } catch (err) {
-        if (err instanceof Error) {
-            setError(err.message);
-        } else {
-            setError('Ett okänt fel uppstod');
-        }
+      onClose();
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in-fast"
-         onClick={onClose}>
-      <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl w-full max-w-lg relative"
-           onClick={e => e.stopPropagation()}>
-        <div className="p-6 border-b border-gray-700">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in-fast" onClick={onClose}>
+      <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl w-full max-w-lg relative" onClick={e => e.stopPropagation()}>
+        <div className="p-6 border-b border-gray-700 flex justify-between items-center">
           <h2 className="text-2xl font-bold text-white">Skapa nytt projekt</h2>
-          <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white z-10 p-2 rounded-full hover:bg-gray-700/50">
+          <button onClick={onClose} className="text-gray-500 hover:text-white p-2 rounded-full hover:bg-gray-700/50">
             <IconX className="w-6 h-6" />
           </button>
         </div>
@@ -76,8 +114,13 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated }: N
               <input type="text" id="projectName" value={projectName} onChange={e => setProjectName(e.target.value)} className="w-full bg-gray-900 border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
             </div>
             <div>
-              <label htmlFor="customerName" className="block text-sm font-medium text-gray-300 mb-1">Kundnamn</label>
-              <input type="text" id="customerName" value={customerName} onChange={e => setCustomerName(e.target.value)} className="w-full bg-gray-900 border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+              <label htmlFor="customer" className="block text-sm font-medium text-gray-300 mb-1">Välj Kund</label>
+              <select id="customer" value={selectedCustomerId} onChange={e => setSelectedCustomerId(e.target.value)} disabled={isLoadingCustomers} className="w-full bg-gray-900 border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50">
+                <option value="">{isLoadingCustomers ? 'Laddar kunder...' : 'Välj en kund'}</option>
+                {customers.map(customer => (
+                  <option key={customer.id} value={customer.id}>{customer.name}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label htmlFor="status" className="block text-sm font-medium text-gray-300 mb-1">Status</label>
@@ -91,7 +134,7 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated }: N
           </div>
           <div className="p-6 border-t border-gray-700 flex justify-end gap-4">
             <button type="button" onClick={onClose} className="py-2 px-4 text-gray-300 font-semibold rounded-lg hover:bg-gray-700 transition-colors">Avbryt</button>
-            <button type="submit" disabled={isSubmitting} className="py-2 px-4 bg-cyan-500 text-white font-semibold rounded-lg hover:bg-cyan-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            <button type="submit" disabled={isSubmitting || isLoadingCustomers} className="py-2 px-4 bg-cyan-500 text-white font-semibold rounded-lg hover:bg-cyan-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               {isSubmitting ? 'Skapar...' : 'Skapa Projekt'}
             </button>
           </div>

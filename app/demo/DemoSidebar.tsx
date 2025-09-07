@@ -1,9 +1,10 @@
+
 'use client';
 import React from 'react';
 import Image from 'next/image';
-import { useAuth } from '@/app/providers/AuthContext';
-import { IconDashboard, IconProjects, IconDocuments, IconCustomers, IconPlus, IconSettings, IconLightbulb, IconClock } from '@/app/constants.tsx';
-import { View } from '@/app/dashboard/page';
+import Link from 'next/link';
+import { IconDashboard, IconProjects, IconDocuments, IconCustomers, IconPlus, IconSettings, IconClock } from '@/app/constants';
+import { DemoView } from './page'; // Importerar från vår nya demo-sida
 
 interface NavItemProps {
     icon: React.ReactNode;
@@ -11,6 +12,8 @@ interface NavItemProps {
     active?: boolean;
     onClick: () => void;
 }
+
+// NavItem är en återanvändbar komponent, ingen ändring behövs här
 const NavItem: React.FC<NavItemProps> = ({ icon, label, active, onClick }) => (
   <button
     onClick={onClick}
@@ -25,15 +28,14 @@ const NavItem: React.FC<NavItemProps> = ({ icon, label, active, onClick }) => (
   </button>
 );
 
-interface SidebarProps {
-    activeView: View;
-    onNavClick: (view: View) => void;
+interface DemoSidebarProps {
+    activeView: DemoView;
+    onNavClick: (view: DemoView) => void;
     onStartQuoteFlow: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavClick, onStartQuoteFlow }) => {
-  const { user, logout } = useAuth();
-
+// Detta är den anpassade Sidebar-komponenten för demon
+const DemoSidebar: React.FC<DemoSidebarProps> = ({ activeView, onNavClick, onStartQuoteFlow }) => {
   return (
     <div className="flex flex-col w-64 bg-gray-800/50 backdrop-blur-sm border-r border-gray-700 text-white">
       <div className="flex items-center justify-center h-20 border-b border-gray-700">
@@ -52,24 +54,24 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavClick, onStartQuoteF
             onClick={onStartQuoteFlow}
             className="w-full flex items-center justify-center gap-2 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40">
           <IconPlus className="w-5 h-5" />
-          <span>Skapa Offert</span>
+          <span>Skapa Offert (Demo)</span>
         </button>
       </div>
       <div className="border-t border-gray-700 p-4">
          <NavItem icon={<IconSettings className="w-6 h-6" />} label="Inställningar" active={activeView === 'SETTINGS'} onClick={() => onNavClick('SETTINGS')} />
         <div className="flex items-center mt-4">
-          {user?.photoURL && <Image className="h-10 w-10 rounded-full object-cover" src={user.photoURL} alt="User avatar" width={40} height={40}/>}
+          <div className="h-10 w-10 rounded-full bg-gray-600 animate-pulse"></div>
           <div className="ml-3">
-            <p className="text-sm font-semibold text-white">{user?.displayName}</p>
-            <p className="text-xs text-gray-400">{user?.email}</p>
+            <p className="text-sm font-semibold text-white">Demo Användare</p>
+            <p className="text-xs text-gray-400">demo@byggpilot.ai</p>
           </div>
         </div>
-        <button onClick={logout} className="w-full mt-4 text-left text-sm text-gray-400 hover:text-white transition-colors duration-200 pl-1">
-          Logga ut
-        </button>
+        <Link href="/dashboard" className="block w-full text-center mt-4 text-sm text-cyan-400 hover:text-cyan-300 transition-colors duration-200">
+          Avsluta Demo & Logga In
+        </Link>
       </div>
     </div>
   );
 };
 
-export default Sidebar;
+export default DemoSidebar;

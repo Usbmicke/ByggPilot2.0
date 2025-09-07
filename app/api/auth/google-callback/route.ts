@@ -1,38 +1,70 @@
 
 import { NextResponse } from 'next/server';
-import { getGoogleTokens } from '@/app/services/googleApiService';
+import { getGoogleTokens, getGoogleUserInfo } from '@/app/services/googleApiService';
+import { admin } from '@/app/lib/firebase/firebaseAdmin';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '@/app/services/firestoreService';
+import { getSession } from '@/app/lib/session'; // Importera vår nya session-hanterare
 
-// Denna slutpunkt hanterar callback-anropet från Googles samtyckesskärm.
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
 
   if (!code) {
-    // Om ingen kod finns, har användaren troligen nekat åtkomst.
     return NextResponse.redirect(new URL('/?error=google_auth_denied', request.url));
   }
 
   try {
-    // Byt ut koden mot access och refresh tokens.
+    // Steg 1: Byt ut koden mot tokens.
     const tokens = await getGoogleTokens(code);
+    const accessToken = tokens.access_token;
+    const refreshToken = tokens.refresh_token;
 
-    // --- SÄKER TOKEN-HANTERING (PLATSHÅLLARE) ---
-    // Detta är ett kritiskt steg. Tokens måste sparas säkert.
-    // 1. **Session-lagring (temporärt):** Lagra tokens i användarens session så de kan användas direkt.
-    //    I en riktig applikation använder man ett bibliotek som Next-Auth eller Iron-sessions för detta.
-    // 2. **Databas-lagring (långsiktigt):** Spara framförallt refresh_token i din databas (t.ex. Firestore),
-    //    krypterat, och kopplat till användarens ID. Detta låter appen agera på användarens vägnar offline.
+    if (!accessToken) {
+        throw new Error("Access Token not received from Google.");
+    }
 
-    console.log('Mottagna Google Tokens:', tokens); 
-    // OBS: Logga aldrig tokens i en produktionsmiljö!
+    // Steg 2: Hämta användarinformation från Google.
+    const userInfo = await getGoogleUserInfo(accessToken);
+    const { id: googleId, email, displayName } = userInfo;
 
-    // I detta exempel omdirigerar vi bara och antar att tokens finns i minnet/sessionen.
-    // Vi behöver en mekanism för att faktiskt spara dessa till användaren.
-    // För nu, omdirigera till huvudsidan med ett success-meddelande.
+    // Steg 3: Hitta eller skapa en användare i Firebase Authentication.
+    let userRecord;
+    try {
+        userRecord = await admin.auth().getUserByEmail(email);
+    } catch (error: any) {
+        if (error.code === 'auth/user-not-found') {
+            userRecord = await admin.auth().createUser({
+                email: email,
+                displayName: displayName,
+                emailVerified: true,
+            });
+        } else {
+            throw error;
+        }
+    }
+    const uid = userRecord.uid;
+
+    // Steg 4: Spara refresh token i Firestore.
+    if (refreshToken) {
+        const tokenRef = doc(db, 'user_tokens', uid);
+        await setDoc(tokenRef, { 
+            googleRefreshToken: refreshToken,
+            googleId: googleId,
+        }, { merge: true });
+    }
+
+    // Steg 5: Skapa en session för användaren.
+    const session = await getSession();
+    session.userId = uid; // Spara Firebase UID i sessionen
+    session.isLoggedIn = true;
+    await session.save(); // Detta krypterar och sätter session-cookien
+
+    // Omdirigera till projektsidan med ett success-meddelande.
     return NextResponse.redirect(new URL('/projects?status=google_auth_success', request.url));
 
   } catch (error) {
-    console.error("Error exchanging Google auth code for tokens: ", error);
+    console.error("Critical error in Google auth callback: ", error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.redirect(new URL(`/?error=google_auth_failed&details=${encodeURIComponent(errorMessage)}`, request.url));
   }

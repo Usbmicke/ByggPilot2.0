@@ -1,86 +1,76 @@
+
 'use client';
-import React from 'react';
-import { Notification } from '@/app/types';
-import { IconBell, IconSearch, IconX } from '@/app/constants';
-import SearchResults from './SearchResults';
 
-interface HeaderProps {
-    notifications: Notification[];
-    isNotificationsOpen: boolean;
-    onNotificationsToggle: () => void;
-    searchTerm: string;
-    onSearchChange: (term: string) => void;
-    searchResults: { type: string; data: any }[];
-    onCloseSearch: () => void;
-}
+import { useSession, signIn, signOut } from 'next-auth/react';
+import Image from 'next/image';
+import { MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 
-const Header: React.FC<HeaderProps> = ({
-    notifications,
-    isNotificationsOpen,
-    onNotificationsToggle,
-    searchTerm,
-    onSearchChange,
-    searchResults,
-    onCloseSearch,
-}) => {
-    const unreadCount = notifications.filter(n => !n.read).length;
+// Denna komponent hanterar in/utloggning och visar användarinformation.
+const AuthButton = () => {
+  const { data: session, status } = useSession();
 
+  if (status === 'loading') {
+    return <div className="w-24 h-8 bg-gray-200 rounded animate-pulse"></div>; // Enkel laddningsindikator
+  }
+
+  if (session) {
     return (
-        <header className="flex-shrink-0 flex items-center justify-between h-20 px-4 md:px-8 border-b border-gray-700 relative z-20">
-            {/* Search Bar */}
-            <div className="flex-1 max-w-2xl relative">
-                <div className="relative">
-                    <IconSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                        type="text"
-                        placeholder="Sök efter projekt, dokument, kunder..."
-                        value={searchTerm}
-                        onChange={(e) => onSearchChange(e.target.value)}
-                        className="w-full bg-gray-800/80 border border-gray-700/80 rounded-lg py-2.5 pl-12 pr-10 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all"
-                    />
-                     {searchTerm && (
-                        <button onClick={onCloseSearch} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white">
-                            <IconX className="w-5 h-5" />
-                        </button>
-                    )}
-                </div>
-                {searchTerm.length > 1 && <SearchResults results={searchResults} onClose={onCloseSearch} />}
-            </div>
-
-            {/* Notifications Bell */}
-            <div className="flex items-center gap-4 ml-4">
-                <div className="relative">
-                    <button onClick={onNotificationsToggle} className="relative p-2 text-gray-400 hover:text-white transition-colors">
-                        <IconBell className="w-6 h-6" />
-                        {unreadCount > 0 && (
-                            <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                                {unreadCount}
-                            </span>
-                        )}
-                    </button>
-                    {isNotificationsOpen && (
-                        <div className="absolute top-full right-0 mt-3 w-80 bg-gray-800 border border-gray-700 rounded-xl shadow-lg z-30">
-                            <div className="p-4 border-b border-gray-700">
-                                <h3 className="font-bold text-white">Notifikationer</h3>
-                            </div>
-                            <div className="max-h-96 overflow-y-auto">
-                                {notifications.length > 0 ? (
-                                    notifications.map(n => (
-                                        <div key={n.id} className={`px-4 py-3 border-b border-gray-700/50 transition-opacity ${n.read ? 'opacity-50 hover:opacity-100' : ''}`}>
-                                            <p className="text-sm text-gray-200">{n.message}</p>
-                                            <p className="text-xs text-gray-500 mt-1">{new Date(n.timestamp).toLocaleString()}</p>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <p className="text-sm text-gray-400 p-4">Inga nya notifikationer.</p>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </header>
+      <div className="flex items-center gap-4">
+        <span className="text-sm font-medium text-gray-700 hidden sm:block">
+            {session.user?.name || session.user?.email}
+        </span>
+        <button onClick={() => signOut()} className="text-sm font-medium text-gray-500 hover:text-gray-900">
+          Logga ut
+        </button>
+      </div>
     );
+  }
+
+  return (
+    <button 
+      onClick={() => signIn('google', { callbackUrl: '/dashboard' })} 
+      className="bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all duration-150 ease-in-out shadow-md"
+    >
+      Logga in med Google
+    </button>
+  );
+};
+
+const Header = () => {
+  return (
+    <header className="bg-white shadow-sm">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center">
+           <a href="/dashboard" className="flex items-center gap-2">
+             <Image src="/images/byggpilotlogga1.png" alt="ByggPilot Logotyp" width={32} height={32} className="h-8 w-8"/>
+             <span className="text-lg font-bold text-gray-900">ByggPilot</span>
+           </a>
+        </div>
+
+        <div className="flex flex-1 items-center justify-center px-2 lg:ml-6 lg:justify-end">
+          <div className="w-full max-w-lg lg:max-w-xs">
+            <label htmlFor="search" className="sr-only">Sök</label>
+            <div className="relative">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+              </div>
+              <input 
+                id="search"
+                name="search"
+                className="block w-full rounded-md border border-gray-300 bg-white py-2 pl-10 pr-3 leading-5 placeholder-gray-500 focus:border-cyan-500 focus:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-cyan-500 sm:text-sm"
+                placeholder="Sök projekt eller kunder"
+                type="search" 
+              />
+            </div>
+          </div>
+        </div>
+        
+        <div className="ml-4 flex items-center">
+          <AuthButton />
+        </div>
+      </div>
+    </header>
+  );
 };
 
 export default Header;

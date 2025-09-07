@@ -1,102 +1,53 @@
-# ByggPilot - Master Plan (Reviderad)
+
+# ByggPilot - Master Plan (Reviderad 2.0)
 
 ## Övergripande Mål
-Att systematiskt och kontrollerat utveckla ByggPilot från en fungerande dashboard med demodata till en värdefull MVP (Minimum Viable Product) med verklig, dynamisk funktionalitet och intelligenta, automatiserade processer.
+Att systematiskt och kontrollerat utveckla ByggPilot från en fungerande dashboard till en värdefull MVP (Minimum Viable Product) med djup integration mot Google Workspace för att skapa automatiserade och tidsbesparande arbetsflöden.
 
 ## Ledande Principer
-- **Fasvis Implementation:** Vi bygger en funktion i taget, testar noggrant och säkerställer stabilitet innan vi går vidare till nästa.
-- **Demo Först:** Ett interaktivt och övertygande demoläge är högsta prioritet för att kunna visa produktens värde för kunder. Detta läge ska vara helt frikopplat från live-system som Firebase och externa API:er.
-- **Inga API-loopar:** För att garantera kostnadskontroll ska frontend **aldrig** anropa AI-tjänster direkt. Alla sådana anrop ska gå via en central "Orchestrator" backend-funktion.
-- **Expert-Chatbot:** Den långsiktiga visionen är att chatten ska utvecklas till en "Bygg-Expert", en specialiserad LAM (Large Action Model) som kan agera som en kunnig digital kollega.
-- **Automatiserad Inledande Funktion:** Funktionen för att omvandla mail till kalenderevents ska ske automatiskt vid inloggning för att omedelbart visa appens värde.
-- **Onboarding via Dashboard:** De två knapparna i chatten på dashboarden är en central del av användarens onboarding-process.
+- **Fasvis Implementation:** En funktion i taget, noggrant testad och stabil.
+- **Orchestrator-arkitektur:** Alla anrop till externa tjänster (AI, Google API:er) går via en central `/api/orchestrator`-slutpunkt för att säkerställa kontroll, säkerhet och enhetlighet.
+- **Expert-Chatbot:** Chatten är det primära gränssnittet för att interagera med ByggPilots smarta funktioner. Den ska vara proaktiv, kontextmedveten och agera som en digital kollega.
+- **Säkerhet och Behörigheter:** Användarens data och integritet är högsta prioritet. Vi använder `next-auth` för säker autentisering och begär endast de behörigheter som är absolut nödvändiga för en specifik funktion.
 
 ---
 
-## Byggplan: Från Fungerande Dashboard till Värdefull MVP
+## Byggplan: Från Dashboard till Automatiserad Projektpartner
 
 ### Fas 0: Interaktivt och Realistiskt Demoläge - SLUTFÖRD
-**Resultat:** Ett heltäckande och interaktivt demoläge har implementerats. Det låter potentiella kunder uppleva ByggPilots kärnfunktioner utan koppling till backend. Demoläget är nu den primära upplevelsen för nya användare och guidar dem genom ett typiskt arbetsflöde.
+**Resultat:** Ett heltäckande och interaktivt demoläge har implementerats. Det låter potentiella kunder uppleva ByggPilots kärnfunktioner utan koppling till backend, vilket skapar en övertygande säljpitch.
 
-- **✅ Steg 0.1: Isolera Demoläget**
-  - **Resultat:** En global `isDemo`-state, aktiverad via `login(true)`, styr nu hela applikationen. Denna state renderar villkorligt demodata och inaktiverar alla anrop till Firebase och externa API:er, vilket garanterar en stabil och isolerad demomiljö.
+### Fas 1-3: (Föråldrade) - ERSATTA AV NY ARKITEKTUR
+**Notering:** De ursprungliga planerna för Fas 1-3 baserades på en äldre arkitektur med Firebase som primär databas. Dessa har skrotats till förmån för en mer flexibel och kraftfull arkitektur centrerad kring `next-auth` och direkta Google API-integrationer.
 
-- **✅ Steg 0.2: Skapa en Levande Demo-Dashboard**
-  - **Resultat:** En `mockData.ts`-fil har skapats och innehåller en uppsättning realistiska demoprojekt, kunder och "att göra"-punkter. Dashboarden hämtar och visar nu denna data i demoläget, vilket skapar en levande och representativ förstasida.
+### Fas 4: Google-autentisering & Proaktiv Onboarding - SLUTFÖRD
+**Mål:** Att byta ut det gamla, simpla autentiseringssystemet mot en robust lösning med `next-auth` och förbereda applikationen för att kunna interagera med användarens Google-tjänster.
 
-- **✅ Steg 0.3: Simulera Navigation och Projektmappar**
-  - **Resultat:** Sidomenyn är fullt klickbar. Dokumentvyn har byggts om för att visa en simulerad och hierarkisk mappstruktur (`01_Kunder & Anbud`, `02_Pågående Projekt` etc.), vilket ger en realistisk bild av hur ByggPilot organiserar filer i Google Drive.
+- **✅ Steg 4.1: Installera och Konfigurera `next-auth`**
+  - **Resultat:** Biblioteket `next-auth` har installerats. En ny API-rutt, `app/api/auth/[...nextauth]/route.ts`, har skapats och konfigurerats för att använda Google som Oauth-leverantör. Miljövariabler (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) har lagts till.
 
-- **✅ Steg 0.4: Guidat "Skapa Offert"-flöde (Simulerat)**
-  - **Resultat:** "Skapa Offert"-knappen initierar nu ett skriptat, guidat flöde i chatten. Flödet simulerar hur AI-assistenten samlar in information för en ny offert, vilket skapar en interaktiv och pedagogisk demonstration av en av appens kärnfunktioner.
+- **✅ Steg 4.2: Uppdatera App-layouten för `SessionProvider`**
+  - **Resultat:** Applikationens rotlayout (`app/layout.tsx`) har rensats från gamla auth-providers och använder nu den officiella `SessionProvider` från `next-auth/react`, vilket gör session-data tillgänglig i hela appen.
 
-- **✅ Steg 0.5: Funktionella men Begränsade Inställningar och Knappar**
-  - **Resultat:** Fokus har legat på kärnfunktionerna i demoläget. Övriga knappar är visuellt närvarande men deras fulla funktionalitet kommer att implementeras i senare faser.
+- **✅ Steg 4.3: Bygga om Inloggningskomponenter**
+  - **Resultat:** Komponentfilen `app/components/layout/Header.tsx` har byggts om från grunden. Den använder nu `useSession`, `signIn` och `signOut` från `next-auth/react` för att dynamiskt visa användarens status och erbjuda in- och utloggning. Gamla, manuella API-anrop har tagits bort.
 
-### Fas 1: Gör Dashboarden Levande (Från Demo till Dynamisk)
-**Mål:** Att omvandla de statiska demoprojektkorten till en levande, dynamisk vy som speglar verklig data från Firestore. Detta är grunden för nästan alla andra funktioner.
+- **✅ Steg 4.4: Implementera det Proaktiva Onboarding-flödet**
+  - **Resultat:** Dashboard-sidan (`app/dashboard/page.tsx` och `app/components/views/DashboardView.tsx`) är nu "inloggningsmedveten". Den visar en uppmaning och en knapp för inloggade användare att starta en proaktiv konfiguration. Chatten (`app/components/chat/Chat.tsx`) har uppdaterats för att ta emot en `startOnboardingFlow`-prop, vilket triggar ett specifikt startmeddelande (`@onboarding_start`) till `/api/orchestrator`. Orchestratorn har uppdaterats för att känna igen denna trigger och svara med ett unikt, guidande flöde.
 
-**Steg 1.1: Definiera Datamodellen i Firestore**
-- **Instruktion:** Skapa en Firestore-kollektion med namnet `projects`. Varje dokument ska representera ett projekt och initialt innehålla fälten: `projectName` (string), `clientName` (string), `status` (string, t.ex. "Offert", "Pågående", "Avslutad"), `ownerId` (string, användarens Firebase UID), `createdAt` (timestamp).
+### Fas 5: Google Drive-integration & Automatiserad Mappstruktur
+**Mål:** Att bygga den första verkliga, tidsbesparande funktionen. När användaren godkänner onboarding-flödet ska ByggPilot automatiskt skapa en standardiserad projektmappstruktur i användarens Google Drive.
 
-**Steg 1.2: Implementera CRUD för Projekt (Create, Read, Update, Delete)**
-- **Läs (Read):**
-  - **Instruktion:** Modifiera `/dashboard/page.tsx`. Istället för demodata, implementera en funktion som anropar Firestore och hämtar alla projekt där `ownerId` matchar den inloggade användarens UID. Visa dessa projekt som projektkort.
-- **Skapa (Create):**
-  - **Instruktion:** Skapa en 'Nytt Projekt'-knapp på dashboarden. Vid klick, visa en modal med fält för 'Projektnamn' och 'Kundnamn'. När formuläret skickas, skapa ett nytt dokument i `projects`-kollektionen.
-- **Uppdatera & Radera (Update & Delete):**
-  - **Instruktion:** På varje projektkort, lägg till en meny (tre punkter) med alternativen 'Ändra status' och 'Radera projekt'. Implementera funktionerna för att uppdatera `status`-fältet eller ta bort dokumentet från Firestore.
+- **Steg 5.1: Skapa API-slutpunkt för Google Drive-åtgärder**
+  - **Instruktion:** Skapa en ny, dedikerad API-rutt (t.ex. `/pages/api/google/drive/create-folders.ts`). Denna slutpunkt ska vara ansvarig för all logik som rör att skapa mappar och filer i Google Drive.
 
-### Fas 2: Den Första Stora Tidsbespararen: Förenklad Tidrapportering
-**Mål:** Att implementera en av de mest efterfrågade funktionerna. Den är tekniskt relativt enkel men ger omedelbart och konkret värde.
+- **Steg 5.2: Implementera Logik för att Skapa Mappar**
+  - **Instruktion:** Inom den nya slutpunkten: hämta användarens `accessToken` från sessionen. Använd detta token för att anropa Google Drive API (v3). Implementera logik som först skapar en huvudmapp ("ByggPilot Projekt") och därefter en standardiserad hierarki inuti den (t.ex. "01_Kunder & Anbud", "02_Pågående Projekt").
 
-**Steg 2.1: Bygg UI för Tidrapportering**
-- **Instruktion:** Skapa en ny widget på dashboarden för tidrapportering. Den ska innehålla: en rullgardinsmeny som listar projekt från `projects`-kollektionen, en 'Checka in'-knapp och en 'Checka ut'-knapp (inaktiv tills incheckad).
-
-**Steg 2.2: Definiera Datamodellen i Firestore**
-- **Instruktion:** Skapa en ny Firestore-kollektion `timeEntries`. Varje dokument ska representera ett arbetspass och innehålla: `projectId` (string), `userId` (string), `startTime` (timestamp), `endTime` (timestamp), `durationMinutes` (number).
-
-**Steg 2.3: Implementera Backend-logiken**
-- **Instruktion:** Skapa en serverlös Google Cloud Function. När 'Checka ut' klickas, ska ett anrop skickas till denna funktion med `projectId`, `startTime` och `endTime`. Funktionen skapar sedan ett nytt dokument i `timeEntries`.
-
-### Fas 3: Grunden till Offertmotorn: Den Guidade Kalkylatorn (MVP)
-**Mål:** Att bygga den första versionen av offertmotorn med fokus på ett konversationellt flöde för att generera ett professionellt dokument.
-
-**Steg 3.1: Starta Offertflödet**
-- **Instruktion:** Implementera en framträdande "+ Skapa Offert"-knapp på dashboarden. Vid klick, aktivera chatten där AI:n ställer den första frågan: "Kul att vi ska räkna på ett nytt jobb! Vem är kunden?"
-
-**Steg 3.2: Bygg det Konversationella Insamlingsflödet**
-- **Instruktion:** Programmera chatt-assistenten att ställa en fråga i taget för att samla in information om projektets omfattning, foton (implementera filuppladdning), mått, budget, kvalitetsnivå och KMA-punkter. All data lagras temporärt i frontend-state.
-
-**Steg 3.3: Guidad Kalkyl via Chatt**
-- **Instruktion:** Efter insamling, guida användaren genom kalkylen. Fråga om arbetsmoment per rum, timmar och material. Programmera AI:n att automatiskt lägga till en fast post för 'KMA/Etablering' och en procentuell buffert för 'Oförutsedda händelser'.
-
-**Steg 3.4: Generera PDF-offert till Google Drive**
-- **Instruktion:** Skapa en Google Cloud Function som tar emot all insamlad data som ett JSON-objekt. Funktionen ska:
-  1. Använda en fördefinierad Google Docs-mall från användarens Drive (`04_Företagsmallar`).
-  2. Fylla i mallen med datan.
-  3. Spara en PDF-kopia i rätt projektmapp (`01_Kunder & Anbud/[Projektnamn]`).
-  4. Returnera en länk till PDF:en som visas i chatten.
-
-### Fas 4: Automatisera Mera: Kostnadseffektiv Analys av PDF-underlag
-**Mål:** Att implementera den smarta "wow-funktionen" för att analysera förfrågningsunderlag med en ny, kostnadseffektiv arkitektur.
-
-**Steg 4.1: Implementera Filuppladdning i Chatten**
-- **Instruktion:** Lägg till en 'Bifoga fil'-knapp i chattgränssnittet. Uppladdade PDF-filer ska skickas till en säker Google Cloud Storage-bucket.
-
-**Steg 4.2: Bygg en "Orchestrator" Backend-funktion**
-- **Instruktion:** Skapa en central Google Cloud Function ("Orchestrator"). När en PDF laddas upp, anropar frontend denna funktion med en referens till filen. Funktionen utför sedan:
-  1. **Anropa Gemini API (Multimodal):** Skicka PDF:en till en multimodal modell (t.ex. Gemini 1.5 Flash).
-  2. **Använd en Anpassad Prompt:** Instruera Gemini: 'Här är ett PDF-dokument som är ett förfrågningsunderlag. Agera som en erfaren byggkalkylator. Läs igenom dokumentet, sammanfatta projektet, extrahera en lista på material och kvantiteter, och identifiera potentiella risker eller oklarheter. Svara i ett strukturerat JSON-format.'
-  3. **Returnera Svar:** Funktionen tar emot JSON-svaret från Gemini och skickar tillbaka det till frontend.
-
-**Steg 4.3: Presentera Resultatet i Chatten**
-- **Instruktion:** När frontend tar emot JSON-svaret från Orchestrator-funktionen, formatera och presentera datan snyggt i chattfönstret med rubrikerna 'Sammanfattning', 'Materiallista' och 'Identifierade Risker'.
+- **Steg 5.3: Uppdatera Orchestratorn för att Anropa Drive-API:et**
+  - **Instruktion:** Modifiera `/pages/api/orchestrator.ts`. När konversationen når punkten där användaren har bekräftat att mapparna ska skapas (t.ex. svarar "Ja" på frågan), ska orchestratorn inte bara svara med text, utan även göra ett internt anrop till den nya API-slutpunkten från Steg 5.1 för att faktiskt utföra åtgärden.
 
 ---
 
 ## Omedelbart Nästa Steg
-- **[ ] Projektstädning:** Sök igenom hela projektet för att identifiera och ta bort:
-    - Obsoleta filer (t.ex. `prompt.md`).
-    - Onödig kod, gamla kommentarer och `console.log`-utskrifter relaterade till tidigare utvecklingssteg.
-    - All demodata och mock-filer som inte längre kommer att användas.
+- **[ ] Starta implementationen av Fas 5.** Fokusera på **Steg 5.1:** Att skapa den nya, säkra API-slutpunkten som kommer att innehålla logiken för att interagera med Google Drive API. Detta lägger grunden för den första riktiga automatiseringsfunktionen i ByggPilot.
