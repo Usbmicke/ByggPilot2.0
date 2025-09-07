@@ -1,16 +1,16 @@
 
-import { NextResponse } from 'next/server';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { NextResponse, NextRequest } from 'next/server';
+import { collection, query, where, getDocs, QueryConstraint } from 'firebase/firestore';
 import { db } from '@/app/services/firestoreService';
 import { getSession } from '@/app/lib/session';
-import { Project } from '@/app/types';
+import { Project, ProjectStatus } from '@/app/types';
 
 /**
- * Hämtar en lista över projekt som ägs av den för närvarande inloggade användaren.
+ * Hämtar en lista över projekt.
+ * Kan filtrera baserat på inloggad användare och valfritt på customerId.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Steg 1: Hämta sessionen och verifiera att användaren är inloggad.
     const session = await getSession();
     const userId = session.userId;
 
@@ -18,32 +18,39 @@ export async function GET() {
       return new NextResponse(JSON.stringify({ message: 'Authentication required' }), { status: 401 });
     }
 
-    // Steg 2: Skapa en Firestore-fråga för att hämta projekt.
-    // Frågan letar efter alla dokument i "projects"-samlingen där "ownerId" matchar den inloggade användarens ID.
-    const projectsQuery = query(
-      collection(db, 'projects'),
-      where('ownerId', '==', userId)
-    );
+    // Hämta query-parametrar från URL:en
+    const searchParams = request.nextUrl.searchParams;
+    const customerId = searchParams.get('customerId');
 
-    // Steg 3: Exekvera frågan.
+    // Bygg upp vår query dynamiskt
+    const queryConstraints: QueryConstraint[] = [];
+    queryConstraints.push(where('ownerId', '==', userId));
+
+    if (customerId) {
+      queryConstraints.push(where('customerId', '==', customerId));
+    }
+
+    const projectsQuery = query(collection(db, 'projects'), ...queryConstraints);
     const querySnapshot = await getDocs(projectsQuery);
 
-    // Steg 4: Formatera resultaten.
     const projects: Project[] = querySnapshot.docs.map(doc => {
         const data = doc.data();
         return {
             id: doc.id,
             name: data.name,
+            customerId: data.customerId,
             customerName: data.customerName,
-            status: data.status,
-            driveFolderId: data.driveFolderId,
-            // Säkerställ att tidsstämplar konverteras till ISO-strängar
+            status: data.status as ProjectStatus,
+            driveFolderId: data.driveFolderId ?? null,
+            address: data.address ?? null,
+            lat: data.lat ?? undefined,
+            lon: data.lon ?? undefined,
+            progress: data.progress ?? 0,
             lastActivity: data.lastActivity?.toDate().toISOString() ?? new Date().toISOString(),
             createdAt: data.createdAt?.toDate().toISOString() ?? new Date().toISOString(),
         };
     });
 
-    // Steg 5: Returnera projektlistan som JSON.
     return NextResponse.json(projects, { status: 200 });
 
   } catch (error) {

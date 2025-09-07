@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState } from 'react';
-import { useSession } from 'next-auth/react'; // 1. Importera useSession
+import { useSession } from 'next-auth/react';
 import Sidebar from '@/app/components/layout/Sidebar';
 import Header from '@/app/components/layout/Header';
 import Chat from '@/app/components/chat/Chat';
@@ -13,8 +13,15 @@ import DocumentsView from '@/app/components/views/DocumentsView';
 import TimeReportingPage from '@/app/dashboard/time-reporting/page';
 import CustomersPage from '@/app/dashboard/customers/page';
 import SettingsView from '@/app/components/views/SettingsView';
+import ProjectDetailView from '@/app/components/views/ProjectDetailView'; // 1. Importera nya vyn
 
 export type View = 'DASHBOARD' | 'PROJECTS' | 'DOCUMENTS' | 'CUSTOMERS' | 'TIME_REPORTING' | 'SETTINGS';
+
+// Typ för ett valt projekt
+interface SelectedProject {
+    id: string;
+    name: string;
+}
 
 const AnimatedBackground = () => (
     <div className="absolute inset-0 -z-10 overflow-hidden bg-gray-900">
@@ -24,32 +31,53 @@ const AnimatedBackground = () => (
 
 export default function DashboardPage() {
     const [activeView, setActiveView] = useState<View>('DASHBOARD');
+    const [selectedProject, setSelectedProject] = useState<SelectedProject | null>(null); // 2. Nytt state
     const [isChatExpanded, setIsChatExpanded] = useState(false);
-    const [startOnboardingFlow, setStartOnboardingFlow] = useState(false); // 2. Skapa nytt state
-    const { data: session, status } = useSession(); // Hämta session-status
+    const [startOnboardingFlow, setStartOnboardingFlow] = useState(false);
+    const [startQuoteFlow, setStartQuoteFlow] = useState(false);
+    const { data: session, status } = useSession();
 
     const handleNavClick = (view: View) => {
+        setSelectedProject(null); // Återställ projektval vid navigering
         setActiveView(view);
     };
-
-    // 3. Skapa handler-funktion
-    const handleStartOnboarding = () => {
-        setStartOnboardingFlow(true);
-        setIsChatExpanded(true); // Öppna chatten automatiskt
+    
+    const handleProjectClick = (project: SelectedProject) => {
+        setSelectedProject(project);
     };
 
-    // Funktion för att återställa flödet när det är klart
-    const onOnboardingComplete = () => {
-        setStartOnboardingFlow(false);
+    const handleBackToDashboard = () => {
+        setSelectedProject(null);
+        setActiveView('DASHBOARD');
     };
+
+    const handleStartOnboarding = () => { setStartOnboardingFlow(true); setIsChatExpanded(true); };
+    const handleStartQuoteFlow = () => { setStartQuoteFlow(true); setIsChatExpanded(true); };
+    const onOnboardingComplete = () => { setStartOnboardingFlow(false); };
+    const onQuoteFlowComplete = () => { setStartQuoteFlow(false); };
 
     const renderView = () => {
+        // 3. Uppdaterad render-logik
+        if (selectedProject) {
+            return <ProjectDetailView 
+                        projectName={selectedProject.name} 
+                        folderId={selectedProject.id} 
+                        onBack={handleBackToDashboard}
+                    />
+        }
+
         switch (activeView) {
             case 'DASHBOARD':
-                // Skicka med session-data och handler till vyn
-                return <DashboardView session={session} status={status} onStartOnboarding={handleStartOnboarding} />;
+                return <DashboardView 
+                    session={session} 
+                    status={status} 
+                    onStartOnboarding={handleStartOnboarding} 
+                    onStartQuoteFlow={handleStartQuoteFlow}
+                    onProjectClick={handleProjectClick} // Skicka med click-handler
+                />;
             case 'PROJECTS':
-                return <ProjectsView />;
+                // Pass project click handler to ProjectsView as well
+                return <ProjectsView onProjectClick={handleProjectClick}/>;
             case 'CUSTOMERS':
                 return <CustomersPage />;
             case 'TIME_REPORTING':
@@ -59,7 +87,13 @@ export default function DashboardPage() {
             case 'SETTINGS':
                 return <SettingsView />;
             default:
-                 return <DashboardView session={session} status={status} onStartOnboarding={handleStartOnboarding} />;
+                 return <DashboardView 
+                    session={session} 
+                    status={status} 
+                    onStartOnboarding={handleStartOnboarding} 
+                    onStartQuoteFlow={handleStartQuoteFlow}
+                    onProjectClick={handleProjectClick}
+                />;
         }
     };
 
@@ -69,7 +103,7 @@ export default function DashboardPage() {
             <Sidebar 
                 activeView={activeView}
                 onNavClick={handleNavClick} 
-                onStartQuoteFlow={() => setIsChatExpanded(true)}
+                onStartQuoteFlow={handleStartQuoteFlow}
             />
             <div className="flex-1 flex flex-col overflow-hidden">
                 <Header />
@@ -79,10 +113,10 @@ export default function DashboardPage() {
                 <Chat 
                     isExpanded={isChatExpanded} 
                     setExpanded={setIsChatExpanded}
-                    startQuoteFlow={false} // Behölls för bakåtkompatibilitet, men används inte för detta flöde
-                    onQuoteFlowComplete={() => {}} // Samma som ovan
-                    startOnboardingFlow={startOnboardingFlow} // 4. Skicka med det nya state-värdet
-                    onOnboardingComplete={onOnboardingComplete} // Skicka med callback
+                    startQuoteFlow={startQuoteFlow}
+                    onQuoteFlowComplete={onQuoteFlowComplete}
+                    startOnboardingFlow={startOnboardingFlow}
+                    onOnboardingComplete={onOnboardingComplete}
                 />
             </div>
         </div>

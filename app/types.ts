@@ -1,5 +1,30 @@
 
-// Grundläggande typer för Kunder, Projekt, etc.
+// En gemensam källa för sanning gällande projektstatus.
+// Detta förhindrar fel pga. stavfel eller olika system.
+export enum ProjectStatus {
+    QUOTE = 'Anbud',
+    PLANNING = 'Planering',
+    ONGOING = 'Pågående',
+    COMPLETED = 'Avslutat',
+    INVOICED = 'Fakturerat',
+}
+
+// Den kompletta och korrekta definitionen av ett Projekt-objekt.
+// Alla delar av applikationen måste följa denna struktur.
+export interface Project {
+    id: string;
+    name: string;
+    customerId: string; // Google Contact ID (resourceName)
+    customerName: string;
+    status: ProjectStatus;
+    driveFolderId?: string | null;
+    address?: string; // Adress för väder etc.
+    lat?: number;
+    lon?: number;
+    progress?: number; // Framsteg i procent (0-100)
+    lastActivity: string; // ISO 8601 date string
+    createdAt: string; // ISO 8601 date string
+}
 
 export interface Customer {
     id: string;
@@ -9,22 +34,12 @@ export interface Customer {
     createdAt: string;
 }
 
-export interface Project {
-    id: string;
-    name: string;
-    customerId: string;
-    customerName: string;
-    status: 'Pågående' | 'Anbud' | 'Avslutat';
-    lastActivity: string;
-    createdAt: string;
-}
-
 export interface TimeEntry {
     id: string;
     userId: string;
     projectId: string;
     projectName: string;
-    customerName: string; // Denormalized for easy display
+    customerName: string;
     date: string;
     hours: number;
     comment?: string;
@@ -41,23 +56,8 @@ export interface Document {
 
 // ----- Typer för Chatt-komponenten -----
 
-// Använder ett mer standardiserat format som är vanligt för AI-chattar.
 export type ChatMessage = {
     id: string; // Unikt ID för React-rendering
     role: 'user' | 'assistant' | 'system';
     content: string;
 };
-
-// Den gamla enum och interfacet tas bort eller kommenteras ut.
-/*
-export enum MessageSender {
-    AI,
-    USER,
-}
-
-export interface ChatMessage {
-    id: string;
-    sender: MessageSender;
-    text: string;
-}
-*/

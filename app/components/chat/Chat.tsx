@@ -5,12 +5,11 @@ import Image from 'next/image';
 import { ChatMessage } from '@/app/types';
 import { IconSend, IconChevronDown, IconPaperclip, IconMic } from '@/app/constants';
 
-// 1. Uppdatera Props
 interface ChatProps {
     isExpanded: boolean;
     setExpanded: (expanded: boolean) => void;
-    startQuoteFlow: boolean; // Behållen för bakåtkompatibilitet
-    onQuoteFlowComplete: () => void; // Behållen för bakåtkompatibilitet
+    startQuoteFlow: boolean;
+    onQuoteFlowComplete: () => void;
     startOnboardingFlow: boolean;
     onOnboardingComplete: () => void;
 }
@@ -57,9 +56,8 @@ const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded, startQuoteFlow, on
         if (isExpanded) chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isExpanded]);
     
-    // Effekt för standard välkomstmeddelande
     useEffect(() => {
-        if(isExpanded && messages.length === 0 && !startOnboardingFlow){
+        if(isExpanded && messages.length === 0 && !isLoading && !startOnboardingFlow && !startQuoteFlow){
             setIsLoading(true);
             setTimeout(() => {
                 setMessages([{
@@ -70,21 +68,20 @@ const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded, startQuoteFlow, on
                 setIsLoading(false);
             }, 500);
         }
-    }, [isExpanded, messages.length, startOnboardingFlow]);
+    }, [isExpanded, messages.length, isLoading, startOnboardingFlow, startQuoteFlow]);
 
-    const sendMessage = useCallback(async (messageContent: string, isInitialOnboardingMessage = false) => {
-        if (messageContent.trim() === '' || isLoading) return;
+    const sendMessage = useCallback(async (messageContent: string, trigger?: 'onboarding_start' | 'quote_start') => {
+        if (messageContent.trim() === '' && !trigger) return;
 
-        let newMessages: ChatMessage[];
-        // Om det är det första onboarding-meddelandet, visa det inte i chatten.
-        if (isInitialOnboardingMessage) {
-            newMessages = [...messages];
-        } else {
+        const isFlowStart = !!trigger;
+        let currentMessages = messages;
+
+        if (!isFlowStart) {
             const userMessage: ChatMessage = { id: `user-${Date.now()}`, role: 'user', content: messageContent };
-            newMessages = [...messages, userMessage];
+            currentMessages = [...messages, userMessage];
+            setMessages(currentMessages);
         }
 
-        setMessages(newMessages);
         setIsLoading(true);
         setError(null);
 
@@ -92,7 +89,7 @@ const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded, startQuoteFlow, on
             const response = await fetch('/api/orchestrator', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: newMessages, trigger: isInitialOnboardingMessage ? 'onboarding_start' : undefined }),
+                body: JSON.stringify({ messages: currentMessages, trigger }),
             });
 
             if (!response.ok) {
@@ -108,21 +105,27 @@ const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded, startQuoteFlow, on
             setError(err.message || 'Kunde inte få ett svar. Försök igen.');
         } finally {
             setIsLoading(false);
-            if (isInitialOnboardingMessage) {
-                onOnboardingComplete(); // 4. Återställ state
-            }
+            if (trigger === 'onboarding_start') onOnboardingComplete();
+            if (trigger === 'quote_start') onQuoteFlowComplete(); // Återställ offertflödet
         }
-    }, [isLoading, messages, onOnboardingComplete]);
+    }, [isLoading, messages, onOnboardingComplete, onQuoteFlowComplete]);
 
-    // 2. Skapa useEffect-hook för onboarding
     useEffect(() => {
         if (startOnboardingFlow) {
-            setMessages([]); // Rensa historiken
-            // 3. Skicka startmeddelande till orchestratorn
-            sendMessage('@onboarding_start', true);
+            setMessages([]);
+            sendMessage('@onboarding_start', 'onboarding_start');
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [startOnboardingFlow]);
+
+    // Ny useEffect för offertflödet
+    useEffect(() => {
+        if (startQuoteFlow) {
+            setMessages([]); // Rensa historiken
+            sendMessage('@quote_start', 'quote_start');
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [startQuoteFlow]);
 
     const handleSend = () => {
         sendMessage(input);
@@ -139,7 +142,7 @@ const Chat: React.FC<ChatProps> = ({ isExpanded, setExpanded, startQuoteFlow, on
 
     return (
         <div className="bg-gray-800 border-t border-gray-700 flex-shrink-0 z-20 shadow-2xl">
-            <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'max-h-[70vh]' : 'max-h-0'}`}>
+             <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'max-h-[70vh]' : 'max-h-0'}`}>
                 <div className="h-[70vh] flex flex-col">
                     <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-gray-900/70">
                          {messages.map(msg => (

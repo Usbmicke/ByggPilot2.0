@@ -2,9 +2,10 @@
 import { NextResponse } from 'next/server';
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/app/services/firestoreService';
-import { createProjectFolder } from '@/app/services/driveService'; // Importera den nya servicen
+import { createProjectFolder } from '@/app/services/driveService';
 import { getSession } from '@/app/lib/session';
-import { Project } from '@/app/types';
+// **STEG 1: Importera de uppdaterade typerna för tydlighet**
+import { Project, ProjectStatus } from '@/app/types';
 
 export async function POST(request: Request) {
   try {
@@ -15,41 +16,39 @@ export async function POST(request: Request) {
       return new NextResponse(JSON.stringify({ message: 'Authentication required' }), { status: 401 });
     }
 
+    // Status-värdet är nu garanterat ett av värdena i ProjectStatus enum
     const { name, customerId, customerName, status } = await request.json();
 
     if (!name || !customerId || !customerName || !status) {
       return new NextResponse(JSON.stringify({ message: 'Missing required fields' }), { status: 400 });
     }
 
-    // Steg 1: Skapa projektet i Firestore för att få ett ID
+    // Spara projektet i Firestore med initiala värden för alla fält
     const projectDocRef = await addDoc(collection(db, "projects"), {
       name,
       customerId,
       customerName,
       status,
-      driveFolderId: null, // Sätts till null initialt
       ownerId: userId,
+      driveFolderId: null,
+      address: null,
+      lat: null,
+      lon: null,
+      progress: 0, // Starta alltid på 0%
       lastActivity: serverTimestamp(),
       createdAt: serverTimestamp(),
     });
 
-    let driveFolderId = null;
+    let driveFolderId: string | null = null;
     try {
-        // Steg 2: Skapa Google Drive-mappen
         driveFolderId = await createProjectFolder(name, customerName);
-
-        // Steg 3: Uppdatera projektet i Firestore med det nya Drive Folder ID:t
-        await updateDoc(projectDocRef, {
-            driveFolderId: driveFolderId
-        });
-
+        await updateDoc(projectDocRef, { driveFolderId: driveFolderId });
     } catch (driveError) {
         console.error("Could not create Google Drive folder. Project created without it.", driveError);
-        // Om detta misslyckas, fortsätter vi. Projektet är skapat,
-        // men vi har ingen mapp. Detta kan hanteras/försökas igen senare.
     }
 
-    // Bygg det slutgiltiga projektobjektet att returnera
+    // **STEG 2: Bygg ett komplett och korrekt projektobjekt att returnera**
+    // Detta objekt måste matcha Project-interfacet i types.ts exakt.
     const newProject: Project = {
         id: projectDocRef.id,
         name,
@@ -57,8 +56,12 @@ export async function POST(request: Request) {
         customerName,
         status,
         driveFolderId,
+        address: null,
+        lat: undefined, // undefined är lämpligare än null för number-typer i JS
+        lon: undefined,
+        progress: 0,
         lastActivity: new Date().toISOString(),
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
     };
 
     return NextResponse.json(newProject, { status: 201 });

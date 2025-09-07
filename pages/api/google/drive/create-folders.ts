@@ -1,53 +1,105 @@
 
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'; // Importera authOptions
+import { google } from 'googleapis';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { OAuth2Client } from 'google-auth-library';
 
-// Typdefinition för ett anpassat session-objekt som inkluderar vårt accessToken
-interface DriveApiSession {
-  accessToken?: string;
+
+// Hjälpfunktion för att hitta en fil/mapp och returnera dess ID, eller null om den inte finns.
+async function findFileId(drive: any, query: string): Promise<string | null> {
+    try {
+        const res = await drive.files.list({
+            q: query,
+            fields: 'files(id, name)',
+            pageSize: 1,
+        });
+        if (res.data.files && res.data.files.length > 0) {
+            return res.data.files[0].id;
+        }
+        return null;
+    } catch (error) {
+        console.error(`Error finding file with query "${query}":`, error);
+        throw new Error('Could not search for files in Google Drive.');
+    }
 }
 
-/**
- * API-slutpunkt för att skapa en standardiserad mappstruktur i användarens Google Drive.
- */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // 1. Säkerställ att vi endast accepterar POST-anrop
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST']);
-    return res.status(405).end(`Method ${req.method} Not Allowed`);
-  }
-
-  try {
-    // 2. Hämta sessionen på ett säkert sätt på serversidan
-    const session = await getServerSession(req, res, authOptions);
-
-    // 3. Validera att användaren är inloggad och har en session
-    if (!session || !session.user) {
-      return res.status(401).json({ error: 'Authentication required. Please log in.' });
-    }
-    
-    // 4. Extrahera accessToken (som vi konfigurerade i next-auth)
-    const { accessToken } = session as unknown as { accessToken?: string };
-    if (!accessToken) {
-        return res.status(401).json({ error: 'Access token not found. Please re-authenticate.' });
+    if (req.method !== 'POST') {
+        return res.status(405).end(`Method ${req.method} Not Allowed`);
     }
 
-    // --- PLATSHÅLLARE FÖR FRAMTIDA LOGIK ---
-    // Här kommer vi att använda `accessToken` för att anropa Google Drive API.
-    // (Detta implementeras i nästa steg, Fas 5.2)
+    try {
+        const session = await getServerSession(req, res, authOptions);
+        if (!session || !(session as any).accessToken) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
 
-    console.log('Successfully authenticated user for Drive API call. Access token length:', accessToken.length);
+        const oAuth2Client = new OAuth2Client();
+        oAuth2Client.setCredentials({ access_token: (session as any).accessToken });
 
-    // 5. Skicka ett temporärt framgångssvar
-    res.status(200).json({ 
-        message: 'API endpoint is ready. Folder creation logic will be implemented here.',
-        // I en riktig implementation skulle vi returnera t.ex. ID:n på de skapade mapparna
-        createdFolders: [], 
-    });
+        const drive = google.drive({ version: 'v3', auth: oAuth2Client });
+        const docs = google.docs({ version: 'v1', auth: oAuth2Client });
 
-  } catch (error) {
-    console.error('Error in create-folders API:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
+        // 1. Kontrollera om mappstrukturen redan finns
+        const mainFolderId = await findFileId(drive, "name='ByggPilot Projekt' and mimeType='application/vnd.google-apps.folder' and 'root' in parents and trashed=false");
+        if (mainFolderId) {
+            return res.status(200).json({ message: 'Project structure already exists.' });
+        }
+
+        // 2. Skapa mappstrukturen
+        const mainFolder = await drive.files.create({
+            requestBody: { name: 'ByggPilot Projekt', mimeType: 'application/vnd.google-apps.folder' },
+            fields: 'id',
+        });
+        const newMainFolderId = mainFolder.data.id;
+        if (!newMainFolderId) throw new Error('Could not create main project folder.');
+
+        const subfolders = ['01_Kunder & Anbud', '02_Pågående Projekt', '03_Avslutade Projekt', '04_Företagsmallar', '05_Ekonomi & Fakturering'];
+        let templateFolderId: string | undefined;
+        for (const folderName of subfolders) {
+            const created = await drive.files.create({
+                requestBody: { name: folderName, mimeType: 'application/vnd.google-apps.folder', parents: [newMainFolderId] },
+                fields: 'id',
+            });
+            if(folderName === '04_Företagsmallar') {
+                templateFolderId = created.data.id;
+            }
+        }
+        if (!templateFolderId) throw new Error("Could not create the '04_Företagsmallar' folder.");
+
+        // 3. Skapa och fyll offertmallen
+        const templateDoc = await docs.documents.create({ requestBody: { title: 'Offertmall' } });
+        const templateDocId = templateDoc.data.documentId;
+        if (!templateDocId) throw new Error('Could not create the template document.');
+
+        const requests = [
+            { insertText: { location: { index: 1 }, text: 'Offert\n' } },
+            { updateTextStyle: { range: { startIndex: 1, endIndex: 7 }, textStyle: { bold: true, fontSize: { magnitude: 24, unit: 'PT' } } } },
+            { insertText: { location: { index: 7 }, text: 'Datum: {{DATUM}}\nOffertnummer: {{OFFERTNUMMER}}\n\n' } },
+            { insertText: { location: { index: 50 }, text: 'Kund\n' } },
+            { updateTextStyle: { range: { startIndex: 50, endIndex: 54 }, textStyle: { bold: true, fontSize: { magnitude: 18, unit: 'PT' } } } },
+            { insertText: { location: { index: 54 }, text: 'Namn: {{KUNDNAMN}}\nAdress: {{ADRESS}}\n\n' } },
+            { insertText: { location: { index: 100 }, text: 'Projektinformation\n' } },
+            { updateTextStyle: { range: { startIndex: 100, endIndex: 118 }, textStyle: { bold: true, fontSize: { magnitude: 18, unit: 'PT' } } } },
+            { insertText: { location: { index: 118 }, text: 'Projekttyp: {{PROJEKTTYP}}\nBeskrivning: {{PROJEKTBESKRIVNING}}\nMaterial/Önskemål: {{MATERIALVAL}}\n' } },
+        ];
+        await docs.documents.batchUpdate({ documentId: templateDocId, requestBody: { requests } });
+
+        // 4. Flytta mallen till rätt mapp
+        const file = await drive.files.get({ fileId: templateDocId, fields: 'parents' });
+        const previousParents = file.data.parents?.join(',') || '';
+        await drive.files.update({
+            fileId: templateDocId,
+            addParents: templateFolderId,
+            removeParents: previousParents,
+            fields: 'id, parents',
+        });
+
+        res.status(200).json({ message: 'Complete project structure and quote template created successfully.' });
+
+    } catch (error: any) {
+        console.error('Error creating folder structure:', error);
+        res.status(500).json({ error: 'Failed to create folder structure', details: error.message });
+    }
 }

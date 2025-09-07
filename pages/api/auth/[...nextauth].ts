@@ -15,7 +15,8 @@ const GOOGLE_AUTHORIZATION_URL =
         "https://www.googleapis.com/auth/userinfo.profile",
         "https://www.googleapis.com/auth/drive", // Full access to Google Drive
         "https://www.googleapis.com/auth/gmail.readonly", // Read-only access to Gmail
-        "https://www.googleapis.com/auth/calendar" // Read/write access to Calendar
+        "https://www.googleapis.com/auth/calendar", // Read/write access to Calendar
+        "https://www.googleapis.com/auth/contacts.readonly" // **NYTT** Read-only access to Contacts
     ].join(" ")
   });
 

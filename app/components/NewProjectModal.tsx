@@ -3,7 +3,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { IconX } from '@/app/constants';
-import { Project, Customer } from '@/app/types';
+// **STEG 1: Importera de nya, korrekta typerna**
+import { Project, ProjectStatus } from '@/app/types';
+
+interface GoogleContact {
+  id: string;
+  name: string;
+}
 
 type NewProjectModalProps = {
   isOpen: boolean;
@@ -14,40 +20,40 @@ type NewProjectModalProps = {
 export default function NewProjectModal({ isOpen, onClose, onProjectCreated }: NewProjectModalProps) {
   const [projectName, setProjectName] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
-  const [status, setStatus] = useState<'Anbud' | 'Pågående' | 'Avslutat'>('Anbud');
+  // **STEG 2: Använd ProjectStatus enum för state**
+  const [status, setStatus] = useState<ProjectStatus>(ProjectStatus.QUOTE);
   
-  // State för att hålla kundlistan och dess laddningsstatus
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [isLoadingCustomers, setIsLoadingCustomers] = useState(false);
+  const [contacts, setContacts] = useState<GoogleContact[]>([]);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Effekt för att hämta kunder när modalen öppnas
   useEffect(() => {
     if (isOpen) {
-      // Återställ formuläret varje gång modalen öppnas
+      // Återställ formuläret med den nya enum-standarden
       setProjectName('');
       setSelectedCustomerId('');
-      setStatus('Anbud');
+      setStatus(ProjectStatus.QUOTE);
       setError(null);
       
-      const fetchCustomers = async () => {
-        setIsLoadingCustomers(true);
+      const fetchContacts = async () => {
+        setIsLoadingContacts(true);
         try {
-          const response = await fetch('/api/customers/list');
+          const response = await fetch('/api/google/people/list-contacts');
           if (!response.ok) {
-            throw new Error('Kunde inte hämta kundlistan');
+            throw new Error('Kunde inte hämta kundlistan från Google');
           }
-          const data: Customer[] = await response.json();
-          setCustomers(data);
+          const data = await response.json();
+          const sortedContacts = (data.contacts || []).sort((a: GoogleContact, b: GoogleContact) => a.name.localeCompare(b.name));
+          setContacts(sortedContacts);
         } catch (err: any) {
-          setError(err.message);
+          setError('Kunde inte ladda Google-kontakter. Prova att logga ut och in igen.');
         }
-        setIsLoadingCustomers(false);
+        setIsLoadingContacts(false);
       };
 
-      fetchCustomers();
+      fetchContacts();
     }
   }, [isOpen]);
 
@@ -62,22 +68,23 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated }: N
       return;
     }
     
-    const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
-    if (!selectedCustomer) {
+    const selectedContact = contacts.find(c => c.id === selectedCustomerId);
+    if (!selectedContact) {
         setError('Den valda kunden är ogiltig.');
         setIsSubmitting(false);
         return;
     }
 
     try {
-      const response = await fetch('/api/projects', {
+      // **STEG 3: Skicka med det korrekta enum-värdet**
+      const response = await fetch('/api/projects/route', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: projectName,
-          customerId: selectedCustomer.id,
-          customerName: selectedCustomer.name,
-          status
+          customerId: selectedContact.id,
+          customerName: selectedContact.name,
+          status: status // Skickar nu 'Anbud', 'Planering', etc.
         }),
       });
 
@@ -86,7 +93,7 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated }: N
         throw new Error(errorData.message || 'Något gick fel');
       }
 
-      const newProject = await response.json();
+      const newProject: Project = await response.json();
       onProjectCreated(newProject);
       onClose();
     } catch (err: any) {
@@ -114,27 +121,28 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated }: N
               <input type="text" id="projectName" value={projectName} onChange={e => setProjectName(e.target.value)} className="w-full bg-gray-900 border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
             </div>
             <div>
-              <label htmlFor="customer" className="block text-sm font-medium text-gray-300 mb-1">Välj Kund</label>
-              <select id="customer" value={selectedCustomerId} onChange={e => setSelectedCustomerId(e.target.value)} disabled={isLoadingCustomers} className="w-full bg-gray-900 border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50">
-                <option value="">{isLoadingCustomers ? 'Laddar kunder...' : 'Välj en kund'}</option>
-                {customers.map(customer => (
-                  <option key={customer.id} value={customer.id}>{customer.name}</option>
+              <label htmlFor="customer" className="block text-sm font-medium text-gray-300 mb-1">Välj Kund (från Google Contacts)</label>
+              <select id="customer" value={selectedCustomerId} onChange={e => setSelectedCustomerId(e.target.value)} disabled={isLoadingContacts} className="w-full bg-gray-900 border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50">
+                <option value="">{isLoadingContacts ? 'Laddar Google-kontakter...' : 'Välj en kund'}</option>
+                {contacts.map(contact => (
+                  <option key={contact.id} value={contact.id}>{contact.name}</option>
                 ))}
               </select>
             </div>
             <div>
               <label htmlFor="status" className="block text-sm font-medium text-gray-300 mb-1">Status</label>
-              <select id="status" value={status} onChange={e => setStatus(e.target.value as any)} className="w-full bg-gray-900 border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                <option value="Anbud">Anbud</option>
-                <option value="Pågående">Pågående</option>
-                <option value="Avslutat">Avslutat</option>
+              {/* **STEG 4: Fyll i listan från enum för att göra den dynamisk** */}
+              <select id="status" value={status} onChange={e => setStatus(e.target.value as ProjectStatus)} className="w-full bg-gray-900 border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                {Object.values(ProjectStatus).map(s => (
+                    <option key={s} value={s}>{s}</option>
+                ))}
               </select>
             </div>
-            {error && <p className="text-red-400 text-sm">{error}</p>}
+            {error && <p className="text-red-400 text-sm py-2 bg-red-900/30 rounded-lg px-3">{error}</p>}
           </div>
           <div className="p-6 border-t border-gray-700 flex justify-end gap-4">
             <button type="button" onClick={onClose} className="py-2 px-4 text-gray-300 font-semibold rounded-lg hover:bg-gray-700 transition-colors">Avbryt</button>
-            <button type="submit" disabled={isSubmitting || isLoadingCustomers} className="py-2 px-4 bg-cyan-500 text-white font-semibold rounded-lg hover:bg-cyan-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            <button type="submit" disabled={isSubmitting || isLoadingContacts} className="py-2 px-4 bg-cyan-500 text-white font-semibold rounded-lg hover:bg-cyan-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               {isSubmitting ? 'Skapar...' : 'Skapa Projekt'}
             </button>
           </div>
