@@ -1,6 +1,6 @@
 
 import './globals.css';
-import NextAuthProvider from '@/app/providers/NextAuthProvider'; // Uppdaterad import
+import { AuthProvider } from '@/app/providers/AuthContext'; // STEG 1: Korrigerad import
 
 export const metadata = {
   title: 'ByggPilot',
@@ -11,9 +11,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="sv">
       <body>
-        <NextAuthProvider> 
+        {/* STEG 2: Använd den korrekta providern */}
+        <AuthProvider> 
           {children}
-        </NextAuthProvider>
+        </AuthProvider>
       </body>
     </html>
   );

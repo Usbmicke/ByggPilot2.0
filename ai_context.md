@@ -1,44 +1,44 @@
 
-# ByggPilot - Master Plan (Reviderad 2.0)
+# ByggPilot - Master Plan (Reviderad 3.0)
 
 ## Övergripande Mål
-Att systematiskt och kontrollerat utveckla ByggPilot från en fungerande dashboard till en värdefull MVP (Minimum Viable Product) med djup integration mot Google Workspace för att skapa automatiserade och tidsbesparande arbetsflöden.
+Att systematiskt utveckla ByggPilot med djupa integrationer mot externa datakällor och avancerad intelligens för att skapa en oumbärlig digital kollega för byggbranschen.
 
 ## Ledande Principer
-- **Fasvis Implementation:** En funktion i taget, noggrant testad och stabil.
-- **Orchestrator-arkitektur:** Alla anrop till externa tjänster (AI, Google API:er) går via en central `/api/orchestrator`-slutpunkt för att säkerställa kontroll, säkerhet och enhetlighet.
-- **Expert-Chatbot:** Chatten är det primära gränssnittet för att interagera med ByggPilots smarta funktioner. Den ska vara proaktiv, kontextmedveten och agera som en digital kollega.
-- **Säkerhet och Behörigheter:** Användarens data och integritet är högsta prioritet. Vi använder `next-auth` för säker autentisering och begär endast de behörigheter som är absolut nödvändiga för en specifik funktion.
+- **Fasvis Implementation:** En funktion i taget, noggrant testad och stabilt integrerad.
+- **Orchestrator-arkitektur:** Alla anrop till externa tjänster går via en central `/api/orchestrator`-slutpunkt för att säkerställa kontroll, säkerhet och enhetlighet.
+- **Sömlös Integration:** Funktioner i chatten ska reflektera och interagera med data som presenteras i det grafiska gränssnittet, och vice versa.
+- **Flexibel Implementation:** Teknisk implementation anpassas för att passa den existerande arkitekturen och säkerställa en robust och underhållbar kodbas.
 
 ---
 
-## Byggplan: Från Dashboard till Automatiserad Projektpartner
-
-### Fas 0: Interaktivt och Realistiskt Demoläge - SLUTFÖRD
-**Resultat:** Ett heltäckande och interaktivt demoläge har implementerats.
-
-### Fas 1-3: (Föråldrade) - ERSATTA AV NY ARKITEKTUR
-**Notering:** De ursprungliga planerna har skrotats till förmån för en mer flexibel arkitektur centrerad kring `next-auth` och direkta Google API-integrationer.
-
-### Fas 4: Google-autentisering & Proaktiv Onboarding - SLUTFÖRD
-**Mål:** Att byta ut det gamla autentiseringssystemet mot en robust lösning med `next-auth` och förbereda applikationen för att kunna interagera med användarens Google-tjänster.
-
-### Fas 5: Google Drive-integration & Projektstruktur - SLUTFÖRD
-**Mål:** Att skapa en solid grund för projekt- och dokumenthantering genom att integrera med Google Drive.
-
-### Fas 6: Den Intelligenta Offertmotorn (MVP) - SLUTFÖRD
-**Mål:** Att skapa ett komplett, konversationsbaserat flöde för att generera en offert med hjälp av en AI-assistent. Detta är den första, sanna "intelligenta" funktionen i ByggPilot och binder samman kunder, projekt och dokument.
+## Byggplan 2.0: MVP - SLUTFÖRD
+Implementationen av Fas 0-6, som utgör kärnan och den första MVP:n av ByggPilot (inklusive Google-integration och den intelligenta offertmotorn), är slutförd.
 
 ---
 
-## Projektstatus: Implementation Slutförd - Granskning & Kvalitetssäkring
+## Byggplan 3.0: Externa API-Integrationer & Avancerad Intelligens
 
-**Status:** All implementation enligt Byggplanen (Fas 0-6) är nu slutförd.
+**Status:** Projektet övergår nu till att integrera med externa, datadrivna tjänster för att dramatiskt öka värdet och intelligensen i applikationen.
 
-**Nästa Steg:** Hela applikationen behöver nu en grundlig granskning och kvalitetssäkring för att identifiera eventuella buggar, utvärdera användarflödets effektivitet och säkerställa att all funktionalitet är robust och motsvarar de uppsatta målen. 
+### Fas 7: Automatisk Kundverifiering (Bolagsverket) - SLUTFÖRD
+- **Mål:** Verifiera företagskunder i realtid mot Bolagsverket för att minska risk och säkerställa datakvalitet.
 
-**Fokusområden för granskning:**
-- **Konversationslogik:** Säkerställa att chattflödena är logiska, hjälpsamma och utan återvändsgränder.
-- **API-integrationer:** Verifiera att all kommunikation med externa API:er (Google Drive, Databasen) är stabil och har korrekt felhantering.
-- **Användarupplevelse (UX):** Utvärdera hur intuitiv och effektiv applikationen är att använda ur ett slutanvändarperspektiv.
-- **Kodkvalitet och Stabilitet:** Genomgång av kodbasen för att säkerställa att den är underhållbar och presterar väl.
+### Fas 8: Proaktiv Väder- och Varningsassistent (SMHI)
+- **Mål:** Varna för väder som påverkar planerade arbeten via dashboard och intelligenta notiser.
+- **Status:** **PÅBÖRJAS NU**
+
+### Fas 9: Dynamisk Regelverkskontroll (Lantmäteriet & Boverket)
+- **Mål:** Ge platsspecifika byggregler och detaljplaner direkt i chatten på begäran.
+
+### Fas 10: Geologisk Riskbedömning (SGU)
+- **Mål:** Presentera grundläggande geologisk markdata för en projektplats.
+
+### Fas 11: System för Kontinuerligt Lärande
+- **Mål:** Skapa datadrivna insikter från användarens egna projekthistorik och bevaka externa regeländringar.
+
+### Fas 12: Förbättrad Användbarhet i Fält
+- **Mål:** Införa röststyrning för kommandon och PWA-funktionalitet för offline-stöd.
+
+### Fas 13: Slutgiltig Kvalitetssäkring
+- **Mål:** Genomföra en fullständig, övergripande granskning av samtliga funktioner inför en potentiell lansering.

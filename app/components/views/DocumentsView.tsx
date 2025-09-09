@@ -1,73 +1,99 @@
 'use client';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react'; // Importerar useState
 import { Project, ProjectStatus } from '@/app/types';
-import { IconFolder, IconFileText, IconFolderOpen } from '@/app/constants';
+import { IconFolder, IconFileText, IconFolderOpen, IconChevronRight } from '@/app/constants';
 
 interface DocumentsViewProps {
     projects: Project[];
 }
 
-const Folder = ({ name, children, defaultOpen = false }) => {
-    const [isOpen, setIsOpen] = React.useState(defaultOpen);
+// Folder-komponenten förblir densamma, men vi gör den lite mer robust
+const Folder = ({ name, children, defaultOpen = false, count }) => {
+    const [isOpen, setIsOpen] = useState(defaultOpen);
 
     return (
         <div className="bg-gray-800/50 border border-gray-700 rounded-xl transition-all duration-300 ease-in-out">
             <button 
                 onClick={() => setIsOpen(!isOpen)} 
-                className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 rounded-t-xl"
+                className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-700/50 rounded-t-xl transition-colors"
             >
                 <div className="flex items-center gap-3">
                     {isOpen ? <IconFolderOpen className="w-7 h-7 text-cyan-400" /> : <IconFolder className="w-7 h-7 text-cyan-400" />}
                     <span className="font-bold text-gray-100 text-lg">{name}</span>
                 </div>
-                <span className="text-sm text-gray-500">{children.length} objekt</span>
+                <div className="flex items-center gap-4">
+                    <span className="text-sm text-gray-500">{count} {count === 1 ? 'objekt' : 'objekt'}</span>
+                    <IconChevronRight className={`w-5 h-5 text-gray-500 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+                </div>
             </button>
-            {isOpen && (
+            {isOpen && children && count > 0 && (
                 <div className="p-4 border-t border-gray-700/50">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {children}
                     </div>
                 </div>
             )}
+            {isOpen && count === 0 && (
+                 <div className="p-4 border-t border-gray-700/50 text-center text-gray-500 text-sm">
+                    Inga projekt i denna kategori.
+                </div>
+            )}
         </div>
     );
 };
 
+// BUGGFIX 2: project.documents existerar inte. Ersätter med platshållare.
 const ProjectFolder = ({ project }: { project: Project }) => (
-    <div className="bg-gray-900/60 border border-gray-600 rounded-lg p-3 transition-colors hover:border-cyan-500/70">
-        <div className="flex items-center gap-2 mb-3">
-            <IconFolder className="w-6 h-6 text-cyan-500" />
+    <div className="bg-gray-900/60 border border-gray-600 rounded-lg p-3 transition-colors hover:border-cyan-500/70 cursor-pointer">
+        <div className="flex items-center gap-2 mb-2">
+            <IconFolder className="w-6 h-6 text-cyan-500 flex-shrink-0" />
             <h4 className="font-semibold text-gray-200 truncate">{project.name}</h4>
         </div>
-        <div className="space-y-1.5 text-sm">
-            {project.documents.slice(0, 4).map(doc => (
-                <div key={doc.id} className="flex items-center gap-2 text-gray-400">
-                    <IconFileText className="w-4 h-4 flex-shrink-0" />
-                    <span className="truncate">{doc.name}</span>
-                </div>
-            ))}
-            {project.documents.length > 4 && (
-                <p className="text-xs text-gray-500 pt-1">+ {project.documents.length - 4} till...</p>
-            )}
+        {/* Ersätter den kraschande koden med en platshållare */}
+        <div className="space-y-1 text-sm text-gray-400">
+            <div className="flex items-center gap-2">
+                <IconFileText className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">Offert.pdf</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <IconFileText className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">Projektplan.docx</span>
+            </div>
         </div>
     </div>
 );
 
 const DocumentsView: React.FC<DocumentsViewProps> = ({ projects }) => {
 
+    // BUGGFIX 1: Skyddsklausul. Säkerställ att `projects` är en array för att undvika krasch.
+    const safeProjects = projects || [];
+
     const groupedProjects = useMemo(() => {
         const groups = {
-            anbud: [],
-            pagaende: [],
-            avslutade: []
+            quote: [], // Ändrat namn för att matcha ProjectStatus.QUOTE
+            ongoing: [],
+            completed: []
         };
-        projects.forEach(p => {
-            if (p.status === ProjectStatus.PLANNING) groups.anbud.push(p);
-            else if (p.status === ProjectStatus.ONGOING) groups.pagaende.push(p);
-            else if (p.status === ProjectStatus.COMPLETED || p.status === ProjectStatus.INVOICED) groups.avslutade.push(p);
+        
+        // Använder `safeProjects` istället för `projects`
+        safeProjects.forEach(p => {
+            // Förenklad logik för att matcha de nya statusarna
+            switch(p.status) {
+                case ProjectStatus.QUOTE:
+                    groups.quote.push(p);
+                    break;
+                case ProjectStatus.PLANNING:
+                case ProjectStatus.ONGOING:
+                    groups.ongoing.push(p);
+                    break;
+                case ProjectStatus.COMPLETED:
+                case ProjectStatus.INVOICED:
+                    groups.completed.push(p);
+                    break;
+            }
         });
         return groups;
-    }, [projects]);
+    }, [safeProjects]);
 
     return (
         <div className="animate-fade-in">
@@ -75,20 +101,20 @@ const DocumentsView: React.FC<DocumentsViewProps> = ({ projects }) => {
             <p className="text-gray-400 mb-8">Här simuleras din mappstruktur i Google Drive. ByggPilot skapar och underhåller denna struktur automatiskt åt dig.</p>
             
             <div className="space-y-6">
-                <Folder name="01_Kunder & Anbud" defaultOpen={true}>
-                    {groupedProjects.anbud.map(project => 
+                <Folder name="01_Kunder & Anbud" defaultOpen={true} count={groupedProjects.quote.length}>
+                    {groupedProjects.quote.map(project => 
                         <ProjectFolder key={project.id} project={project} />
                     )}
                 </Folder>
 
-                <Folder name="02_Pågående Projekt" defaultOpen={true}>
-                    {groupedProjects.pagaende.map(project => 
+                <Folder name="02_Pågående Projekt" defaultOpen={true} count={groupedProjects.ongoing.length}>
+                    {groupedProjects.ongoing.map(project => 
                         <ProjectFolder key={project.id} project={project} />
                     )}
                 </Folder>
 
-                <Folder name="03_Avslutade Projekt">
-                    {groupedProjects.avslutade.map(project => 
+                <Folder name="03_Avslutade Projekt" count={groupedProjects.completed.length}>
+                    {groupedProjects.completed.map(project => 
                         <ProjectFolder key={project.id} project={project} />
                     )}
                 </Folder>

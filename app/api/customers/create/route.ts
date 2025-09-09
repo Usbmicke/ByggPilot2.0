@@ -7,25 +7,30 @@ import { Customer } from '@/app/types';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, email, phone } = body;
+    // Destrukturera isCompany tillsammans med de andra fälten
+    const { name, email, phone, isCompany } = body;
 
-    if (!name || !email) {
-      return new NextResponse(JSON.stringify({ message: 'Name and email are required' }), { status: 400 });
+    // Validering: Endast namn är ett absolut krav.
+    if (!name) {
+      return new NextResponse(JSON.stringify({ message: 'Name is required' }), { status: 400 });
     }
 
+    // Lägg till det nya fältet i objektet som sparas i Firestore
     const docRef = await addDoc(collection(db, "customers"), {
       name,
       email,
       phone,
+      isCompany: isCompany || false, // Sätt till false om det inte är definierat
       createdAt: serverTimestamp(),
     });
 
-    const newCustomer: Customer = {
+    // Inkludera det nya fältet i det returnerade objektet
+    const newCustomer: Partial<Customer> = {
         id: docRef.id,
         name,
         email,
         phone,
-        createdAt: new Date().toISOString()
+        isCompany: isCompany || false,
     };
 
     return NextResponse.json(newCustomer, { status: 201 });

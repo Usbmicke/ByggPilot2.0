@@ -1,12 +1,12 @@
-// TODO: Ersätt med dina egna Firebase-projektuppgifter
-// Gå till Projektinställningar > Allmänt i din Firebase-konsol
-// och klicka på Lägg till app > Webbapp för att hitta dessa värden.
+
+// Denna fil läser in konfigurationen från miljövariabler (.env.local)
+// Detta är en säker metod för att hantera känslig information.
 
 export const firebaseConfig = {
-  apiKey: "DIN_API_KEY",
-  authDomain: "DITT_PROJEKTID.firebaseapp.com",
-  projectId: "DITT_PROJEKTID",
-  storageBucket: "DITT_PROJEKTID.appspot.com",
-  messagingSenderId: "DIN_MESSAGING_SENDER_ID",
-  appId: "DIN_APP_ID"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
