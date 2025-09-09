@@ -3,14 +3,13 @@
 
 import { useSession, signIn, signOut } from 'next-auth/react';
 import Image from 'next/image';
-import { MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 
 // Denna komponent hanterar in/utloggning och visar användarinformation.
 const AuthButton = () => {
   const { data: session, status } = useSession();
 
   if (status === 'loading') {
-    return <div className="w-24 h-8 bg-gray-200 rounded animate-pulse"></div>; // Enkel laddningsindikator
+    return <div className="w-24 h-8 bg-gray-200 rounded animate-pulse"></div>;
   }
 
   if (session) {
@@ -27,48 +26,23 @@ const AuthButton = () => {
   }
 
   return (
-    <button 
-      onClick={() => signIn('google', { callbackUrl: '/dashboard' })} 
-      className="bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all duration-150 ease-in-out shadow-md"
-    >
-      Logga in med Google
-    </button>
+      <button onClick={() => signIn('google')} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
+          Logga in med Google
+      </button>
   );
 };
 
 const Header = () => {
   return (
-    <header className="bg-white shadow-sm">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="flex items-center justify-between h-16 px-4 bg-white border-b border-gray-200">
         <div className="flex items-center">
-           <a href="/dashboard" className="flex items-center gap-2">
-             <Image src="/images/byggpilotlogga1.png" alt="ByggPilot Logotyp" width={32} height={32} className="h-8 w-8"/>
-             <span className="text-lg font-bold text-gray-900">ByggPilot</span>
-           </a>
-        </div>
-
-        <div className="flex flex-1 items-center justify-center px-2 lg:ml-6 lg:justify-end">
-          <div className="w-full max-w-lg lg:max-w-xs">
-            <label htmlFor="search" className="sr-only">Sök</label>
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
-              </div>
-              <input 
-                id="search"
-                name="search"
-                className="block w-full rounded-md border border-gray-300 bg-white py-2 pl-10 pr-3 leading-5 placeholder-gray-500 focus:border-cyan-500 focus:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-cyan-500 sm:text-sm"
-                placeholder="Sök projekt eller kunder"
-                type="search" 
-              />
-            </div>
-          </div>
+            <Image src="/images/byggpilot.png" alt="ByggPilot 2.0 Logotyp" width={40} height={40} />
+            <span className="ml-2 text-lg font-semibold">ByggPilot 2.0</span>
         </div>
         
-        <div className="ml-4 flex items-center">
-          <AuthButton />
+        <div className="flex items-center gap-6">
+            <AuthButton />
         </div>
-      </div>
     </header>
   );
 };

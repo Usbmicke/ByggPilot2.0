@@ -11,7 +11,11 @@ const ProjectRow = ({ project }: { project: Project }) => {
   const router = useRouter();
 
   const handleRowClick = () => {
-    router.push(`/projects/${project.id}`);
+    // I en demo-kontext är projekt-ID inte en siffra, så vi navigerar inte.
+    if (typeof project.id === 'number') { 
+      router.push(`/projects/${project.id}`);
+    }
+    // Om det är en demo, gör inget vid klick, eller visa ett meddelande.
   };
 
   return (
@@ -20,7 +24,6 @@ const ProjectRow = ({ project }: { project: Project }) => {
       onClick={handleRowClick}
     >
       <div className="col-span-4 font-medium text-white truncate">{project.name}</div>
-      {/* Korrigerat fält: customerName istället för customer.name */}
       <div className="col-span-3 text-gray-400 truncate">{project.customerName}</div> 
       <div className="col-span-2 text-gray-400">{new Date(project.lastActivity).toLocaleDateString('sv-SE')}</div>
       <div className="col-span-2 flex items-center">
@@ -35,7 +38,8 @@ const ProjectRow = ({ project }: { project: Project }) => {
 
 export default function ProjectsView({ projects: initialProjects, customers, todos }) {
   const [projects, setProjects] = useState<Project[]>(initialProjects || []);
-  const [loading, setLoading] = useState(true);
+  // Ladda bara om initialProjects inte finns.
+  const [loading, setLoading] = useState(!initialProjects);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -43,11 +47,17 @@ export default function ProjectsView({ projects: initialProjects, customers, tod
     const fetchProjects = async () => {
       setLoading(true);
       try {
-        // Korrigerat API-anrop till den nya list-slutpunkten
         const response = await fetch('/api/projects/list'); 
         if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            // Försök att läsa felmeddelandet som JSON
+            try {
+              const errorData = await response.json();
+              throw new Error(errorData.message || `Fel från server: ${response.status}`);
+            } catch (jsonError) {
+              // Om det inte är JSON, läs som text
+              const errorText = await response.text();
+              throw new Error(`Kunde inte tolka serverns svar. Status: ${response.status}, Svar: ${errorText}`);
+            }
         }
         const data: Project[] = await response.json();
         setProjects(data);
@@ -56,20 +66,23 @@ export default function ProjectsView({ projects: initialProjects, customers, tod
             setError(e.message);
         }
          else {
-            setError('An unknown error occurred');
+            setError('Ett okänt fel inträffade');
         }
       } finally {
         setLoading(false);
       }
     };
+    
+    // Hämta bara data om ingen initial data har skickats med.
+    if (!initialProjects) {
+        fetchProjects();
+    }
 
-    fetchProjects();
-  }, []);
+  }, [initialProjects]);
 
   const handleProjectCreated = (newProject: Project) => {
     setProjects(currentProjects => [newProject, ...currentProjects]);
   };
-
 
   return (
     <div className="p-4 md:p-8">
@@ -97,7 +110,7 @@ export default function ProjectsView({ projects: initialProjects, customers, tod
         </div>
         
         {loading && <div className="p-4 text-center text-gray-400">Laddar projekt...</div>}
-        {error && <div className="p-4 text-center text-red-400">Kunde inte ladda projekt. {error === 'Authentication required' ? 'Du måste vara inloggad.' : `Fel: ${error}`}</div>}
+        {error && <div className="p-4 text-center text-red-400">Kunde inte ladda projekt. {error.includes('Authentication required') ? 'Du måste vara inloggad.' : `Fel: ${error}`}</div>}
         
         {!loading && !error && projects.map(p => <ProjectRow key={p.id} project={p} />)}
 

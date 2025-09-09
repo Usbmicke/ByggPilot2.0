@@ -12,6 +12,9 @@ const DemoDashboardView = () => {
     const recentProjects = demoProjects.slice(0, 2);
     const recentTimeEntries = demoTimeEntries.slice(0, 2);
 
+    // Summerar timmarna från demo-data dynamiskt
+    const totalHours = demoTimeEntries.reduce((sum, entry) => sum + entry.hours, 0);
+
     // En enkel statisk widget
     const KpiCard = ({ title, value, icon }) => (
         <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 flex items-center">
@@ -31,7 +34,7 @@ const DemoDashboardView = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <KpiCard title="Pågående Projekt" value={demoProjects.filter(p => p.status === 'Pågående').length} icon={<ProjectIcon className="h-6 w-6 text-cyan-400"/>} />
                 <KpiCard title="Nya Anbud" value={demoProjects.filter(p => p.status === 'Anbud').length} icon={<ProjectIcon className="h-6 w-6 text-yellow-400"/>} />
-                <KpiCard title="Rapporterade Timmar (7d)" value="14.5" icon={<TimeIcon className="h-6 w-6 text-green-400"/>} />
+                <KpiCard title="Rapporterade Timmar (7d)" value={totalHours.toFixed(1)} icon={<TimeIcon className="h-6 w-6 text-green-400"/>} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -67,7 +70,7 @@ const DemoDashboardView = () => {
                                             <p className="font-medium text-white">{entry.projectName}</p>
                                             <p className="text-sm text-gray-400">{entry.comment}</p>
                                         </div>
-                                        <p className="text-right font-mono text-white">{entry.hours.toFixed(2)}h</p>
+                                        <p className="text-right font-mono text-white">{entry.hours.toFixed(1)}h</p>
                                     </div>
                                 </li>
                             ))}

@@ -29,7 +29,7 @@ const DemoTimeReportingView = () => {
                                 <td className="p-4 whitespace-nowrap">{entry.date}</td>
                                 <td className="p-4 font-medium">{entry.projectName}</td>
                                 <td className="p-4 text-gray-400 hidden md:table-cell">{entry.customerName}</td>
-                                <td className="p-4 text-right font-mono">{entry.hours.toFixed(2)}</td>
+                                <td className="p-4 text-right font-mono">{entry.hours.toFixed(1)}</td>
                                 <td className="p-4 text-gray-400 hidden lg:table-cell">{entry.comment}</td>
                             </tr>
                         ))}

@@ -19,7 +19,7 @@ export const demoCustomers: Customer[] = [
     },
 ];
 
-// Påhittade projekt
+// Påhittade projekt - nu med korrekta datumsträngar
 export const demoProjects: Project[] = [
     {
         id: 'demo-proj-1',
@@ -27,7 +27,7 @@ export const demoProjects: Project[] = [
         customerId: 'demo-cust-1',
         customerName: 'Kalle Anka Bygg & Entreprenad',
         status: 'Pågående',
-        lastActivity: '2 dagar sedan',
+        lastActivity: '2023-10-26T14:00:00Z', // KORRIGERAT
         createdAt: '2023-10-26T10:05:00Z',
     },
     {
@@ -36,7 +36,7 @@ export const demoProjects: Project[] = [
         customerId: 'demo-cust-2',
         customerName: 'Musse Pigg Fastigheter',
         status: 'Anbud',
-        lastActivity: '5 dagar sedan',
+        lastActivity: '2023-10-23T18:00:00Z', // KORRIGERAT
         createdAt: '2023-10-23T11:00:00Z',
     },
     {
@@ -45,7 +45,7 @@ export const demoProjects: Project[] = [
         customerId: 'demo-cust-1',
         customerName: 'Kalle Anka Bygg & Entreprenad',
         status: 'Avslutat',
-        lastActivity: '1 månad sedan',
+        lastActivity: '2023-09-28T12:00:00Z', // KORRIGERAT
         createdAt: '2023-08-20T09:00:00Z',
     },
 ];

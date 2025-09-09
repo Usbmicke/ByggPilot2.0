@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { getSession } from '@/app/lib/session';
-import { ChatMessage, Customer, Project } from '@/app/types';
+import { ChatMessage, Customer, Project, ProjectStatus } from '@/app/types';
 import { headers } from 'next/headers';
 import { listFilesAndFolders } from '@/app/services/driveService';
 
@@ -12,14 +12,25 @@ const lastAssistantMessageContains = (messages: ChatMessage[], text: string): bo
 
 const sendReply = (content: string) => NextResponse.json({ reply: { role: 'assistant', content } });
 
+// --- Återanvändbara flöden ---
+
 async function handleCustomerSelected(customerId: string, customerName: string, cookie: string, protocol: string, host: string) {
     const projectApiUrl = `${protocol}://${host}/api/projects/list?customerId=${customerId}`;
     const projects: Project[] = await (await fetch(projectApiUrl, { headers: { 'Cookie': cookie } })).json();
     let msg = `Ok, kund \"${customerName}\" är vald. `;
-    msg += projects.length > 0 ? `Vilket projekt gäller det?\\n` + projects.map(p => `\\[${p.name}\\]`).join(' ') : '';
-    msg += `\\n\\nAnnars kan du \\n[Skapa nytt projekt].`;
+    msg += projects.length > 0 ? `Vilket projekt gäller det?\n` + projects.map(p => `\\[${p.name}\\]`).join(' ') : '';
+    msg += `\n\nAnnars kan du \n[Skapa nytt projekt].`;
     return sendReply(msg);
 }
+
+// Hjälpfunktion för att extrahera data från tidigare meddelanden
+const extractDataFromMessage = (messages: ChatMessage[], regex: RegExp): string | null => {
+    const messageContent = messages.filter(m => m.role === 'assistant').pop()?.content || '';
+    const match = messageContent.match(regex);
+    return match ? match[1] : null;
+};
+
+// --- Huvudlogik för API-rutten ---
 
 export async function POST(request: Request) {
   try {
@@ -49,8 +60,8 @@ export async function POST(request: Request) {
 
         const customers: Customer[] = await (await fetch(`${protocol}://${host}/api/customers/list`, { headers: { 'Cookie': cookie } })).json();
         const found = customers.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
-        let reply = found.length > 0 ? `Hittade: \\n` + found.map(c => `\\[${c.name}\\]`).join(' ') : `Hittade inte "${searchTerm}".`;
-        reply += "\\n\\n[Skapa ny kund] eller [Avbryt].";
+        let reply = found.length > 0 ? `Hittade: \n` + found.map(c => `\\[${c.name}\\]`).join(' ') : `Hittade inte "${searchTerm}".`;
+        reply += "\n\n[Skapa ny kund] eller [Avbryt].";
         return sendReply(reply);
     }
 
@@ -78,8 +89,7 @@ export async function POST(request: Request) {
         const { foretagsnamn, adress, status } = companyData;
         const fullAddress = `${adress.utdelningsadress1}, ${adress.postnummer} ${adress.postort}`;
         
-        // Spara verifierad data i chatten för nästa steg
-        const reply = `Jag hittade: **${foretagsnamn}** (${status.status}).\\nAdress: ${fullAddress}.\\n\\nStämmer detta? \\n[Ja, skapa kund med dessa uppgifter] [Nej, försök igen]`;
+        const reply = `Jag hittade: **${foretagsnamn}** (${status.status}).\nAdress: ${fullAddress}.\n\nStämmer detta? \n[Ja, skapa kund med dessa uppgifter] [Nej, försök igen]`;
         return sendReply(reply);
     }
     
@@ -89,14 +99,12 @@ export async function POST(request: Request) {
             return sendReply("Ok. Ange organisationsnummer igen.");
         }
         
-        // Vi behöver extrahera företagsnamnet från föregående assistent-meddelande
-        const prevAssistantMsg = messages.filter((m: ChatMessage) => m.role === 'assistant').pop()?.content || '';
-        const companyNameMatch = prevAssistantMsg.match(/\*\*(.*?)\*\*/);
-        const companyName = companyNameMatch ? companyNameMatch[1] : 'Okänt Företagsnamn';
+        const companyName = extractDataFromMessage(messages, /\*\*(.*?)\*\*/);
+        if (!companyName) return sendReply("Ett internt fel uppstod. Jag kunde inte hitta företagsnamnet. Försök igen.");
 
         const newCustomer: Customer = await (await fetch(`${protocol}://${host}/api/customers/create`, { 
             method: 'POST', headers: { 'Content-Type': 'application/json', 'Cookie': cookie }, 
-            body: JSON.stringify({ name: companyName, isCompany: true }) // Skicka med flagga
+            body: JSON.stringify({ name: companyName, isCompany: true })
         })).json();
         
         return handleCustomerSelected(newCustomer.id, newCustomer.name, cookie, protocol, host);
@@ -119,10 +127,49 @@ export async function POST(request: Request) {
         return handleCustomerSelected(chosen.id, chosen.name, cookie, protocol, host);
     }
     
-    // 7. Välj projekt
+    // 7. Användaren vill skapa ett nytt projekt
+    if (lastUserMessage.content === 'Skapa nytt projekt') {
+        // Spara kundnamnet från föregående assistent-meddelande för att använda det senare
+        const customerName = extractDataFromMessage(messages, /kund \"(.*?)\"/);
+        return sendReply(`Ok, vi skapar ett nytt projekt för kunden \"${customerName}\". Vilket namn ska projektet ha?`);
+    }
+
+    // 8. Användaren har angett ett projektnamn
+    if (lastAssistantMessageContains(messages, "Vilket namn ska projektet ha?")) {
+        const newProjectName = lastUserMessage.content;
+        const customerName = extractDataFromMessage(messages, /kunden \"(.*?)\"/);
+
+        // Hämta hela kundobjektet för att få kund-ID
+        const customers: Customer[] = await (await fetch(`${protocol}://${host}/api/customers/list`, { headers: { 'Cookie': cookie } })).json();
+        const customer = customers.find(c => c.name === customerName);
+
+        if (!customer) {
+            return sendReply(`Ett fel uppstod: Jag kunde inte hitta kund-ID för \"${customerName}\". Avbryter.`);
+        }
+
+        const response = await fetch(`${protocol}://${host}/api/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Cookie': cookie },
+            body: JSON.stringify({
+                name: newProjectName,
+                customerId: customer.id,
+                customerName: customer.name,
+                status: ProjectStatus.QUOTE // Sätter status till "Anbud"
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            return sendReply(`Kunde inte skapa projektet: ${errorData.message}. Försök igen.`);
+        }
+
+        const newProject: Project = await response.json();
+        return sendReply(`Projektet \"${newProject.name}\" har skapats åt kunden ${customer.name} och en Google Drive-mapp har skapats. Vad vill du göra nu?`);
+    }
+
+    // 9. Välj befintligt projekt
     if (lastAssistantMessageContains(messages, "Vilket projekt gäller det?")) {
         const projectName = lastUserMessage.content.replace(/\\[|\\]/g, '');
-        if (projectName === 'Skapa nytt projekt') return sendReply("Funktionen för att skapa nya projekt är inte implementerad än. Välj ett befintligt.");
         
         const projects: Project[] = await (await fetch(`${protocol}://${host}/api/projects/list`, { headers: { 'Cookie': cookie } })).json();
         const project = projects.find(p => p.name === projectName);
@@ -130,17 +177,17 @@ export async function POST(request: Request) {
         if (!project.driveFolderId) return sendReply(`Projekt \"${projectName}\" saknar en Drive-mapp.`);
 
         const files = await listFilesAndFolders(project.driveFolderId);
-        let reply = files.length > 0 ? `Hittade filer... Vilka ska inkluderas?\\n` + files.map(f => `\\[${f.name}\\]`).join(' ') : `Hittade inga filer.`;
-        reply += `\\n\\n[Ingen av dessa] eller [Avbryt].`;
+        let reply = files.length > 0 ? `Hittade filer... Vilka ska inkluderas?\n` + files.map(f => `\\[${f.name}\\]`).join(' ') : `Hittade inga filer.`;
+        reply += `\n\n[Ingen av dessa] eller [Avbryt].`;
         return sendReply(reply);
     }
 
-    // 8. Generera offertförslag (Simulerad AI)
+    // 10. Generera offertförslag (Simulerad AI)
     if (lastAssistantMessageContains(messages, "Vilka ska inkluderas?")) {
         const fileName = lastUserMessage.content.replace(/\\[|\\]/g, '');
         if (fileName === 'Ingen av dessa' || fileName === 'Avbryt') return sendReply("Ok, avbryter.");
 
-        let summary = `Analyserar \"${fileName}\". Förslag:\\n*   Rivning vägg: 8 tim\\n*   Ny vägg: 16 tim\\n*   Material: 5400 kr\\n*   Avfall: 2 tim\\n\\nVill du \\n[Spara och skicka] eller [Gör ändringar]?`;
+        let summary = `Analyserar \"${fileName}\". Förslag:\n*   Rivning vägg: 8 tim\n*   Ny vägg: 16 tim\n*   Material: 5400 kr\n*   Avfall: 2 tim\n\nVill du \n[Spara och skicka] eller [Gör ändringar]?`;
         return sendReply(summary);
     }
 

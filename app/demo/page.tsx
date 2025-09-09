@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 
 import DemoSidebar from './DemoSidebar'; 
-import Header from '@/app/components/layout/Header';
 import Chat from '@/app/components/chat/Chat';
 
 // Importera alla demo-vyer
@@ -67,7 +66,7 @@ export default function DemoPage() {
                 onStartQuoteFlow={() => setIsChatExpanded(true)}
             />
             <div className="flex-1 flex flex-col overflow-hidden">
-                <Header />
+                 {/* Header-komponenten är nu borttagen härifrån för ett renare gränssnitt */}
                 <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-8 relative">
                     <div className="bg-yellow-900/30 border border-yellow-700 text-yellow-300 text-center font-semibold rounded-lg p-2 mb-6">
                         <p>DU ÄR I DEMO-LÄGET. Ingen data sparas. <a href="/dashboard" className="underline hover:text-white">Klicka här för att logga in.</a></p>

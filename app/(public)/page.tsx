@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
+import { signIn } from 'next-auth/react';
 import ProTipsModal from '@/app/components/ProTipsModal';
 
 // --- IKONER --- 
@@ -126,15 +126,15 @@ export default function LandingPage() {
               <span className="text-2xl font-bold text-white">ByggPilot</span>
             </div>
             <nav className="flex items-center gap-2 sm:gap-4">
-                <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 bg-white text-gray-700 font-semibold py-2 px-3 rounded-md shadow-sm hover:bg-gray-200 transition-colors duration-300">
+                <button onClick={() => signIn('google')} className="inline-flex items-center justify-center gap-2 bg-white text-gray-800 font-semibold py-2 px-3 rounded-md shadow-sm hover:bg-gray-200 transition-colors duration-300">
                     <GoogleIcon className="w-5 h-5" />
                     <span className="hidden sm:inline text-sm">Logga in med Google</span>
                     <span className="sm:hidden text-sm">Logga in</span>
-                </Link>
-                <Link href="/demo" className="bg-cyan-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-cyan-600 transition-all duration-300 animate-pulse-glow">
+                </button>
+                <button onClick={() => window.location.href='/demo'} className="bg-cyan-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-cyan-600 transition-all duration-300 animate-pulse-glow">
                     <span className="hidden sm:inline">Testa ByggPilot Gratis</span>
                     <span className="sm:hidden">Testa Gratis</span>
-                </Link>
+                </button>
             </nav>
           </div>
         </header>
@@ -149,10 +149,10 @@ export default function LandingPage() {
               <p className="max-w-3xl mx-auto text-lg md:text-xl text-gray-400 mb-8">
                   ByggPilot är din nya digitala kollega som förvandlar administration till en automatiserad process, direkt i ditt befintliga Google-konto. Frigör tid, eliminera papperskaos och fokusera på det som verkligen driver din firma framåt.
               </p>
-              <Link href="/dashboard" className="inline-flex items-center justify-center gap-3 bg-white text-gray-800 font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-200 transition-all duration-300 transform hover:scale-105">
+              <button onClick={() => signIn('google')} className="inline-flex items-center justify-center gap-3 bg-white text-gray-800 font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-200 transition-all duration-300 transform hover:scale-105">
                   <GoogleIcon className="w-6 h-6" />
                   Logga in med Google
-              </Link>
+              </button>
               <p className="text-xs text-gray-500 mt-4">
                   ByggPilot är byggt för Googles kraftfulla och kostnadsfria verktyg. 
                   <a href="https://accounts.google.com/signup" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline ml-1">
