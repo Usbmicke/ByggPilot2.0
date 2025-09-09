@@ -23,28 +23,22 @@ Att systematiskt och kontrollerat utveckla ByggPilot från en fungerande dashboa
 ### Fas 4: Google-autentisering & Proaktiv Onboarding - SLUTFÖRD
 **Mål:** Att byta ut det gamla autentiseringssystemet mot en robust lösning med `next-auth` och förbereda applikationen för att kunna interagera med användarens Google-tjänster.
 
-### Fas 5: Google Drive-integration & Automatiserad Mappstruktur - SLUTFÖRD
-**Mål:** Att bygga den första verkliga, tidsbesparande funktionen. När användaren godkänner onboarding-flödet, skapar ByggPilot automatiskt en standardiserad projektmappstruktur i användarens Google Drive.
-- ✅ **Steg 5.1:** Skapa API-slutpunkt för Google Drive-åtgärder.
-- ✅ **Steg 5.2:** Implementera Logik för att Skapa Mappar.
-- ✅ **Steg 5.3:** Uppdatera Orchestratorn för att Anropa Drive-API:et.
+### Fas 5: Google Drive-integration & Projektstruktur - SLUTFÖRD
+**Mål:** Att skapa en solid grund för projekt- och dokumenthantering genom att integrera med Google Drive.
 
-### Fas 6: Den Intelligenta Offertmotorn (MVP)
-**Mål:** Att omvandla det simulerade "Skapa Offert"-flödet till en verklig, automatiserad process som, genom en guidad konversation, samlar in information och genererar en professionell PDF-offert från en mall i användarens Google Drive.
-
-- **Steg 6.1: Aktivera "Skapa Offert"-flödet i UI**
-  - **Instruktion:** Identifiera och aktivera den knapp eller det gränssnittselement som ska starta offertskapandet för en inloggad användare. Detta ska, precis som onboarding, trigga en specifik konversation i chatten (t.ex., med en `startQuoteFlow`-prop).
-
-- **Steg 6.2: Uppdatera Orchestratorn för Offertinsamling**
-  - **Instruktion:** Skapa en ny specialiserad prompt för offerter. Den ska instruera AI-modellen att agera som en erfaren kalkylator och ställa en fråga i taget för att samla in nödvändig information: kundnamn, projektbeskrivning, mått, materialval, etc. Denna konversation ska avslutas med att AI:n anropar en ny `ACTION`-tagg, t.ex. `[ACTION:CREATE_QUOTE_DOCUMENT]`.
-
-- **Steg 6.3: Skapa API-slutpunkt för Google Docs**
-  - **Instruktion:** Skapa en ny, dedikerad API-rutt (t.ex. `/pages/api/google/docs/create-quote.ts`). Denna slutpunkt ska ta emot den insamlade datan från orchestratorn. 
-
-- **Steg 6.4: Implementera Logik för Dokumentgenerering**
-  - **Instruktion:** Inom Docs-API-slutpunkten: implementera logik som hittar en fördefinierad offertmall i användarens Drive (från `04_Företagsmallar`), skapar en kopia av den, fyller den med den insamlade datan, och sparar den som en PDF i rätt projektmapp (`01_Kunder & Anbud`).
+### Fas 6: Den Intelligenta Offertmotorn (MVP) - SLUTFÖRD
+**Mål:** Att skapa ett komplett, konversationsbaserat flöde för att generera en offert med hjälp av en AI-assistent. Detta är den första, sanna "intelligenta" funktionen i ByggPilot och binder samman kunder, projekt och dokument.
 
 ---
 
-## Omedelbart Nästa Steg
-- **[ ] Starta implementationen av Fas 6.** Fokusera på **Steg 6.1:** Att lokalisera och aktivera "Skapa Offert"-knappen i användargränssnittet för inloggade användare så att den korrekt initierar det nya, intelligenta flödet i chatten.
+## Projektstatus: Implementation Slutförd - Granskning & Kvalitetssäkring
+
+**Status:** All implementation enligt Byggplanen (Fas 0-6) är nu slutförd.
+
+**Nästa Steg:** Hela applikationen behöver nu en grundlig granskning och kvalitetssäkring för att identifiera eventuella buggar, utvärdera användarflödets effektivitet och säkerställa att all funktionalitet är robust och motsvarar de uppsatta målen. 
+
+**Fokusområden för granskning:**
+- **Konversationslogik:** Säkerställa att chattflödena är logiska, hjälpsamma och utan återvändsgränder.
+- **API-integrationer:** Verifiera att all kommunikation med externa API:er (Google Drive, Databasen) är stabil och har korrekt felhantering.
+- **Användarupplevelse (UX):** Utvärdera hur intuitiv och effektiv applikationen är att använda ur ett slutanvändarperspektiv.
+- **Kodkvalitet och Stabilitet:** Genomgång av kodbasen för att säkerställa att den är underhållbar och presterar väl.
