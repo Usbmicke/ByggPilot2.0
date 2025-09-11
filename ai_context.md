@@ -1,44 +1,70 @@
+ByggPilot - Master Plan (Reviderad 4.0)
+Övergripande Mål
+Att bygga en tekniskt solid, säker och skalbar SaaS-applikation (ByggPilot) som fungerar som en "digital kollega" för byggbranschen. Projektet har ett tydligt exit-fokus, vilket ställer extremt höga krav på kodkvalitet, testning och underhållbarhet.
 
-# ByggPilot - Master Plan (Reviderad 3.0)
+Nulägesanalys & Arkitektur
+Projektet består av två distinkta delar:
 
-## Övergripande Mål
-Att systematiskt utveckla ByggPilot med djupa integrationer mot externa datakällor och avancerad intelligens för att skapa en oumbärlig digital kollega för byggbranschen.
+Den Skarpa Applikationen (/dashboard): En Next.js-app med App Router. Använder Firebase för databas (Firestore) och autentisering (NextAuth med Google Provider). All backend-logik hanteras av API Routes. Kärnan i appens intelligens är en central /api/orchestrator-slutpunkt som styr konversationer och anropar andra interna API:er.
 
-## Ledande Principer
-- **Fasvis Implementation:** En funktion i taget, noggrant testad och stabilt integrerad.
-- **Orchestrator-arkitektur:** Alla anrop till externa tjänster går via en central `/api/orchestrator`-slutpunkt för att säkerställa kontroll, säkerhet och enhetlighet.
-- **Sömlös Integration:** Funktioner i chatten ska reflektera och interagera med data som presenteras i det grafiska gränssnittet, och vice versa.
-- **Flexibel Implementation:** Teknisk implementation anpassas för att passa den existerande arkitekturen och säkerställa en robust och underhållbar kodbas.
+Den Interaktiva Demon (/demo): En helt frikopplad sandlåda på en separat route. Den använder ingen live-data från Firebase, utan drivs uteslutande av statisk, hårdkodad data från app/demo/data.ts. Syftet är att ge en riskfri och övertygande demonstration av appens UI och grundläggande flöden.
 
----
+VIKTIGT: All ny utveckling av kärnfunktioner ska ske i den Skarpa Applikationen. Demon uppdateras endast vid behov för att spegla nya UI-förändringar.
 
-## Byggplan 2.0: MVP - SLUTFÖRD
-Implementationen av Fas 0-6, som utgör kärnan och den första MVP:n av ByggPilot (inklusive Google-integration och den intelligenta offertmotorn), är slutförd.
+Reviderad Byggplan 4.0
+Kärnfunktionalitet & Kvalitetssäkring - SLUTFÖRD
+Status: En fullständig kvalitetsgranskning av den befintliga kodbasen har genomförts.
 
----
+Resultat:
 
-## Byggplan 3.0: Externa API-Integrationer & Avancerad Intelligens
+Sessionshantering (iron-session) är säker och korrekt implementerad.
 
-**Status:** Projektet övergår nu till att integrera med externa, datadrivna tjänster för att dramatiskt öka värdet och intelligensen i applikationen.
+API-routes för att lista projekt och kunder är skyddade och effektiva.
 
-### Fas 7: Automatisk Kundverifiering (Bolagsverket) - SLUTFÖRD
-- **Mål:** Verifiera företagskunder i realtid mot Bolagsverket för att minska risk och säkerställa datakvalitet.
+Orchestrator-API:et är säkert men har ofullständiga funktioner.
 
-### Fas 8: Proaktiv Väder- och Varningsassistent (SMHI)
-- **Mål:** Varna för väder som påverkar planerade arbeten via dashboard och intelligenta notiser.
-- **Status:** **PÅBÖRJAS NU**
+Google Drive-integrationen är inte påbörjad, endast förberedd i UI.
 
-### Fas 9: Dynamisk Regelverkskontroll (Lantmäteriet & Boverket)
-- **Mål:** Ge platsspecifika byggregler och detaljplaner direkt i chatten på begäran.
+Fas 7: Automatisk Kundverifiering (Bolagsverket)
+Status: Grund-API & Simulerat Flöde Slutfört.
 
-### Fas 10: Geologisk Riskbedömning (SGU)
-- **Mål:** Presentera grundläggande geologisk markdata för en projektplats.
+Detaljer: En API-route (/api/verify-company) finns och är integrerad i orchestratorns "Skapa ny kund"-flöde. API:et är simulerat och returnerar hårdkodad data för testning.
 
-### Fas 11: System för Kontinuerligt Lärande
-- **Mål:** Skapa datadrivna insikter från användarens egna projekthistorik och bevaka externa regeländringar.
+Aktuell Arbetsorder & Nästa Steg
+Nästa Steg (Högsta Prioritet): Slutför 'Skapa Projekt'-logiken i Orchestratorn
 
-### Fas 12: Förbättrad Användbarhet i Fält
-- **Mål:** Införa röststyrning för kommandon och PWA-funktionalitet för offline-stöd.
+Bakgrund: Kvalitetsgranskningen visade att chattflödet för att skapa en offert är komplett fram till dokumentval, men funktionen för att faktiskt skapa ett nytt projekt i databasen via chatten är inte implementerad.
 
-### Fas 13: Slutgiltig Kvalitetssäkring
-- **Mål:** Genomföra en fullständig, övergripande granskning av samtliga funktioner inför en potentiell lansering.
+Uppdrag:
+
+Implementera logiken i /api/orchestrator/route.ts som hanterar när användaren bekräftar en offertsammanfattning.
+
+Orchestratorn ska då anropa den befintliga API-routen för att skapa projekt (/api/projects/route.ts) med den insamlade datan (kund-ID, projektnamn etc.).
+
+Säkerställ att det nya projektet sparas korrekt i Firestore.
+
+Ge användaren en bekräftelse i chatten med en länk till det nyskapade projektet.
+
+Efterföljande Faser (Enligt tidigare plan):
+När kärnflödet för att skapa projekt är komplett, fortsätter vi med externa API-integrationer.
+
+Fas 8: Proaktiv Väder- och Varningsassistent (SMHI)
+
+Fas 9: Dynamisk Regelverkskontroll (Lantmäteriet & Boverket)
+
+Fas 10: Geologisk Riskbedömning (SGU)
+
+Fas 11: System för Kontinuerligt Lärande
+
+Fas 12: Förbättrad Användbarhet i Fält (Röststyrning & PWA)
+
+Fas 13: Slutgiltig Kvalitetssäkring
+
+Stående Order & Kvalitetskrav
+Testning Först: All ny backend-logik (API Routes) måste föregås av eller åtföljas av automatiserade tester (Vitest). Detta är icke-förhandlingsbart.
+
+Säkerhet: Alla API-routes måste verifiera användarens session i början av varje anrop. Ingen data får exponeras för oautentiserade användare.
+
+Effektivitet: Använd fields-parametern vid anrop till externa API:er (som Google Drive) för att minimera datamängd och kostnad. Undvik onödiga databasläsningar.
+
+Versionshantering: Använd Conventional Commits för alla Git-commits för att skapa en tydlig och spårbar historik.
