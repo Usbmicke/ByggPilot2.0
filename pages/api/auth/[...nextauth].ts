@@ -45,5 +45,9 @@ export default NextAuth({
       session.refreshToken = token.refreshToken;
       return session;
     },
+    async redirect({ baseUrl }) {
+      // Oavsett var användaren kom ifrån, skicka dem alltid till dashboarden efter inloggning.
+      return `${baseUrl}/dashboard`;
+    }
   },
 });

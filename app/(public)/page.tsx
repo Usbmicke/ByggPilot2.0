@@ -78,7 +78,7 @@ const CustomAnimationsStyle = () => (
     @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 12px 0px rgba(56, 189, 248, 0.3); } 50% { box-shadow: 0 0 20px 3px rgba(56, 189, 248, 0.5); } }
     .animate-pulse-glow { animation: pulse-glow 4s infinite ease-in-out; }
     @keyframes float-up { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: 0.7; } 90% { opacity: 0.7; } 100% { transform: translateY(-100vh); opacity: 0; } }
-    .particle { position: absolute; border-radius: 50%; background: white; animation-name: float-up; animation-timing-function: linear; animation-iteration-count: infinite; }
+    .particle { position: absolute; border-radius: 50%; background: #4a4a4a; animation-name: float-up; animation-timing-function: linear; animation-iteration-count: infinite; }
   `}</style>
 );
 

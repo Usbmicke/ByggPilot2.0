@@ -2,7 +2,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { google } from 'googleapis';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/pages/api/auth/[...nextauth]'; // Korrekt import
 import { OAuth2Client } from 'google-auth-library';
 
 // Hjälpfunktion för att hitta filer/mappar och hantera fel
@@ -26,8 +26,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         const quoteData = req.body;
-        if (!quoteData || !quoteData.customerName) {
-            return res.status(400).json({ error: 'Missing quote data' });
+        // UPPDATERAD: Validera att vi har ett kund-ID och kundnamn
+        if (!quoteData || !quoteData.customerId || !quoteData.customerName) {
+            return res.status(400).json({ error: 'Missing required customer data (ID and name)' });
         }
 
         const oAuth2Client = new OAuth2Client();
@@ -44,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (!templateId) throw new Error("Could not find template file 'Offertmall'");
 
         // 2. Skapa en kopia av mallen
-        const newQuoteTitle = `Offert - ${quoteData.customerName || 'Nytt Projekt'}`;
+        const newQuoteTitle = `Offert - ${quoteData.customerName}`;
         const copyResponse = await drive.files.copy({
             fileId: templateId,
             requestBody: { name: newQuoteTitle },
@@ -70,9 +71,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const anbudFolderId = await findFile(drive, `name='01_Kunder & Anbud' and mimeType='application/vnd.google-apps.folder'`);
         if (!anbudFolderId) throw new Error("Could not find folder '01_Kunder & Anbud'");
         
-        let customerFolderId = await findFile(drive, `name='${quoteData.customerName}' and '${anbudFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+        // UPPDATERAD: Mappen namnges med ID och namn för unikhet och läsbarhet
+        const customerFolderName = `${quoteData.customerName} - ${quoteData.customerId}`;
+        let customerFolderId = await findFile(drive, `name='${customerFolderName}' and '${anbudFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+        
         if (!customerFolderId) {
-            const folderMetadata = { name: quoteData.customerName, mimeType: 'application/vnd.google-apps.folder', parents: [anbudFolderId] };
+            const folderMetadata = { name: customerFolderName, mimeType: 'application/vnd.google-apps.folder', parents: [anbudFolderId] };
             const createdFolder = await drive.files.create({ requestBody: folderMetadata, fields: 'id' });
             customerFolderId = createdFolder.data.id;
         }
