@@ -1,70 +1,39 @@
-ByggPilot - Master Plan (Reviderad 4.0)
-Övergripande Mål
-Att bygga en tekniskt solid, säker och skalbar SaaS-applikation (ByggPilot) som fungerar som en "digital kollega" för byggbranschen. Projektet har ett tydligt exit-fokus, vilket ställer extremt höga krav på kodkvalitet, testning och underhållbarhet.
+'''
+# AI Context for ByggPilot 2.0 Development
 
-Nulägesanalys & Arkitektur
-Projektet består av två distinkta delar:
+This document outlines the development plan and key architectural decisions for the ByggPilot 2.0 application. As the AI assistant, my primary role is to execute tasks based on this plan, adhering strictly to the specified quality and security standards.
 
-Den Skarpa Applikationen (/dashboard): En Next.js-app med App Router. Använder Firebase för databas (Firestore) och autentisering (NextAuth med Google Provider). All backend-logik hanteras av API Routes. Kärnan i appens intelligens är en central /api/orchestrator-slutpunkt som styr konversationer och anropar andra interna API:er.
+## Development Plan & Status
 
-Den Interaktiva Demon (/demo): En helt frikopplad sandlåda på en separat route. Den använder ingen live-data från Firebase, utan drivs uteslutande av statisk, hårdkodad data från app/demo/data.ts. Syftet är att ge en riskfri och övertygande demonstration av appens UI och grundläggande flöden.
+The project is divided into distinct phases. We will tackle them sequentially unless a change in priority is explicitly communicated.
 
-VIKTIGT: All ny utveckling av kärnfunktioner ska ske i den Skarpa Applikationen. Demon uppdateras endast vid behov för att spegla nya UI-förändringar.
+**Grundläggande Setup & Kärnfunktionalitet**
 
-Reviderad Byggplan 4.0
-Kärnfunktionalitet & Kvalitetssäkring - SLUTFÖRD
-Status: En fullständig kvalitetsgranskning av den befintliga kodbasen har genomförts.
+*   **[AVKLARAD] Fas 1: Projektinitialisering & Teknisk Stack:** Next.js (App Router), TypeScript, Tailwind CSS, NextAuth.js, Firebase (Authentication, Firestore, Storage).
+*   **[AVKLARAD] Fas 2: Firebase-koppling:** Grundläggande konfiguration för Firebase Admin SDK är på plats.
+*   **[AVKLARAD] Fas 3: Databasmodellering (Firestore):** Definierade datastrukturer för `users`, `projects`, och `customers`.
+*   **[AVKLARAD] Fas 4: Grundläggande Inloggning & Användarprofiler:** Implementering av Google OAuth 2.0. Blockerare åtgärdad.
+*   **[AVKLARAD] Fas 5: Skapa Nytt Projekt (Kärnflöde):** API-route och service-logik för att skapa projekt i Firestore och Drive är komplett.
+*   **[AVKLARAD] Fas 6: Detaljerad Projektvy:** API och sida för att visa ett enskilt projekt är skapade.
+*   **[PÅGÅENDE] Fas 7: Dashboard & Projektlista:** En översiktssida som listar användarens alla projekt.
+*   **[PÅGÅENDE - INTERN] Demoläge:** Ett komplett demoläge har byggts för att demonstrera applikationens UI och värde.
 
-Resultat:
+**Efterföljande Faser (Enligt tidigare plan):**
 
-Sessionshantering (iron-session) är säker och korrekt implementerad.
+*   **Fas 8: Proaktiv Väder- och Varningsassistent (SMHI)**
+*   **Fas 9: Dynamisk Regelverkskontroll (Lantmäteriet & Boverket)**
+*   **Fas 10: Geologisk Riskbedömning (SGU)**
+*   **Fas 11: System för Kontinuerligt Lärande**
+*   **Fas 12: Förbättrad Användbarhet i Fält (Röststyrning & PWA)**
+*   **Fas 13: Slutgiltig Kvalitetssäkring**
 
-API-routes för att lista projekt och kunder är skyddade och effektiva.
+## Stående Order & Kvalitetskrav
 
-Orchestrator-API:et är säkert men har ofullständiga funktioner.
+*   **Noggrannhet Först:** Läs och förstå filer *innan* du skriver till dem. Oavsiktlig överskrivning av filer (`.env.local`, etc.) är oacceptabelt. Dubbelkolla alltid sökvägar och innehåll.
+*   **Inga Syntaxfel:** Validera all kod du skriver. Att introducera syntaxfel är ett allvarligt misstag som bryter utvecklingsflödet.
+*   **Inga API-loopar:** Använd inte verktyg i repetitiva loopar. Tänk igenom planen och agera metodiskt, steg-för-steg.
+*   **Säkerhet:** Alla API-routes måste verifiera användarens session. Inga känsliga nycklar (`.env.local`, `serviceAccountKey.json`) får någonsin exponeras eller checkas in.
+*   **Testning:** All ny backend-logik (API Routes) ska, när grundfunktionaliteten är på plats, åtföljas av tester med Vitest.
+*   **Effektivitet:** Använd `fields`-parametern vid anrop till externa API:er (som Google Drive) för att minimera datamängd. Undvik onödiga databasläsningar.
 
-Google Drive-integrationen är inte påbörjad, endast förberedd i UI.
-
-Fas 7: Automatisk Kundverifiering (Bolagsverket)
-Status: Grund-API & Simulerat Flöde Slutfört.
-
-Detaljer: En API-route (/api/verify-company) finns och är integrerad i orchestratorns "Skapa ny kund"-flöde. API:et är simulerat och returnerar hårdkodad data för testning.
-
-Aktuell Arbetsorder & Nästa Steg
-Nästa Steg (Högsta Prioritet): Slutför 'Skapa Projekt'-logiken i Orchestratorn
-
-Bakgrund: Kvalitetsgranskningen visade att chattflödet för att skapa en offert är komplett fram till dokumentval, men funktionen för att faktiskt skapa ett nytt projekt i databasen via chatten är inte implementerad.
-
-Uppdrag:
-
-Implementera logiken i /api/orchestrator/route.ts som hanterar när användaren bekräftar en offertsammanfattning.
-
-Orchestratorn ska då anropa den befintliga API-routen för att skapa projekt (/api/projects/route.ts) med den insamlade datan (kund-ID, projektnamn etc.).
-
-Säkerställ att det nya projektet sparas korrekt i Firestore.
-
-Ge användaren en bekräftelse i chatten med en länk till det nyskapade projektet.
-
-Efterföljande Faser (Enligt tidigare plan):
-När kärnflödet för att skapa projekt är komplett, fortsätter vi med externa API-integrationer.
-
-Fas 8: Proaktiv Väder- och Varningsassistent (SMHI)
-
-Fas 9: Dynamisk Regelverkskontroll (Lantmäteriet & Boverket)
-
-Fas 10: Geologisk Riskbedömning (SGU)
-
-Fas 11: System för Kontinuerligt Lärande
-
-Fas 12: Förbättrad Användbarhet i Fält (Röststyrning & PWA)
-
-Fas 13: Slutgiltig Kvalitetssäkring
-
-Stående Order & Kvalitetskrav
-Testning Först: All ny backend-logik (API Routes) måste föregås av eller åtföljas av automatiserade tester (Vitest). Detta är icke-förhandlingsbart.
-
-Säkerhet: Alla API-routes måste verifiera användarens session i början av varje anrop. Ingen data får exponeras för oautentiserade användare.
-
-Effektivitet: Använd fields-parametern vid anrop till externa API:er (som Google Drive) för att minimera datamängd och kostnad. Undvik onödiga databasläsningar.
-
-Versionshantering: Använd Conventional Commits för alla Git-commits för att skapa en tydlig och spårbar historik.
+'''

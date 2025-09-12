@@ -1,56 +1,70 @@
 
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '@/app/services/firestoreService';
-import { getSession } from '@/app/lib/session';
+import { getServerSession } from '@/app/lib/auth'; // KORRIGERAD SÖKVÄG
 import { TimeEntry } from '@/app/types';
 
 /**
- * Hämtar en lista över tidsposter som ägs av den för närvarande inloggade användaren,
- * sorterade efter datum i fallande ordning.
+ * @swagger
+ * /api/time-entries/list:
+ *   get:
+ *     summary: List time entries for a project
+ *     tags:
+ *       - Time Entries
+ *     parameters:
+ *       - in: query
+ *         name: projectId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the project to fetch time entries for.
+ *     responses:
+ *       200:
+ *         description: A list of time entries.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/TimeEntry'
+ *       401:
+ *         description: Authentication required.
+ *       500:
+ *         description: Internal server error.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Steg 1: Hämta sessionen och verifiera användaren.
-    const session = await getSession();
-    const userId = session.userId;
-
-    if (!userId) {
+    const session = await getServerSession(); // KORRIGERAD FUNKTION
+    if (!session?.user?.id) {
       return new NextResponse(JSON.stringify({ message: 'Authentication required' }), { status: 401 });
     }
 
-    // Steg 2: Skapa en Firestore-fråga för att hämta tidsposter.
-    // Frågan sorterar resultaten efter "date" för att visa de senaste posterna först.
-    const timeEntriesQuery = query(
-      collection(db, 'time-entries'),
-      where('ownerId', '==', userId),
-      orderBy('date', 'desc') // Nyaste först
+    const { searchParams } = new URL(request.url);
+    const projectId = searchParams.get('projectId');
+
+    if (!projectId) {
+      return new NextResponse(JSON.stringify({ message: 'Project ID is required' }), { status: 400 });
+    }
+
+    // TODO: Add extra validation to ensure the user owns the project associated with the time entries
+
+    const q = query(
+      collection(db, 'timeEntries'),
+      where('projectId', '==', projectId),
+      orderBy('startTime', 'desc')
     );
 
-    // Steg 3: Exekvera frågan.
-    const querySnapshot = await getDocs(timeEntriesQuery);
+    const querySnapshot = await getDocs(q);
+    const timeEntries: TimeEntry[] = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    } as TimeEntry));
 
-    // Steg 4: Formatera resultaten.
-    const timeEntries: TimeEntry[] = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-            id: doc.id,
-            projectId: data.projectId,
-            projectName: data.projectName,
-            customerName: data.customerName,
-            date: data.date, 
-            hours: data.hours,
-            comment: data.comment,
-            // Konvertera Firestore Timestamp till ISO-sträng om den finns
-            createdAt: data.createdAt?.toDate().toISOString() ?? new Date().toISOString(),
-        };
-    });
-
-    // Steg 5: Returnera tidsposterna som JSON.
-    return NextResponse.json(timeEntries, { status: 200 });
+    return NextResponse.json(timeEntries);
 
   } catch (error) {
-    console.error("Error fetching time entries: ", error);
+    console.error("Error listing time entries:", error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new NextResponse(JSON.stringify({ message: `Internal Server Error: ${errorMessage}` }), { status: 500 });
   }

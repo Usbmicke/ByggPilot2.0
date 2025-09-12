@@ -1,25 +1,29 @@
 
 import { Project, Customer, TimeEntry, Document } from '@/app/types';
 
-// Påhittade kunder
+// --- DYNAMISK DATUMBERÄKNING ---
+const now = new Date();
+const daysAgo = (days: number) => new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString();
+
+// --- PÅHITTADE KUNDER ---
 export const demoCustomers: Customer[] = [
     {
         id: 'demo-cust-1',
         name: 'Kalle Anka Bygg & Entreprenad',
         email: 'kalle.anka@exempel.se',
         phone: '070-123 45 67',
-        createdAt: '2023-10-26T10:00:00Z',
+        createdAt: daysAgo(30),
     },
     {
         id: 'demo-cust-2',
         name: 'Musse Pigg Fastigheter',
         email: 'musse.pigg@exempel.se',
         phone: '070-987 65 43',
-        createdAt: '2023-09-15T14:30:00Z',
+        createdAt: daysAgo(60),
     },
 ];
 
-// Påhittade projekt - nu med korrekta datumsträngar
+// --- PÅHITTADE PROJEKT (FÖRBÄTTRADE MED RIKARE DATA) ---
 export const demoProjects: Project[] = [
     {
         id: 'demo-proj-1',
@@ -27,8 +31,21 @@ export const demoProjects: Project[] = [
         customerId: 'demo-cust-1',
         customerName: 'Kalle Anka Bygg & Entreprenad',
         status: 'Pågående',
-        lastActivity: '2023-10-26T14:00:00Z', // KORRIGERAT
-        createdAt: '2023-10-26T10:05:00Z',
+        lastActivity: daysAgo(2),
+        createdAt: daysAgo(25),
+        progress: 65, // Ny egenskap
+        address: 'Ankeborgsvägen 1, 123 45 ANKEBORG' // Ny egenskap
+    },
+    {
+        id: 'demo-proj-4',
+        name: 'Balkongbygge Kv. Fågel Fenix',
+        customerId: 'demo-cust-2',
+        customerName: 'Musse Pigg Fastigheter',
+        status: 'Planerat',
+        lastActivity: daysAgo(7),
+        createdAt: daysAgo(15),
+        progress: 10, // Ny egenskap
+        address: 'Paradgatan 5A, 123 46 NYA STAN' // Ny egenskap
     },
     {
         id: 'demo-proj-2',
@@ -36,8 +53,10 @@ export const demoProjects: Project[] = [
         customerId: 'demo-cust-2',
         customerName: 'Musse Pigg Fastigheter',
         status: 'Anbud',
-        lastActivity: '2023-10-23T18:00:00Z', // KORRIGERAT
-        createdAt: '2023-10-23T11:00:00Z',
+        lastActivity: daysAgo(5),
+        createdAt: daysAgo(5),
+        progress: 0, // Ny egenskap
+        address: 'Mussevägen 22, 123 46 NYA STAN' // Ny egenskap
     },
     {
         id: 'demo-proj-3',
@@ -45,52 +64,36 @@ export const demoProjects: Project[] = [
         customerId: 'demo-cust-1',
         customerName: 'Kalle Anka Bygg & Entreprenad',
         status: 'Avslutat',
-        lastActivity: '2023-09-28T12:00:00Z', // KORRIGERAT
-        createdAt: '2023-08-20T09:00:00Z',
+        lastActivity: daysAgo(30),
+        createdAt: daysAgo(50),
+        progress: 100, // Ny egenskap
+        address: 'Gamla Vägen 12, 123 44 GAMLEBY' // Ny egenskap
     },
 ];
 
-// Påhittade tidrapporter
+// --- PÅHITTADE TIDRAPPORTER ---
 export const demoTimeEntries: TimeEntry[] = [
     {
-        id: 'demo-time-1',
-        userId: 'demo-user',
-        projectId: 'demo-proj-1',
-        projectName: 'Villa Ankeborg Renovering',
-        customerName: 'Kalle Anka Bygg & Entreprenad',
-        date: '2023-10-27',
-        hours: 8,
-        comment: 'Rivning av gammalt kök.',
-        createdAt: '2023-10-27T17:00:00Z',
+        id: 'demo-time-1', userId: 'demo-user', projectId: 'demo-proj-1', projectName: 'Villa Ankeborg Renovering',
+        customerName: 'Kalle Anka Bygg & Entreprenad', date: daysAgo(1).substring(0, 10), hours: 8,
+        comment: 'Rivning av gammalt kök och förberedelse för VVS.', createdAt: daysAgo(1),
     },
     {
-        id: 'demo-time-2',
-        userId: 'demo-user',
-        projectId: 'demo-proj-1',
-        projectName: 'Villa Ankeborg Renovering',
-        customerName: 'Kalle Anka Bygg & Entreprenad',
-        date: '2023-10-26',
-        hours: 6.5,
-        comment: 'Montering av nya fönster.',
-        createdAt: '2023-10-26T16:30:00Z',
+        id: 'demo-time-2', userId: 'demo-user', projectId: 'demo-proj-1', projectName: 'Villa Ankeborg Renovering',
+        customerName: 'Kalle Anka Bygg & Entreprenad', date: daysAgo(2).substring(0, 10), hours: 6.5,
+        comment: 'Montering av nya fönster i vardagsrum.', createdAt: daysAgo(2),
     },
 ];
 
-// Påhittad dokumentstruktur
+// --- PÅHITTAD DOKUMENTSTRUKTUR ---
 export const demoDocuments: Document[] = [
-    {
-        id: 'doc-proj-1',
-        name: 'Villa Ankeborg Renovering',
-        type: 'folder',
-        path: '/Villa Ankeborg Renovering',
+    { 
+        id: 'doc-proj-1', name: 'Villa Ankeborg Renovering', type: 'folder', path: '/Villa Ankeborg Renovering',
         children: [
             { id: 'doc-offer-1', name: 'Offert_Villa_Ankeborg.pdf', type: 'file', path: '/Villa Ankeborg Renovering/Offert_Villa_Ankeborg.pdf' },
             { id: 'doc-blueprint-1', name: 'Ritningar_kök.pdf', type: 'file', path: '/Villa Ankeborg Renovering/Ritningar_kök.pdf' },
-            {
-                id: 'doc-images-1',
-                name: 'Bilder',
-                type: 'folder',
-                path: '/Villa Ankeborg Renovering/Bilder',
+            { 
+                id: 'doc-images-1', name: 'Bilder', type: 'folder', path: '/Villa Ankeborg Renovering/Bilder',
                 children: [
                     { id: 'doc-img-1', name: 'före_rivning_1.jpg', type: 'file', path: '/Villa Ankeborg Renovering/Bilder/före_rivning_1.jpg' },
                     { id: 'doc-img-2', name: 'fönstermontering.jpg', type: 'file', path: '/Villa Ankeborg Renovering/Bilder/fönstermontering.jpg' },
@@ -98,20 +101,20 @@ export const demoDocuments: Document[] = [
             }
         ]
     },
-    {
-        id: 'doc-proj-2',
-        name: 'Attefallshus i Nya Stan',
-        type: 'folder',
-        path: '/Attefallshus i Nya Stan',
+    { 
+        id: 'doc-proj-4', name: 'Balkongbygge Kv. Fågel Fenix', type: 'folder', path: '/Balkongbygge Kv. Fågel Fenix',
+        children: [
+            { id: 'doc-offer-4', name: 'Godkänd_Offert_Balkong.pdf', type: 'file', path: '/Balkongbygge Kv. Fågel Fenix/Godkänd_Offert_Balkong.pdf' },
+        ]
+    },
+    { 
+        id: 'doc-proj-2', name: 'Attefallshus i Nya Stan', type: 'folder', path: '/Attefallshus i Nya Stan',
         children: [
              { id: 'doc-offer-2', name: 'Anbud_Attefall.pdf', type: 'file', path: '/Attefallshus i Nya Stan/Anbud_Attefall.pdf' },
         ]
     },
-    {
-        id: 'doc-proj-3',
-        name: 'Takbyte Gamla Vägen 12',
-        type: 'folder',
-        path: '/Takbyte Gamla Vägen 12',
+    { 
+        id: 'doc-proj-3', name: 'Takbyte Gamla Vägen 12', type: 'folder', path: '/Takbyte Gamla Vägen 12',
         children: [
             { id: 'doc-final-1', name: 'Slutbesiktning.pdf', type: 'file', path: '/Takbyte Gamla Vägen 12/Slutbesiktning.pdf' },
         ]

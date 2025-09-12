@@ -1,8 +1,9 @@
+
 'use client';
 import React from 'react';
 import Image from 'next/image';
-import { useAuth } from '@/app/providers/AuthContext';
-import { IconDashboard, IconProjects, IconDocuments, IconCustomers, IconPlus, IconSettings, IconLightbulb, IconClock } from '@/app/constants.tsx';
+import { useSession, signOut } from 'next-auth/react';
+import { IconDashboard, IconProjects, IconDocuments, IconCustomers, IconPlus, IconSettings, IconLightbulb, IconClock } from '@/app/constants'; // Assuming constants.tsx is in the app root
 import { View } from '@/app/dashboard/page';
 
 interface NavItemProps {
@@ -11,6 +12,7 @@ interface NavItemProps {
     active?: boolean;
     onClick: () => void;
 }
+
 const NavItem: React.FC<NavItemProps> = ({ icon, label, active, onClick }) => (
   <button
     onClick={onClick}
@@ -32,7 +34,22 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavClick, onStartQuoteFlow }) => {
-  const { user, logout } = useAuth();
+  const { data: session, status } = useSession();
+
+  const handleLogout = () => {
+    signOut({ callbackUrl: '/login' });
+  };
+
+  // Handle loading and unauthenticated states
+  if (status === 'loading') {
+    return (
+        <div className="flex flex-col w-64 bg-gray-800/50 backdrop-blur-sm border-r border-gray-700 text-white">
+            <div className="flex items-center justify-center h-20 border-b border-gray-700">
+                <h1 className="text-2xl font-bold">Laddar...</h1>
+            </div>
+        </div>
+    );
+  }
 
   return (
     <div className="flex flex-col w-64 bg-gray-800/50 backdrop-blur-sm border-r border-gray-700 text-white">
@@ -57,14 +74,16 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavClick, onStartQuoteF
       </div>
       <div className="border-t border-gray-700 p-4">
          <NavItem icon={<IconSettings className="w-6 h-6" />} label="Inställningar" active={activeView === 'SETTINGS'} onClick={() => onNavClick('SETTINGS')} />
-        <div className="flex items-center mt-4">
-          {user?.photoURL && <Image className="h-10 w-10 rounded-full object-cover" src={user.photoURL} alt="User avatar" width={40} height={40}/>}
-          <div className="ml-3">
-            <p className="text-sm font-semibold text-white">{user?.displayName}</p>
-            <p className="text-xs text-gray-400">{user?.email}</p>
-          </div>
-        </div>
-        <button onClick={logout} className="w-full mt-4 text-left text-sm text-gray-400 hover:text-white transition-colors duration-200 pl-1">
+        {status === 'authenticated' && session.user && (
+            <div className="flex items-center mt-4">
+            {session.user.image && <Image className="h-10 w-10 rounded-full object-cover" src={session.user.image} alt="User avatar" width={40} height={40}/>}
+            <div className="ml-3">
+                <p className="text-sm font-semibold text-white">{session.user.name || 'Användare'}</p>
+                <p className="text-xs text-gray-400">{session.user.email || 'Ingen email'}</p>
+            </div>
+            </div>
+        )}
+        <button onClick={handleLogout} className="w-full mt-4 text-left text-sm text-gray-400 hover:text-white transition-colors duration-200 pl-1">
           Logga ut
         </button>
       </div>

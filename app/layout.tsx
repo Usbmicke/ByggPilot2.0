@@ -1,8 +1,11 @@
-
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import './globals.css';
-import { AuthProvider } from '@/app/providers/AuthContext'; // STEG 1: Korrigerad import
+import NextAuthProvider from '@/app/providers/NextAuthProvider'; // Ändrad import
 
-export const metadata = {
+const inter = Inter({ subsets: ['latin'] });
+
+export const metadata: Metadata = {
   title: 'ByggPilot',
   description: 'Mindre papperskaos. Mer tid att bygga.',
 };
@@ -10,11 +13,8 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="sv">
-      <body>
-        {/* STEG 2: Använd den korrekta providern */}
-        <AuthProvider> 
-          {children}
-        </AuthProvider>
+      <body className={inter.className}>
+        <NextAuthProvider>{children}</NextAuthProvider> 
       </body>
     </html>
   );

@@ -1,0 +1,27 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users can only read/write their own user document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Projects:
+    // - Users can create new projects.
+    // - Users can read, update, or delete projects they own.
+    match /projects/{projectId} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
+    }
+
+    // Customers:
+    // - Logged-in users can create new customers.
+    // - Users can read, update, delete customers associated with their projects (more complex, simplified for now).
+    // For now, let's allow any authenticated user to read/write customers.
+    match /customers/{customerId} {
+       allow read, write: if request.auth != null;
+    }
+  }
+}

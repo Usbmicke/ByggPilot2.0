@@ -4,7 +4,7 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { IconDashboard, IconProjects, IconDocuments, IconCustomers, IconPlus, IconSettings, IconClock } from '@/app/constants';
-import { DemoView } from './page'; // Importerar från vår nya demo-sida
+import { DemoView } from './page';
 
 interface NavItemProps {
     icon: React.ReactNode;
@@ -13,7 +13,6 @@ interface NavItemProps {
     onClick: () => void;
 }
 
-// NavItem är en återanvändbar komponent, ingen ändring behövs här
 const NavItem: React.FC<NavItemProps> = ({ icon, label, active, onClick }) => (
   <button
     onClick={onClick}
@@ -34,7 +33,6 @@ interface DemoSidebarProps {
     onStartQuoteFlow: () => void;
 }
 
-// Detta är den anpassade Sidebar-komponenten för demon
 const DemoSidebar: React.FC<DemoSidebarProps> = ({ activeView, onNavClick, onStartQuoteFlow }) => {
   return (
     <div className="flex flex-col w-64 bg-gray-800/50 backdrop-blur-sm border-r border-gray-700 text-white">
@@ -52,9 +50,9 @@ const DemoSidebar: React.FC<DemoSidebarProps> = ({ activeView, onNavClick, onSta
       <div className="px-4 py-4 space-y-4">
         <button 
             onClick={onStartQuoteFlow}
-            className="w-full flex items-center justify-center gap-2 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40">
+            className="w-full flex items-center justify-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 shadow-lg shadow-yellow-500/20 hover:shadow-yellow-500/40">
           <IconPlus className="w-5 h-5" />
-          <span>Skapa Offert (Demo)</span>
+          <span>Starta Nytt Projekt</span>
         </button>
       </div>
       <div className="border-t border-gray-700 p-4">
