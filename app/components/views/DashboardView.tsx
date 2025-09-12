@@ -6,7 +6,7 @@ import { FolderPlusIcon, ArrowRightIcon, DocumentPlusIcon, ExclamationTriangleIc
 import ProjectCard from '@/app/components/dashboard/ProjectCard';
 import RecentEventsWidget from '@/app/components/dashboard/RecentEventsWidget';
 import TodoWidget from '@/app/components/dashboard/TodoWidget';
-import { Project } from '@/app/types'; // Importera den fullständiga Project-typen
+import { Project } from '@/app/types';
 
 interface DashboardViewProps {
   session: Session | null;
@@ -16,6 +16,7 @@ interface DashboardViewProps {
   onProjectClick: (project: Project) => void;
 }
 
+// OnboardingCard-komponenten finns kvar, men kommer inte längre att anropas felaktigt.
 const OnboardingCard = ({ onStartOnboarding }: { onStartOnboarding: () => void }) => (
   <div className="bg-gradient-to-br from-cyan-600 to-blue-700 p-6 rounded-xl shadow-lg border border-cyan-500/50 flex flex-col items-center text-center">
     <FolderPlusIcon className="h-12 w-12 text-white/90 mb-3"/>
@@ -43,13 +44,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ session, status, onStartO
       const fetchProjects = async () => {
         try {
           setIsLoading(true);
-          // **KORRIGERING: Anropar rätt API för att hämta projekt från Firestore**
           const response = await fetch('/api/projects/list');
           if (!response.ok) {
             throw new Error('Något gick fel vid hämtning av projekt från databasen.');
           }
           const data = await response.json();
-          setProjects(data || []); // API:et returnerar en array direkt
+          setProjects(data || []);
         } catch (err: any) {
           setError(err.message);
         } finally {
@@ -68,10 +68,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ session, status, onStartO
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
       <div className="lg:col-span-2 space-y-8">
-        {status === 'authenticated' && !isLoading && projects.length === 0 && !error &&(
-          <OnboardingCard onStartOnboarding={onStartOnboarding} />
-        )}
-
+        {/* DEN FELAKTIGA LOGIKEN FÖR ONBOARDING ÄR NU BORTTAGEN */}
+        
         <div>
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-3xl font-bold text-white">Mina Projekt</h2>
@@ -100,19 +98,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({ session, status, onStartO
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {projects.map(project => (
                 <div key={project.id} onClick={() => onProjectClick(project)} className="cursor-pointer">
-                  {/* Skickar med hela det korrekta projektobjektet till ProjectCard */}
                   <ProjectCard project={project} showWeather={true} />
                 </div>
               ))}
             </div>
           ) : (
+            // Detta är vyn som visas för en inloggad användare UTAN några projekt.
             <div className="text-center py-16 px-6 bg-gray-800/50 border border-gray-700 rounded-xl">
               <h3 className="text-xl font-bold text-white">Välkommen till ByggPilot!</h3>
-              {status === 'authenticated' ? (
-                <p className="text-gray-400 mt-2">Du har inga projekt än. Klicka på \"Skapa Offert\" för att starta ett nytt.</p>
-              ) : (
-                <p className="text-gray-400 mt-2">Logga in med Google för att se dina projekt.</p>
-              )}
+              <p className="text-gray-400 mt-2">Du har inga projekt än. Klicka på \"Skapa Offert\" för att starta ett nytt.</p>
             </div>
           )}
         </div>

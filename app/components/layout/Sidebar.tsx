@@ -3,7 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { useSession, signOut } from 'next-auth/react';
-import { IconDashboard, IconProjects, IconDocuments, IconCustomers, IconPlus, IconSettings, IconLightbulb, IconClock } from '@/app/constants'; // Assuming constants.tsx is in the app root
+import { IconDashboard, IconProjects, IconDocuments, IconCustomers, IconPlus, IconSettings, IconClock, IconLogout } from '@/app/constants'; // Importerar IconLogout
 import { View } from '@/app/dashboard/page';
 
 interface NavItemProps {
@@ -36,27 +36,31 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavClick, onStartQuoteFlow }) => {
   const { data: session, status } = useSession();
 
+  // Korrekt utloggningsfunktion som omdirigerar till startsidan
   const handleLogout = () => {
-    signOut({ callbackUrl: '/login' });
+    signOut({ callbackUrl: '/' }); 
   };
 
-  // Handle loading and unauthenticated states
   if (status === 'loading') {
     return (
-        <div className="flex flex-col w-64 bg-gray-800/50 backdrop-blur-sm border-r border-gray-700 text-white">
-            <div className="flex items-center justify-center h-20 border-b border-gray-700">
-                <h1 className="text-2xl font-bold">Laddar...</h1>
+        <div className="w-64 bg-gray-900 border-r border-gray-700 p-4">
+            <div className="animate-pulse space-y-4">
+                <div className="h-10 bg-gray-700 rounded"></div>
+                <div className="h-8 bg-gray-700 rounded w-3/4"></div>
+                <div className="h-8 bg-gray-700 rounded w-1/2"></div>
+                <div className="h-8 bg-gray-700 rounded w-3/4"></div>
             </div>
         </div>
     );
   }
 
   return (
-    <div className="flex flex-col w-64 bg-gray-800/50 backdrop-blur-sm border-r border-gray-700 text-white">
+    <div className="flex flex-col w-64 bg-gray-900 border-r border-gray-700 text-white">
       <div className="flex items-center justify-center h-20 border-b border-gray-700">
          <Image src="/images/byggpilotlogga1.png" alt="ByggPilot Logotyp" width={32} height={32} />
          <h1 className="text-2xl font-bold ml-2">ByggPilot</h1>
       </div>
+      
       <nav className="flex-1 px-4 py-6 space-y-2">
         <NavItem icon={<IconDashboard className="w-6 h-6" />} label="Översikt" active={activeView === 'DASHBOARD'} onClick={() => onNavClick('DASHBOARD')} />
         <NavItem icon={<IconProjects className="w-6 h-6" />} label="Projekt" active={activeView === 'PROJECTS'} onClick={() => onNavClick('PROJECTS')} />
@@ -64,7 +68,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavClick, onStartQuoteF
         <NavItem icon={<IconDocuments className="w-6 h-6" />} label="Dokument" active={activeView === 'DOCUMENTS'} onClick={() => onNavClick('DOCUMENTS')} />
         <NavItem icon={<IconCustomers className="w-6 h-6" />} label="Kunder" active={activeView === 'CUSTOMERS'} onClick={() => onNavClick('CUSTOMERS')} />
       </nav>
-      <div className="px-4 py-4 space-y-4">
+      
+      <div className="px-4 py-4">
         <button 
             onClick={onStartQuoteFlow}
             className="w-full flex items-center justify-center gap-2 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40">
@@ -72,20 +77,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavClick, onStartQuoteF
           <span>Skapa Offert</span>
         </button>
       </div>
-      <div className="border-t border-gray-700 p-4">
+      
+      <div className="border-t border-gray-700 mt-auto p-4 space-y-4">
          <NavItem icon={<IconSettings className="w-6 h-6" />} label="Inställningar" active={activeView === 'SETTINGS'} onClick={() => onNavClick('SETTINGS')} />
-        {status === 'authenticated' && session.user && (
-            <div className="flex items-center mt-4">
-            {session.user.image && <Image className="h-10 w-10 rounded-full object-cover" src={session.user.image} alt="User avatar" width={40} height={40}/>}
-            <div className="ml-3">
-                <p className="text-sm font-semibold text-white">{session.user.name || 'Användare'}</p>
-                <p className="text-xs text-gray-400">{session.user.email || 'Ingen email'}</p>
-            </div>
-            </div>
-        )}
-        <button onClick={handleLogout} className="w-full mt-4 text-left text-sm text-gray-400 hover:text-white transition-colors duration-200 pl-1">
-          Logga ut
-        </button>
+         <NavItem icon={<IconLogout className="w-6 h-6" />} label="Logga ut" onClick={handleLogout} />
       </div>
     </div>
   );
