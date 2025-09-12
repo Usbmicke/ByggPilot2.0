@@ -1,5 +1,5 @@
 
-import { collection, getDocs, addDoc, query, where, orderBy, serverTimestamp, updateDoc, QueryConstraint } from 'firebase/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 import { db } from '@/app/services/firestoreService';
 import { Project, ProjectStatus } from '@/app/types';
 import { createProjectFolder } from '@/app/services/driveService';
@@ -25,35 +25,41 @@ export async function listProjects(ownerId: string, customerId?: string): Promis
   }
 
   try {
-    const queryConstraints: QueryConstraint[] = [where('ownerId', '==', ownerId)];
+    let projectsQuery: FirebaseFirestore.Query = db.collection('projects').where('ownerId', '==', ownerId);
+    
     if (customerId) {
-      queryConstraints.push(where('customerId', '==', customerId));
+      projectsQuery = projectsQuery.where('customerId', '==', customerId);
     }
 
-    const projectsQuery = query(collection(db, 'projects'), ...queryConstraints);
-    const querySnapshot = await getDocs(projectsQuery);
+    const querySnapshot = await projectsQuery.get();
 
     const projects: Project[] = querySnapshot.docs.map(doc => {
       const data = doc.data();
+      // Konvertera Firestore Timestamps till ISO-strängar
+      const createdAt = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString();
+      const lastActivity = data.lastActivity?.toDate ? data.lastActivity.toDate().toISOString() : new Date().toISOString();
+
       return {
         id: doc.id,
         name: data.name,
         customerId: data.customerId,
         customerName: data.customerName,
         status: data.status as ProjectStatus,
+        ownerId: data.ownerId, // Se till att ownerId inkluderas
         driveFolderId: data.driveFolderId ?? null,
         address: data.address ?? null,
         lat: data.lat ?? undefined,
         lon: data.lon ?? undefined,
         progress: data.progress ?? 0,
-        lastActivity: data.lastActivity?.toDate().toISOString() ?? new Date().toISOString(),
-        createdAt: data.createdAt?.toDate().toISOString() ?? new Date().toISOString(),
+        lastActivity: lastActivity,
+        createdAt: createdAt,
       };
     });
 
     return projects;
   } catch (error) {
     console.error("Error fetching projects: ", error);
+    // Returnera en tom array vid fel för att inte krascha klienten helt
     return [];
   }
 }
@@ -71,7 +77,7 @@ export async function createProject(projectData: CreateProjectData): Promise<Pro
   }
 
   try {
-    const projectDocRef = await addDoc(collection(db, "projects"), {
+    const projectPayload = {
       name,
       customerId,
       customerName,
@@ -82,17 +88,18 @@ export async function createProject(projectData: CreateProjectData): Promise<Pro
       lat: null,
       lon: null,
       progress: 0,
-      lastActivity: serverTimestamp(),
-      createdAt: serverTimestamp(),
-    });
+      lastActivity: FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+    };
+
+    const projectDocRef = await db.collection("projects").add(projectPayload);
 
     let driveFolderId: string | null = null;
     try {
       driveFolderId = await createProjectFolder(name, customerName);
-      await updateDoc(projectDocRef, { driveFolderId: driveFolderId });
+      await projectDocRef.update({ driveFolderId: driveFolderId });
     } catch (driveError) {
       console.error("Could not create Google Drive folder. Project created without it.", driveError);
-      // The project is still created, just without the folder. This is acceptable.
     }
 
     const newProject: Project = {

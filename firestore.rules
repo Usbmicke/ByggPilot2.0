@@ -1,27 +1,20 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Users can only read/write their own user document
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // Lås allting som standard
+    match /{document=**} {
+      allow read, write: if false;
     }
 
-    // Projects:
-    // - Users can create new projects.
-    // - Users can read, update, or delete projects they own.
+    // Tillåt användare att läsa, skapa och uppdatera sina egna projekt.
+    // `read` täcker `get` och `list` (för frågor som i listProjects).
+    // `create` täcker `addDoc` (för createProject).
+    // `update` täcker `updateDoc` (för att lägga till Drive-mappens ID).
     match /projects/{projectId} {
-      allow create: if request.auth != null;
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
-    }
-
-    // Customers:
-    // - Logged-in users can create new customers.
-    // - Users can read, update, delete customers associated with their projects (more complex, simplified for now).
-    // For now, let's allow any authenticated user to read/write customers.
-    match /customers/{customerId} {
-       allow read, write: if request.auth != null;
+      allow read, update: if request.auth.uid == resource.data.ownerId;
+      allow create: if request.auth.uid == request.resource.data.ownerId;
     }
   }
 }
