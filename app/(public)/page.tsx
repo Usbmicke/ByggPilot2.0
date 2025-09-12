@@ -78,7 +78,7 @@ const CustomAnimationsStyle = () => (
     @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 12px 0px rgba(56, 189, 248, 0.3); } 50% { box-shadow: 0 0 20px 3px rgba(56, 189, 248, 0.5); } }
     .animate-pulse-glow { animation: pulse-glow 4s infinite ease-in-out; }
     @keyframes float-up { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: 0.7; } 90% { opacity: 0.7; } 100% { transform: translateY(-100vh); opacity: 0; } }
-    .particle { position: absolute; border-radius: 50%; background: #4a4a4a; animation-name: float-up; animation-timing-function: linear; animation-iteration-count: infinite; }
+    .particle { position: absolute; border-radius: 50%; background: #FFFFFF; animation-name: float-up; animation-timing-function: linear; animation-iteration-count: infinite; }
   `}</style>
 );
 
@@ -111,6 +111,9 @@ const AnimatedBackground = () => {
 // --- HUVUDLAYOUT --- 
 export default function LandingPage() {
   const [isProTipsModalOpen, setIsProTipsModalOpen] = useState(false);
+  const handleSignIn = () => {
+    signIn('google', { callbackUrl: '/dashboard' });
+  };
 
   return (
     <div className="text-gray-200 font-sans">
@@ -126,7 +129,7 @@ export default function LandingPage() {
               <span className="text-2xl font-bold text-white">ByggPilot</span>
             </div>
             <nav className="flex items-center gap-2 sm:gap-4">
-                <button onClick={() => signIn('google')} className="inline-flex items-center justify-center gap-2 bg-white text-gray-800 font-semibold py-2 px-3 rounded-md shadow-sm hover:bg-gray-200 transition-colors duration-300">
+                <button onClick={handleSignIn} className="inline-flex items-center justify-center gap-2 bg-white text-gray-800 font-semibold py-2 px-3 rounded-md shadow-sm hover:bg-gray-200 transition-colors duration-300">
                     <GoogleIcon className="w-5 h-5" />
                     <span className="hidden sm:inline text-sm">Logga in med Google</span>
                     <span className="sm:hidden text-sm">Logga in</span>
@@ -149,7 +152,7 @@ export default function LandingPage() {
               <p className="max-w-3xl mx-auto text-lg md:text-xl text-gray-400 mb-8">
                   ByggPilot är din nya digitala kollega som förvandlar administration till en automatiserad process, direkt i ditt befintliga Google-konto. Frigör tid, eliminera papperskaos och fokusera på det som verkligen driver din firma framåt.
               </p>
-              <button onClick={() => signIn('google')} className="inline-flex items-center justify-center gap-3 bg-white text-gray-800 font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-200 transition-all duration-300 transform hover:scale-105">
+              <button onClick={handleSignIn} className="inline-flex items-center justify-center gap-3 bg-white text-gray-800 font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-200 transition-all duration-300 transform hover:scale-105">
                   <GoogleIcon className="w-6 h-6" />
                   Logga in med Google
               </button>
