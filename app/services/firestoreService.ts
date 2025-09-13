@@ -1,31 +1,20 @@
-import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
 
-// Construct the service account object from individual environment variables
-const serviceAccount = {
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  // Replace the literal \n with actual newlines
-  privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-};
+import { db } from '@/app/lib/firebase/firebaseAdmin';
+import { getApps, getApp } from 'firebase-admin/app';
 
-// Initialize Firebase Admin SDK if not already initialized
-if (!getApps().length) {
-  initializeApp({
-    credential: cert(serviceAccount)
-  });
-}
-
-const db = getFirestore();
-
+// Denna funktion behövs inte längre här eftersom vi importerar en redan konfigurerad 'db'-instans.
+// Vi behåller getAdminApp ifall någon annan del av koden är beroende av den.
 const getAdminApp = () => {
   if (getApps().length) {
     return getApp();
-  } else {
-    return initializeApp({
-      credential: cert(serviceAccount)
-    });
   }
+  // Denna gren bör teoretiskt sett aldrig nås nu, eftersom firebaseAdmin.ts
+  // redan har kört och initierat appen.
+  console.error("Attempted to initialize Firebase Admin from firestoreService, but it should already be initialized.");
+  // Vi kan inte initiera här eftersom vi inte har serviceAccount-logiken längre.
+  // Detta är avsiktligt för att centralisera logiken.
+  throw new Error("Firebase Admin SDK is not initialized.");
 };
 
 export { db, getAdminApp };
+

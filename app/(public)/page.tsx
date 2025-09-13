@@ -101,7 +101,6 @@ export default function LandingPage() {
                     <span className="hidden sm:inline text-sm">Logga in med Google</span>
                     <span className="sm:hidden text-sm">Logga in</span>
                 </button>
-                <button onClick={() => router.push('/demo')} className="bg-cyan-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-cyan-600 transition-all duration-300 animate-pulse-glow"><span className="hidden sm:inline">Testa ByggPilot Gratis</span><span className="sm:hidden">Testa Gratis</span></button>
             </nav>
           </div>
         </header>
