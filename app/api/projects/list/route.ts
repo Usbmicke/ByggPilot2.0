@@ -1,25 +1,32 @@
 
-import { NextResponse, NextRequest } from 'next/server';
-import { getServerSession } from '@/app/lib/auth';
-import { listProjects } from '@/app/services/projectService';
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { db } from '@/app/services/firestoreService';
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession();
-    if (!session?.user?.id) {
-      return new NextResponse(JSON.stringify({ message: 'Authentication required' }), { status: 401 });
+export async function GET(request: Request) {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.id) {
+        return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const searchParams = request.nextUrl.searchParams;
-    const customerId = searchParams.get('customerId') || undefined;
+    try {
+        const projectsRef = db.collection('users').doc(session.user.id).collection('projects');
+        const snapshot = await projectsRef.orderBy('createdAt', 'desc').get();
 
-    const projects = await listProjects(session.user.id, customerId);
+        if (snapshot.empty) {
+            return NextResponse.json({ projects: [] });
+        }
 
-    return NextResponse.json(projects, { status: 200 });
+        const projects: any[] = [];
+        snapshot.forEach(doc => {
+            projects.push({ id: doc.id, ...doc.data() });
+        });
 
-  } catch (error) {
-    console.error("Error in GET /api/projects/list: ", error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new NextResponse(JSON.stringify({ message: `Internal Server Error: ${errorMessage}` }), { status: 500 });
-  }
+        return NextResponse.json({ projects });
+
+    } catch (error) {
+        console.error('Error fetching projects:', error);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
 }

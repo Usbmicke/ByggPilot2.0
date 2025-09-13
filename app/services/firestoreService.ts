@@ -1,14 +1,31 @@
+import { initializeApp, getApps, cert, getApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; // Importera getAuth
-import { firebaseConfig } from "@/app/firebaseConfig";
+// Construct the service account object from individual environment variables
+const serviceAccount = {
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+  // Replace the literal \n with actual newlines
+  privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+};
 
-// Undvik att initialisera appen flera gånger
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+// Initialize Firebase Admin SDK if not already initialized
+if (!getApps().length) {
+  initializeApp({
+    credential: cert(serviceAccount)
+  });
+}
 
-// Initialisera och exportera tjänster
-const db = getFirestore(app);
-const auth = getAuth(app); // Initialisera Auth
+const db = getFirestore();
 
-export { db, auth }; // Exportera både db och auth
+const getAdminApp = () => {
+  if (getApps().length) {
+    return getApp();
+  } else {
+    return initializeApp({
+      credential: cert(serviceAccount)
+    });
+  }
+};
+
+export { db, getAdminApp };

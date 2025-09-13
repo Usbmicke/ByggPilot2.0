@@ -2,39 +2,18 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Session } from 'next-auth';
-import { FolderPlusIcon, ArrowRightIcon, DocumentPlusIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { DocumentPlusIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import ProjectCard from '@/app/components/dashboard/ProjectCard';
-import RecentEventsWidget from '@/app/components/dashboard/RecentEventsWidget';
-import TodoWidget from '@/app/components/dashboard/TodoWidget';
 import { Project } from '@/app/types';
 
 interface DashboardViewProps {
   session: Session | null;
   status: 'loading' | 'authenticated' | 'unauthenticated';
-  onStartOnboarding: () => void;
   onStartQuoteFlow: () => void;
   onProjectClick: (project: Project) => void;
 }
 
-// OnboardingCard-komponenten finns kvar, men kommer inte längre att anropas felaktigt.
-const OnboardingCard = ({ onStartOnboarding }: { onStartOnboarding: () => void }) => (
-  <div className="bg-gradient-to-br from-cyan-600 to-blue-700 p-6 rounded-xl shadow-lg border border-cyan-500/50 flex flex-col items-center text-center">
-    <FolderPlusIcon className="h-12 w-12 text-white/90 mb-3"/>
-    <h3 className="text-xl font-bold text-white">Redo att organisera?</h3>
-    <p className="text-white/80 mt-2 mb-4 text-sm max-w-sm">
-      Låt ByggPilot skapa en standardiserad mappstruktur och offertmall direkt i din Google Drive. 
-    </p>
-    <button 
-      onClick={onStartOnboarding}
-      className="bg-white text-cyan-700 font-semibold py-2 px-5 rounded-lg shadow hover:bg-gray-100 transition-transform transform hover:scale-105 flex items-center gap-2"
-    >
-      Konfigurera startpaket
-      <ArrowRightIcon className="w-4 h-4" />
-    </button>
-  </div>
-);
-
-const DashboardView: React.FC<DashboardViewProps> = ({ session, status, onStartOnboarding, onStartQuoteFlow, onProjectClick }) => {
+const DashboardView: React.FC<DashboardViewProps> = ({ session, status, onStartQuoteFlow, onProjectClick }) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,10 +45,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ session, status, onStartO
   }, [status]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
-      <div className="lg:col-span-2 space-y-8">
-        {/* DEN FELAKTIGA LOGIKEN FÖR ONBOARDING ÄR NU BORTTAGEN */}
-        
+    <div className="animate-fade-in">
         <div>
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-3xl font-bold text-white">Mina Projekt</h2>
@@ -95,7 +71,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ session, status, onStartO
               <p className="text-red-300 mt-2">{error}</p>
             </div>
           ) : projects.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {projects.map(project => (
                 <div key={project.id} onClick={() => onProjectClick(project)} className="cursor-pointer">
                   <ProjectCard project={project} showWeather={true} />
@@ -103,19 +79,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ session, status, onStartO
               ))}
             </div>
           ) : (
-            // Detta är vyn som visas för en inloggad användare UTAN några projekt.
             <div className="text-center py-16 px-6 bg-gray-800/50 border border-gray-700 rounded-xl">
               <h3 className="text-xl font-bold text-white">Välkommen till ByggPilot!</h3>
-              <p className="text-gray-400 mt-2">Du har inga projekt än. Klicka på \"Skapa Offert\" för att starta ett nytt.</p>
+              <p className="text-gray-400 mt-2">Du har inga projekt än. Klicka på "Skapa Offert" för att starta ett nytt.</p>
             </div>
           )}
         </div>
-      </div>
-
-      <div className="lg:col-span-1 space-y-8">
-        <RecentEventsWidget />
-        <TodoWidget />
-      </div>
     </div>
   );
 };

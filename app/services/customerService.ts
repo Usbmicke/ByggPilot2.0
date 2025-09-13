@@ -1,5 +1,5 @@
 
-import { collection, getDocs, addDoc, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, getDoc, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/app/services/firestoreService';
 import { Customer } from '@/app/types';
 
@@ -12,9 +12,38 @@ interface CreateCustomerData {
 }
 
 /**
+ * Fetches a single customer by their ID.
+ * @param customerId - The ID of the customer to fetch.
+ * @returns A promise that resolves to the customer, or null if not found.
+ */
+export async function getCustomer(customerId: string): Promise<Customer | null> {
+    if (!customerId) {
+        console.error("getCustomer: customerId is required");
+        return null;
+    }
+    try {
+        const docRef = doc(db, 'customers', customerId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            return {
+                id: docSnap.id,
+                name: data.name,
+                email: data.email,
+                phone: data.phone,
+                isCompany: data.isCompany,
+                createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
+            };
+        }
+        return null;
+    } catch (error) {
+        console.error(`Error fetching customer ${customerId}:`, error);
+        return null;
+    }
+}
+
+/**
  * Lists all customers belonging to a specific user.
- * @param ownerId - The ID of the user whose customers to fetch.
- * @returns A promise that resolves to an array of customers.
  */
 export async function listCustomers(ownerId: string): Promise<Customer[]> {
   if (!ownerId) {
@@ -23,9 +52,8 @@ export async function listCustomers(ownerId: string): Promise<Customer[]> {
   }
 
   try {
-    const customersCollection = collection(db, 'customers');
     const q = query(
-      customersCollection,
+      collection(db, 'customers'),
       where('ownerId', '==', ownerId),
       orderBy('createdAt', 'desc')
     );
@@ -46,15 +74,12 @@ export async function listCustomers(ownerId: string): Promise<Customer[]> {
     return customers;
   } catch (error) {
     console.error("Error fetching customers: ", error);
-    // In a real app, you might want to handle this more gracefully
     return [];
   }
 }
 
 /**
  * Creates a new customer for a specific user.
- * @param customerData - The data for the new customer.
- * @returns A promise that resolves to the newly created customer.
  */
 export async function createCustomer(customerData: CreateCustomerData): Promise<Customer> {
   const { name, ownerId, isCompany, email, phone } = customerData;
@@ -80,7 +105,7 @@ export async function createCustomer(customerData: CreateCustomerData): Promise<
       isCompany,
       email,
       phone,
-      createdAt: new Date().toISOString(), // Use current date as a temporary timestamp
+      createdAt: new Date().toISOString(), 
     };
 
     return newCustomer;
