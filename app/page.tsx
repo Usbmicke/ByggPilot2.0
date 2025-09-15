@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import { useSession, signIn } from 'next-auth/react';
 import ProTipsModal from '@/app/components/ProTipsModal';
 
-// --- IKONER ---
+// --- ICONS (No changes) ---
 const GoogleIcon = (props) => (
     <svg {...props} viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></svg>
 );
@@ -26,7 +26,7 @@ export const IconLightbulb = (props) => (
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15.09 16.05a1 1 0 0 1-.9.55H9.81a1 1 0 0 1-.9-.55L6.23 8.32a.5.5 0 0 1 .5-.62h10.54a.5.5 0 0 1 .5.62l-2.68 7.73z"></path><path d="M12 16.6v2.24m-3.5-3.83.9-1.56m7.2 1.56-.9-1.56m-3.7-6.2v-3.8M5.88 8.32h12.24"></path></svg>
 );
 
-// --- ÅTERANVÄNDBARA KOMPONENTER ---
+// --- REUSABLE COMPONENTS (No changes) ---
 const cardBaseStyle = "bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-6 transition-all duration-300";
 const cardHoverEffect = "hover:scale-105 hover:shadow-[0_0_25px_rgba(156,163,175,0.2)] hover:border-gray-400/50";
 
@@ -51,7 +51,7 @@ const FeatureCard = ({ title, description }) => (
     <div className={`${cardBaseStyle} ${cardHoverEffect} flex flex-col`}><h3 className="text-lg font-bold text-gray-100 mb-2">{title}</h3><p className="text-gray-400 text-sm flex-grow">{description}</p></div>
 );
 
-// --- ANIMATION & BAKGRUND ---
+// --- ANIMATION & BACKGROUND (No changes) ---
 const CustomAnimationsStyle = () => (
   <style>{`
     @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 12px 0px rgba(56, 189, 248, 0.3); } 50% { box-shadow: 0 0 20px 3px rgba(56, 189, 248, 0.5); } }
@@ -81,6 +81,43 @@ const AnimatedBackground = () => {
 export default function LandingPage() {
   const [isProTipsModalOpen, setIsProTipsModalOpen] = useState(false);
   const router = useRouter();
+  const { data: session, status } = useSession();
+
+  // NEW: Automatically redirect if the user is authenticated
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.push('/dashboard');
+    }
+  }, [status, router]);
+
+  // NEW: Handle sign-in in a popup window
+  const handleSignIn = async () => {
+    const result = await signIn('google', {
+      redirect: false, // <-- This is the key
+      callbackUrl: '/dashboard',
+    });
+
+    if (result && result.url) {
+      // Open the URL in a new popup window
+      const width = 600, height = 700;
+      const left = (window.innerWidth - width) / 2;
+      const top = (window.innerHeight - height) / 2;
+      window.open(result.url, 'signIn', 
+        `toolbar=no, location=no, directories=no, status=no, menubar=no, 
+        scrollbars=no, resizable=no, copyhistory=no, width=${width}, 
+        height=${height}, top=${top}, left=${left}`
+      );
+    }
+  };
+
+  // Don't render the page content if we are already authenticated and about to redirect.
+  if (status === 'authenticated') {
+    return (
+        <div className="fixed inset-0 bg-[#0B2545] flex items-center justify-center text-white">
+            <p>Verifierar inloggning, omdirigerar till översikten...</p>
+        </div>
+    );
+  }
 
   return (
     <div className="text-gray-200 font-sans">
@@ -96,7 +133,8 @@ export default function LandingPage() {
               <span className="text-2xl font-bold text-white">ByggPilot</span>
             </div>
             <nav className="flex items-center gap-2 sm:gap-4">
-                <button onClick={() => signIn('google', { callbackUrl: '/dashboard' })} className="inline-flex items-center justify-center gap-2 bg-white text-gray-800 font-semibold py-2 px-3 rounded-md shadow-sm hover:bg-gray-200 transition-colors duration-300">
+                {/* UPDATED: onClick calls the new handleSignIn function */}
+                <button onClick={handleSignIn} className="inline-flex items-center justify-center gap-2 bg-white text-gray-800 font-semibold py-2 px-3 rounded-md shadow-sm hover:bg-gray-200 transition-colors duration-300">
                     <GoogleIcon className="w-5 h-5" />
                     <span className="hidden sm:inline text-sm">Logga in med Google</span>
                     <span className="sm:hidden text-sm">Logga in</span>
@@ -111,7 +149,8 @@ export default function LandingPage() {
             <div className="container mx-auto px-6">
               <h1 className="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-4">Mindre papperskaos.<br/>Mer tid att bygga.</h1>
               <p className="max-w-3xl mx-auto text-lg md:text-xl text-gray-400 mb-8">ByggPilot är din nya digitala kollega som förvandlar administration till en automatiserad process. Frigör tid, eliminera papperskaos och fokusera på det som verkligen driver din firma framåt.</p>
-              <button onClick={() => signIn('google', { callbackUrl: '/dashboard' })} className="inline-flex items-center justify-center gap-3 bg-white text-gray-800 font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-200 transition-all duration-300 transform hover:scale-105">
+              {/* UPDATED: onClick calls the new handleSignIn function */}
+              <button onClick={handleSignIn} className="inline-flex items-center justify-center gap-3 bg-white text-gray-800 font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-200 transition-all duration-300 transform hover:scale-105">
                   <GoogleIcon className="w-6 h-6" />
                   Logga in med Google
               </button>
@@ -119,7 +158,7 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* --- PROBLEM-SEKTION --- */}
+          {/* --- The rest of the page remains unchanged --- */}
           <section className="py-16 md:py-24">
             <div className="container mx-auto px-6">
               <h2 className="text-3xl md:text-4xl font-bold text-center text-white mb-12">Det administrativa kaoset som stjäl din lönsamhet</h2>
@@ -139,7 +178,6 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* --- FEATURE-SEKTION --- */}
           <section className="py-16 md:py-24">
               <div className="container mx-auto px-6">
                   <div className="text-center max-w-3xl mx-auto">
@@ -155,7 +193,6 @@ export default function LandingPage() {
               </div>
           </section>
 
-          {/* --- KUNSKAPSBANK-SEKTION --- */}
           <section className="py-16 md:py-24">
               <div className="container mx-auto px-6">
                   <button 
@@ -172,7 +209,6 @@ export default function LandingPage() {
               </div>
           </section>
 
-          {/* --- GRUNDARE-SEKTION --- */}
           <section className="py-16 md:py-24">
             <div className="container mx-auto px-6">
               <div className="max-w-4xl mx-auto bg-gray-800/50 border border-gray-700 rounded-xl p-8 md:p-12 grid md:grid-cols-3 gap-8 items-center">
@@ -187,7 +223,6 @@ export default function LandingPage() {
           </section>
         </main>
         
-        {/* --- FOOTER --- */}
         <footer className="border-t border-white/10 mt-16">
           <div className="container mx-auto px-6 py-6 text-center text-gray-500 text-sm">© {new Date().getFullYear()} ByggPilot AB | Integritetspolicy | Användarvillkor</div>
         </footer>
