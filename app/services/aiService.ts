@@ -1,12 +1,13 @@
 
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Ny instansiering av OpenAI-klienten
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Validera att API-nyckeln finns.
+if (!process.env.GOOGLE_AI_API_KEY) {
+  throw new Error("Google AI API key is not configured in .env.local. Please add GOOGLE_AI_API_KEY.");
+}
 
-// ... (befintliga interfaces och OpenAI-klient)
+// Initiera Google AI-klienten med nyckeln från .env.local
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
 
 export interface RiskAnalysis {
   summary: string;
@@ -18,39 +19,48 @@ export interface RiskAnalysis {
   }[];
 }
 
-// ... (befintlig generateQuoteSuggestion)
-
 /**
- * Genererar en avancerad, initial riskanalys för ett svenskt byggprojekt.
+ * Genererar en avancerad, initial riskanalys för ett svenskt byggprojekt med Google Gemini.
  */
 export async function generateInitialRiskAnalysis(projectName: string, projectDescription: string): Promise<RiskAnalysis | null> {
-  // Samma kraftfulla prompt som tidigare, men med ett nytt namn för tydlighet
+  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
   const systemPrompt = `
     Du är ByggPilot AI, en Sveriges ledande experter på KMA (Kvalitet, Miljö, Arbetsmiljö) och riskhantering inom bygg- och anläggningssektorn.
     Analysen måste grunda sig i svenska lagar och branschstandarder (AFS, BBR, PBL).
     Fokusera på Kvalitet, Tid och Ekonomi.
     Strukturera ditt svar som ett JSON-objekt med "summary" och "risks".
-    Svara ENDAST med ett giltigt JSON-objekt.
+    Svara ENDAST med ett giltigt JSON-objekt, utan extra text eller markdown-formatering.
   `;
   const userContent = `Analysera följande projekt:\nProjektnamn: ${projectName}\nBeskrivning: ${projectDescription || 'Ingen detaljerad beskrivning angiven.'}`;
+  
+  const prompt = `${systemPrompt}\n\n${userContent}`;
 
   try {
-    // ... OpenAI API-anrop som tidigare ...
-    const analysis: RiskAnalysis = {} as any; // Dummy
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    // Rensa svar från eventuell markdown-formatering
+    const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+    const analysis: RiskAnalysis = JSON.parse(cleanedText);
+    if (!analysis.risks || !analysis.summary) {
+      throw new Error("AI response is missing required fields.");
+    }
     return analysis;
+
   } catch (error) {
-    console.error("Error in generateInitialRiskAnalysis:", error);
+    console.error("Error in generateInitialRiskAnalysis with Google Gemini:", error);
     return null;
   }
 }
 
 /**
- * Uppdaterar en befintlig riskanalys med nya risker från en arbetsorder.
+ * Uppdaterar en befintlig riskanalys med nya risker från en arbetsorder med Google Gemini.
  */
 export async function generateRiskAnalysisUpdate(existingAnalysis: RiskAnalysis, workOrder: string): Promise<RiskAnalysis | null> {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error("OpenAI API key is not configured.");
-  }
+  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
   const systemPrompt = `
     Du är ByggPilot AI, en expert på KMA i den svenska byggbranschen.
@@ -62,33 +72,28 @@ export async function generateRiskAnalysisUpdate(existingAnalysis: RiskAnalysis,
     4. Skriv om den övergripande sammanfattningen ("summary") så att den reflekterar den nya, mest kritiska risken.
     5. Returnera hela det uppdaterade riskanalys-objektet i samma JSON-format.
 
-    Svara ENDAST med det kompletta, uppdaterade och giltiga JSON-objektet.
+    Svara ENDAST med det kompletta, uppdaterade och giltiga JSON-objektet, utan extra text eller markdown.
   `;
 
   const userContent = `Befintlig riskanalys (JSON):\n${JSON.stringify(existingAnalysis)}\n\nNy arbetsorder att analysera och infoga:\n"${workOrder}"`;
+  const prompt = `${systemPrompt}\n\n${userContent}`;
 
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4-turbo",
-      response_format: { type: "json_output" },
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userContent },
-      ],
-      temperature: 0.5,
-    });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
 
-    const result = response.choices[0].message?.content;
-    if (!result) throw new Error('AI model returned an empty response.');
+    // Rensa svar från eventuell markdown-formatering
+    const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
-    const updatedAnalysis: RiskAnalysis = JSON.parse(result);
+    const updatedAnalysis: RiskAnalysis = JSON.parse(cleanedText);
     if (!updatedAnalysis.risks || !updatedAnalysis.summary) {
       throw new Error("AI response is missing required fields.");
     }
     return updatedAnalysis;
 
   } catch (error) {
-    console.error("Error in generateRiskAnalysisUpdate:", error);
+    console.error("Error in generateRiskAnalysisUpdate with Google Gemini:", error);
     return null;
   }
 }

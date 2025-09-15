@@ -8,17 +8,16 @@ if (!admin.apps.length) {
     throw new Error('Missing Firebase Admin credentials in .env.local. Please add FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY');
   }
 
-  // Viktigt: Byt ut alla förekomster av \\n med \n i den privata nyckeln.
+  // Återställd: Denna rad är KRITISK för att korrekt formatera den privata nyckeln från .env.local.
+  // Den byter ut de text-escapade radbrytningarna (\\n) till faktiska radbrytningar (\n).
   const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
 
   admin.initializeApp({
     credential: admin.credential.cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: privateKey,
+      privateKey: privateKey, // Använder den korrigerade nyckeln
     }),
-    // Om du använder andra Firebase-tjänster som Realtime Database, lägg till dess URL här.
-    // databaseURL: `https://${process.env.FIREBASE_PROJECT_ID}.firebaseio.com`
   });
 }
 
