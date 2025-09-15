@@ -1,4 +1,3 @@
-
 // ====== Generella Typer ======
 
 export interface ChatMessage {
@@ -25,30 +24,26 @@ export interface User {
 
 export interface Customer {
   id: string;
+  userId: string; // <-- TILLAGD
   name: string;
   email?: string;
   phone?: string;
   isCompany?: boolean;
-  createdAt: string; // Tillagt för att matcha demo-data och god praxis
+  createdAt: string;
 }
 
 export interface Project {
-  id: string | number; // Kan vara nummer i demo, string från DB
+  id: string; // Ändrat från 'string | number'
+  userId: string; // <-- TILLAGD
   name: string;
   customerId: string;
-  customerName?: string; // Cachelagrat kundnamn för enklare visning
-  status: ProjectStatus | string; // Tillåter string för flexibilitet med demo-data
+  customerName?: string;
+  status: ProjectStatus | string;
   progress?: number;
   driveFolderId?: string;
   address?: string;
-  lastActivity: string; // Datum för senaste aktivitet (ISO-sträng)
-  createdAt: string; // När projektet skapades (ISO-sträng)
-}
-
-export interface Todo {
-  id: number;
-  text: string;
-  completed: boolean;
+  lastActivity: string;
+  createdAt: string;
 }
 
 // NYTT: Definition för tidrapporter

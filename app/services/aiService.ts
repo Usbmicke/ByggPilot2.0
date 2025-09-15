@@ -1,6 +1,11 @@
 
 import OpenAI from 'openai';
 
+// Ny instansiering av OpenAI-klienten
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
 // ... (befintliga interfaces och OpenAI-klient)
 
 export interface RiskAnalysis {

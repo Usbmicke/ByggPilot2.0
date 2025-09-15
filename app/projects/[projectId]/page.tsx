@@ -1,93 +1,112 @@
-
-'use client';
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import { Project } from '@/app/types';
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { getServerSession } from '@/app/lib/auth';
+import { getProject } from '@/app/services/projectService';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { ProjectStatus } from '@/app/types';
 
-const ProjectDetailView = () => {
-    const [project, setProject] = useState<Project | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const params = useParams();
-    const projectId = params.projectId as string;
+interface ProjectDetailPageProps {
+  params: {
+    projectId: string;
+  };
+}
 
-    useEffect(() => {
-        if (!projectId) return;
+// Helper för att formatera datum
+const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric' });
 
-        const fetchProject = async () => {
-            try {
-                setLoading(true);
-                const response = await fetch(`/api/projects/${projectId}`);
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || `Failed to fetch project: ${response.statusText}`);
-                }
-                const data: Project = await response.json();
-                setProject(data);
-            } catch (err: any) {
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchProject();
-    }, [projectId]);
-
-    if (loading) {
-        return <div className="text-center text-gray-400">Laddar projekt...</div>;
-    }
-
-    if (error) {
-        return <div className="text-center text-red-500">Fel: {error}</div>;
-    }
-
-    if (!project) {
-        return <div className="text-center text-gray-400">Kunde inte hitta projektet.</div>;
-    }
-
-    return (
-        <div className="animate-fade-in space-y-6">
-            <div>
-                <Link href="/projects" className="text-gray-400 hover:text-white flex items-center gap-2 mb-4">
-                    <ArrowLeftIcon className="w-5 h-5" />
-                    Tillbaka till projektlistan
-                </Link>
-                <h1 className="text-3xl font-bold text-white">{project.name}</h1>
-                <p className="text-gray-400">{project.customerName}</p>
-            </div>
-
-            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-6">
-                <h2 className="text-xl font-bold text-white mb-4">Projektinformation</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <p className="text-sm text-gray-400">Status</p>
-                        <p className="text-lg text-white font-semibold">{project.status}</p>
-                    </div>
-                     <div>
-                        <p className="text-sm text-gray-400">Adress</p>
-                        <p className="text-lg text-white font-semibold">{project.address || 'Ej angiven'}</p>
-                    </div>
-                    <div>
-                        <p className="text-sm text-gray-400">Senaste aktivitet</p>
-                        <p className="text-lg text-white font-semibold">{project.lastActivity ? new Date(project.lastActivity).toLocaleDateString('sv-SE') : '-'}</p>
-                    </div>
-                    <div>
-                        <p className="text-sm text-gray-400">Skapad</p>
-                        <p className="text-lg text-white font-semibold">{project.createdAt ? new Date(project.createdAt).toLocaleDateString('sv-SE') : '-'}</p>
-                    </div>
-                    <div>
-                        <p className="text-sm text-gray-400">Google Drive-mapp</p>
-                        {project.driveFolderId ? 
-                            <a href={`https://drive.google.com/drive/folders/${project.driveFolderId}`} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">Öppna mapp</a> 
-                            : <p className="text-lg text-gray-500 font-semibold">Ingen mapp skapad</p>}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+// Helper för att få färg baserat på status
+const getStatusChipClass = (status: ProjectStatus) => {
+  switch (status) {
+    case ProjectStatus.Completed:
+      return 'bg-green-100 text-green-800';
+    case ProjectStatus.InProgress:
+      return 'bg-blue-100 text-blue-800';
+    case ProjectStatus.OnHold:
+      return 'bg-yellow-100 text-yellow-800';
+    case ProjectStatus.NotStarted:
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
 };
 
-export default ProjectDetailView;
+export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
+  const { projectId } = params;
+  const session = await getServerSession();
+  const userId = session?.user?.id;
+
+  if (!userId) {
+    return <p>Autentisering krävs.</p>;
+  }
+
+  const project = await getProject(projectId, userId);
+
+  if (!project) {
+    notFound(); // getProject returnerar null om projektet är arkiverat eller inte finns
+  }
+
+  const progress = project.progress ?? 0;
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      {/* -- Rubrik och knappar -- */}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <p className="text-sm text-gray-500">Projekt</p>
+          <h1 className="text-3xl font-bold text-gray-900">{project.name}</h1>
+        </div>
+        <Link href={`/projects/${projectId}/edit`} passHref>
+          <span className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md cursor-pointer">
+            Redigera projekt
+          </span>
+        </Link>
+      </div>
+
+      {/* -- Detaljkort -- */}
+      <div className="bg-white shadow-md rounded-lg p-6 space-y-6">
+
+        {/* Status och Förlopp */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">Status</h3>
+            <p className={`mt-1 inline-block px-3 py-1 text-sm font-semibold rounded-full ${getStatusChipClass(project.status)}`}>
+              {project.status}
+            </p>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">Förlopp</h3>
+            <div className="mt-2 flex items-center gap-2">
+               <div className="w-full bg-gray-200 rounded-full h-2.5">
+                 <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
+               </div>
+               <span className="font-medium text-gray-700">{progress}%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Kund och Adress */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t pt-6">
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">Kund</h3>
+            <p className="mt-1 text-gray-900 font-semibold">{project.customerName}</p>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">Adress</h3>
+            <p className="mt-1 text-gray-900">{project.address || 'Ingen adress angiven'}</p>
+          </div>
+        </div>
+
+         {/* Datum */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t pt-6">
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">Skapat</h3>
+            <p className="mt-1 text-gray-900">{formatDate(project.createdAt)}</p>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-gray-500">Senaste aktivitet</h3>
+            <p className="mt-1 text-gray-900">{formatDate(project.lastActivity)}</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}

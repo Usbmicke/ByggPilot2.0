@@ -1,116 +1,94 @@
-
-import { collection, getDocs, addDoc, doc, getDoc, query, where, orderBy, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/app/services/firestoreService';
+import { promises as fs } from 'fs';
+import path from 'path';
 import { Customer } from '@/app/types';
+import { revalidatePath } from 'next/cache';
 
-interface CreateCustomerData {
-  name: string;
-  ownerId: string;
-  isCompany: boolean;
-  email?: string;
-  phone?: string;
-}
+const dataFilePath = path.join(process.cwd(), 'app/data/customers.json');
 
-/**
- * Fetches a single customer by their ID.
- * @param customerId - The ID of the customer to fetch.
- * @returns A promise that resolves to the customer, or null if not found.
- */
-export async function getCustomer(customerId: string): Promise<Customer | null> {
-    if (!customerId) {
-        console.error("getCustomer: customerId is required");
-        return null;
-    }
-    try {
-        const docRef = doc(db, 'customers', customerId);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            return {
-                id: docSnap.id,
-                name: data.name,
-                email: data.email,
-                phone: data.phone,
-                isCompany: data.isCompany,
-                createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
-            };
-        }
-        return null;
-    } catch (error) {
-        console.error(`Error fetching customer ${customerId}:`, error);
-        return null;
-    }
-}
-
-/**
- * Lists all customers belonging to a specific user.
- */
-export async function listCustomers(ownerId: string): Promise<Customer[]> {
-  if (!ownerId) {
-    console.error("listCustomers: ownerId is required");
-    return [];
-  }
-
+async function readData(): Promise<Customer[]> {
   try {
-    const q = query(
-      collection(db, 'customers'),
-      where('ownerId', '==', ownerId),
-      orderBy('createdAt', 'desc')
-    );
-    const querySnapshot = await getDocs(q);
-
-    const customers: Customer[] = querySnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        isCompany: data.isCompany,
-        createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString(),
-      };
-    });
-
-    return customers;
+    const fileContent = await fs.readFile(dataFilePath, 'utf-8');
+    return JSON.parse(fileContent) as Customer[];
   } catch (error) {
-    console.error("Error fetching customers: ", error);
+    // Om filen inte finns, returnera en tom array.
     return [];
   }
 }
 
-/**
- * Creates a new customer for a specific user.
- */
-export async function createCustomer(customerData: CreateCustomerData): Promise<Customer> {
-  const { name, ownerId, isCompany, email, phone } = customerData;
+async function writeData(data: Customer[]): Promise<void> {
+  await fs.writeFile(dataFilePath, JSON.stringify(data, null, 2));
+}
 
-  if (!name || !ownerId) {
-    throw new Error('Name and ownerId are required to create a customer.');
-  }
+// --- CRUD Funktioner ---
 
-  try {
-    const docRef = await addDoc(collection(db, "customers"), {
-      name,
-      ownerId,
-      isCompany,
-      email,
-      phone,
-      createdAt: serverTimestamp(),
-    });
+export async function listCustomers(userId: string): Promise<Customer[]> {
+  const allCustomers = await readData();
+  // Returnera endast aktiva kunder för den specifika användaren
+  return allCustomers.filter(c => c.userId === userId && c.archivedAt === null);
+}
 
-    const newCustomer: Customer = {
-      id: docRef.id,
-      name,
-      ownerId,
-      isCompany,
-      email,
-      phone,
-      createdAt: new Date().toISOString(), 
+export async function getCustomer(id: string, userId: string): Promise<Customer | null> {
+  const allCustomers = await readData();
+  const customer = allCustomers.find(c => c.id === id && c.userId === userId);
+  // Returnera endast om den inte är arkiverad
+  return customer && customer.archivedAt === null ? customer : null;
+}
+
+export async function createCustomer(data: Omit<Customer, 'id' | 'createdAt' | 'archivedAt'>): Promise<Customer> {
+  const allCustomers = await readData();
+  const newCustomer: Customer = {
+    ...data,
+    id: `cust_${new Date().getTime()}`,
+    createdAt: new Date().toISOString(),
+    archivedAt: null, // Nya kunder är aldrig arkiverade
+  };
+  allCustomers.push(newCustomer);
+  await writeData(allCustomers);
+  return newCustomer;
+}
+
+export async function updateCustomer(id: string, userId: string, data: Partial<Customer>): Promise<Customer> {
+    const allCustomers = await readData();
+    const index = allCustomers.findIndex(c => c.id === id && c.userId === userId);
+
+    if (index === -1) {
+        throw new Error('Customer not found or access denied.');
+    }
+
+    // Uppdatera och säkerställ att vissa fält inte kan ändras
+    allCustomers[index] = { 
+        ...allCustomers[index], 
+        ...data,
+        id: allCustomers[index].id, // Behåll original-ID
+        userId: allCustomers[index].userId // Behåll original-userId
     };
+    
+    await writeData(allCustomers);
+    return allCustomers[index];
+}
 
-    return newCustomer;
-  } catch (error) {
-    console.error("Error creating customer: ", error);
-    throw new Error('Failed to create customer in Firestore.');
-  }
+export async function archiveCustomer(id: string, userId: string): Promise<void> {
+    const allCustomers = await readData();
+    const index = allCustomers.findIndex(c => c.id === id && c.userId === userId);
+
+    if (index === -1) {
+        throw new Error('Customer not found or access denied.');
+    }
+
+    // Markera kunden som arkiverad
+    allCustomers[index].archivedAt = new Date().toISOString();
+    
+    await writeData(allCustomers);
+}
+
+// Funktion för att hämta ALLA kunder (inklusive arkiverade) för en användare
+export async function listAllCustomersForUser(userId: string): Promise<Customer[]> {
+  const allCustomers = await readData();
+  return allCustomers.filter(c => c.userId === userId);
+}
+
+// NY FUNKTION: Hämta endast arkiverade kunder
+export async function listArchivedCustomers(userId: string): Promise<Customer[]> {
+  const allCustomers = await readData();
+  return allCustomers.filter(c => c.userId === userId && c.archivedAt !== null);
 }

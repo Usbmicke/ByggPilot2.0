@@ -1,20 +1,21 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Lås allting som standard
-    match /{document=**} {
-      allow read, write: if false;
+
+    // Användare får endast läsa sitt eget användardokument och inte lista eller skriva till andra.
+    match /users/{documentId} {
+      allow read: if request.auth.uid == documentId;
+      allow write: if false; // Ingen ska kunna modifiera användardokument via klienten.
     }
 
-    // Tillåt användare att läsa, skapa och uppdatera sina egna projekt.
-    // `read` täcker `get` och `list` (för frågor som i listProjects).
-    // `create` täcker `addDoc` (för createProject).
-    // `update` täcker `updateDoc` (för att lägga till Drive-mappens ID).
-    match /projects/{projectId} {
-      allow read, update: if request.auth.uid == resource.data.ownerId;
-      allow create: if request.auth.uid == request.resource.data.ownerId;
+    // Generisk regel för alla andra datamodeller (projekt, kunder, tidsposter etc.)
+    // Denna regel säkerställer strikt multi-tenancy.
+    // En användare kan skapa, läsa, uppdatera och radera dokument om deras UID matchar
+    // userId-fältet i dokumentet.
+    match /{collection}/{documentId} {
+      allow read, update, delete: if request.auth.uid == resource.data.userId;
+      allow create: if request.auth.uid == request.resource.data.userId;
     }
   }
 }

@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from '@/app/lib/auth';
 import { createProject } from '@/app/services/projectService';
-import { ProjectStatus } from '@/app/types';
+import { Project, ProjectStatus } from '@/app/types';
 
 export async function POST(request: Request) {
   try {
@@ -11,19 +11,25 @@ export async function POST(request: Request) {
       return new NextResponse(JSON.stringify({ message: 'Authentication required' }), { status: 401 });
     }
 
-    const { name, customerId, customerName, status } = await request.json() as { name: string, customerId: string, customerName: string, status: ProjectStatus };
+    const body = await request.json();
+    const { name, customerId, customerName, status, address } = body;
 
-    if (!name || !customerId || !customerName || !status) {
-      return new NextResponse(JSON.stringify({ message: 'Missing required fields' }), { status: 400 });
+    if (!name || !customerId || !status) {
+      return new NextResponse(JSON.stringify({ message: 'Fälten name, customerId och status är obligatoriska' }), { status: 400 });
     }
 
-    const newProject = await createProject({
+    // Skapa ett projektobjekt som matchar den nya datamodellen
+    // Använder Omit för att ta bort fält som inte ska skickas av klienten
+    const projectData: Omit<Project, 'id' | 'createdAt' | 'lastActivity' | 'progress'> = {
       name,
       customerId,
-      customerName,
+      customerName: customerName || '', // Säkerställ att customerName är en sträng
       status,
-      ownerId: session.user.id,
-    });
+      address: address || '',
+      userId: session.user.id, // Korrekt fältnamn
+    };
+
+    const newProject = await createProject(projectData);
 
     return NextResponse.json(newProject, { status: 201 });
 

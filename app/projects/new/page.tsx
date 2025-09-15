@@ -1,140 +1,81 @@
+import { getServerSession } from '@/app/lib/auth';
+import { listCustomers } from '@/app/services/customerService';
+import { createProjectAction } from './actions';
+import { Customer } from '@/app/types';
 
-'use client';
+export default async function NewProjectPage() {
+  const session = await getServerSession();
+  const userId = session?.user?.id;
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Customer, ProjectStatus } from '@/app/types';
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
-import Link from 'next/link';
+  if (!userId) {
+    return <p>Du måste vara inloggad.</p>;
+  }
 
-const NewProjectPage = () => {
-    const router = useRouter();
-    const [projectName, setProjectName] = useState('');
-    const [selectedCustomer, setSelectedCustomer] = useState('');
-    const [status, setStatus] = useState<ProjectStatus>('Planerat');
-    const [customers, setCustomers] = useState<Customer[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+  const customers = await listCustomers(userId);
 
-    // Hämta kunder för dropdown
-    useEffect(() => {
-        const fetchCustomers = async () => {
-            try {
-                const response = await fetch('/api/customers/list');
-                if (!response.ok) {
-                    throw new Error('Kunde inte hämta kunder.');
-                }
-                const data: Customer[] = await response.json();
-                setCustomers(data);
-            } catch (err: any) {
-                setError(err.message);
-            }
-        };
-        fetchCustomers();
-    }, []);
+  return (
+    <div className="max-w-2xl mx-auto">
+      <h1 className="text-3xl font-bold mb-8">Skapa Nytt Projekt</h1>
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!projectName || !selectedCustomer) {
-            setError('Projektnamn och kund måste fyllas i.');
-            return;
-        }
-
-        setIsLoading(true);
-        setError(null);
-
-        const [customerId, customerName] = selectedCustomer.split('||');
-
-        try {
-            const response = await fetch('/api/projects', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: projectName, customerId, customerName, status }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Något gick fel.');
-            }
-
-            const newProject = await response.json();
-            
-            // Omdirigera till den nya projektsidan
-            router.push(`/projects/${newProject.id}`);
-
-        } catch (err: any) {
-            setError(err.message);
-            setIsLoading(false);
-        }
-    };
-
-    return (
-        <div className="animate-fade-in max-w-2xl mx-auto">
-             <Link href="/projects" className="text-gray-400 hover:text-white flex items-center gap-2 mb-4">
-                    <ArrowLeftIcon className="w-5 h-5" />
-                    Avbryt
-            </Link>
-            <h1 className="text-3xl font-bold text-white mb-6">Skapa nytt projekt</h1>
-            
-            <form onSubmit={handleSubmit} className="space-y-6 bg-gray-800/50 border border-gray-700 rounded-lg p-8">
-                <div>
-                    <label htmlFor="projectName" className="block text-sm font-medium text-gray-300 mb-2">Projektnamn</label>
-                    <input
-                        type="text"
-                        id="projectName"
-                        value={projectName}
-                        onChange={(e) => setProjectName(e.target.value)}
-                        className="w-full bg-gray-900 border-gray-700 text-white rounded-md p-2 focus:ring-cyan-500 focus:border-cyan-500"
-                        placeholder='Ex: Altanbygge hos Nilsson'
-                        required
-                    />
+      {customers.length === 0 ? (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+            <div className="flex">
+                <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.21 3.03-1.742 3.03H4.42c-1.532 0-2.492-1.696-1.742-3.03l5.58-9.92zM10 13a1 1 0 110-2 1 1 0 010 2zm-1-4a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
+                    </svg>
                 </div>
-
-                <div>
-                    <label htmlFor="customer" className="block text-sm font-medium text-gray-300 mb-2">Kund</label>
-                    <select
-                        id="customer"
-                        value={selectedCustomer}
-                        onChange={(e) => setSelectedCustomer(e.target.value)}
-                        className="w-full bg-gray-900 border-gray-700 text-white rounded-md p-2 focus:ring-cyan-500 focus:border-cyan-500"
-                        required
-                    >
-                        <option value="" disabled>Välj en kund...</option>
-                        {customers.map(c => (
-                            <option key={c.id} value={`${c.id}||${c.name}`}>{c.name}</option>
-                        ))}
-                    </select>
-                    <p className="text-xs text-gray-500 mt-2">Saknas kunden? <Link href="/customers/new" className="text-cyan-400 hover:underline">Skapa ny kund här.</Link></p>
+                <div className="ml-3">
+                    <p className="text-sm text-yellow-700">
+                        Du måste ha minst en kund för att kunna skapa ett projekt. 
+                        <a href="/customers/new" className="font-medium underline text-yellow-800 hover:text-yellow-900">Skapa en kund nu</a>.
+                    </p>
                 </div>
-
-                <div>
-                    <label htmlFor="status" className="block text-sm font-medium text-gray-300 mb-2">Status</label>
-                    <select
-                        id="status"
-                        value={status}
-                        onChange={(e) => setStatus(e.target.value as ProjectStatus)}
-                        className="w-full bg-gray-900 border-gray-700 text-white rounded-md p-2 focus:ring-cyan-500 focus:border-cyan-500"
-                    >
-                        <option value="Planerat">Planerat</option>
-                        <option value="Pågående">Pågående</option>
-                        <option value="Avslutat">Avslutat</option>
-                    </select>
-                </div>
-
-                {error && <p className="text-red-400 text-sm">{error}</p>}
-
-                <div className="flex justify-end pt-4">
-                    <button 
-                        type="submit"
-                        disabled={isLoading}
-                        className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {isLoading ? 'Skapar...' : 'Skapa projekt'}
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
-    );
-};
+      ) : (
+        <form action={createProjectAction} className="space-y-6 bg-white p-8 rounded-lg shadow-md">
+          
+          {/* Kundval */}
+          <div>
+            <label htmlFor="customerId" className="block text-sm font-medium text-gray-700">Välj Kund</label>
+            <select id="customerId" name="customerId" required
+                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 rounded-md">
+              {customers.map((customer: Customer) => (
+                <option key={customer.id} value={customer.id}>{customer.name}</option>
+              ))}
+            </select>
+          </div>
 
-export default NewProjectPage;
+          {/* Projektnamn */}
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700">Projektnamn</label>
+            <input id="name" name="name" type="text" required
+                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+          </div>
+
+          {/* Adress */}
+          <div>
+            <label htmlFor="address" className="block text-sm font-medium text-gray-700">Adress</label>
+            <input id="address" name="address" type="text"
+                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+          </div>
+
+          {/* Deadline */}
+          <div>
+            <label htmlFor="deadline" className="block text-sm font-medium text-gray-700">Tidsfrist (valfritt)</label>
+            <input id="deadline" name="deadline" type="date"
+                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+             <p className="mt-2 text-xs text-gray-500">Ange ett slutdatum för projektet. Detta hjälper ByggPilot att övervaka projektets hälsa.</p>
+          </div>
+
+          <div className="flex justify-end pt-4">
+            <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">
+              Skapa Projekt
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
