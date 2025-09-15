@@ -2,7 +2,8 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from '@/app/lib/auth';
 import { createFolder, getGoogleAuth } from '@/app/services/driveService';
-import { updateUser } from '@/app/services/firestoreService';
+// Importerar `db`-instansen direkt istället för den felaktiga `updateUser`
+import { db } from '@/app/services/firestoreService';
 
 export async function POST(request: Request) {
   try {
@@ -13,10 +14,16 @@ export async function POST(request: Request) {
     if (!userId || !accessToken) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
+    
+    const userRef = db.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+    
+    if(userDoc.exists && userDoc.data()?.driveRootFolderId) {
+        return NextResponse.json({ message: 'User setup already complete.' });
+    }
 
-    // Skapa rotmappen "ByggPilot" i användarens Google Drive
     const auth = getGoogleAuth(accessToken);
-    const folderName = "ByggPilot";
+    const folderName = "ByggPilot - Kundmapp";
     const folder = await createFolder(auth, folderName);
 
     if (!folder || !folder.id) {
@@ -25,8 +32,8 @@ export async function POST(request: Request) {
 
     const driveRootFolderId = folder.id;
 
-    // Spara ID:t för den nya mappen i användarens dokument i Firestore
-    await updateUser(userId, { driveRootFolderId: driveRootFolderId });
+    // KORRIGERING: Använder `db`-instansen för att uppdatera användaren direkt.
+    await userRef.update({ driveRootFolderId: driveRootFolderId });
 
     return NextResponse.json({ 
         message: 'User setup complete. Root folder created.',

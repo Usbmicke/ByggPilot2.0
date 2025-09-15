@@ -8,7 +8,7 @@ if (!admin.apps.length) {
     throw new Error('Missing Firebase Admin credentials in .env.local. Please add FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY');
   }
 
-  // Återställd: Denna rad är KRITISK för att korrekt formatera den privata nyckeln från .env.local.
+  // Denna rad är KRITISK för att korrekt formatera den privata nyckeln från .env.local.
   // Den byter ut de text-escapade radbrytningarna (\\n) till faktiska radbrytningar (\n).
   const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
 

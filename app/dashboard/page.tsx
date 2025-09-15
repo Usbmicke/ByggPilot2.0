@@ -1,25 +1,18 @@
 'use client';
-import React from 'react';
+
 import { useSession } from 'next-auth/react';
 import DashboardView from '@/app/components/views/DashboardView';
-import { mockData } from '@/app/services/mockData';
 
 export default function DashboardPage() {
     const { data: session } = useSession();
-    const isDemo = !session; // If no session, run in demo mode
 
-    // In a real app, you'd fetch this data based on the session
-    const data = isDemo ? mockData : { projects: [], customers: [], contacts: [] };
-
-    // These would come from a settings context or similar
-    const showWeatherWidget = true;
-    const showTodoWidget = true;
-
-    return (
-        <DashboardView 
-            projects={data.projects} 
-            showWeather={showWeatherWidget}
-            showTodo={showTodoWidget}
-        />
-    );
+    if (session) {
+        // Riktig data för inloggad användare
+        // Du kan hämta och skicka riktig data till DashboardView här
+        return <DashboardView projects={[]} customers={[]} username={session.user?.name || 'Användare'} isDemo={false} />;
+    } else {
+        // Fallback eller demoläge om sessionen inte finns
+        // Använd mockData här om du vill
+        return <DashboardView projects={[]} customers={[]} username="Demoläge" isDemo={true} />;
+    }
 }

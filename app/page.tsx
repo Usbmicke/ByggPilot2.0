@@ -83,14 +83,7 @@ export default function LandingPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
 
-  // NEW: Automatically redirect if the user is authenticated
-  useEffect(() => {
-    if (status === 'authenticated') {
-      router.push('/dashboard');
-    }
-  }, [status, router]);
-
-  // NEW: Handle sign-in in a popup window
+  // Handle sign-in in a popup window
   const handleSignIn = async () => {
     const result = await signIn('google', {
       redirect: false, // <-- This is the key
@@ -110,11 +103,18 @@ export default function LandingPage() {
     }
   };
 
+  // When the session status changes, check if we are authenticated.
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.push('/dashboard');
+    }
+  }, [status, router]);
+
   // Don't render the page content if we are already authenticated and about to redirect.
-  if (status === 'authenticated') {
+  if (status === 'loading') {
     return (
         <div className="fixed inset-0 bg-[#0B2545] flex items-center justify-center text-white">
-            <p>Verifierar inloggning, omdirigerar till översikten...</p>
+            <p>Verifierar inloggning...</p>
         </div>
     );
   }
@@ -133,7 +133,6 @@ export default function LandingPage() {
               <span className="text-2xl font-bold text-white">ByggPilot</span>
             </div>
             <nav className="flex items-center gap-2 sm:gap-4">
-                {/* UPDATED: onClick calls the new handleSignIn function */}
                 <button onClick={handleSignIn} className="inline-flex items-center justify-center gap-2 bg-white text-gray-800 font-semibold py-2 px-3 rounded-md shadow-sm hover:bg-gray-200 transition-colors duration-300">
                     <GoogleIcon className="w-5 h-5" />
                     <span className="hidden sm:inline text-sm">Logga in med Google</span>
@@ -149,7 +148,6 @@ export default function LandingPage() {
             <div className="container mx-auto px-6">
               <h1 className="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-4">Mindre papperskaos.<br/>Mer tid att bygga.</h1>
               <p className="max-w-3xl mx-auto text-lg md:text-xl text-gray-400 mb-8">ByggPilot är din nya digitala kollega som förvandlar administration till en automatiserad process. Frigör tid, eliminera papperskaos och fokusera på det som verkligen driver din firma framåt.</p>
-              {/* UPDATED: onClick calls the new handleSignIn function */}
               <button onClick={handleSignIn} className="inline-flex items-center justify-center gap-3 bg-white text-gray-800 font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-200 transition-all duration-300 transform hover:scale-105">
                   <GoogleIcon className="w-6 h-6" />
                   Logga in med Google
