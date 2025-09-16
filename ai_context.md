@@ -1,39 +1,90 @@
-'''
-# AI Context for ByggPilot 2.0 Development
+# ByggPilot: AI Context & Development Guidelines
 
-This document outlines the development plan and key architectural decisions for the ByggPilot 2.0 application. As the AI assistant, my primary role is to execute tasks based on this plan, adhering strictly to the specified quality and security standards.
+**Dokumentversion: 1.1**
+**Senast uppdaterad: 2024-05-22**
 
-## Development Plan & Status
+---
 
-The project is divided into distinct phases. We will tackle them sequentially unless a change in priority is explicitly communicated.
+## 1. Kärnmission
 
-**Grundläggande Setup & Kärnfunktionalitet**
+ByggPilot är ett **Large Action Model (LAM)**, utformat för att vara den digitala kollegan för små och medelstora byggföretag. Målet är inte bara att svara på frågor, utan att **agera proaktivt** för att automatisera, förenkla och effektivisera hela den administrativa processen – från "Jobb-till-Kassa". Vi är ett intelligent lager ovanpå Google Workspace som frigör hantverkarens tid och minskar risken för kostsamma fel. All interaktion ska vara så enkel som möjligt, med **klickbara knappar och guidade flöden** som primär interaktionsmetod i chatten.
 
-*   **[AVKLARAD] Fas 1: Projektinitialisering & Teknisk Stack:** Next.js (App Router), TypeScript, Tailwind CSS, NextAuth.js, Firebase (Authentication, Firestore, Storage).
-*   **[AVKLARAD] Fas 2: Firebase-koppling:** Grundläggande konfiguration för Firebase Admin SDK är på plats.
-*   **[AVKLARAD] Fas 3: Databasmodellering (Firestore):** Definierade datastrukturer för `users`, `projects`, och `customers`.
-*   **[AVKLARAD] Fas 4: Grundläggande Inloggning & Användarprofiler:** Implementering av Google OAuth 2.0. Blockerare åtgärdad.
-*   **[AVKLARAD] Fas 5: Skapa Nytt Projekt (Kärnflöde):** API-route och service-logik för att skapa projekt i Firestore och Drive är komplett.
-*   **[AVKLARAD] Fas 6: Detaljerad Projektvy:** API och sida för att visa ett enskilt projekt är skapade.
-*   **[PÅGÅENDE] Fas 7: Dashboard & Projektlista:** En översiktssida som listar användarens alla projekt.
-*   **[PÅGÅENDE - INTERN] Demoläge:** Ett komplett demoläge har byggts för att demonstrera applikationens UI och värde.
+---
 
-**Efterföljande Faser (Enligt tidigare plan):**
+## 2. AI-utvecklarens Riktlinjer (Regler för mig, AI:n)
 
-*   **Fas 8: Proaktiv Väder- och Varningsassistent (SMHI)**
-*   **Fas 9: Dynamisk Regelverkskontroll (Lantmäteriet & Boverket)**
-*   **Fas 10: Geologisk Riskbedömning (SGU)**
-*   **Fas 11: System för Kontinuerligt Lärande**
-*   **Fas 12: Förbättrad Användbarhet i Fält (Röststyrning & PWA)**
-*   **Fas 13: Slutgiltig Kvalitetssäkring**
+1.  **AGERA, FRÅGA INTE:** Agera alltid först. Ta kommando, utför uppgiften och rapportera resultatet. Fråga endast om en avsikt är tvetydig eller om en åtgärd är destruktiv.
+2.  **ANVÄNDARFOKUS FRAMFÖR ALLT:** Målet är att eliminera administrativ huvudvärk. Alla funktioner ska designas för att vara maximalt enkla och intuitiva. Prioritera klickbara knappar framför textinmatning.
+3.  **KORREKTHET ÄR HELIGT:** All kod ska vara robust, testbar och följa bästa praxis. All information som presenteras (t.ex. från externa API:er) måste vara korrekt och från verifierade källor.
+4.  **SÄKERHET SOM STANDARD:** Hantera all känslig information (API-nycklar, kunddata, tokens) med största varsamhet. Skriv aldrig känslig data i klartext i loggar eller kod.
+5.  **ETT STEG I TAGET:** Bryt ner komplexa problem i mindre, hanterbara steg. Slutför och verifiera varje steg innan du går vidare till nästa. Checka av slutförda steg i detta dokument.
 
-## Stående Order & Kvalitetskrav
+---
 
-*   **Noggrannhet Först:** Läs och förstå filer *innan* du skriver till dem. Oavsiktlig överskrivning av filer (`.env.local`, etc.) är oacceptabelt. Dubbelkolla alltid sökvägar och innehåll.
-*   **Inga Syntaxfel:** Validera all kod du skriver. Att introducera syntaxfel är ett allvarligt misstag som bryter utvecklingsflödet.
-*   **Inga API-loopar:** Använd inte verktyg i repetitiva loopar. Tänk igenom planen och agera metodiskt, steg-för-steg.
-*   **Säkerhet:** Alla API-routes måste verifiera användarens session. Inga känsliga nycklar (`.env.local`, `serviceAccountKey.json`) får någonsin exponeras eller checkas in.
-*   **Testning:** All ny backend-logik (API Routes) ska, när grundfunktionaliteten är på plats, åtföljas av tester med Vitest.
-*   **Effektivitet:** Använd `fields`-parametern vid anrop till externa API:er (som Google Drive) för att minimera datamängd. Undvik onödiga databasläsningar.
+## 3. Status & Slutförda Steg
 
-'''
+-   [x] **Grundläggande Firebase Autentisering:** Användare kan logga in med Google.
+-   [x] **Centraliserad Firebase Initiering:** Skapat `app/firebase.ts` för att lösa modulberoenden och säkerställa en enda källa för Firebase-objekt.
+-   [x] **Konsoliderad Sessionhantering:** Byggfel relaterade till `getServerSession` är lösta genom att standardisera på NextAuth.js.
+-   [x] **Struktur för AI-kontext:** Detta dokument, `ai_context.md`, har skapats.
+-   [x] **Reparera Utloggningsfunktion:**
+    -   [x] Återplacerat utloggningsknappen i det nedre vänstra hörnet.
+    -   [x] Säkerställt att klick på knappen tvingar en fullständig utloggning.
+
+---
+
+## 4. Utvecklingsplan & Checklista
+
+### Fas 1: Foundation & Kärnfunktionalitet (Nuvarande Fokus)
+
+-   [ ] **Google Drive Integration:**
+    -   [ ] **(PÅGÅR)** Hämta och säkert spara `refresh_token` för Google API-åtkomst i `.env.local`.
+    -   [ ] Implementera funktion (`driveService.ts`) för att vid första anrop skapa en rotmapp vid namn "ByggPilot" i användarens Google Drive.
+    -   [ ] Implementera funktion för att automatiskt skapa en standardiserad projektmappstruktur (inspirerad av ISO 9001) inuti "ByggPilot"-mappen när ett nytt projekt skapas.
+-   [ ] **Grundläggande Företagsverifiering:**
+    -   [ ] Skapa en service (`companyService.ts` eller liknande).
+    -   [ ] Implementera API-anrop för att hämta grundläggande företagsinformation från Bolagsverket (via en tredjeparts-API om nödvändigt) baserat på organisationsnummer.
+    -   [ ] Implementera API-anrop för att verifiera F-skatt och momsstatus via Skatteverket.
+
+### Fas 2: Offertmotorn (Högsta Prioritet)
+
+-   [ ] **Konversationell Offertskapande:**
+    -   [ ] Skapa ett chattflöde där AI:n agerar som en kalkylator och guidar användaren steg-för-steg genom att ställa frågor för att bygga upp en offert.
+-   [ ] **Interaktiv Offertpresentation:**
+    -   [ ] Generera en unik, delbar webbsida för varje offert.
+    -   [ ] Kunden ska kunna välja/avvälja tillval, och priset uppdateras i realtid.
+-   [ ] **E-signering & Deposition:**
+    -   [ ] Integrera en lösning för juridiskt bindande e-signering direkt på offertsidan.
+    -   [ ] Möjliggör krav på deposition vid godkännande för att förbättra kassaflödet.
+
+### Fas 3: Automatiserad Administration
+
+-   [ ] **KMA-analys via Chatt:**
+    -   [ ] Skapa ett guidat flöde där AI:n ställer relevanta frågor för att genomföra och dokumentera en riskanalys (Kvalitet, Miljö, Arbetsmiljö) för ett projekt.
+-   [ ] **Automatiserade Kunduppdateringar:**
+    -   [ ] Skapa en funktion där AI:n kan generera en enkel, professionell veckouppdatering baserad på projektets status och skicka som förslag till användaren.
+-   [ ] **Extern Datainhämtning för Projekt:**
+    -   [ ] Integration med Lantmäteriet för fastighetsinformation.
+    -   [ ] Integration med SGU (Sveriges Geologiska Undersökning) för markdata (jordart, radonrisk).
+    -   [ ] Integration med RAÄ (Riksantikvarieämbetet) för att kontrollera fornlämningar.
+
+### Fas 4: Visionära Funktioner (Efter Kärnfunktionalitet)
+
+-   [ ] **Kvittohantering med Vision AI:**
+    -   [ ] Användaren laddar upp en bild på ett kvitto.
+    -   [ ] AI:n skannar, tolkar och kopplar automatiskt kostnaden till rätt projekt.
+-   [ ] **Hantering av ÄTA-arbeten:**
+    -   [ ] Transkribera ett röstmemo från användaren till ett ÄTA-underlag.
+    -   [ ] Föreslå att underlaget skickas till kund för godkännande.
+
+---
+
+## 5. Teknisk Arkitektur & Standarder
+
+-   **Frontend:** Next.js 14 (App Router), React, TypeScript, Tailwind CSS
+-   **Autentisering:** NextAuth.js (credentials) och Firebase Authentication (Google provider).
+-   **Databas:** Firestore för projekt-, kund- och användardata.
+-   **Backend Services:** Next.js API Routes.
+-   **Filhantering:** Google Drive API.
+-   **Hosting/Deployment:** Vercel (förutsatt).
+-   **Kodstandard:** All kod ska vara på svenska i kommentarer och användarvända strängar. Funktionsnamn och variabler på engelska.
