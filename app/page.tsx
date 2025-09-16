@@ -1,9 +1,9 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { useSession, signIn } from 'next-auth/react';
+import { signIn } from 'next-auth/react';
 import ProTipsModal from '@/app/components/ProTipsModal';
 
 // --- ICONS (No changes) ---
@@ -80,44 +80,11 @@ const AnimatedBackground = () => {
 // --- HUVUDLAYOUT ---
 export default function LandingPage() {
   const [isProTipsModalOpen, setIsProTipsModalOpen] = useState(false);
-  const router = useRouter();
-  const { data: session, status } = useSession();
 
   // Handle sign-in in a popup window
-  const handleSignIn = async () => {
-    const result = await signIn('google', {
-      redirect: false, // <-- This is the key
-      callbackUrl: '/dashboard',
-    });
-
-    if (result && result.url) {
-      // Open the URL in a new popup window
-      const width = 600, height = 700;
-      const left = (window.innerWidth - width) / 2;
-      const top = (window.innerHeight - height) / 2;
-      window.open(result.url, 'signIn', 
-        `toolbar=no, location=no, directories=no, status=no, menubar=no, 
-        scrollbars=no, resizable=no, copyhistory=no, width=${width}, 
-        height=${height}, top=${top}, left=${left}`
-      );
-    }
+  const handleSignIn = () => {
+    signIn('google', { callbackUrl: '/dashboard' });
   };
-
-  // When the session status changes, check if we are authenticated.
-  useEffect(() => {
-    if (status === 'authenticated') {
-      router.push('/dashboard');
-    }
-  }, [status, router]);
-
-  // Don't render the page content if we are already authenticated and about to redirect.
-  if (status === 'loading') {
-    return (
-        <div className="fixed inset-0 bg-[#0B2545] flex items-center justify-center text-white">
-            <p>Verifierar inloggning...</p>
-        </div>
-    );
-  }
 
   return (
     <div className="text-gray-200 font-sans">

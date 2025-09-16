@@ -1,9 +1,10 @@
 
 'use client';
 import React from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/app/context/AuthContext'; // Importera useAuth
+import { useRouter } from 'next/navigation'; // Importera useRouter
 import Sidebar from '@/app/components/layout/Sidebar';
-import Header from '@/app/components/layout/Header'; // Korrigerad sökväg
+import Header from '@/app/components/layout/Header';
 import Chat from '@/app/components/chat/Chat';
 
 const AnimatedBackground = () => (
@@ -13,20 +14,30 @@ const AnimatedBackground = () => (
 );
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-    const { data: session } = useSession();
-    const isDemo = !session;
+    const { user, loading } = useAuth();
+    const router = useRouter();
 
-    const notifications = isDemo ? [] : [];
+    if (loading) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center bg-gray-900 text-white">
+                <p>Laddar...</p>
+            </div>
+        );
+    }
+
+    if (!user) {
+        router.push('/'); // Omdirigera till landningssidan
+        return null;
+    }
     
     const handleChatToggle = () => {
-        // Lägg till logik för att visa/dölja chatten här
         console.log("Toggle chat");
     };
 
     return (
         <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
             <AnimatedBackground />
-            <Sidebar isDemo={isDemo} />
+            <Sidebar isDemo={!user} />
             <div className="flex flex-1 flex-col overflow-hidden">
                  <Header onChatToggle={handleChatToggle} />
                 <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
