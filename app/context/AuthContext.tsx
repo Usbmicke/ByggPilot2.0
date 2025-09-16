@@ -1,80 +1,69 @@
-"use client";
+'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { getApp, getApps, initializeApp } from 'firebase/app';
-import { 
-    getAuth, 
-    GoogleAuthProvider, 
-    signInWithRedirect, 
-    onAuthStateChanged, 
-    getRedirectResult,
-    signOut,
-    User 
-} from 'firebase/auth';
-import { firebaseConfig } from '@/app/firebaseConfig';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider, User } from 'firebase/auth';
+// KORRIGERING: Importera `auth` från vår nya, centraliserade `firebase.ts` fil.
+import { auth } from '@/app/firebase'; 
+import { useRouter } from 'next/navigation';
 
-// --- KORREKT FIREBASE INITIALISERING ---
-// Säkerställer att appen bara initialiseras en gång.
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
-
-// --- CONTEXT DEFINITION ---
+// Definiera en tydlig typ för kontextens värde
 interface AuthContextType {
-  user: User | null; // Den inloggade Firebase-användaren
-  loading: boolean;  // Laddningsstatus för att undvika flimmer
+  user: User | null;
+  loading: boolean;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
+// Skapa kontexten med en initialt undefined värde för att hantera laddningsstatus
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// --- AUTH PROVIDER COMPONENT ---
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+// Huvudkomponenten som tillhandahåller autentiseringskontexten
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-  // Funktion för att starta inloggningsprocessen
-  const signInWithGoogle = async () => {
-    setLoading(true);
-    await signInWithRedirect(auth, provider);
-  };
-
-  // Funktion för utloggning
-  const logout = async () => {
-    setLoading(true);
-    await signOut(auth);
-    setUser(null);
-    setLoading(false);
-  };
-
+  // LYSSNARE FÖR AUTENTISERINGSSTATUS
   useEffect(() => {
-    // Hanterar resultatet när användaren kommer tillbaka från Google
-    const handleRedirectResult = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result) {
-          // Användaren har loggat in
-          setUser(result.user);
-        }
-      } catch (error) {
-        console.error("Error during sign-in redirect:", error);
-      }
-    };
-
-    handleRedirectResult();
-
-    // Lyssnar på ändringar i autentiseringsstatus (t.ex. vid sidomladdning)
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
+      
+      // Oavsett var användaren är, om de är inloggade, skicka dem till dashboarden.
+      if (currentUser) {
+        console.log("Användare inloggad, omdirigerar till /dashboard");
+        router.push('/dashboard');
+      }
     });
 
-    // Städar upp prenumerationen när komponenten tas bort
+    // Städa upp lyssnaren när komponenten avmonteras
     return () => unsubscribe();
-  }, []);
+  }, [router]); // `router` är ett stabilt beroende
 
-  const value = {
+  // Funktion för att logga in med Google
+  const signInWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Fel vid inloggning med Google", error);
+    }
+  };
+
+  // Funktion för att logga ut
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      // Omdirigera explicit till startsidan för en snabbare användarupplevelse.
+      console.log("Användare utloggad, omdirigerar till /");
+      router.push('/');
+    } catch (error) {
+      console.error("Fel vid utloggning", error);
+    }
+  };
+
+  // Samla värdena som ska tillhandahållas av kontexten
+  const value: AuthContextType = {
     user,
     loading,
     signInWithGoogle,
@@ -88,11 +77,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// --- CUSTOM HOOK FÖR ENKEL ANVÄNDNING ---
-export const useAuth = () => {
+// Exportera en anpassad hook för att enkelt kunna använda kontexten
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };

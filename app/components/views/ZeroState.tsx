@@ -1,38 +1,35 @@
 'use client';
 
 import React from 'react';
-import Chat from '@/app/components/Chat';
-import { ChatMessage } from '@/app/types';
+import { ArrowDownIcon } from '@heroicons/react/24/outline';
 
 interface ZeroStateProps {
     username: string;
 }
 
 export default function ZeroState({ username }: ZeroStateProps) {
-    // Flyttad in i komponenten för att få tillgång till `username`
-    const initialOnboardingMessage: ChatMessage = {
-        role: 'assistant',
-        content: `Välkommen, ${username}! Jag är ByggPilot, din digitala kollega.\n\nFör att vi ska kunna jobba effektivt behöver jag organisera dina projekt. Jag kan skapa en standardiserad mappstruktur åt dig i Google Drive. Det rekommenderas starkt.\n\nSka jag skapa mappstrukturen nu?`,
-    };
 
     return (
-        <div className="flex h-full w-full gap-8 p-4 bg-brand-dark/50">
-            {/* Vänster kolumn: Välkomstinformation och kontext */}
-            <div className="flex w-1/3 flex-col items-start justify-center rounded-lg bg-gray-800/60 p-8 text-white shadow-lg">
-                <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-                    Bara ett steg kvar...
+        <div className="flex flex-col h-full w-full items-center justify-center p-4 text-center">
+            
+            <div className="w-full max-w-2xl">
+                <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
+                    Välkommen, {username}!
                 </h1>
-                <p className="mt-6 text-lg leading-8 text-gray-300">
-                    ByggPilot organiserar allt ditt arbete i Google Drive. För att allt ska fungera måste vi skapa en grundläggande mappstruktur.
+                <p className="mt-6 text-xl leading-8 text-gray-300">
+                    Jag är ByggPilot, din nya digitala kollega. Mitt mål är att förenkla och automatisera ditt administrativa arbete.
                 </p>
-                <p className="mt-4 text-lg leading-8 text-gray-300">
-                    Svara "Ja" i chatten till höger för att låta din nya AI-kollega skapa mapparna åt dig. Detta ger dig en central plats för alla dina projekt, offerter, och fakturor.
+                <p className="mt-4 text-lg text-gray-400">
+                    För att komma igång behöver vi skapa en standardiserad mappstruktur i din Google Drive. Det ger oss en central plats för alla projekt, offerter och fakturor.
                 </p>
-            </div>
+                
+                <div className="mt-12 flex flex-col items-center gap-4">
+                     <p className="font-semibold text-cyan-400">
+                        Svara "Ja" i assistenten nedan för att starta installationen.
+                    </p>
+                    <ArrowDownIcon className="h-8 w-8 text-cyan-500 animate-bounce" />
+                </div>
 
-            {/* Höger kolumn: Interaktiv AI-chatt */}
-            <div className="w-2/3">
-                 <Chat initialMessages={[initialOnboardingMessage]} />
             </div>
         </div>
     );

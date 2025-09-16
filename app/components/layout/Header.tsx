@@ -1,56 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/app/context/AuthContext'; // <-- BYTT TILL VÅR NYA AUTH CONTEXT
+import React, { useState } from 'react';
+import { useAuth } from '@/app/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { MagnifyingGlassIcon, BellIcon, ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, BellIcon } from '@heroicons/react/24/outline';
 import SearchResults from '@/app/components/layout/SearchResults';
 
-interface HeaderProps {
-  onChatToggle: () => void;
-}
-
-const Header: React.FC<HeaderProps> = ({ onChatToggle }) => {
-  const { user, loading, logout } = useAuth(); // <-- ANVÄNDER VÅR NYA HOOK
+const Header: React.FC = () => {
+  const { user, logout } = useAuth();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  
-  // NOT: Låter setup-logiken vara kvar, men den kan behöva ses över.
-  // Beroende på om /api/user/setup kräver en Firebase JWT eller en Next-Auth JWT.
-  // Tills vidare är denna logik bortkommenterad för att undvika fel.
-  /*
-  const [isSetupRunning, setIsSetupRunning] = useState(false);
-  useEffect(() => {
-    const setupUser = async () => {
-      if (user && !isSetupRunning) { // Antag att vi behöver en property på user-objektet
-        setIsSetupRunning(true);
-        try {
-          console.log('Starting user setup...');
-          const response = await fetch('/api/user/setup', {
-            method: 'POST',
-          });
-
-          if (!response.ok) {
-            throw new Error('Failed to run user setup');
-          }
-          console.log('User setup successful.');
-          // Kanske uppdatera användarobjektet här?
-
-        } catch (error) {
-          console.error('Error during user setup:', error);
-        } finally {
-          setIsSetupRunning(false);
-        }
-      }
-    };
-
-    if (!loading && user) {
-      setupUser();
-    }
-  }, [user, loading, isSetupRunning]);
-  */
 
   const handleLogout = async () => {
     await logout();
@@ -63,7 +24,10 @@ const Header: React.FC<HeaderProps> = ({ onChatToggle }) => {
   };
 
   return (
-    <header className="bg-gray-900 border-b border-gray-700/50 p-4 sticky top-0 z-40">
+    // KORREKT ARKITEKTUR: `fixed` positionering.
+    // `top-0` fäster den i toppen.
+    // `left-64` och `right-0` ser till att den sträcker sig exakt från sidomenyn till skärmens kant.
+    <header className="fixed top-0 left-64 right-0 bg-gray-900 border-b border-gray-700/50 p-4 z-30">
       <div className="flex items-center justify-between">
         <div className="relative flex-1 max-w-xl">
           <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
@@ -82,11 +46,10 @@ const Header: React.FC<HeaderProps> = ({ onChatToggle }) => {
         </div>
 
         <div className="flex items-center gap-4 ml-6">
-          <button onClick={onChatToggle} className="p-2 rounded-full hover:bg-gray-700 transition-colors text-gray-400 hover:text-white">
-            <ChatBubbleOvalLeftEllipsisIcon className="h-6 w-6" />
-          </button>
-          
-          <button className="p-2 rounded-full hover:bg-gray-700 transition-colors text-gray-400 hover:text-white">
+          <button 
+            className="p-2 rounded-full hover:bg-gray-700 transition-colors text-gray-400 hover:text-white"
+            onClick={() => alert('Notisfunktionen är under utveckling!')}
+          >
             <BellIcon className="h-6 w-6" />
           </button>
 
@@ -106,7 +69,6 @@ const Header: React.FC<HeaderProps> = ({ onChatToggle }) => {
                     )}
                 </div>
                 <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-md shadow-lg py-1 z-50 hidden group-hover:block">
-                    <a href="#" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700">Kontoinställningar</a>
                     <button 
                         onClick={handleLogout} 
                         className="w-full text-left block px-4 py-2 text-sm text-red-400 hover:bg-red-500/20"
