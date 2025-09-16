@@ -1,29 +1,33 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useAuth } from '@/app/context/AuthContext'; // <-- BYTT TILL VÅR NYA AUTH CONTEXT
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { MagnifyingGlassIcon, BellIcon, ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/outline';
 import SearchResults from '@/app/components/layout/SearchResults';
-import { ExtendedSession } from '@/app/types';
 
 interface HeaderProps {
   onChatToggle: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ onChatToggle }) => {
-  const { data: session, status, update } = useSession();
+  const { user, loading, logout } = useAuth(); // <-- ANVÄNDER VÅR NYA HOOK
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  
+  // NOT: Låter setup-logiken vara kvar, men den kan behöva ses över.
+  // Beroende på om /api/user/setup kräver en Firebase JWT eller en Next-Auth JWT.
+  // Tills vidare är denna logik bortkommenterad för att undvika fel.
+  /*
   const [isSetupRunning, setIsSetupRunning] = useState(false);
-
   useEffect(() => {
-    const setupUser = async (user: ExtendedSession['user']) => {
-      if (user && !user.driveRootFolderId && !isSetupRunning) {
+    const setupUser = async () => {
+      if (user && !isSetupRunning) { // Antag att vi behöver en property på user-objektet
         setIsSetupRunning(true);
         try {
-          console.log('Starting user setup: driveRootFolderId is missing.');
+          console.log('Starting user setup...');
           const response = await fetch('/api/user/setup', {
             method: 'POST',
           });
@@ -31,23 +35,27 @@ const Header: React.FC<HeaderProps> = ({ onChatToggle }) => {
           if (!response.ok) {
             throw new Error('Failed to run user setup');
           }
-          console.log('User setup successful. Reloading session...');
-          // Force a session reload to get the new driveRootFolderId
-          await update();
+          console.log('User setup successful.');
+          // Kanske uppdatera användarobjektet här?
 
         } catch (error) {
           console.error('Error during user setup:', error);
-          // Optional: Handle error, e.g., show a notification to the user
         } finally {
           setIsSetupRunning(false);
         }
       }
     };
 
-    if (status === 'authenticated') {
-      setupUser((session as ExtendedSession).user);
+    if (!loading && user) {
+      setupUser();
     }
-  }, [session, status, isSetupRunning, update]);
+  }, [user, loading, isSetupRunning]);
+  */
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/');
+  };
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return '??';
@@ -82,25 +90,25 @@ const Header: React.FC<HeaderProps> = ({ onChatToggle }) => {
             <BellIcon className="h-6 w-6" />
           </button>
 
-          {session?.user && (
+          {user && (
              <div className="relative group">
                 <div className="h-10 w-10 rounded-full bg-cyan-600 flex items-center justify-center text-white font-bold text-sm border-2 border-gray-600 cursor-pointer">
-                    {session.user.image ? (
+                    {user.photoURL ? (
                         <Image 
-                        src={session.user.image} 
+                        src={user.photoURL} 
                         alt="Profilbild" 
                         width={40} 
                         height={40} 
                         className="rounded-full" 
                         />
                     ) : (
-                        getInitials(session.user.name)
+                        getInitials(user.displayName)
                     )}
                 </div>
                 <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-md shadow-lg py-1 z-50 hidden group-hover:block">
                     <a href="#" className="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700">Kontoinställningar</a>
                     <button 
-                        onClick={() => signOut()} 
+                        onClick={handleLogout} 
                         className="w-full text-left block px-4 py-2 text-sm text-red-400 hover:bg-red-500/20"
                     >
                         Logga ut

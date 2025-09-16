@@ -1,10 +1,10 @@
-
 'use client';
 import React from 'react';
 import Image from 'next/image';
-import { useSession, signOut } from 'next-auth/react';
-import { IconDashboard, IconProjects, IconDocuments, IconCustomers, IconPlus, IconSettings, IconClock, IconLogout } from '@/app/constants'; // Importerar IconLogout
+import { useAuth } from '@/app/context/AuthContext'; // <-- BYTT TILL VÅR NYA AUTH CONTEXT
+import { IconDashboard, IconProjects, IconDocuments, IconCustomers, IconPlus, IconSettings, IconClock, IconLogout } from '@/app/constants';
 import { View } from '@/app/dashboard/page';
+import { useRouter } from 'next/navigation'; // Importera useRouter
 
 interface NavItemProps {
     icon: React.ReactNode;
@@ -34,14 +34,16 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavClick, onStartQuoteFlow }) => {
-  const { data: session, status } = useSession();
+  const { user, loading, logout } = useAuth(); // <-- ANVÄNDER VÅR NYA HOOK
+  const router = useRouter();
 
-  // Korrekt utloggningsfunktion som omdirigerar till startsidan
-  const handleLogout = () => {
-    signOut({ callbackUrl: '/' }); 
+  // Ny utloggningsfunktion som använder AuthContext
+  const handleLogout = async () => {
+    await logout();
+    router.push('/'); // Omdirigera till startsidan efter utloggning
   };
 
-  if (status === 'loading') {
+  if (loading) {
     return (
         <div className="w-64 bg-gray-900 border-r border-gray-700 p-4">
             <div className="animate-pulse space-y-4">
@@ -79,6 +81,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavClick, onStartQuoteF
       </div>
       
       <div className="border-t border-gray-700 mt-auto p-4 space-y-4">
+         {/* Här kan du lägga till logik som visar användarens namn/email från `user`-objektet om du vill */}
+         {user && (
+             <div className="text-sm text-gray-400 truncate">
+                 Inloggad som {user.displayName || user.email}
+             </div>
+         )}
          <NavItem icon={<IconSettings className="w-6 h-6" />} label="Inställningar" active={activeView === 'SETTINGS'} onClick={() => onNavClick('SETTINGS')} />
          <NavItem icon={<IconLogout className="w-6 h-6" />} label="Logga ut" onClick={handleLogout} />
       </div>
