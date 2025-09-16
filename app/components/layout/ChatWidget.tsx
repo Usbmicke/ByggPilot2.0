@@ -13,11 +13,27 @@ const promptSuggestions = [
     "Ge mig en checklista för egenkontroll vid VVS-installation..."
 ];
 
+// Denna text kommer att vara det FÖRSTA meddelandet en ny användare ser.
+const ONBOARDING_WELCOME_MESSAGE = `
+**Välkommen till ByggPilot!**
+
+Jag är din nya digitala kollega, och jag är här för att hjälpa dig att automatisera ditt administrativa arbete. 
+
+För att vi ska kunna arbeta tillsammans behöver jag få tillgång till några av dina Google-tjänster. Oroa dig inte, jag kommer att fråga om lov för varje steg.
+
+**Låt oss börja med att sätta upp din grundläggande mappstruktur i Google Drive.**
+
+Skriv **"starta konfiguration"** eller klicka på knappen nedan för att påbörja processen.
+`;
+
 export default function ChatWidget() {
-    const [isExpanded, setIsExpanded] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(true); // Starta expanderad för nya användare
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [messages, setMessages] = useState<ChatMessage[]>([{ role: 'assistant', content: 'Hej! Jag är ByggPilot. Ställ en fråga eller ge mig ett kommando för att komma igång.' }]);
+    
+    // Uppdaterat initialt meddelande för att starta onboarding
+    const [messages, setMessages] = useState<ChatMessage[]>([{ role: 'assistant', content: ONBOARDING_WELCOME_MESSAGE }]);
+    
     const [placeholder, setPlaceholder] = useState(promptSuggestions[0]);
 
     useEffect(() => {
@@ -56,10 +72,7 @@ export default function ChatWidget() {
     };
 
     return (
-        // HUVUDFIX: `top-20` (5rem/80px) läggs till när den är expanderad, vilket fäster den mot sidhuvudet.
-        // `top-auto` används i kollapsat läge så att höjden bestäms av innehållet.
         <div className={`fixed bottom-0 left-64 right-0 z-50 transition-all duration-500 ease-in-out ${isExpanded ? 'top-20' : 'top-auto'}`}>
-            {/* Den inre behållaren har nu `h-full` för att fylla hela den yttre behållarens utrymme. */}
             <div className="bg-gray-800/80 backdrop-blur-md shadow-2xl-top border-t border-gray-700/80 max-w-7xl mx-auto rounded-t-lg flex flex-col h-full">
                 
                 <div className="flex-1 overflow-y-auto p-4" style={{ display: isExpanded ? 'block' : 'none' }}>

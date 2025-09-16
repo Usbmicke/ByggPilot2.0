@@ -4,6 +4,7 @@ import Sidebar from '@/app/components/layout/Sidebar';
 import Header from '@/app/components/layout/Header';
 import AuthGuard from '@/app/components/AuthGuard';
 import ChatWidget from '@/app/components/layout/ChatWidget';
+import Providers from '@/app/components/Providers'; // Importera den nya providern
 
 const AnimatedBackground = () => (
     <div className="absolute inset-0 -z-10 overflow-hidden bg-gray-900">
@@ -13,23 +14,24 @@ const AnimatedBackground = () => (
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     return (
-        <AuthGuard>
-            <div className="h-screen bg-gray-900">
-                <AnimatedBackground />
-                <Sidebar />
-                <Header />
-                
-                {/* HUVUDOMBYGGNAD: `main` är nu en scrollbar container som är korrekt
-                    positionerad med padding för att undvika de fasta sido- och toppmenyerna. */}
-                <main className="ml-64 pt-20 h-full overflow-y-auto">
-                    {/* Innehållet har sin egen padding för luftighet */}
-                    <div className="p-4 md:p-6 lg:p-8">
-                        {children}
-                    </div>
-                </main>
+        // Steg 1: Omslut hela layouten med Providers för att ge tillgång till sessionen
+        <Providers>
+            {/* Steg 2: AuthGuard skyddar hela dashboarden som det var tänkt */}
+            <AuthGuard>
+                <div className="h-screen bg-gray-900">
+                    <AnimatedBackground />
+                    <Sidebar />
+                    <Header />
+                    
+                    <main className="ml-64 pt-20 h-full overflow-y-auto">
+                        <div className="p-4 md:p-6 lg:p-8">
+                            {children}
+                        </div>
+                    </main>
 
-                <ChatWidget />
-            </div>
-        </AuthGuard>
+                    <ChatWidget />
+                </div>
+            </AuthGuard>
+        </Providers>
     );
 }

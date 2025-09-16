@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '@/app/context/AuthContext';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import React, { useEffect } from 'react';
 
@@ -9,18 +9,20 @@ import React, { useEffect } from 'react';
 // Medan autentiseringsstatusen kontrolleras visas en laddningsskärm.
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-    const { user, loading } = useAuth();
+    const { status } = useSession();
     const router = useRouter();
 
     useEffect(() => {
-        // Vi väntar tills laddningen är klar och om det inte finns någon användare.
-        if (!loading && !user) {
+        // Omdirigera om statusen inte är 'authenticated' och inte heller 'loading'.
+        // Detta täcker fallet 'unauthenticated'.
+        if (status !== 'loading' && status !== 'authenticated') {
             router.push('/');
         }
-    }, [user, loading, router]);
+    }, [status, router]);
 
-    // Om det fortfarande laddas, visa en platshållare.
-    if (loading || !user) {
+    // Om statusen är 'loading' eller om användaren är oautentiserad 
+    // (och omdirigeringen ännu inte har skett), visa en laddningsskärm.
+    if (status === 'loading' || status !== 'authenticated') {
         return (
             <div className="flex h-screen w-full items-center justify-center bg-gray-900 text-white">
                 <p>Verifierar åtkomst...</p>
@@ -28,6 +30,6 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         );
     }
 
-    // Om laddningen är klar och det finns en användare, rendera barnkomponenterna.
+    // Om status är 'authenticated', rendera barnkomponenterna.
     return <>{children}</>;
 }

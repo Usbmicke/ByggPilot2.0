@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/app/context/AuthContext";
+import Providers from "@/app/components/Providers"; // Importera den korrekta providern
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,9 +18,8 @@ export default function RootLayout({
   return (
     <html lang="sv">
       <body className={inter.className}>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        {/* Omslut med den nya providern som innehåller SessionProvider */}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

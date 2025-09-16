@@ -1,14 +1,14 @@
-// Import the functions you need from the SDKs you need
+// Rättad fil: app/firebase.ts
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { firebaseConfig } from "@/app/firebaseConfig"; // Importera konfigurationen
+import { getFirestore } from "firebase/firestore"; // <-- IMPORTERA FIRESTORE
+import { firebaseConfig } from "@/app/firebaseConfig";
 
-// Initialize Firebase
-// Vi kollar om en app redan har initierats för att undvika fel under Next.js hot-reloading.
+// Undvik åter-initialisering på serversidan
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-// Hämta och exportera auth-objektet från den initierade appen
 const auth = getAuth(app);
+const firestore = getFirestore(app); // <-- INITIERA FIRESTORE
 
-// Exportera de objekt vi behöver i resten av applikationen
-export { app, auth };
+// Exportera allt som behövs
+export { app, auth, firestore }; // <-- EXPORTERA FIRESTORE

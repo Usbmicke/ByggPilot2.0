@@ -3,10 +3,9 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAuth } from '@/app/context/AuthContext';
-import { IconDashboard, IconProjects, IconDocuments, IconCustomers, IconPlus, IconSettings, IconClock, IconLogout } from '@/app/constants'; // Lade till IconLogout
+import { useSession, signOut } from 'next-auth/react'; // Byt till next-auth
+import { IconDashboard, IconProjects, IconDocuments, IconCustomers, IconPlus, IconSettings, IconClock, IconLogout } from '@/app/constants';
 
-// NavItem - oförändrad
 const NavItem = ({ href, icon, label }: { href: string; icon: React.ReactNode; label: string; }) => {
   const pathname = usePathname();
   const isActive = pathname === href;
@@ -24,11 +23,9 @@ const NavItem = ({ href, icon, label }: { href: string; icon: React.ReactNode; l
 };
 
 const Sidebar: React.FC = () => {
-  // Hämta logout-funktionen från vår kontext.
-  const { user, loading, logout } = useAuth();
+  const { data: session, status } = useSession(); // Använd session och status från next-auth
 
-  // Laddningsskeleton - oförändrad
-  if (loading) {
+  if (status === 'loading') {
     return (
       <div className="w-64 bg-gray-900 border-r border-gray-700 p-4 fixed h-full">
           <div className="animate-pulse space-y-4">
@@ -43,13 +40,11 @@ const Sidebar: React.FC = () => {
 
   return (
     <div className="flex flex-col w-64 bg-gray-900 border-r border-gray-700 text-white fixed h-full z-30">
-      {/* Header - oförändrad */}
       <div className="flex items-center justify-center h-20 border-b border-gray-700 flex-shrink-0">
          <Image src="/images/byggpilotlogga1.png" alt="ByggPilot Logotyp" width={32} height={32} />
          <h1 className="text-2xl font-bold ml-2">ByggPilot</h1>
       </div>
       
-      {/* Navigation - oförändrad */}
       <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
         <NavItem href="/dashboard" icon={<IconDashboard className="w-6 h-6" />} label="Översikt" />
         <NavItem href="/projects" icon={<IconProjects className="w-6 h-6" />} label="Projekt" />
@@ -58,7 +53,6 @@ const Sidebar: React.FC = () => {
         <NavItem href="/customers" icon={<IconCustomers className="w-6 h-6" />} label="Kunder" />
       </nav>
       
-      {/* Offertknapp - oförändrad */}
       <div className="px-4 py-4 mt-auto border-t border-gray-700 flex-shrink-0">
         <button 
             onClick={() => alert('Funktionen \'Skapa Offert\' är under utveckling!')}
@@ -68,27 +62,25 @@ const Sidebar: React.FC = () => {
         </button>
       </div>
       
-      {/* ==== NY, FÖRBÄTTRAD ANVÄNDARSEKTION & UTLOGGNINGSKNAPP ==== */}
       <div className="border-t border-gray-700 p-4 flex-shrink-0">
-        {user && (
+        {session?.user && (
             <div className="flex items-center gap-3 mb-4">
                 <Image 
-                    src={user.photoURL || './images/default-profile.png'} 
+                    src={session.user.image || './images/default-profile.png'} 
                     alt="Profilbild"
                     width={40} 
                     height={40} 
                     className="rounded-full bg-gray-600"
                 />
                 <div className="truncate">
-                    <p className="font-semibold text-white text-sm">{user.displayName || 'Användare'}</p>
-                    <p className="text-gray-400 text-xs truncate">{user.email}</p>
+                    <p className="font-semibold text-white text-sm">{session.user.name || 'Användare'}</p>
+                    <p className="text-gray-400 text-xs truncate">{session.user.email}</p>
                 </div>
             </div>
         )}
         <NavItem href="/settings" icon={<IconSettings className="w-6 h-6" />} label="Inställningar" />
-        {/* Den nya, dedikerade utloggningsknappen */}
         <button 
-          onClick={logout} 
+          onClick={() => signOut({ callbackUrl: '/' })} 
           className="flex items-center w-full px-4 py-2.5 mt-2 rounded-lg transition-colors duration-200 text-left text-gray-400 hover:bg-red-800/50 hover:text-white">
           <IconLogout className="w-6 h-6" />
           <span className="ml-4 font-medium">Logga ut</span>

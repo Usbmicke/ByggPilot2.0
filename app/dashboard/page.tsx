@@ -1,30 +1,20 @@
 'use client';
 
-import { useAuth } from '@/app/context/AuthContext';
+import { useSession } from 'next-auth/react';
 import DashboardView from '@/app/components/views/DashboardView';
-import ZeroState from '@/app/components/views/ZeroState';
 
-// I en verklig applikation skulle denna data hämtas från Firestore.
-// Vi simulerar detta för att demonstrera "Zero State".
-const hasInitialData = false; // Sätt till `true` för att testa DashboardView
+// Denna sida visar nu ALLTID dashboard-vyn.
+// AuthGuard har flyttats till layout-nivån (app/dashboard/layout.tsx) 
+// för att skydda hela dashboarden, vilket är en bättre arkitektur.
 
 export default function DashboardPage() {
-    const { user } = useAuth();
+    const { data: session } = useSession();
 
-    if (!user) {
-        return null; // AuthGuard sköter laddningsvy och omdirigering
-    }
-
-    // Denna sida avgör nu vilken vy som ska visas.
-    // `DashboardView` och `ZeroState` är nu rena presentationskomponenter.
+    // Eftersom sidan skyddas av AuthGuard i layouten, kan vi anta att
+    // sessionen kommer att finnas här. Vi skickar användarnamnet vidare.
     return (
         <div className="h-full w-full">
-            {hasInitialData ? (
-                // Prop-listan är nu mycket renare
-                <DashboardView username={user.displayName || 'Användare'} />
-            ) : (
-                <ZeroState username={user.displayName || 'Användare'} />
-            )}
+            <DashboardView username={session?.user?.name || 'Användare'} />
         </div>
     );
 }

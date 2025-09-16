@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/app/context/AuthContext'; // <-- BYTT TILL VÅR NYA AUTH CONTEXT
+import { useSession, signIn } from 'next-auth/react'; // <-- Byt till NextAuth
 import ProTipsModal from '@/app/components/ProTipsModal';
 
 // --- ICONS (Inga ändringar) ---
@@ -81,16 +81,22 @@ const AnimatedBackground = () => {
 export default function LandingPage() {
   const [isProTipsModalOpen, setIsProTipsModalOpen] = useState(false);
   const router = useRouter();
-  const { user, loading, signInWithGoogle } = useAuth(); // <-- ANVÄNDER VÅR AUTH-HOOK
+  const { status } = useSession(); // <-- Använd NextAuths sessionstatus
 
   // Omdirigera om användaren redan är inloggad.
   useEffect(() => {
-    if (!loading && user) {
+    if (status === 'authenticated') {
       router.push('/dashboard');
     }
-  }, [user, loading, router]);
+  }, [status, router]);
 
-  // Rendera ALLTID landningssidan. Omdirigeringen sker i bakgrunden.
+  // Funktion för att hantera inloggning
+  const handleSignIn = () => {
+      signIn('google', { callbackUrl: '/dashboard' });
+  };
+
+  // Rendera landningssidan medan sessionen verifieras.
+  // Om användaren är inloggad kommer useEffect att omdirigera dem.
   return (
     <div className="text-gray-200 font-sans">
       <CustomAnimationsStyle />
@@ -105,7 +111,7 @@ export default function LandingPage() {
               <span className="text-2xl font-bold text-white">ByggPilot</span>
             </div>
             <nav className="flex items-center gap-2 sm:gap-4">
-                <button onClick={signInWithGoogle} className="inline-flex items-center justify-center gap-2 bg-white text-gray-800 font-semibold py-2 px-3 rounded-md shadow-sm hover:bg-gray-200 transition-colors duration-300">
+                <button onClick={handleSignIn} className="inline-flex items-center justify-center gap-2 bg-white text-gray-800 font-semibold py-2 px-3 rounded-md shadow-sm hover:bg-gray-200 transition-colors duration-300">
                     <GoogleIcon className="w-5 h-5" />
                     <span className="hidden sm:inline text-sm">Logga in med Google</span>
                     <span className="sm:hidden text-sm">Logga in</span>
@@ -120,7 +126,7 @@ export default function LandingPage() {
             <div className="container mx-auto px-6">
               <h1 className="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-4">Mindre papperskaos.<br/>Mer tid att bygga.</h1>
               <p className="max-w-3xl mx-auto text-lg md:text-xl text-gray-400 mb-8">ByggPilot är din nya digitala kollega som förvandlar administration till en automatiserad process. Frigör tid, eliminera papperskaos och fokusera på det som verkligen driver din firma framåt.</p>
-              <button onClick={signInWithGoogle} className="inline-flex items-center justify-center gap-3 bg-white text-gray-800 font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-200 transition-all duration-300 transform hover:scale-105">
+              <button onClick={handleSignIn} className="inline-flex items-center justify-center gap-3 bg-white text-gray-800 font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-200 transition-all duration-300 transform hover:scale-105">
                   <GoogleIcon className="w-6 h-6" />
                   Logga in med Google
               </button>
