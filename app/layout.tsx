@@ -2,8 +2,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import NextAuthProvider from '@/app/providers/NextAuthProvider';
-import { AuthContextProvider } from '@/app/context/AuthContext'; // Importera AuthContextProvider
+import { AuthContextProvider } from '@/app/context/AuthContext'; // Det enda korrekta systemet
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -16,11 +15,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="sv">
       <body className={`${inter.className} bg-gray-900`}>
-        <NextAuthProvider>
-          <AuthContextProvider>
-            {children}
-          </AuthContextProvider>
-        </NextAuthProvider>
+        {/* Endast den korrekta providern för Firebase-autentisering finns kvar */}
+        <AuthContextProvider>
+          {children}
+        </AuthContextProvider>
       </body>
     </html>
   );

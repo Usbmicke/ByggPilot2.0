@@ -1,84 +1,74 @@
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions, ExtendedSession } from '@/app/api/auth/[...nextauth]/route';
-import { google } from 'googleapis';
+import { auth as adminAuth } from '@/app/lib/firebase/admin';
 import { ChatMessage, FlowState, RiskAnalysis } from '@/app/types';
-import { generateInitialRiskAnalysis, generateRiskAnalysisUpdate } from '@/app/services/aiService';
-import { createRiskAnalysisDocument, updateRiskAnalysisDocument } from '@/app/services/documentService';
-import { getProject, updateProjectWithRiskAnalysis } from '@/app/services/projectService'; // Importera rätt uppdateringsfunktion
+import { URL } from 'url';
 
-const sendReply = (text: string, internalState?: FlowState) => {
+const sendReply = (text: string, flowState?: FlowState) => {
     const response: ChatMessage = {
-        id: `msg_${Date.now()}`,
         role: 'assistant',
         content: text,
-        internalState,
+        ...(flowState && { flowState }),
     };
-    return NextResponse.json(response);
-};
-
-const WORK_ORDER_KEYWORDS = ['komplettera med', 'installera', 'riva', 'åtgärda', 'bygga', 'montera', 'lägga till'];
-
-const isWorkOrder = (text: string): boolean => {
-    return WORK_ORDER_KEYWORDS.some(keyword => text.toLowerCase().startsWith(keyword));
+    return NextResponse.json({ reply: response });
 };
 
 export async function POST(request: Request) {
-    const session: ExtendedSession | null = await getServerSession(authOptions);
+    // --- 1. Autentisering ---
+    const authorizationHeader = request.headers.get('Authorization');
+    if (!authorizationHeader || !authorizationHeader.startsWith('Bearer ')) {
+        return NextResponse.json({ error: 'Authorization token is missing or invalid' }, { status: 401 });
+    }
+    const idToken = authorizationHeader.split('Bearer ')[1];
 
-    if (!session?.accessToken || !session.user?.id) {
-        return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    try {
+        await adminAuth.verifyIdToken(idToken);
+    } catch (error) {
+        console.error("Firebase Auth Error:", error);
+        return NextResponse.json({ error: 'Invalid or expired authorization token' }, { status: 403 });
     }
 
+    // --- 2. Meddelandehantering ---
     const { messages } = await request.json();
     const lastUserMessage = messages[messages.length - 1];
-    const internalState: FlowState = messages.filter((m: ChatMessage) => m.role === 'assistant').pop()?.internalState || {};
+    const lastAssistantMessage = messages.length > 1 ? messages[messages.length - 2] : null;
 
-    // ========== DYNAMISK RISKANALYS-UPPDATERING (NU KORRIGERAD) ========== 
-    if (isWorkOrder(lastUserMessage.content) && internalState.projectId) {
-        const projectId = internalState.projectId;
-        const workOrderText = lastUserMessage.content;
+    // --- 3. Onboarding-flöde: Skapa Mappstruktur ---
+    const isAskingToCreateFolders = lastAssistantMessage?.content.includes('Ska jag skapa mappstrukturen nu?');
+    const isUserSayingYes = lastUserMessage.content.trim().toLowerCase() === 'ja';
 
+    if (isAskingToCreateFolders && isUserSayingYes) {
+        console.log('[Orchestrator] Onboarding: User confirmed folder creation.');
         try {
-            const project = await getProject(projectId);
-            if (!project || !project.riskAnalysisJson) {
-                return sendReply(`Jag kan inte uppdatera riskanalysen eftersom ingen ursprunglig analys finns sparad i databasen. Skapa en först.`, internalState);
-            }
+            // Anropa vår skyddade API-route för att skapa mapparna
+            const driveApiUrl = new URL('/api/drive/create-project-folder', request.url).toString();
+            
+            const driveResponse = await fetch(driveApiUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${idToken}`,
+                },
+            });
 
-            const documentId = project.riskAnalysisUrl?.split('/').slice(-2, -1)[0];
-            if (!documentId) {
-                return sendReply("Kunde inte hitta dokument-ID i databasen för att uppdatera Google-dokumentet.", internalState);
+            if (!driveResponse.ok) {
+                const errorData = await driveResponse.json();
+                console.error('[Orchestrator] Drive API call failed:', errorData);
+                return sendReply(`Jag stötte på ett problem när jag skulle skapa mapparna: ${errorData.error || 'Okänt fel'}. Försök igen eller kontakta support.`);
             }
             
-            // **HÄR ÄR FIXEN:** Hämta den befintliga analysen från databasen
-            const existingAnalysis: RiskAnalysis = JSON.parse(project.riskAnalysisJson as string);
+            const successData = await driveResponse.json();
+            console.log('[Orchestrator] Drive API call successful:', successData);
 
-            const updatedAnalysis = await generateRiskAnalysisUpdate(existingAnalysis, workOrderText);
-            if (!updatedAnalysis) {
-                return sendReply("AI:n kunde inte uppdatera riskanalysen just nu. Försök igen.", internalState);
-            }
-
-            const docs = google.docs({ version: 'v1', auth: new google.auth.OAuth2() /* ...auth setup... */ }); // Auth måste konfigureras korrekt
-            await updateRiskAnalysisDocument(docs, documentId, updatedAnalysis, project.name);
-            
-            // Spara den uppdaterade analysen (både URL och JSON) till Firestore
-            await updateProjectWithRiskAnalysis(projectId, updatedAnalysis, project.riskAnalysisUrl!);
-
-            let reply = `OK, jag har noterat arbetsordern: \"${workOrderText}\".\n\n`
-            reply += `Jag har uppdaterat riskanalysen med de nya punkterna. Här är den nya sammanfattningen:\n**${updatedAnalysis.summary}**\n\n`
-            reply += `Du kan se den fullständiga, uppdaterade analysen här: [Riskanalys - ${project.name}](${project.riskAnalysisUrl})`
-
-            return sendReply(reply, internalState);
+            const replyText = "Utmärkt! Jag har skapat din grundläggande mappstruktur i din Google Drive under namnet **ByggPilot Projekt**.\n\nNu är din grund-setup klar! Vad vill du göra härnäst? Du kan till exempel be mig att: \n- **Skapa ett nytt projekt** \n- **Starta en ny offert**";
+            return sendReply(replyText);
 
         } catch (error) {
-            console.error("[ORCHESTRATOR] Error during risk analysis update:", error);
-            return sendReply("Ett oväntat fel uppstod när jag skulle uppdatera riskanalysen.", internalState);
+            console.error("[Orchestrator] Internal error during folder creation flow:", error);
+            return sendReply("Ett oväntat internt fel uppstod. Försök igen.");
         }
     }
-    
-    // ... (Logik för att skapa initiala projekt etc. ligger här)
 
-    return sendReply(`Jag är osäker på hur jag ska tolka \"${lastUserMessage.content}\".`);
+    // --- X. Fallback-svar ---
+    // (Här skulle annan logik, som riskanalys etc., läggas in i framtiden)
+    return sendReply(`Jag är osäker på hur jag ska tolka \"${lastUserMessage.content}\". Försök formulera om dig.`);
 }
-

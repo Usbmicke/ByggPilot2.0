@@ -1,16 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    transpilePackages: ['firebase', 'firebase-admin'],
-    images: {
-        remotePatterns: [
-            {
-                protocol: 'https',
-                hostname: 'lh3.googleusercontent.com',
-                port: '',
-                pathname: '/**',
-            },
+  reactStrictMode: true,
+  headers: async () => {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin-allow-popups',
+          },
         ],
-    },
+      },
+    ];
+  },
 };
 
 export default nextConfig;

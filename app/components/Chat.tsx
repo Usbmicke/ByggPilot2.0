@@ -48,8 +48,12 @@ const quickActions = [
 // Main Chat Component
 // =======================================================================
 
-export default function Chat() {
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
+interface ChatProps {
+    initialMessages?: ChatMessage[];
+}
+
+export default function Chat({ initialMessages = [] }: ChatProps) {
+    const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     

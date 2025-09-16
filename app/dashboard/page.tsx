@@ -1,37 +1,39 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/app/context/AuthContext';
 import DashboardView from '@/app/components/views/DashboardView';
-import { useRouter } from 'next/navigation';
+import ZeroState from '@/app/components/views/ZeroState';
+
+// I en verklig applikation skulle denna data hämtas från Firestore.
+// Vi simulerar detta för att demonstrera "Zero State".
+const fetchedProjects: any[] = []; // Tom lista för att tvinga Zero State
 
 export default function DashboardPage() {
-    const { data: session, status } = useSession();
-    const router = useRouter();
+    const { user } = useAuth(); // Använder vår centraliserade AuthContext
 
-    // Om AuthGuard i layout.tsx fungerar, borde detta aldrig hända,
-    // men det är en extra säkerhetsåtgärd.
-    if (status === 'unauthenticated') {
-        router.push('/');
+    // Om vi inte har någon användardata än, visa inget. AuthGuard hanterar laddning.
+    if (!user) {
         return null;
     }
 
-    // Visa en laddningsskärm medan sessionen hämtas.
-    // AuthContext laddar först, sedan laddar NextAuth sessionen. Detta är normalt.
-    if (status === 'loading' || !session?.user) {
-        return (
-            <div className="flex h-full w-full items-center justify-center">
-                <p className="text-white">Laddar instrumentpanel...</p>
-            </div>
-        );
-    }
+    // Kontrollera om det finns några projekt.
+    const hasProjects = fetchedProjects.length > 0;
 
-    // När sessionen är laddad, rendera den faktiska instrumentpanelen.
     return (
-        <DashboardView
-            projects={[]}
-            customers={[]}
-            username={session.user.name || 'Användare'}
-            isDemo={false}
-        />
+        <div className="h-full w-full">
+            {hasProjects ? (
+                // **Normalt Läge:** Användaren har data.
+                // Rendera den vanliga instrumentpanelen med användarens projekt.
+                <DashboardView
+                    projects={fetchedProjects}
+                    customers={[]}
+                    username={user.displayName || 'Användare'}
+                />
+            ) : (
+                // **Zero State:** Ny användare utan data.
+                // Rendera välkomstskärmen med en proaktiv AI-onboarding.
+                <ZeroState username={user.displayName || 'Användare'} />
+            )}
+        </div>
     );
 }
