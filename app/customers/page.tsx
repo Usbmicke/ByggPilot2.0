@@ -1,10 +1,11 @@
 import Link from 'next/link';
-import { getServerSession } from '@/app/lib/auth';
+import { getServerSession } from 'next-auth/next';
 import { listCustomers } from '@/app/services/customerService';
 import { Customer } from '@/app/types';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'; // Korrekt sökväg
 
 export default async function CustomerListPage() {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
   
   let customers: Customer[] = [];

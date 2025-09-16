@@ -1,7 +1,8 @@
-import { getServerSession } from '@/app/lib/auth';
+import { getServerSession } from 'next-auth/next';
 import { listProjects } from '@/app/services/projectService';
 import { Project } from '@/app/types';
 import Link from 'next/link';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'; // Korrekt sökväg
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -39,7 +40,7 @@ const ProjectRow = ({ project }: { project: Project }) => {
 
 
 export default async function ProjectsPage() {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
 
   if (!userId) {
