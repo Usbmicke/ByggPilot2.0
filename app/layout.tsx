@@ -1,25 +1,28 @@
+// Fil: app/layout.tsx
+import './globals.css'
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import Providers from './providers' // <-- IMPORTERA
 
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import './globals.css';
-import { AuthContextProvider } from '@/app/context/AuthContext'; // Det enda korrekta systemet
-
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'ByggPilot',
-  description: 'Mindre papperskaos. Mer tid att bygga.',
-};
+  description: 'Din AI-assistent i byggbranschen',
+}
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <html lang="sv">
-      <body className={`${inter.className} bg-gray-900`}>
-        {/* Endast den korrekta providern för Firebase-autentisering finns kvar */}
-        <AuthContextProvider>
+    <html lang="en">
+      <body className={inter.className}>
+        <Providers> {/* <-- OMSLUT */}
           {children}
-        </AuthContextProvider>
+        </Providers>
       </body>
     </html>
-  );
+  )
 }
