@@ -1,13 +1,9 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/app/context/AuthContext';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { firestore as db } from '@/app/lib/firebase/client';
-import AuthGuard from '@/app/components/AuthGuard';
+import React from 'react';
 import Sidebar from '@/app/components/layout/Sidebar';
 import Header from '@/app/components/layout/Header';
-import ChatWidget from '@/app/components/widget/ChatWidget';
-import { UserProfile } from '@/app/types/user';
+import AuthGuard from '@/app/components/AuthGuard';
+import Providers from '@/app/components/Providers';
 
 const AnimatedBackground = () => (
     <div className="absolute inset-0 -z-10 overflow-hidden bg-gray-900">
@@ -16,39 +12,19 @@ const AnimatedBackground = () => (
 );
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-    const { user } = useAuth();
-    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-
-    useEffect(() => {
-        if (!user) return;
-
-        const userDocRef = doc(db, 'users', user.uid);
-        const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                // Inkludera användarens ID i profilen för enkel åtkomst
-                setUserProfile({ id: user.uid, ...docSnap.data() } as UserProfile);
-            }
-        });
-
-        return () => unsubscribe();
-    }, [user]);
-
     return (
-        <AuthGuard>
-            <div className="h-screen bg-gray-900 text-white">
-                <AnimatedBackground />
-                <Sidebar />
-                <Header />
-                
-                <main className="ml-64 pt-20 h-full overflow-y-auto">
-                    <div className="p-4 md:p-6 lg:p-8">
-                        {children}
+        <Providers>
+            <AuthGuard>
+                <div className="h-screen bg-gray-900 text-white flex">
+                    <Sidebar />
+                    <div className="flex-1 flex flex-col">
+                        <Header />
+                        <main className="flex-1 overflow-hidden">
+                            {children}
+                        </main>
                     </div>
-                </main>
-
-                {/* Passerar hela den korrigerade profilen till ChatWidget */}
-                {userProfile && <ChatWidget userProfile={userProfile} />}
-            </div>
-        </AuthGuard>
+                </div>
+            </AuthGuard>
+        </Providers>
     );
 }
