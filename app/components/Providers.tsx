@@ -1,14 +1,20 @@
+
 'use client';
 
 import { SessionProvider } from 'next-auth/react';
 import React from 'react';
+import { AuthProvider } from '@/app/context/AuthContext'; // Importera vår nya AuthProvider
 
 interface Props {
     children: React.ReactNode;
 }
 
-// Detta är en klientkomponent som tillhandahåller NextAuth-sessionen 
-// till alla sina barnkomponenter.
 export default function Providers({ children }: Props) {
-    return <SessionProvider>{children}</SessionProvider>;
+    return (
+        <AuthProvider> 
+            <SessionProvider>
+                {children}
+            </SessionProvider>
+        </AuthProvider>
+    );
 }

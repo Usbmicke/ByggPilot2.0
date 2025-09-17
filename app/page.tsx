@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useSession, signIn } from 'next-auth/react';
+import { useAuth } from '@/app/context/AuthContext';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { auth } from '@/app/lib/firebase/client';
 import ProTipsModal from '@/app/components/ProTipsModal';
 
 // --- ICONS ---
@@ -81,17 +83,30 @@ const AnimatedBackground = () => {
 export default function LandingPage() {
   const [isProTipsModalOpen, setIsProTipsModalOpen] = useState(false);
   const router = useRouter();
-  const { status } = useSession();
+  const { user, loading } = useAuth(); // KORRIGERAD: Använder useAuth
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    // KORRIGERAD: Omdirigerar om användaren är inloggad
+    if (user) {
       router.push('/dashboard');
     }
-  }, [status, router]);
+  }, [user, router]);
 
-  const handleSignIn = () => {
-      signIn('google'); // ÅTERSTÄLLD: Använder nu popup-flöde
+  const handleSignIn = async () => {
+      // KORRIGERAD: Använder Firebase popup-inloggning
+      const provider = new GoogleAuthProvider();
+      try {
+          await signInWithPopup(auth, provider);
+          // Omdirigering hanteras av useEffect ovan
+      } catch (error) {
+          console.error("Inloggningsfel med Google: ", error);
+      }
   };
+
+  // Förhindrar att sidan "flimrar" för inloggade användare
+  if (loading || user) {
+    return <div className="fixed inset-0 bg-[#0B2545] flex items-center justify-center text-white">Laddar...</div>;
+  }
 
   return (
     <div className="text-gray-200 font-sans">
