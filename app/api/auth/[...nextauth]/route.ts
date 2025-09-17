@@ -1,31 +1,23 @@
 
 // Fil: app/api/auth/[...nextauth]/route.ts
-import NextAuth from "next-auth"
+import NextAuth, { Session, User } from "next-auth"
+import { JWT } from "next-auth/jwt"
 import GoogleProvider from "next-auth/providers/google"
-import { FirestoreAdapter } from "@auth/firebase-adapter"
+import { FirestoreAdapter } from "@next-auth/firebase-adapter"
+import { collection, getDocs, where, query, addDoc, limit } from "firebase/firestore";
 
-// === KORREKT IMPORT ===
-// Importera den server-anpassade admin-instansen av firestore.
-// Denna har rätt behörigheter för att skriva till databasen.
+// === SLUTGILTIG LÖSNING ===
+// Importerar från den ENDA, auktoritativa källan för Firebase Admin.
+// Detta säkerställer att alla delar av koden (Adapter, callbacks) använder samma databasanslutning.
 import { firestoreAdmin } from "@/app/lib/firebase-admin"
 
 const handler = NextAuth({
-  // Skicka in den korrekta admin-instansen till adaptern
   adapter: FirestoreAdapter(firestoreAdmin),
 
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      
-      authorization: {
-        params: {
-          prompt: "consent select_account",
-          access_type: "offline",
-          response_type: "code",
-          scope: "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive"
-        }
-      }
     }),
   ],
   
@@ -35,27 +27,49 @@ const handler = NextAuth({
 
   callbacks: {
     async jwt({ token, user, account }) {
-      if (account && user) {
+      if (user && account) {
+        const usersRef = collection(firestoreAdmin, "users");
+        const q = query(usersRef, where("email", "==", user.email), limit(1));
+        const userQuerySnap = await getDocs(q);
+
+        let userId: string;
+
+        if (!userQuerySnap.empty) {
+          // Användaren finns redan.
+          userId = userQuerySnap.docs[0].id;
+        } else {
+          // FirestoreAdapter bör ha skapat användaren. Vi hämtar den.
+          const newUserQuerySnap = await getDocs(q);
+          if (!newUserQuerySnap.empty) {
+            userId = newUserQuerySnap.docs[0].id;
+          } else {
+            // Nödlösning om användaren inte hittas direkt, men detta bör inte hända.
+            console.error("FATAL: User not found immediately after creation by adapter.");
+            // Försök inte fortsätta utan ett ID.
+            return Promise.reject(new Error("User creation failed"));
+          }
+        }
+
+        token.id = userId;
         token.accessToken = account.access_token;
         if (account.refresh_token) {
           token.refreshToken = account.refresh_token;
         }
-        token.id = user.id;
       }
       return token;
     },
 
-    async session({ session, token }) {
-      session.accessToken = token.accessToken as string;
-      session.refreshToken = token.refreshToken as string;
-      if (session.user) {
+    async session({ session, token }: { session: Session; token: JWT }) {
+      if (token && session.user) {
         session.user.id = token.id as string;
+        session.accessToken = token.accessToken as string;
+        session.refreshToken = token.refreshToken as string;
       }
       return session;
     }
   },
 
   secret: process.env.NEXTAUTH_SECRET,
-})
+});
 
-export { handler as GET, handler as POST }
+export { handler as GET, handler as POST };
