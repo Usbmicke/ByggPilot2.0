@@ -1,34 +1,34 @@
 'use client';
 
 import React from 'react';
-import { ArrowDownIcon } from '@heroicons/react/24/outline';
+import { PlusCircleIcon } from '@heroicons/react/24/solid';
 
-interface ZeroStateProps {
-    username: string;
-}
+// Denna komponent är den *korrekta* vyn när en användare är klar med onboardingen
+// men ännu inte har skapat något projekt.
+export default function ZeroState() {
 
-// Komponenten har nu en neutral och vägledande text.
-export default function ZeroState({ username }: ZeroStateProps) {
+    // Funktion för att hantera klick på knappen.
+    // I framtiden kan detta öppna en modal eller navigera till en ny sida.
+    const handleCreateProject = () => {
+        alert('Navigerar till sidan för att skapa ett nytt projekt...');
+    };
 
     return (
-        <div className="flex flex-col h-full w-full items-center justify-center p-4 text-center bg-gray-900">
-            
-            <div className="w-full max-w-2xl">
-                <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
-                    Välkommen, {username}!
-                </h1>
-                <p className="mt-6 text-xl leading-8 text-gray-300">
-                    Jag är ByggPilot, din nya digitala kollega, redo att förenkla och automatisera ditt administrativa arbete.
+        <div className="flex flex-col h-full items-center justify-center text-center p-8">
+            <div className="max-w-md">
+                <h2 className="text-2xl font-bold text-white">Du har inga aktiva projekt än</h2>
+                <p className="mt-3 text-lg text-gray-400">
+                    Kom igång genom att skapa ditt första projekt.
                 </p>
-                
-                {/* ==== KORREKT, ICKE-MISSVISANDE TEXT ==== */}
-                <div className="mt-12 flex flex-col items-center gap-4">
-                     <p className="font-semibold text-cyan-400 text-lg">
-                        Allt börjar med en konversation. Vad vill du göra först? Prata med mig i chatten nedan.
-                    </p>
-                    <ArrowDownIcon className="h-8 w-8 text-cyan-500 animate-bounce" />
+                <div className="mt-8">
+                    <button
+                        onClick={handleCreateProject}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-700 transition-colors shadow-lg"
+                    >
+                        <PlusCircleIcon className="h-6 w-6" />
+                        <span>Skapa ditt första projekt</span>
+                    </button>
                 </div>
-
             </div>
         </div>
     );

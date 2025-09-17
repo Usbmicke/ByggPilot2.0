@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronUpIcon, ChevronDownIcon, Bot } from 'lucide-react';
+import { ChevronUpIcon, ChevronDownIcon, ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 
 interface OnboardingWidgetProps {
@@ -22,7 +22,6 @@ export default function OnboardingWidget({ onComplete }: OnboardingWidgetProps) 
         <div className={`fixed bottom-0 left-0 right-0 md:left-64 z-50 transition-all duration-500 ease-in-out ${isExpanded ? 'top-auto' : 'top-full'}`}>
             <div className="bg-gray-800/90 backdrop-blur-md shadow-2xl-top border-t border-gray-700/80 max-w-4xl mx-auto rounded-t-lg flex flex-col">
                 
-                {/* Header för att expandera/kollapsa */}
                 <div 
                     className="flex justify-between items-center p-3 cursor-pointer" 
                     onClick={() => setIsExpanded(!isExpanded)}
@@ -33,7 +32,6 @@ export default function OnboardingWidget({ onComplete }: OnboardingWidgetProps) 
                     </button>
                 </div>
 
-                {/* Innehållet som visas när den är expanderad */}
                 {isExpanded && (
                     <motion.div 
                         initial={{ opacity: 0, height: 0 }} 
@@ -44,7 +42,7 @@ export default function OnboardingWidget({ onComplete }: OnboardingWidgetProps) 
                         <div className="p-6 text-center border-t border-gray-700/80">
                             <div className="flex justify-center mb-4">
                                 <div className="p-3 bg-gray-700 rounded-full">
-                                    <Bot size={32} className="text-cyan-400" />
+                                    <ChatBubbleOvalLeftEllipsisIcon size={32} className="text-cyan-400 h-8 w-8" />
                                 </div>
                             </div>
 
