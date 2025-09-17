@@ -1,9 +1,13 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/app/context/AuthContext';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { firestore as db } from '@/app/lib/firebase/client';
+import AuthGuard from '@/app/components/AuthGuard';
 import Sidebar from '@/app/components/layout/Sidebar';
 import Header from '@/app/components/layout/Header';
-import ChatWidget from '@/app/components/layout/ChatWidget';
-import AuthGuard from '@/app/components/AuthGuard'; // Importerar den nya, korrekta AuthGuard
+import ChatWidget from '@/app/components/widget/ChatWidget'; // Uppdaterad sökväg
+import { UserProfile } from '@/app/types/user'; // Antag att vi har en central typ-fil
 
 const AnimatedBackground = () => (
     <div className="absolute inset-0 -z-10 overflow-hidden bg-gray-900">
@@ -12,9 +16,25 @@ const AnimatedBackground = () => (
 );
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+    const { user } = useAuth();
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+    useEffect(() => {
+        if (!user) return;
+
+        const userDocRef = doc(db, 'users', user.uid);
+        const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setUserProfile(docSnap.data() as UserProfile);
+            }
+        });
+
+        return () => unsubscribe();
+    }, [user]);
+
     return (
-        <AuthGuard> {/* Applicerar det nya skyddet */}
-            <div className="h-screen bg-gray-900">
+        <AuthGuard>
+            <div className="h-screen bg-gray-900 text-white">
                 <AnimatedBackground />
                 <Sidebar />
                 <Header />
@@ -25,7 +45,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </div>
                 </main>
 
-                <ChatWidget />
+                {/* Passerar profilen till ChatWidget så den blir medveten om onboarding-status */}
+                {userProfile && <ChatWidget userProfile={userProfile} />}
             </div>
         </AuthGuard>
     );

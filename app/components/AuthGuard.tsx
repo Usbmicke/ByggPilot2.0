@@ -1,41 +1,63 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { firestore as db } from '@/app/lib/firebase/client'; // Korrigerad import
 
 interface AuthGuardProps {
   children: React.ReactNode;
 }
 
 /**
- * En skyddskomponent som säkerställer att användaren är inloggad.
- * Om användaren inte är inloggad och laddningen är klar,
- * omdirigeras de till landningssidan.
- * Visar en laddningsindikator medan autentiseringsstatus verifieras.
+ * Skyddar rutter och säkerställer att varje inloggad användare har ett användardokument
+ * i Firestore med en definierad `onboardingStatus`.
  */
 export default function AuthGuard({ children }: AuthGuardProps) {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const [isVerified, setIsVerified] = useState(false);
 
   useEffect(() => {
-    // Omdirigera om laddningen är klar och det inte finns någon användare.
-    if (!loading && !user) {
-      router.push('/');
+    if (authLoading) {
+      return; // Vänta tills Firebase Auth har initialiserats
     }
-  }, [user, loading, router]);
 
-  // Visa en laddningsskärm medan vi väntar på autentiseringsstatus.
-  if (loading) {
-    return <div className="fixed inset-0 bg-[#0B2545] flex items-center justify-center text-white">Verifierar användare...</div>;
+    if (!user) {
+      router.push('/'); // Användaren är inte inloggad, skicka till startsidan
+      return;
+    }
+
+    // Användaren är inloggad, verifiera eller skapa användardokument i Firestore.
+    const verifyOrCreateUserDocument = async () => {
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (!userDocSnap.exists()) {
+        // Användardokumentet finns inte, detta är första inloggningen.
+        try {
+          await setDoc(userDocRef, {
+            email: user.email,
+            displayName: user.displayName,
+            createdAt: new Date(),
+            onboardingStatus: 'pending', // Startstatus enligt planen
+          });
+        } catch (error) {
+          console.error("Kunde inte skapa användardokument:", error);
+          return;
+        }
+      }
+      setIsVerified(true);
+    };
+
+    verifyOrCreateUserDocument();
+
+  }, [user, authLoading, router]);
+
+  if (!isVerified) {
+    return <div className="fixed inset-0 bg-[#0B2545] flex items-center justify-center text-white">Konfigurerar ditt konto...</div>;
   }
 
-  // Om användaren är inloggad, rendera barnkomponenterna (den skyddade sidan).
-  if (user) {
-    return <>{children}</>;
-  }
-
-  // Returnera null (eller ingenting) medan omdirigering pågår för att förhindra
-  // att den oskyddade sidan renderas en kort stund.
-  return null;
+  return <>{children}</>;
 }

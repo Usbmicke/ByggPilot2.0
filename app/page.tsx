@@ -83,28 +83,19 @@ const AnimatedBackground = () => {
 export default function LandingPage() {
   const [isProTipsModalOpen, setIsProTipsModalOpen] = useState(false);
   const router = useRouter();
-  const { user } = useAuth(); // Vi behöver inte 'loading' här längre
+  const { user } = useAuth();
 
-  useEffect(() => {
-    // Omdirigerar om användaren är inloggad. Detta sker nu smidigt
-    // efter att sidan har renderats.
-    if (user) {
-      router.push('/dashboard');
-    }
-  }, [user, router]);
+  // DEN AUTOMATISKA Omdirigering har tagits bort härifrån
 
   const handleSignIn = async () => {
       const provider = new GoogleAuthProvider();
       try {
           await signInWithPopup(auth, provider);
-          // Omdirigering hanteras av useEffect ovan
+          router.push('/dashboard'); // Omdirigera manuellt efter lyckad inloggning
       } catch (error) {
           console.error("Inloggningsfel med Google: ", error);
       }
   };
-
-  // Den problematiska "Laddar..."-vyn är nu borttagen.
-  // Sidan renderas alltid, och omdirigering sker i bakgrunden.
 
   return (
     <div className="text-gray-200 font-sans">
@@ -120,11 +111,23 @@ export default function LandingPage() {
               <span className="text-2xl font-bold text-white">ByggPilot</span>
             </div>
             <nav className="flex items-center gap-2 sm:gap-4">
-                <button onClick={handleSignIn} className="inline-flex items-center justify-center gap-2 bg-white text-gray-800 font-semibold py-2 px-3 rounded-md shadow-sm hover:bg-gray-200 transition-colors duration-300">
+              {user ? (
+                <button 
+                  onClick={() => router.push('/dashboard')}
+                  className="bg-cyan-600 text-white font-semibold py-2 px-4 rounded-md shadow-sm hover:bg-cyan-700 transition-colors duration-300 text-sm"
+                >
+                  Gå till Dashboard
+                </button>
+              ) : (
+                <button 
+                  onClick={handleSignIn} 
+                  className="inline-flex items-center justify-center gap-2 bg-white text-gray-800 font-semibold py-2 px-3 rounded-md shadow-sm hover:bg-gray-200 transition-colors duration-300"
+                >
                     <GoogleIcon className="w-5 h-5" />
                     <span className="hidden sm:inline text-sm">Logga in med Google</span>
                     <span className="sm:hidden text-sm">Logga in</span>
                 </button>
+              )}
             </nav>
           </div>
         </header>
@@ -135,10 +138,16 @@ export default function LandingPage() {
             <div className="container mx-auto px-6">
               <h1 className="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-4">Mindre papperskaos.<br/>Mer tid att bygga.</h1>
               <p className="max-w-3xl mx-auto text-lg md:text-xl text-gray-400 mb-8">ByggPilot är din nya digitala kollega som förvandlar administration till en automatiserad process. Frigör tid, eliminera papperskaos och fokusera på det som verkligen driver din firma framåt.</p>
-              <button onClick={handleSignIn} className="inline-flex items-center justify-center gap-3 bg-white text-gray-800 font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-200 transition-all duration-300 transform hover:scale-105">
-                  <GoogleIcon className="w-6 h-6" />
-                  Logga in med Google
-              </button>
+              {user ? (
+                 <button onClick={() => router.push('/dashboard')} className="bg-cyan-600 text-white font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-cyan-700 transition-all duration-300 transform hover:scale-105">
+                    Gå till din Dashboard &rarr;
+                  </button>
+              ) : (
+                <button onClick={handleSignIn} className="inline-flex items-center justify-center gap-3 bg-white text-gray-800 font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-200 transition-all duration-300 transform hover:scale-105">
+                    <GoogleIcon className="w-6 h-6" />
+                    Logga in med Google
+                </button>
+              )}
               <p className="text-xs text-gray-500 mt-4">ByggPilot är byggt för Googles kraftfulla och kostnadsfria verktyg. <a href="https://accounts.google.com/signup" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline ml-1">Skaffa ett konto här.</a></p>
             </div>
           </section>
