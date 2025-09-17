@@ -1,11 +1,14 @@
 'use client';
 
+import React from 'react';
 import ProjectOverview from '@/app/components/dashboard/ProjectOverview';
 
 /**
- * Huvudsidan för instrumentpanelen som visas efter att onboardingen är slutförd.
- * All logik för autentisering och status-kontroll hanteras nu av den övergripande layouten.
+ * Denna sida är nu extremt enkel. Den visar bara projektöversikten.
+ * All logik för onboarding och dataladdning hanteras i DashboardLayout.
  */
 export default function DashboardPage() {
-  return <ProjectOverview />;
+    return (
+        <ProjectOverview />
+    );
 }
