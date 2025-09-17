@@ -3,22 +3,23 @@
 import NextAuth from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 import { FirestoreAdapter } from "@auth/firebase-adapter"
-import { firestore } from "@/app/firebase" 
+
+// === KORREKT IMPORT ===
+// Importera den server-anpassade admin-instansen av firestore.
+// Denna har rätt behörigheter för att skriva till databasen.
+import { firestoreAdmin } from "@/app/lib/firebase-admin"
 
 const handler = NextAuth({
-  adapter: FirestoreAdapter(firestore),
+  // Skicka in den korrekta admin-instansen till adaptern
+  adapter: FirestoreAdapter(firestoreAdmin),
 
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       
-      // ==== FÖRBÄTTRAD AUTHORIZATION FÖR ATT ALLTID VISA SAMTYCKE ====
       authorization: {
         params: {
-          // "consent" ber om samtycke.
-          // "select_account" tvingar användaren att välja ett Google-konto.
-          // Kombinationen löser problemet där Google auto-väljer ett konto utan att fråga igen.
           prompt: "consent select_account",
           access_type: "offline",
           response_type: "code",
