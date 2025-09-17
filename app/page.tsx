@@ -83,17 +83,17 @@ const AnimatedBackground = () => {
 export default function LandingPage() {
   const [isProTipsModalOpen, setIsProTipsModalOpen] = useState(false);
   const router = useRouter();
-  const { user, loading } = useAuth(); // KORRIGERAD: Använder useAuth
+  const { user } = useAuth(); // Vi behöver inte 'loading' här längre
 
   useEffect(() => {
-    // KORRIGERAD: Omdirigerar om användaren är inloggad
+    // Omdirigerar om användaren är inloggad. Detta sker nu smidigt
+    // efter att sidan har renderats.
     if (user) {
       router.push('/dashboard');
     }
   }, [user, router]);
 
   const handleSignIn = async () => {
-      // KORRIGERAD: Använder Firebase popup-inloggning
       const provider = new GoogleAuthProvider();
       try {
           await signInWithPopup(auth, provider);
@@ -103,10 +103,8 @@ export default function LandingPage() {
       }
   };
 
-  // Förhindrar att sidan "flimrar" för inloggade användare
-  if (loading || user) {
-    return <div className="fixed inset-0 bg-[#0B2545] flex items-center justify-center text-white">Laddar...</div>;
-  }
+  // Den problematiska "Laddar..."-vyn är nu borttagen.
+  // Sidan renderas alltid, och omdirigering sker i bakgrunden.
 
   return (
     <div className="text-gray-200 font-sans">

@@ -1,18 +1,23 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useSession, signOut } from 'next-auth/react'; // Byt till next-auth
+import { useAuth } from '@/app/context/AuthContext'; // KORRIGERING: Byt till useAuth
+import { signOut } from 'firebase/auth';             // KORRIGERING: Importera signOut från Firebase
+import { auth } from '@/app/lib/firebase/client'; // KORRIGERING: Importera auth-instansen
 import Image from 'next/image';
 import { MagnifyingGlassIcon, BellIcon } from '@heroicons/react/24/outline';
 import SearchResults from '@/app/components/layout/SearchResults';
+import { useRouter } from 'next/navigation';
 
 const Header: React.FC = () => {
-  const { data: session } = useSession(); // Använd session från next-auth
+  const { user } = useAuth(); // KORRIGERING: Använd user från useAuth
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   const handleLogout = async () => {
-    await signOut({ callbackUrl: '/' }); // Använd signOut från next-auth
+    await signOut(auth); // KORRIGERING: Använd signOut från Firebase
+    router.push('/');
   };
 
   const getInitials = (name: string | null | undefined) => {
@@ -47,19 +52,19 @@ const Header: React.FC = () => {
             <BellIcon className="h-6 w-6" />
           </button>
 
-          {session?.user && (
+          {user && ( // KORRIGERING: Kontrollera om Firebase-användaren finns
              <div className="relative group">
                 <div className="h-10 w-10 rounded-full bg-cyan-600 flex items-center justify-center text-white font-bold text-sm border-2 border-gray-600 cursor-pointer">
-                    {session.user.image ? (
+                    {user.photoURL ? ( // KORRIGERING: Använd user.photoURL
                         <Image 
-                        src={session.user.image} 
+                        src={user.photoURL} 
                         alt="Profilbild" 
                         width={40} 
                         height={40} 
                         className="rounded-full" 
                         />
                     ) : (
-                        getInitials(session.user.name)
+                        getInitials(user.displayName) // KORRIGERING: Använd user.displayName
                     )}
                 </div>
                 <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-md shadow-lg py-1 z-50 hidden group-hover:block">
