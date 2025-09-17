@@ -6,8 +6,8 @@ import { firestore as db } from '@/app/lib/firebase/client';
 import AuthGuard from '@/app/components/AuthGuard';
 import Sidebar from '@/app/components/layout/Sidebar';
 import Header from '@/app/components/layout/Header';
-import ChatWidget from '@/app/components/widget/ChatWidget'; // Uppdaterad sökväg
-import { UserProfile } from '@/app/types/user'; // Antag att vi har en central typ-fil
+import ChatWidget from '@/app/components/widget/ChatWidget';
+import { UserProfile } from '@/app/types/user';
 
 const AnimatedBackground = () => (
     <div className="absolute inset-0 -z-10 overflow-hidden bg-gray-900">
@@ -25,7 +25,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         const userDocRef = doc(db, 'users', user.uid);
         const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
             if (docSnap.exists()) {
-                setUserProfile(docSnap.data() as UserProfile);
+                // Inkludera användarens ID i profilen för enkel åtkomst
+                setUserProfile({ id: user.uid, ...docSnap.data() } as UserProfile);
             }
         });
 
@@ -45,7 +46,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </div>
                 </main>
 
-                {/* Passerar profilen till ChatWidget så den blir medveten om onboarding-status */}
+                {/* Passerar hela den korrigerade profilen till ChatWidget */}
                 {userProfile && <ChatWidget userProfile={userProfile} />}
             </div>
         </AuthGuard>
