@@ -48,13 +48,6 @@ const TipCard = ({ icon, title, children, className }) => (
     </div>
 );
 
-const ChatPrompt = ({ children }) => (
-    <div className="mt-4 pt-4 border-t border-yellow-700/20">
-        <p className="italic text-sm text-yellow-300/90">
-            <span className="font-bold not-italic text-yellow-300">ByggPilot löser detta:</span> {children}
-        </p>
-    </div>
-);
 
 const ProTipsModal = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
@@ -92,7 +85,6 @@ const ProTipsModal = ({ isOpen, onClose }) => {
                                  <div className="flex items-center gap-3 mb-2"><IconTrendingUp className="w-5 h-5 text-yellow-300"/><h4 className="text-md font-bold text-white">Framtidssäkra ditt företag: Nya regler 2025</h4></div>
                                 <p className="text-yellow-200/90 text-xs">Stora förändringar är på väg. Företag som förbereder sig nu kommer att ha ett stort försprång. Begreppet \"ÄTA-jobb\" ersätts med \"ändring av entreprenaden\" för att tvinga fram bättre förfrågningsunderlag från start.</p>
                             </div>
-                             <ChatPrompt>Be chatten att 'skapa ett Hantverkarformuläret 17 för projektet [Projekt X]'. All kund- och projektdata hämtas automatiskt och avtalet är redo.</ChatPrompt>
                         </TipCard>
 
                         <TipCard icon={<IconMessageSquare className="w-6 h-6" />} title="Planering & Kommunikation – Din viktigaste investering">
@@ -101,7 +93,6 @@ const ProTipsModal = ({ isOpen, onClose }) => {
                                 <li><strong>Ta betalt för förarbetet:</strong> Specificera och ta betalt för planeringsarbetet. Det minskar risken för dyra missförstånd.</li>
                                 <li><strong>Överträffa förväntningarna på kommunikation:</strong> Dålig återkoppling är hantverkares sämsta rykte. Ett snabbt SMS om en försening bygger enormt förtroende.</li>
                             </ul>
-                            <ChatPrompt>Be chatten att 'sammanfatta veckans tidrapporter och skicka en lägesrapport till kunden'. All kommunikation loggas och sparas i projektet.</ChatPrompt>
                         </TipCard>
 
                         <TipCard icon={<IconShieldAlert className="w-6 h-6" />} title="Riskhantering – Tänk steget längre än konkurrenterna">
@@ -110,12 +101,10 @@ const ProTipsModal = ({ isOpen, onClose }) => {
                                 <li><strong>Börja med en SWOT-analys:</strong> Identifiera snabbt projektets Styrkor, Svagheter, Möjligheter och Hot.</li>
                                 <li><strong>Gör en enkel riskanalys:</strong> \"Svagheter\" och \"Hot\" från din SWOT blir underlaget. Bedöm sannolikhet och konsekvens.</li>
                             </ul>
-                            <ChatPrompt>Slipp leta mallar. Be chatten att 'skapa en komplett riskanalys för detta projekt'. Dokumentet skapas och sparas direkt i rätt mapp.</ChatPrompt>
                         </TipCard>
                         
                         <TipCard icon={<IconFileText className="w-6 h-6" />} title="Skriv ALLTID avtal – Skydda dig och din verksamhet">
                            <p>Muntliga avtal skapar osäkerhet. Som seriös hantverkare skyddar ett skriftligt avtal inte bara kunden, utan även dig och ditt företag. Det är ditt främsta verktyg för att undvika dyra tvister om vad som egentligen ingick i priset.</p>
-                           <ChatPrompt>Be chatten att 'skapa ett utkast till ABT 06-avtal med [Kundens namn]'. Allt samlas på rätt plats, redo för signering.</ChatPrompt>
                         </TipCard>
 
                         <TipCard icon={<IconBookOpen className="w-6 h-6" />} title="Bli expert på din hemmabana – Utbilda dig med Boverket!">
@@ -124,18 +113,15 @@ const ProTipsModal = ({ isOpen, onClose }) => {
                                 <li><a href="https://www.boverket.se/sv/PBL-kunskapsbanken/" target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:underline">Boverkets Kunskapsbank</a></li>
                                 <li><a href="https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/plan-och-bygglag-2010900_sfs-2010-900/" target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:underline">Plan- och bygglagen (PBL)</a></li>
                             </ul>
-                            <ChatPrompt>Fråga chatten: 'Sammanfatta BBR-kraven för tätskikt i badrum'. Du får svar direkt, baserat på Boverkets säkra källor, utan att lämna appen.</ChatPrompt>
                         </TipCard>
                         
                          <TipCard icon={<IconClipboardCheck className="w-6 h-6" />} title="Bygglov beviljat? Kom ihåg Startbesked!">
                            <p>Informera din kund om processen för att visa din expertis. Många kunder tror att de får börja bygga så fort bygglovet är beviljat.</p>
                            <p className="mt-2">Påminn kunden om att efter bygglov följer ett tekniskt samråd med kommunen, och först därefter får man ett startbesked – den officiella signalen att bygget får påbörjas. Detta enkla råd kan bespara din kund dyra sanktionsavgifter.</p>
-                           <ChatPrompt>Be chatten att 'skapa en checklista för kunden efter beviljat bygglov'. Imponera med din professionalism och hjälp kunden undvika misstag.</ChatPrompt>
                         </TipCard>
 
                          <TipCard icon={<IconScale className="w-6 h-6" />} title="Ritning vs. Beskrivning – Vad gäller vid en tvist?">
                            <p>Om ritningen och den tekniska beskrivningen säger olika saker finns en tydlig rangordning i standardavtalen (som AB 04). Förenklat gäller: Kontraktet > Beskrivningar > Ritningar. En textbeskrivning väger alltså tyngre än en ritning.</p>
-                           <ChatPrompt>Hamnat i en knivig situation? Fråga chatten: 'Vad har företräde, ritning eller beskrivning enligt AB 04?' och få omedelbar klarhet.</ChatPrompt>
                         </TipCard>
 
                     </div>

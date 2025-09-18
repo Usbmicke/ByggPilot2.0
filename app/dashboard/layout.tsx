@@ -1,48 +1,19 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/app/context/AuthContext';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { firestore as db } from '@/app/lib/firebase/client';
+import React from 'react';
 import AuthGuard from '@/app/components/AuthGuard';
 import Sidebar from '@/app/components/layout/Sidebar';
 import Header from '@/app/components/layout/Header';
 import OnboardingWidget from '@/app/components/onboarding/OnboardingWidget';
 import Providers from '@/app/components/Providers';
-import { UserProfile } from '@/app/types/user';
 
+// Denna bakgrundskomponent kan återanvändas eller anpassas senare
 const AnimatedBackground = () => (
-    <div className="absolute inset-0 -z-10 overflow-hidden bg-gray-900">
+    <div className="fixed inset-0 -z-10 overflow-hidden bg-gray-900">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:3rem_3rem]"></div>
     </div>
 );
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-    const { user } = useAuth();
-    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        if (!user) {
-            setLoading(false);
-            return;
-        }
-        const userDocRef = doc(db, 'users', user.uid);
-        const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                setUserProfile({ id: user.uid, ...docSnap.data() } as UserProfile);
-            }
-            setLoading(false);
-        });
-        return () => unsubscribe();
-    }, [user]);
-
-    const handleOnboardingComplete = async () => {
-        if (user) {
-            const { updateUserOnboardingStatus } = await import('@/app/lib/firebase/firestore');
-            await updateUserOnboardingStatus(user.uid, 'complete');
-        }
-    };
-
     return (
         <Providers>
             <AuthGuard>
@@ -57,9 +28,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         </div>
                     </main>
 
-                    {!loading && userProfile?.onboardingStatus !== 'complete' && (
-                        <OnboardingWidget onComplete={handleOnboardingComplete} />
-                    )}
+                    {/* OnboardingWidget hanterar nu sin egen synlighet och logik */}
+                    <OnboardingWidget />
                 </div>
             </AuthGuard>
         </Providers>

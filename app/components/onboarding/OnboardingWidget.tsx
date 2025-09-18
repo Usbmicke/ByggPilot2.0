@@ -1,79 +1,86 @@
 'use client';
 
-import React, { useState } from 'react';
-import { ChevronUpIcon, ChevronDownIcon, ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/outline';
+import React, { useState, useEffect } from 'react';
+import { ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/app/context/AuthContext';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { firestore as db } from '@/app/lib/firebase/client';
+import { UserProfile } from '@/app/types/user';
 
-interface OnboardingWidgetProps {
-  onComplete: () => void;
-}
+export default function OnboardingWidget() {
+    const { user } = useAuth();
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [isCompleting, setIsCompleting] = useState(false);
 
-export default function OnboardingWidget({ onComplete }: OnboardingWidgetProps) {
-    const [isExpanded, setIsExpanded] = useState(true); // Starta expanderad
-    const [isLoading, setIsLoading] = useState(false);
+    useEffect(() => {
+        if (!user) {
+            setLoading(false);
+            return;
+        }
+        const userDocRef = doc(db, 'users', user.uid);
+        const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setUserProfile({ id: user.uid, ...docSnap.data() } as UserProfile);
+            }
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, [user]);
 
-    const handleSelection = async () => {
-        setIsLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        onComplete();
+    const handleOnboardingComplete = async () => {
+        if (user) {
+            setIsCompleting(true);
+            const { updateUserOnboardingStatus } = await import('@/app/lib/firebase/firestore');
+            await updateUserOnboardingStatus(user.uid, 'complete');
+        }
     };
 
+    if (loading || userProfile?.onboardingStatus === 'complete') {
+        return null;
+    }
+
     return (
-        <div className={`fixed bottom-0 left-0 right-0 md:left-64 z-50 transition-all duration-500 ease-in-out ${isExpanded ? 'top-auto' : 'top-full'}`}>
-            <div className="bg-gray-800/90 backdrop-blur-md shadow-2xl-top border-t border-gray-700/80 max-w-4xl mx-auto rounded-t-lg flex flex-col">
-                
-                <div 
-                    className="flex justify-between items-center p-3 cursor-pointer" 
-                    onClick={() => setIsExpanded(!isExpanded)}
-                >
-                    <h3 className="font-bold text-white">Kom igång med ByggPilot</h3>
-                    <button className="p-2 text-gray-400 hover:text-white transition-colors duration-200">
-                        {isExpanded ? <ChevronDownIcon className="h-6 w-6" /> : <ChevronUpIcon className="h-6 w-6" />}
-                    </button>
+        <div className="fixed inset-0 md:left-64 z-40 flex items-center justify-center p-4 bg-gray-900/80 backdrop-blur-sm">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                className="bg-gray-800 border border-gray-700/80 shadow-2xl rounded-lg max-w-2xl w-full flex flex-col items-center p-8 md:p-12 text-center"
+            >
+                <div className="flex justify-center mb-6">
+                    <div className="p-4 bg-gray-700 rounded-full">
+                        <ChatBubbleOvalLeftEllipsisIcon size={32} className="text-cyan-400 h-10 w-10" />
+                    </div>
                 </div>
 
-                {isExpanded && (
-                    <motion.div 
-                        initial={{ opacity: 0, height: 0 }} 
-                        animate={{ opacity: 1, height: 'auto' }} 
-                        transition={{ duration: 0.3 }}
-                        className="overflow-hidden"
+                <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">Kom igång med ByggPilot</h2>
+                <h3 className="text-xl font-semibold text-white mb-2">Anslut ditt Google Drive-konto</h3>
+                <p className="text-gray-300 mb-8 max-w-prose mx-auto">
+                    För att jag ska kunna hjälpa dig att automatiskt skapa, hantera och spara dina projektdokument behöver jag tillgång till Google Drive. Dina filer förblir dina.
+                </p>
+
+                <div className="flex flex-col sm:flex-row justify-center gap-4 w-full max-w-md">
+                    <button
+                        onClick={handleOnboardingComplete}
+                        disabled={isCompleting}
+                        className="flex-1 px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <div className="p-6 text-center border-t border-gray-700/80">
-                            <div className="flex justify-center mb-4">
-                                <div className="p-3 bg-gray-700 rounded-full">
-                                    <ChatBubbleOvalLeftEllipsisIcon size={32} className="text-cyan-400 h-8 w-8" />
-                                </div>
-                            </div>
-
-                            <h4 className="text-xl font-semibold text-white mb-2">Anslut ditt Google Drive-konto</h4>
-                            <p className="text-gray-300 mb-6 max-w-prose mx-auto">
-                                För att jag ska kunna hjälpa dig att automatiskt skapa, hantera och spara dina projektdokument behöver jag tillgång till Google Drive. Dina filer förblir dina.
-                            </p>
-
-                            <div className="flex justify-center gap-4">
-                                <button
-                                    onClick={handleSelection}
-                                    disabled={isLoading}
-                                    className="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isLoading ? 'Ansluter...' : 'Ja, koppla Google Drive'}
-                                </button>
-                                <button
-                                    onClick={handleSelection} // Båda knapparna slutför onboardingen för nu
-                                    disabled={isLoading}
-                                    className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg transition-colors disabled:opacity-50"
-                                >
-                                    Kanske senare
-                                </button>
-                            </div>
-                             <p className="text-xs text-gray-500 mt-4 max-w-sm mx-auto">
-                              Genom att ansluta godkänner du att ByggPilot kan läsa och hantera filer relaterade till dina byggprojekt.
-                            </p>
-                        </div>
-                    </motion.div>
-                )}
-            </div>
+                        {isCompleting ? 'Ansluter...' : 'Ja, koppla Google Drive'}
+                    </button>
+                    <button
+                        onClick={handleOnboardingComplete} // Samma funktion, vi hanterar inte "kanske senare" annorlunda just nu
+                        disabled={isCompleting}
+                        className="flex-1 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg transition-colors disabled:opacity-50"
+                    >
+                        Kanske senare
+                    </button>
+                </div>
+                 <p className="text-xs text-gray-500 mt-6 max-w-sm mx-auto">
+                  Genom att ansluta godkänner du att ByggPilot kan läsa och hantera filer relaterade till dina byggprojekt.
+                </p>
+            </motion.div>
         </div>
     );
 }
