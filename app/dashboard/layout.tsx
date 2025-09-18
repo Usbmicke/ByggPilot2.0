@@ -1,37 +1,65 @@
 'use client';
-import React from 'react';
-import AuthGuard from '@/app/components/AuthGuard';
+
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/app/context/AuthContext';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { firestore as db } from '@/app/lib/firebase/client';
+import { UserProfile } from '@/app/types/user';
+
 import Sidebar from '@/app/components/layout/Sidebar';
 import Header from '@/app/components/layout/Header';
-import OnboardingWidget from '@/app/components/onboarding/OnboardingWidget';
-import Providers from '@/app/components/Providers';
+import ChatWidget from '@/app/components/layout/ChatWidget';
+import AnimatedBackground from '@/app/components/layout/AnimatedBackground';
 
-// Denna bakgrundskomponent kan återanvändas eller anpassas senare
-const AnimatedBackground = () => (
-    <div className="fixed inset-0 -z-10 overflow-hidden bg-gray-900">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:3rem_3rem]"></div>
-    </div>
-);
+interface Props {
+    children: React.ReactNode;
+}
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({ children }: Props) {
+    const { user } = useAuth();
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (user) {
+            const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+                if (doc.exists()) {
+                    setUserProfile(doc.data() as UserProfile);
+                } else {
+                    setUserProfile(null); 
+                }
+                setLoading(false);
+            });
+            return () => unsub();
+        } else {
+            setLoading(false);
+        }
+    }, [user]);
+
+    if (loading) {
+        return (
+            <div className="h-screen w-screen flex items-center justify-center bg-gray-900">
+                <p className="text-white">Laddar din arbetsyta...</p>
+            </div>
+        );
+    }
+
     return (
-        <Providers>
-            <AuthGuard>
-                <div className="h-screen bg-gray-900">
-                    <AnimatedBackground />
-                    <Sidebar />
-                    <Header />
-                    
-                    <main className="ml-0 md:ml-64 pt-20 h-full overflow-y-auto">
-                        <div className="p-4 md:p-6 lg:p-8">
-                            {children}
-                        </div>
-                    </main>
+        <div className="min-h-screen bg-gray-900 text-white">
+            <AnimatedBackground />
+            <Sidebar />
+            
+            <div className="md:pl-64"> 
+                <Header />
+                
+                <main className="pt-20">
+                    <div className="grid justify-center pt-24 px-4">
+                        {children}
+                    </div>
+                </main>
+            </div>
 
-                    {/* OnboardingWidget hanterar nu sin egen synlighet och logik */}
-                    <OnboardingWidget />
-                </div>
-            </AuthGuard>
-        </Providers>
+            <ChatWidget />
+        </div>
     );
 }

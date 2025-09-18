@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, getAdditionalUserInfo } from 'firebase/auth';
 import { auth } from '@/app/lib/firebase/client';
 import ProTipsModal from '@/app/components/ProTipsModal';
 
@@ -82,18 +82,48 @@ const AnimatedBackground = () => {
 // --- HUVUDLAYOUT ---
 export default function LandingPage() {
   const [isProTipsModalOpen, setIsProTipsModalOpen] = useState(false);
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
 
-  // DEN AUTOMATISKA Omdirigering har tagits bort härifrån
-
   const handleSignIn = async () => {
+      setIsSigningIn(true);
       const provider = new GoogleAuthProvider();
+      // Be om nödvändiga behörigheter
+      provider.addScope('https://www.googleapis.com/auth/drive');
+      provider.setCustomParameters({ prompt: 'select_account' }); // Alltid visa konto-väljaren
+
       try {
-          await signInWithPopup(auth, provider);
-          router.push('/dashboard'); // Omdirigera manuellt efter lyckad inloggning
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        
+        if (credential && user) {
+            const idToken = await user.getIdToken(true);
+            const accessToken = credential.accessToken;
+
+            // Skicka tokens till backend för säker lagring
+            const response = await fetch('/api/auth/store-tokens', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${idToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ accessToken, refreshToken: credential.secret }), // refreshToken kan vara i 'secret' beroende på version
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to store tokens on server.');
+            }
+
+            // Allt är klart, omdirigera till dashboard
+            router.push('/dashboard');
+        } else {
+             throw new Error('Could not get credentials from sign-in result.');
+        }
       } catch (error) {
-          console.error("Inloggningsfel med Google: ", error);
+          console.error("Error during sign-in or token storage: ", error);
+          setIsSigningIn(false);
       }
   };
 
@@ -121,9 +151,14 @@ export default function LandingPage() {
               ) : (
                 <button 
                   onClick={handleSignIn} 
-                  className="inline-flex items-center justify-center gap-2 bg-white text-gray-800 font-semibold py-2 px-3 rounded-md shadow-sm hover:bg-gray-200 transition-colors duration-300"
+                  disabled={isSigningIn}
+                  className="inline-flex items-center justify-center gap-2 bg-white text-gray-800 font-semibold py-2 px-3 rounded-md shadow-sm hover:bg-gray-200 transition-colors duration-300 disabled:opacity-50"
                 >
-                    <GoogleIcon className="w-5 h-5" />
+                    {isSigningIn ? (
+                        <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-800"></span>
+                    ) : (
+                        <GoogleIcon className="w-5 h-5" />
+                    )}
                     <span className="hidden sm:inline text-sm">Logga in med Google</span>
                     <span className="sm:hidden text-sm">Logga in</span>
                 </button>
@@ -143,9 +178,13 @@ export default function LandingPage() {
                     Gå till din Dashboard &rarr;
                   </button>
               ) : (
-                <button onClick={handleSignIn} className="inline-flex items-center justify-center gap-3 bg-white text-gray-800 font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-200 transition-all duration-300 transform hover:scale-105">
-                    <GoogleIcon className="w-6 h-6" />
-                    Logga in med Google
+                <button onClick={handleSignIn} disabled={isSigningIn} className="inline-flex items-center justify-center gap-3 bg-white text-gray-800 font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-200 transition-all duration-300 transform hover:scale-105 disabled:opacity-50">
+                    {isSigningIn ? (
+                         <span className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-800"></span>
+                    ) : (
+                        <GoogleIcon className="w-6 h-6" />
+                    )}
+                    {isSigningIn ? 'Verifierar...' : 'Logga in med Google'}
                 </button>
               )}
               <p className="text-xs text-gray-500 mt-4">ByggPilot är byggt för Googles kraftfulla och kostnadsfria verktyg. <a href="https://accounts.google.com/signup" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline ml-1">Skaffa ett konto här.</a></p>
