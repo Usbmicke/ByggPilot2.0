@@ -33,11 +33,13 @@ export default function OnboardingWidget() {
         if (user) {
             setIsCompleting(true);
             const { updateUserOnboardingStatus } = await import('@/app/lib/firebase/firestore');
-            await updateUserOnboardingStatus(user.uid, 'complete');
+            // KORRIGERING: Ändrat från 'complete' till 'completed' för att matcha kontrollen.
+            await updateUserOnboardingStatus(user.uid, 'completed');
         }
     };
 
-    if (loading || userProfile?.onboardingStatus === 'complete') {
+    // KORRIGERING: Ändrat från 'complete' till 'completed' för att matcha databasvärdet.
+    if (loading || userProfile?.onboardingStatus === 'completed') {
         return null;
     }
 

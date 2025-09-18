@@ -1,6 +1,6 @@
 # ByggPilot: AI Context & Development Guidelines
 
-**Dokumentversion: 1.1**
+**Dokumentversion: 1.2**
 **Senast uppdaterad: 2024-05-22**
 
 ---
@@ -23,6 +23,12 @@ ByggPilot är ett **Large Action Model (LAM)**, utformat för att vara den digit
 
 ## 3. Status & Slutförda Steg
 
+-   [x] **Kodgranskning och städning:**
+    -   [x] Refaktorerat `DashboardLayout` och `OnboardingWidget` för ökad modularitet och renare kod.
+    -   [x] Rensat bort oanvänd och framtida kod från `ProTipsModal`.
+-   [x] **Förbättrat Onboarding-flöde:**
+    -   [x] Omdesignat `OnboardingWidget` till en centrerad modal för ett tydligare första intryck för nya användare.
+    -   [x] Säkerställt att onboarding-vyn korrekt täcker över den initiala "ZeroState"-vyn.
 -   [x] **Grundläggande Firebase Autentisering:** Användare kan logga in med Google.
 -   [x] **Centraliserad Firebase Initiering:** Skapat `app/firebase.ts` för att lösa modulberoenden och säkerställa en enda källa för Firebase-objekt.
 -   [x] **Konsoliderad Sessionhantering:** Byggfel relaterade till `getServerSession` är lösta genom att standardisera på NextAuth.js.
