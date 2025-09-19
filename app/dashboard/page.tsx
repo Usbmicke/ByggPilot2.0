@@ -1,8 +1,9 @@
-'use client';
-
-import React from 'react';
-import ZeroState from '@/app/components/views/ZeroState';
+import ProjectDashboard from "@/app/components/dashboard/ProjectDashboard";
 
 export default function DashboardPage() {
-    return <ZeroState />;
+  return (
+    <div className="w-full">
+      <ProjectDashboard />
+    </div>
+  );
 }

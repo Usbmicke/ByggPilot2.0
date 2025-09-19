@@ -1,102 +1,83 @@
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { getAuthenticatedClient } from '@/app/lib/google/auth';
 import { google } from 'googleapis';
-import { firestore } from '@/app/lib/firebase/server'; // Admin SDK for server-side operations
-import { auth as adminAuth } from 'firebase-admin';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { firestore } from '@/app/lib/firebase/server';
 
-// Helper to verify user and get their UID
-async function verifyUser(req: NextRequest): Promise<string> {
-    const authorization = req.headers.get('Authorization');
-    if (!authorization?.startsWith('Bearer ')) {
-        throw new Error('Missing or invalid authorization header');
-    }
-    const idToken = authorization.split('Bearer ')[1];
-    const decodedToken = await adminAuth().verifyIdToken(idToken);
-    return decodedToken.uid;
-}
+// =======================================================================
+//  POST-metod: Skapar mappstruktur i Google Drive
+// =======================================================================
 
-// Helper to retrieve the securely stored access token
-async function getAccessToken(uid: string): Promise<string> {
-    const privateDataRef = firestore.collection('users').doc(uid).collection('private').doc('google');
-    const docSnap = await privateDataRef.get();
-    if (!docSnap.exists) {
-        throw new Error('Private user data or access token not found.');
+export async function POST() {
+    // 1. Hämta serversession för att identifiera användaren
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.id) {
+        return NextResponse.json({ error: 'Autentisering krävs.' }, { status: 401 });
     }
-    const accessToken = docSnap.data()?.accessToken;
-    if (!accessToken) {
-        throw new Error('Access token is missing from private user data.');
-    }
-    return accessToken;
-}
 
-// Helper to get user's company name
-async function getCompanyName(uid: string): Promise<string> {
-    const userRef = firestore.collection('users').doc(uid);
-    const docSnap = await userRef.get();
-    if (docSnap.exists) {
-        return docSnap.data()?.companyName || docSnap.data()?.displayName || 'Okänt Företag';
-    }
-    throw new Error('User profile not found.');
-}
+    const userId = session.user.id;
+    const userDisplayName = session.user.name || 'Okänt Företag';
 
-export async function POST(req: NextRequest) {
     try {
-        const uid = await verifyUser(req);
-        const [accessToken, companyName] = await Promise.all([
-            getAccessToken(uid),
-            getCompanyName(uid)
-        ]);
+        // 2. Hämta en autentiserad Google API-klient
+        const auth = await getAuthenticatedClient(userId);
+        if (!auth) {
+            return NextResponse.json({ error: 'Kunde inte autentisera mot Google.' }, { status: 500 });
+        }
+        const drive = google.drive({ version: 'v3', auth });
 
-        const oauth2Client = new google.auth.OAuth2();
-        oauth2Client.setCredentials({ access_token: accessToken });
+        // 3. Definiera mappstrukturen
+        const mainFolderName = `📁 ByggPilot - ${userDisplayName}`;
+        const subFolders = [
+            '1. Kunder',
+            '2. Pågående Projekt',
+            '3. Avslutade Projekt',
+            '4. Företagsmallar',
+            '5. Bokföringsunderlag'
+        ];
 
-        const drive = google.drive({ version: 'v3', auth: oauth2Client });
-
-        // 1. Create the main folder
-        const mainFolderName = `📁 ByggPilot - ${companyName}`;
+        // 4. Skapa huvudmappen
         const mainFolder = await drive.files.create({
             requestBody: {
                 name: mainFolderName,
                 mimeType: 'application/vnd.google-apps.folder',
             },
-            fields: 'id, webViewLink',
+            fields: 'id',
         });
 
         const mainFolderId = mainFolder.data.id;
         if (!mainFolderId) {
-            throw new Error('Could not create main folder.');
+            throw new Error('Kunde inte skapa huvudmappen i Google Drive.');
         }
 
-        // 2. Define and create subfolders in parallel
-        const subFolders = ['01_Kunder', '02_Pågående Projekt', '03_Avslutade Projekt', '04_Företagsmallar', '05_Bokföringsunderlag'];
-        const subFolderPromises = subFolders.map(folderName => 
-            drive.files.create({
-                requestBody: {
-                    name: folderName,
-                    mimeType: 'application/vnd.google-apps.folder',
-                    parents: [mainFolderId],
-                },
-                fields: 'id',
+        // 5. Skapa undermapparna parallellt för effektivitet
+        await Promise.all(
+            subFolders.map(folderName => {
+                return drive.files.create({
+                    requestBody: {
+                        name: folderName,
+                        mimeType: 'application/vnd.google-apps.folder',
+                        parents: [mainFolderId],
+                    },
+                });
             })
         );
-        await Promise.all(subFolderPromises);
 
-        // 3. Update the user's public profile with the new folder ID and status
-        await firestore.collection('users').doc(uid).update({
-            driveFolderStructureStatus: 'created',
-            driveMainFolderId: mainFolderId,
-            driveMainFolderLink: mainFolder.data.webViewLink
+        // 6. Uppdatera användarens profil i Firestore
+        const userDocRef = firestore.collection('users').doc(userId);
+        await userDocRef.update({
+            driveFolderStructureCreated: true,
         });
 
-        return NextResponse.json({ 
-            success: true, 
-            message: `Mappstrukturen '${mainFolderName}' har skapats! Du hittar den i din Google Drive.`,
-            folderLink: mainFolder.data.webViewLink
-        });
+        // 7. Returnera ett framgångsmeddelande
+        return NextResponse.json({ success: true, message: 'Mappstruktur skapad.', folderId: mainFolderId });
 
-    } catch (error: any) {
-        console.error('[API /create-initial-structure] Error:', error);
-        const status = error.message.includes('token') || error.message.includes('authorization') ? 401 : 500;
-        return NextResponse.json({ success: false, error: error.message || 'An internal server error occurred.' }, { status });
+    } catch (error) {
+        console.error('Fel vid skapande av mappstruktur i Google Drive:', error);
+        // Försök ge ett mer specifikt felmeddelande om möjligt
+        const errorMessage = error instanceof Error ? error.message : 'Ett okänt fel uppstod.';
+        return NextResponse.json({ error: 'Internt serverfel', details: errorMessage }, { status: 500 });
     }
 }

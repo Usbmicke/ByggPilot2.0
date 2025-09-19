@@ -59,7 +59,8 @@ export default function DashboardLayout({ children }: Props) {
                 </main>
             </div>
 
-            <ChatWidget />
+            {/* Skickar med användarprofilen till ChatWidget */}
+            <ChatWidget userProfile={userProfile} />
         </div>
     );
 }
