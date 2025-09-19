@@ -17,6 +17,7 @@
     "framer-motion": "^12.23.13",
     "google-auth-library": "^10.3.0",
     "googleapis": "^159.0.0",
+    "handlebars": "^4.7.8",
     "next": "14.2.3",
     "next-auth": "^4.24.11",
     "react": "^18",

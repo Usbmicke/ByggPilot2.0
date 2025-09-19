@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { firestore as db } from '@/app/lib/firebase/client';
 import { Project } from '@/app/types/project';
+import CalculationEngine from '@/app/components/dashboard/CalculationEngine'; // IMPORTERAD
 
 interface ProjectPageParams {
     params: { projectId: string };
@@ -59,10 +60,9 @@ export default function ProjectPage({ params }: ProjectPageParams) {
                 <p className="text-xl text-gray-300">Kund: {project.clientName}</p>
             </div>
 
-            <div className="bg-gray-800/50 p-8 rounded-xl border border-dashed border-gray-600 text-center">
-                <h2 className="text-xl font-semibold">Offertmotor kommer här</h2>
-                <p className="text-gray-400 mt-2">Detta är platsen där den guidade kalkylatorn och KMA-flödet kommer att byggas.</p>
-            </div>
+            {/* Här monteras motorn in */}
+            <CalculationEngine projectId={projectId} />
+
         </div>
     );
 }
