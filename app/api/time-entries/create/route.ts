@@ -1,61 +1,47 @@
 
+// Fil: app/api/time-entries/create/route.ts
 import { NextResponse } from 'next/server';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/app/services/firestoreService';
-import { getSession } from '@/app/lib/session';
-import { TimeEntry } from '@/app/types';
+import { getServerSession } from "next-auth/next";
+import { handler } from "@/app/api/auth/[...nextauth]/route";
+import { firestoreAdmin } from "@/app/lib/firebase-admin";
+import { TimeEntry } from "@/app/types/time"; // Importera vår nya datamodell
 
 export async function POST(request: Request) {
+  const session = await getServerSession(handler);
+  if (!session || !session.user || !session.user.id) {
+    return new NextResponse(JSON.stringify({ message: 'Användaren är inte auktoriserad.' }), { status: 401 });
+  }
+
   try {
-    // Steg 1: Hämta sessionen och verifiera att användaren är inloggad.
-    const session = await getSession();
-    const userId = session.userId;
-
-    if (!userId) {
-      return new NextResponse(JSON.stringify({ message: 'Authentication required' }), { status: 401 });
-    }
-
     const body = await request.json();
-    const { projectId, projectName, customerName, date, hours, comment } = body;
+    const { projectId, date, hours, description } = body;
 
-    // Steg 2: Validera inkommande data
-    if (!projectId || !projectName || !customerName || !date || hours === undefined) {
-      return new NextResponse(JSON.stringify({ message: 'Missing required fields' }), { status: 400 });
+    // Validering
+    if (!projectId || !date || hours === undefined || !description) {
+      return new NextResponse(JSON.stringify({ message: 'Alla fält är obligatoriska.' }), { status: 400 });
     }
-
     if (typeof hours !== 'number' || hours <= 0) {
-        return new NextResponse(JSON.stringify({ message: 'Hours must be a positive number' }), { status: 400 });
+        return new NextResponse(JSON.stringify({ message: 'Antal timmar måste vara ett positivt tal.' }), { status: 400 });
     }
 
-    // Steg 3: Skapa tidsposten i Firestore
-    const docRef = await addDoc(collection(db, "time_entries"), {
-      userId,
+    const newTimeEntry: Omit<TimeEntry, 'id' | 'createdAt'> = {
+      userId: session.user.id,
       projectId,
-      projectName,
-      customerName,
-      date, 
+      date: new Date(date),
       hours,
-      comment: comment || '',
-      createdAt: serverTimestamp(),
-    });
-
-    // Steg 4: Returnera det skapade objektet
-    const newTimeEntry: Partial<TimeEntry> = {
-        id: docRef.id,
-        userId,
-        projectId,
-        projectName,
-        customerName,
-        date,
-        hours,
-        comment,
+      description,
     };
 
-    return NextResponse.json(newTimeEntry, { status: 201 });
+    // Skapa ett nytt dokument i 'time-entries' samlingen
+    const docRef = await firestoreAdmin.collection('time-entries').add({
+        ...newTimeEntry,
+        createdAt: new Date(), // Lägg till serverns tidsstämpel
+    });
+
+    return NextResponse.json({ id: docRef.id, ...newTimeEntry }, { status: 201 });
 
   } catch (error) {
-    console.error("Error creating time entry: ", error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new NextResponse(JSON.stringify({ message: `Internal Server Error: ${errorMessage}`}), { status: 500 });
+    console.error('Error creating time entry:', error);
+    return new NextResponse(JSON.stringify({ message: 'Internt serverfel vid skapande av tidrapport.' }), { status: 500 });
   }
 }

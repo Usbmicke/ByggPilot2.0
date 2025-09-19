@@ -84,14 +84,20 @@ export default function LandingPage() {
   const [isProTipsModalOpen, setIsProTipsModalOpen] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading } = useAuth(); // Lägg till loading från useAuth
+
+  // Omdirigera om användaren redan är inloggad
+  useEffect(() => {
+    if (!loading && user) {
+      router.push('/dashboard');
+    }
+  }, [user, loading, router]);
 
   const handleSignIn = async () => {
       setIsSigningIn(true);
       const provider = new GoogleAuthProvider();
-      // Be om nödvändiga behörigheter
       provider.addScope('https://www.googleapis.com/auth/drive');
-      provider.setCustomParameters({ prompt: 'select_account' }); // Alltid visa konto-väljaren
+      provider.setCustomParameters({ prompt: 'select_account' });
 
       try {
         const result = await signInWithPopup(auth, provider);
@@ -102,21 +108,19 @@ export default function LandingPage() {
             const idToken = await user.getIdToken(true);
             const accessToken = credential.accessToken;
 
-            // Skicka tokens till backend för säker lagring
             const response = await fetch('/api/auth/store-tokens', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${idToken}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ accessToken, refreshToken: credential.secret }), // refreshToken kan vara i 'secret' beroende på version
+                body: JSON.stringify({ accessToken, refreshToken: credential.secret }),
             });
 
             if (!response.ok) {
                 throw new Error('Failed to store tokens on server.');
             }
 
-            // Allt är klart, omdirigera till dashboard
             router.push('/dashboard');
         } else {
              throw new Error('Could not get credentials from sign-in result.');
@@ -126,7 +130,17 @@ export default function LandingPage() {
           setIsSigningIn(false);
       }
   };
+  
+  // Visa ingenting eller en laddningsindikator medan vi väntar på auth-status
+  if (loading || user) {
+    return (
+        <div className="fixed inset-0 bg-[#0B2545] flex items-center justify-center">
+            <div className="text-white">Laddar...</div>
+        </div>
+    );
+  }
 
+  // Om vi inte laddar och det inte finns någon användare, visa landningssidan
   return (
     <div className="text-gray-200 font-sans">
       <CustomAnimationsStyle />
@@ -141,14 +155,6 @@ export default function LandingPage() {
               <span className="text-2xl font-bold text-white">ByggPilot</span>
             </div>
             <nav className="flex items-center gap-2 sm:gap-4">
-              {user ? (
-                <button 
-                  onClick={() => router.push('/dashboard')}
-                  className="bg-cyan-600 text-white font-semibold py-2 px-4 rounded-md shadow-sm hover:bg-cyan-700 transition-colors duration-300 text-sm"
-                >
-                  Gå till Dashboard
-                </button>
-              ) : (
                 <button 
                   onClick={handleSignIn} 
                   disabled={isSigningIn}
@@ -162,7 +168,6 @@ export default function LandingPage() {
                     <span className="hidden sm:inline text-sm">Logga in med Google</span>
                     <span className="sm:hidden text-sm">Logga in</span>
                 </button>
-              )}
             </nav>
           </div>
         </header>
@@ -173,11 +178,6 @@ export default function LandingPage() {
             <div className="container mx-auto px-6">
               <h1 className="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-4">Mindre papperskaos.<br/>Mer tid att bygga.</h1>
               <p className="max-w-3xl mx-auto text-lg md:text-xl text-gray-400 mb-8">ByggPilot är din nya digitala kollega som förvandlar administration till en automatiserad process. Frigör tid, eliminera papperskaos och fokusera på det som verkligen driver din firma framåt.</p>
-              {user ? (
-                 <button onClick={() => router.push('/dashboard')} className="bg-cyan-600 text-white font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-cyan-700 transition-all duration-300 transform hover:scale-105">
-                    Gå till din Dashboard &rarr;
-                  </button>
-              ) : (
                 <button onClick={handleSignIn} disabled={isSigningIn} className="inline-flex items-center justify-center gap-3 bg-white text-gray-800 font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-gray-200 transition-all duration-300 transform hover:scale-105 disabled:opacity-50">
                     {isSigningIn ? (
                          <span className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-800"></span>
@@ -186,7 +186,6 @@ export default function LandingPage() {
                     )}
                     {isSigningIn ? 'Verifierar...' : 'Logga in med Google'}
                 </button>
-              )}
               <p className="text-xs text-gray-500 mt-4">ByggPilot är byggt för Googles kraftfulla och kostnadsfria verktyg. <a href="https://accounts.google.com/signup" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline ml-1">Skaffa ett konto här.</a></p>
             </div>
           </section>

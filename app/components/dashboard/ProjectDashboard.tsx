@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -8,12 +9,17 @@ import { Project } from '@/app/types/project';
 import ZeroState from './ZeroState';
 import ProjectCard from './ProjectCard';
 import CreateProjectModal from './CreateProjectModal';
+import NewTimeEntryModal from '../NewTimeEntryModal'; // Importera modalen
 
 export default function ProjectDashboard() {
     const { user } = useAuth();
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreateModalOpen, setCreateModalOpen] = useState(false);
+    
+    // State för tidrapporterings-modalen
+    const [isTimeEntryModalOpen, setTimeEntryModalOpen] = useState(false);
+    const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
 
     useEffect(() => {
         if (user) {
@@ -30,6 +36,16 @@ export default function ProjectDashboard() {
             return () => unsubscribe();
         }
     }, [user]);
+
+    const handleOpenTimeEntryModal = (projectId: string) => {
+        setSelectedProjectId(projectId);
+        setTimeEntryModalOpen(true);
+    };
+
+    const handleCloseTimeEntryModal = () => {
+        setSelectedProjectId(null);
+        setTimeEntryModalOpen(false);
+    };
 
     if (isLoading) {
         return <p>Laddar projekt...</p>;
@@ -52,13 +68,24 @@ export default function ProjectDashboard() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {projects.map(project => (
-                            <ProjectCard key={project.id} project={project} />
+                            <ProjectCard 
+                                key={project.id} 
+                                project={project} 
+                                onReportTime={handleOpenTimeEntryModal} // Skicka ner funktionen
+                            />
                         ))}
                     </div>
                 </div>
             )}
             {isCreateModalOpen && (
                 <CreateProjectModal onClose={() => setCreateModalOpen(false)} />
+            )}
+            {isTimeEntryModalOpen && selectedProjectId && (
+                <NewTimeEntryModal 
+                    isOpen={isTimeEntryModalOpen}
+                    onClose={handleCloseTimeEntryModal}
+                    projectId={selectedProjectId}
+                />
             )}
         </div>
     );

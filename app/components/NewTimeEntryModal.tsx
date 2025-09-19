@@ -1,104 +1,45 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { IconX } from '@/app/constants.tsx';
-import { Project, TimeEntry } from '@/app/types';
+import React, { useState, Fragment } from 'react';
+import { Dialog, Transition } from '@headlessui/react';
 
-type NewTimeEntryModalProps = {
+interface NewTimeEntryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onTimeEntryCreated: (newTimeEntry: TimeEntry) => void;
-};
+  projectId: string;
+}
 
-export default function NewTimeEntryModal({ isOpen, onClose, onTimeEntryCreated }: NewTimeEntryModalProps) {
-  // Formulär-state
-  const [selectedProjectId, setSelectedProjectId] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]); // Sätt dagens datum som standard
+export default function NewTimeEntryModal({ isOpen, onClose, projectId }: NewTimeEntryModalProps) {
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [hours, setHours] = useState('');
-  const [comment, setComment] = useState('');
-
-  // State för att hämta projekt
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
-
-  // State för formulärhantering
+  const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Effekt för att hämta projekt när modalen öppnas
-  useEffect(() => {
-    if (isOpen) {
-      // Återställ formuläret
-      setSelectedProjectId('');
-      setDate(new Date().toISOString().split('T')[0]);
-      setHours('');
-      setComment('');
-      setError(null);
-      
-      const fetchProjects = async () => {
-        setIsLoadingProjects(true);
-        try {
-          const response = await fetch('/api/projects/list');
-          if (!response.ok) {
-            throw new Error('Kunde inte hämta projektlistan');
-          }
-          const data: Project[] = await response.json();
-          // Filtrera bort avslutade projekt
-          const activeProjects = data.filter(p => p.status !== 'Avslutat');
-          setProjects(activeProjects);
-        } catch (err: any) {
-          setError(err.message);
-        }
-        setIsLoadingProjects(false);
-      };
-
-      fetchProjects();
-    }
-  }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
 
-    const selectedProject = projects.find(p => p.id === selectedProjectId);
-
-    if (!selectedProject || !date || !hours) {
-      setError('Projekt, datum och timmar måste fyllas i.');
-      setIsSubmitting(false);
-      return;
-    }
-
-    const hoursNumber = parseFloat(hours);
-    if (isNaN(hoursNumber) || hoursNumber <= 0) {
-        setError('Antal timmar måste vara ett positivt tal.');
-        setIsSubmitting(false);
-        return;
-    }
-
     try {
       const response = await fetch('/api/time-entries/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          projectId: selectedProject.id,
-          projectName: selectedProject.name,
-          customerName: selectedProject.customerName,
+          projectId,
           date,
-          hours: hoursNumber,
-          comment
+          hours: parseFloat(hours),
+          description,
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Något gick fel vid spara av tidpost');
+        throw new Error(errorData.message || 'Något gick fel.');
       }
 
-      const newTimeEntry = await response.json();
-      onTimeEntryCreated(newTimeEntry);
-      onClose();
+      onClose(); // Stäng modalen vid framgång
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -106,50 +47,110 @@ export default function NewTimeEntryModal({ isOpen, onClose, onTimeEntryCreated 
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in-fast" onClick={onClose}>
-      <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl w-full max-w-lg relative" onClick={e => e.stopPropagation()}>
-        <div className="p-6 border-b border-gray-700 flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-white">Rapportera Tid</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-white p-2 rounded-full hover:bg-gray-700/50">
-            <IconX className="w-6 h-6" />
-          </button>
+    <Transition appear show={isOpen} as={Fragment}>
+      <Dialog as="div" className="relative z-50" onClose={onClose}>
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <div className="fixed inset-0 bg-black bg-opacity-60" />
+        </Transition.Child>
+
+        <div className="fixed inset-0 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4 text-center">
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-300"
+              enterFrom="opacity-0 scale-95"
+              enterTo="opacity-100 scale-100"
+              leave="ease-in duration-200"
+              leaveFrom="opacity-100 scale-100"
+              leaveTo="opacity-0 scale-95"
+            >
+              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-gray-800 p-6 text-left align-middle shadow-xl transition-all">
+                <Dialog.Title
+                  as="h3"
+                  className="text-lg font-medium leading-6 text-white"
+                >
+                  Rapportera Tid
+                </Dialog.Title>
+                <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+                  <div>
+                    <label htmlFor="date" className="block text-sm font-medium text-gray-300">
+                      Datum
+                    </label>
+                    <input
+                      type="date"
+                      id="date"
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                      className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="hours" className="block text-sm font-medium text-gray-300">
+                      Antal timmar
+                    </label>
+                    <input
+                      type="number"
+                      id="hours"
+                      value={hours}
+                      onChange={(e) => setHours(e.target.value)}
+                      className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-sm"
+                      required
+                      step="0.5"
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="description" className="block text-sm font-medium text-gray-300">
+                      Beskrivning
+                    </label>
+                    <textarea
+                      id="description"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      className="mt-1 block w-full rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-sm"
+                      required
+                      rows={3}
+                    />
+                  </div>
+
+                  {error && (
+                    <div className="text-sm text-red-400">
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="mt-6 flex justify-end space-x-2">
+                     <button
+                        type="button"
+                        className="inline-flex justify-center rounded-md border border-transparent bg-gray-600 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
+                        onClick={onClose}
+                      >
+                        Avbryt
+                      </button>
+                    <button
+                      type="submit"
+                      className="inline-flex justify-center rounded-md border border-transparent bg-cyan-600 px-4 py-2 text-sm font-medium text-white hover:bg-cyan-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 disabled:opacity-50"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? 'Sparar...' : 'Spara'}
+                    </button>
+                  </div>
+                </form>
+              </Dialog.Panel>
+            </Transition.Child>
+          </div>
         </div>
-        <form onSubmit={handleSubmit}>
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <label htmlFor="project" className="block text-sm font-medium text-gray-300 mb-1">Projekt</label>
-              <select id="project" value={selectedProjectId} onChange={e => setSelectedProjectId(e.target.value)} disabled={isLoadingProjects} className="w-full bg-gray-900 border-gray-700 rounded-lg p-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50">
-                <option value="">{isLoadingProjects ? 'Laddar projekt...' : 'Välj ett projekt'}</option>
-                {projects.map(project => (
-                  <option key={project.id} value={project.id}>{project.name} ({project.customerName})</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="date" className="block text-sm font-medium text-gray-300 mb-1">Datum</label>
-              <input type="date" id="date" value={date} onChange={e => setDate(e.target.value)} className="w-full bg-gray-900 border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 calendar-picker-indicator-dark" />
-            </div>
-             <div>
-              <label htmlFor="hours" className="block text-sm font-medium text-gray-300 mb-1">Timmar</label>
-              <input type="number" id="hours" value={hours} onChange={e => setHours(e.target.value)} placeholder="T.ex. 8" step="0.5" min="0" className="w-full bg-gray-900 border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
-            </div>
-            <div className="md:col-span-2">
-              <label htmlFor="comment" className="block text-sm font-medium text-gray-300 mb-1">Kommentar (valfri)</label>
-              <textarea id="comment" value={comment} onChange={e => setComment(e.target.value)} rows={3} className="w-full bg-gray-900 border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Beskrivning av arbetet..."></textarea>
-            </div>
-            {error && <p className="text-red-400 text-sm md:col-span-2">{error}</p>}
-          </div>
-          <div className="p-6 border-t border-gray-700 flex justify-end gap-4">
-            <button type="button" onClick={onClose} className="py-2 px-4 text-gray-300 font-semibold rounded-lg hover:bg-gray-700 transition-colors">Avbryt</button>
-            <button type="submit" disabled={isSubmitting || isLoadingProjects} className="py-2 px-4 bg-cyan-500 text-white font-semibold rounded-lg hover:bg-cyan-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              {isSubmitting ? 'Sparar...' : 'Spara Tidpost'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </Dialog>
+    </Transition>
   );
 }

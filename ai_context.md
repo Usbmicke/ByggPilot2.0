@@ -32,13 +32,23 @@ Detta är den centrala filosofin som definierar hur ByggPilot ska kännas och ag
 ---
 
 ## 3. Status & Slutförda Steg
-- [ ] **FAS 1: Grundläggande struktur & Onboarding (Pågår)**
+
+- [x] **FAS 1: Grundläggande struktur & Autentisering (AVKLARAD)**
   - [x] Skapa Firebase-projekt & grundläggande databasregler.
   - [x] Implementera användarautentisering (Google).
+  - [x] Säkra behörigheter (Scopes) för Drive & Kalender.
   - [x] Skapa grundläggande layout med Sidebar och Header.
-  - [x] Skapa datamodell för `User` och `Project`.
+  - [x] Implementera automatisk omdirigering för inloggade användare.
+  - [x] Skapa datamodeller för `User` och `Project`.
   - [x] Implementera grundläggande Onboarding-flöde.
-- [ ] **FAS 2: Kärnfunktioner (Ej påbörjad)**
+
+- [ ] **FAS 2: Kärnfunktioner (Pågår)**
+  - [x] **Operation: Signerat & Klart** - Automatiserad offerthantering via Google Docs.
+  - [x] **Operation: Synkroniserad Tid** - Integration med Google Kalender i dashboard.
+  - [ ] **Operation: Tidslappen 2.0** - Skapa funktion för tidrapportering per projekt.
+  - [ ] Visa tidrapporter per projekt.
+  - [ ] Skapa funktion för att logga material och kostnader (ÄTA).
+
 - [ ] **FAS 3: Integrationer (Ej påbörjad)**
 - [ ] **FAS 4: AI & Insikter (Ej påbörjad)**
 
