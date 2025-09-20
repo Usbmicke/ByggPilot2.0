@@ -10,8 +10,8 @@ import { getApps } from 'firebase-admin/app';
 const serviceAccount = {
   projectId: process.env.FIREBASE_PROJECT_ID!,
   clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
-  // Ersätt \n med faktiska radbrytningar för private key, vilket är nödvändigt när den läses från .env
-  privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+  // .env.local är nu korrekt formaterad, så vi behöver inte längre laga nyckeln med kod.
+  privateKey: process.env.FIREBASE_PRIVATE_KEY!,
 };
 
 // Undvik att åter-initialisera appen vid varje hot-reload i utvecklingsmiljö.
