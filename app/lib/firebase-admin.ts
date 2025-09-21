@@ -1,58 +1,46 @@
 
 // Fil: app/lib/firebase-admin.ts
 import admin from 'firebase-admin';
-import { getApps } from 'firebase-admin/app';
+import { getApps, initializeApp, App } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
 // =========================================================================
-// === AVGÖRANDE FÖRÄNDRING FÖR EN ROBUST AUTENTISERING =====================
+// === NY STRUKTUR FÖR ATT FÖRHINDRA PROCESS-KONFLIKTER ====================
 // =========================================================================
 //
-// Vi överger de separata miljövariablerna (PROJECT_ID, CLIENT_EMAIL, PRIVATE_KEY)
-// som är extremt känsliga för formateringsfel.
+// Vi flyttar all initialiseringslogik till en funktion som anropas "lazy",
+// dvs. bara när den faktiskt behövs. Detta förhindrar att Firebase Admin
+// SDK körs automatiskt vid en import och krockar med andra bibliotek
+// (som NextAuth) som också behöver prata med Google APIs.
 //
-// Istället använder vi EN ENDA miljövariabel: `FIREBASE_SERVICE_ACCOUNT_JSON`
+// Denna funktion fungerar som en "singleton" - den ser till att appen
+// bara initialiseras en enda gång under hela serverns livstid.
 //
-// Denna variabel ska innehålla HELA innehållet från din Firebase service account
-// JSON-fil, inkapslat i enkla citattecken. Detta eliminerar alla problem 
-// med radbrytningar och specialtecken.
-//
-// I din .env.local-fil ska det se ut så här:
-// FIREBASE_SERVICE_ACCOUNT_JSON='''{
-//   "type": "service_account",
-//   "project_id": "ditt-projekt-id",
-//   "private_key_id": "din-nyckel-id",
-//   "private_key": "-----BEGIN PRIVATE KEY-----\nDIN\nLÅNGA\nNYCKEL\n-----END PRIVATE KEY-----\n",
-//   "client_email": "din-service-account-email",
-//   "client_id": "ditt-client-id",
-//   "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-//   "token_uri": "https://oauth2.googleapis.com/token",
-//   "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-//   "client_x509_cert_url": "din-cert-url"
-// }'''
-//
-// OBS: Det är Kritiskt att hela JSON-objektet är omgivet av '''.
 // =========================================================================
 
-try {
-  if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-    throw new Error('Miljövariabeln FIREBASE_SERVICE_ACCOUNT_JSON är inte satt. Se instruktionerna i `app/lib/firebase-admin.ts`.');
-  }
+let firestoreAdminInstance: admin.firestore.Firestore | null = null;
 
-  // Parse the stringified JSON from the environment variable
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-
-  if (!getApps().length) {
-    admin.initializeApp({
+function initializeFirebaseAdmin() {
+  if (getApps().length === 0) {
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON är inte satt.');
+    }
+    
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    
+    initializeApp({
       credential: admin.credential.cert(serviceAccount)
     });
-    console.log("Firebase Admin SDK initialiserades framgångsrikt med den nya metoden.");
+    console.log("Firebase Admin SDK initialiserad LAZY/ON-DEMAND för att undvika konflikter.");
   }
-} catch (error: any) {
-  console.error("FATALT FEL vid initialisering av Firebase Admin SDK:", error.message);
-  // We throw the error to prevent the app from running with a broken configuration.
-  throw error; 
+  return admin.firestore();
 }
 
-const firestoreAdmin = admin.firestore();
-
-export { firestoreAdmin };
+// Detta är den nya exporten. Den ser till att vi alltid får en giltig
+// Firestore-instans utan att orsaka sidoeffekter vid import.
+export function getFirestoreAdmin() {
+  if (!firestoreAdminInstance) {
+    firestoreAdminInstance = initializeFirebaseAdmin();
+  }
+  return firestoreAdminInstance;
+}

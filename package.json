@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "kill-port 3000 && next dev --port 3000",
+    "dev": "kill-port 3001 && next dev --port 3001",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -13,12 +13,12 @@
     "@heroicons/react": "^2.2.0",
     "@next-auth/firebase-adapter": "^2.0.1",
     "firebase": "^10.12.2",
-    "firebase-admin": "^11.11.1",
+    "firebase-admin": "^13.5.0",
     "framer-motion": "^12.23.13",
     "google-auth-library": "^10.3.0",
     "googleapis": "^159.0.0",
     "handlebars": "^4.7.8",
-    "next": "14.2.3",
+    "next": "^14.2.32",
     "next-auth": "^4.24.11",
     "react": "^18",
     "react-dom": "^18",
@@ -36,8 +36,5 @@
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
-  },
-  "resolutions": {
-    "@firebase/auth": "0.23.2"
   }
 }

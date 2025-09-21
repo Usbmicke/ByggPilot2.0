@@ -1,10 +1,9 @@
+
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/app/context/AuthContext';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { firestore as db } from '@/app/lib/firebase/client';
-import { UserProfile } from '@/app/types/user';
+import React from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 import Sidebar from '@/app/components/layout/Sidebar';
 import Header from '@/app/components/layout/Header';
@@ -16,32 +15,20 @@ interface Props {
 }
 
 export default function DashboardLayout({ children }: Props) {
-    const { user } = useAuth();
-    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-    const [loading, setLoading] = useState(true);
+    const { data: session, status } = useSession();
+    const router = useRouter();
 
-    useEffect(() => {
-        if (user) {
-            const unsub = onSnapshot(doc(db, 'users', user.uid), (doc) => {
-                if (doc.exists()) {
-                    setUserProfile(doc.data() as UserProfile);
-                } else {
-                    setUserProfile(null); 
-                }
-                setLoading(false);
-            });
-            return () => unsub();
-        } else {
-            setLoading(false);
-        }
-    }, [user]);
-
-    if (loading) {
+    if (status === 'loading') {
         return (
             <div className="h-screen w-screen flex items-center justify-center bg-gray-900">
-                <p className="text-white">Laddar din arbetsyta...</p>
+                <p className="text-white">Laddar din session...</p>
             </div>
         );
+    }
+
+    if (status === 'unauthenticated') {
+        router.push('/api/auth/signin');
+        return null;
     }
 
     return (
@@ -59,8 +46,7 @@ export default function DashboardLayout({ children }: Props) {
                 </main>
             </div>
 
-            {/* Skickar med användarprofilen till ChatWidget */}
-            <ChatWidget userProfile={userProfile} />
+            <ChatWidget userProfile={null} />
         </div>
     );
 }
