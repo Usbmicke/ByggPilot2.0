@@ -1,16 +1,11 @@
-
 // Fil: app/api/auth/[...nextauth]/route.ts
 import NextAuth, { Session } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 import { FirestoreAdapter } from "@next-auth/firebase-adapter"
-// Importera den nya, säkra funktionen istället för den direkta instansen
 import { getFirestoreAdmin } from "@/app/lib/firebase-admin"
 
 
 const handler = NextAuth({
-  // Anropa funktionen här. Detta säkerställer att Firebase Admin initialiseras
-  // säkert, "lazy", och bara när NextAuth behöver den.
-  // Detta löser konflikten mellan Firebase Admin och NextAuth.
   adapter: FirestoreAdapter(getFirestoreAdmin()),
 
   providers: [
@@ -26,6 +21,17 @@ const handler = NextAuth({
   ],
 
   callbacks: {
+    // --- DIAGNOSTISK CALLBACK ---
+    // Denna funktion körs efter att Google svarat, men innan en session skapas.
+    async signIn({ user, account, profile, email, credentials }) {
+      console.log('--- signIn Callback Start ---');
+      console.log('User:', JSON.stringify(user, null, 2));
+      console.log('Account:', JSON.stringify(account, null, 2));
+      console.log('Profile:', JSON.stringify(profile, null, 2));
+      console.log('--- signIn Callback Slut ---');
+      // Vi tillåter alltid inloggning för nu, syftet är att logga.
+      return true;
+    },
     async session({ session, user }) {
         session.user.id = user.id;
         return session;
