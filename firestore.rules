@@ -1,9 +1,27 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Tillåt en användare att skapa sitt eget dokument
+    // Users can read and write their own user document.
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Users can manage their own projects.
+    // This includes reading a list of their projects.
+    match /projects/{projectId} {
+      allow read, create, update, delete: if request.auth != null && request.auth.uid == get(/databases/$(database)/documents/projects/$(projectId)).data.userId || request.resource.data.userId == request.auth.uid;
+    }
+
+    // Users can manage time entries for projects they own.
+    // To do this, we check that the project referenced by the time entry is owned by the user.
+    match /time-entries/{timeEntryId} {
+       allow read, create, update, delete: if request.auth != null && get(/databases/$(database)/documents/projects/$(request.resource.data.projectId)).data.userId == request.auth.uid;
+    }
+
+    // Users can manage material costs for projects they own.
+    match /material-costs/{materialCostId} {
+      allow read, create, update, delete: if request.auth != null && get(/databases/$(database)/documents/projects/$(request.resource.data.projectId)).data.userId == request.auth.uid;
     }
   }
 }
