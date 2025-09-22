@@ -2,16 +2,23 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: [
-    "./app/**/*.{js,ts,jsx,tsx,mdx}", // Denna rad täcker ALLA komponenter i din app
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
       colors: {
-        'brand-dark': '#0D1B2A',
-        'brand-medium': '#1B263B',
-        'brand-light': '#415A77',
-        'brand-accent': '#778DA9',
-        'brand-text': '#E0E1DD',
+        // Dov, professionell baspalett
+        'background-primary': '#1A202C',   // Mörkt blågrå
+        'background-secondary': '#2D3748', // Gråblå
+        'border-primary': '#4A5568',       // Mellangrå
+        'text-primary': '#F7FAFC',         // Nästan vit
+        'text-secondary': '#A0AEC0',       // Ljusgrå
+        
+        // Tydlig accent- & status-palett
+        'accent-blue': '#3182CE',          // Klar blå
+        'accent-gold': '#B79434',          // Muted Guld/Ockra
+        'status-green': '#38A169',         // Grön
+        'status-red': '#E53E3E',           // Röd
       }
     },
   },

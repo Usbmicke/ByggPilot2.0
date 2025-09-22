@@ -1,4 +1,3 @@
-
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -18,11 +17,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="sv">
-      {/* 
-        Klasserna här säkerställer att body-elementet fyller hela skärmen 
-        och använder flexbox för att positionera sitt innehåll. 
-      */}
-      <body className={`${inter.className} h-full bg-gray-900 text-gray-100`}>
+      <body className={`${inter.className} h-full bg-background-primary text-text-primary`}>
         <AuthProvider>
           {children}
         </AuthProvider>
