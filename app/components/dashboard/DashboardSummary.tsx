@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react'; // KORREKT IMPORT
 
 interface SummaryData {
   totalProjects: number;
@@ -14,9 +15,9 @@ interface DashboardSummaryProps {
 }
 
 export default function DashboardSummary({ updateTrigger }: DashboardSummaryProps) {
+  const { data: session, status } = useSession(); // Använder NextAuth:s useSession hook
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchSummary = async () => {
@@ -24,20 +25,31 @@ export default function DashboardSummary({ updateTrigger }: DashboardSummaryProp
         setIsLoading(true);
         const response = await fetch('/api/dashboard/summary', { credentials: 'include' });
         if (!response.ok) {
-          throw new Error('Kunde inte hämta summeringsdata.');
+          // Misslyckas tyst, logga endast i konsolen för felsökning
+          console.warn(`DashboardSummary: Failed to fetch summary data. Status: ${response.status}`);
+          return; 
         }
         const data = await response.json();
         setSummary(data);
       } catch (err: any) {
-        setError(err.message);
+        console.error('DashboardSummary fetch error:', err.message); // Logga felet för felsökning
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchSummary();
-  }, [updateTrigger]);
+    // Kör bara fetchSummary om NextAuth rapporterar att användaren är autentiserad
+    if (status === 'authenticated') {
+      fetchSummary();
+    } else if (status === 'unauthenticated') {
+      // Om användaren inte är inloggad, sluta ladda direkt.
+      setIsLoading(false);
+    }
+    // Om status är 'loading', fortsätter isLoading att vara true, vilket är korrekt.
 
+  }, [updateTrigger, status]); // Kör om effekten när status ändras
+
+  // Visa en snygg laddnings-animation medan vi väntar på data
   if (isLoading) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -51,12 +63,9 @@ export default function DashboardSummary({ updateTrigger }: DashboardSummaryProp
     );
   }
   
-  if (error) {
-    return <p className="text-red-400 text-center mb-8">Fel: {error}</p>;
-  }
-  
+  // Om vi inte har någon data efter laddning (t.ex. vid ett tyst fel), rendera ingenting.
   if (!summary) {
-      return null; // Eller någon annan fallback-UI
+      return null; 
   }
 
   return (
