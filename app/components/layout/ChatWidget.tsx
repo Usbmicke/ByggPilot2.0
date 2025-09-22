@@ -46,7 +46,6 @@ export default function ChatWidget({ userProfile }: ChatWidgetProps) {
     // --- Effekt för proaktiv onboarding ---
     useEffect(() => {
         if (userProfile) {
-            // Använd realtidsdata från profilen för att avgöra nästa steg
             if (userProfile.onboardingStatus === 'complete' && !userProfile.driveFolderStructureCreated) {
                 setMessages([{ role: 'assistant', content: DRIVE_SETUP_PROMPT }]);
                 setOnboardingStep('drive_setup');
@@ -73,31 +72,15 @@ export default function ChatWidget({ userProfile }: ChatWidgetProps) {
     const handleCreateDriveStructure = async () => {
         setIsLoading(true);
         setMessages(prev => [...prev, { role: 'user', content: 'Ja, skapa mappstrukturen.' }]);
-        
         try {
-            const response = await fetch('/api/google/drive/create-initial-structure', {
-                method: 'POST',
-            });
-
-            if (!response.ok) {
-                throw new Error(`API-anrop misslyckades med status: ${response.status}`);
-            }
-
-            // Uppdateringen av meddelanden och onboarding-steg kommer nu att hanteras
-            // automatiskt av `useEffect` när `userProfile` uppdateras via Firestore listener.
-            // Vi behöver inte manuellt lägga till ett meddelande här.
-
+            await fetch('/api/google/drive/create-initial-structure', { method: 'POST' });
         } catch (error) {
             console.error("Fel vid skapande av mappstruktur:", error);
-            setMessages(prev => [...prev, { role: 'assistant', content: 'Åh nej, något gick fel. Jag kunde inte skapa mappstrukturen just nu. Vi kan försöka igen senare.' }]);
-        } finally {
-            // Vi sätter inte isLoading till false här, eftersom vi inväntar Firestore-uppdateringen
-            // som kommer att ändra komponentens state och ta bort laddningsindikatorn indirekt.
+            setMessages(prev => [...prev, { role: 'assistant', content: 'Åh nej, något gick fel.' }]);
         }
     };
 
-
-    // --- Logik för att hantera meddelanden ---
+    // --- REN-LOGIK FÖR MEDDELANDEN (INGEN SIMULERING) ---
     const handleSendMessage = async (messageContent?: string) => {
         const content = (messageContent || input).trim();
         if (!content) return;
@@ -105,16 +88,6 @@ export default function ChatWidget({ userProfile }: ChatWidgetProps) {
         const newMessages: ChatMessage[] = [...messages, { role: 'user', content }];
         setMessages(newMessages);
         setInput('');
-        setIsLoading(true);
-
-        try {
-            await new Promise(res => setTimeout(res, 1500));
-            setMessages(prev => [...prev, { role: 'assistant', content: `Jag har mottagit ditt meddelande: "${content}". Funktion för att behandla detta är under utveckling.`}]);
-        } catch (error) {
-            setMessages(prev => [...prev, { role: 'assistant', content: `Ett fel uppstod. Kunde inte behandla din förfrågan.`}]);
-        } finally {
-            setIsLoading(false);
-        }
     };
 
     // --- Hantera skicka med Enter-tangenten ---
@@ -149,42 +122,29 @@ export default function ChatWidget({ userProfile }: ChatWidgetProps) {
                     </div>
                 )}
                 
-                {/* Meddelandelista */}
+                {/* Meddelandelista med robust scrollbar-hantering */}
                 {isExpanded && (
-                    <div className="flex-1 overflow-y-auto">
+                    <div className="flex-1 overflow-y-auto custom-scrollbar-hide">
                         <Chat messages={messages} isLoading={isLoading} />
                     </div>
                 )}
 
                 {/* Botten-sektion */}
                 <div className="p-3 flex-shrink-0">
-                    
-                    {/* Särskilda knappar för onboarding-steget */}
                     {onboardingStep === 'drive_setup' && !isLoading && (
                         <div className="flex gap-2 mb-3 justify-center">
-                            <button onClick={handleCreateDriveStructure} className="bg-accent-blue hover:opacity-90 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                                Ja, skapa struktur
-                            </button>
-                            <button onClick={() => {
-                                setMessages([{ role: 'assistant', content: ONBOARDING_WELCOME_MESSAGE }]);
-                                setOnboardingStep('complete');
-                            }} className="bg-border-primary hover:opacity-90 text-text-primary font-bold py-2 px-4 rounded-lg transition-colors">
-                                Påminn mig senare
-                            </button>
+                            <button onClick={handleCreateDriveStructure} className="bg-accent-blue hover:opacity-90 text-white font-bold py-2 px-4 rounded-lg transition-colors">Ja, skapa struktur</button>
+                            <button onClick={() => { setMessages([{ role: 'assistant', content: ONBOARDING_WELCOME_MESSAGE }]); setOnboardingStep('complete'); }} className="bg-border-primary hover:opacity-90 text-text-primary font-bold py-2 px-4 rounded-lg transition-colors">Påminn mig senare</button>
                         </div>
                     )}
 
-                    {/* Input-fält och standardknappar */}
                     <div className="flex items-end gap-2">
                         <button onClick={() => setIsExpanded(!isExpanded)} className="p-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-border-primary transition-colors">
                             {isExpanded ? <ChevronDownIcon className="h-6 w-6" /> : <ChevronUpIcon className="h-6 w-6" />}
                         </button>
-                        <button className="p-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-border-primary transition-colors" onClick={() => alert('Funktionen är under utveckling.')}>
-                            <PaperClipIcon className="h-6 w-6" />
-                        </button>
-                         <button className="p-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-border-primary transition-colors" onClick={() => alert('Funktionen är under utveckling.')}>
-                            <MicrophoneIcon className="h-6 w-6" />
-                        </button>
+
+                        <button disabled className="p-2 text-text-secondary rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><PaperClipIcon className="h-6 w-6" /></button>
+                        <button disabled className="p-2 text-text-secondary rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><MicrophoneIcon className="h-6 w-6" /></button>
 
                         <textarea
                             ref={textareaRef}
@@ -194,7 +154,7 @@ export default function ChatWidget({ userProfile }: ChatWidgetProps) {
                             onKeyDown={handleKeyDown}
                             onFocus={() => !isExpanded && setIsExpanded(true)}
                             placeholder={placeholder}
-                            className="flex-1 bg-border-primary/70 text-text-primary rounded-lg px-4 py-2.5 border border-transparent focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none max-h-48 transition-all duration-200"
+                            className="flex-1 bg-border-primary/70 text-text-primary rounded-lg px-4 py-2.5 border border-transparent focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none max-h-48 custom-scrollbar-hide"
                             disabled={onboardingStep === 'drive_setup' || isLoading}
                         />
                         <button 

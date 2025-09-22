@@ -2,42 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Vi tar bort de tidigare, alltför restriktiva reglerna för html och body.
-   Tailwind hanterar detta på ett bättre sätt som standard. 
-   Vi behåller animationerna eftersom de hör hemma här. */
+/* ============================================= */
+/* Återanvändbar klass för att dölja scrollbars */
+/* ============================================= */
 
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 12px 0px rgba(56, 189, 248, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 20px 3px rgba(56, 189, 248, 0.5);
-  }
+/* För Webkit-baserade webbläsare (Chrome, Safari, Edge) */
+.custom-scrollbar-hide::-webkit-scrollbar {
+    display: none;
 }
 
-.animate-pulse-glow {
-  animation: pulse-glow 4s infinite ease-in-out;
-}
-
-@keyframes float-up {
-  0% {
-    transform: translateY(0);
-    opacity: 0;
-  }
-  10%, 90% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-100vh);
-    opacity: 0;
-  }
-}
-
-.particle {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
-  animation-name: float-up;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
+/* För Firefox och andra */
+.custom-scrollbar-hide {
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+    scrollbar-width: none;     /* Firefox */
 }
