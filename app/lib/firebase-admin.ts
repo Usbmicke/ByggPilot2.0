@@ -1,5 +1,4 @@
 
-// Fil: app/lib/firebase-admin.ts
 import * as admin from 'firebase-admin';
 
 // Denna kod körs bara en gång när modulen laddas första gången på servern.
@@ -13,14 +12,14 @@ if (!admin.apps.length) {
     console.log('Firebase Admin SDK har initierats framgångsrikt från miljövariabel.');
   } catch (e) {
     // Om det misslyckas (t.ex. under lokal utveckling), faller vi tillbaka till standard-credentials.
-    // Detta fungerar automatiskt på Google Cloud Workstations.
     console.warn('Kunde inte hitta eller tolka FIREBASE_SERVICE_ACCOUNT_JSON. Faller tillbaka till standard-credentials.');
     admin.initializeApp();
     console.log('Firebase Admin SDK har initierats med standard-credentials.');
   }
 }
 
-// Exportera den färdiga och återanvändbara anslutningen direkt.
+// Skapa och exportera den initierade Firestore-instansen.
+// Alla server-filer ska importera denna instans istället för att skapa en egen.
 const firestoreAdmin = admin.firestore();
 
-export { firestoreAdmin };
+export { admin, firestoreAdmin };
