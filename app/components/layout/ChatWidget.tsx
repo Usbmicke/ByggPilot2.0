@@ -19,11 +19,11 @@ interface ChatWidgetProps {
 
 // --- Konstanter ---
 const promptSuggestions = [
-    "Skapa en komplett riskanalys för mitt nya projekt...",
-    "Sammanfatta förra veckans tidrapporter...",
-    "Ge mig en checklista för egenkontroll vid VVS-installation...",
-    "Skriv ett utkast till ett ÄTA-underlag för tilläggsarbete...",
-    "Vilka BBR-krav gäller för tillgänglighet i flerbostadshus?..."
+    "Skapa ett nytt projekt för Bygg AB...",
+    "Sammanfatta mina senaste tidrapporter...",
+    "Ge mig en checklista för KMA-ronder...",
+    "Skriv ett utkast till ett ÄTA-underlag...",
+    "Vilka krav gäller för fallskydd på tak?"
 ];
 
 const ONBOARDING_WELCOME_MESSAGE = `**Välkommen till ByggPilot!**\n\nJag är din nya digitala kollega. Vad kan jag hjälpa dig med idag?`;
@@ -68,26 +68,61 @@ export default function ChatWidget({ userProfile }: ChatWidgetProps) {
         return () => clearInterval(interval);
     }, []);
 
-    // --- Logik för att hantera mappstruktur-skapande ---
+    // --- Logik för att hantera mappstruktur-skapande (Onboarding) ---
     const handleCreateDriveStructure = async () => {
         setIsLoading(true);
-        setMessages(prev => [...prev, { role: 'user', content: 'Ja, skapa mappstrukturen.' }]);
-        try {
-            await fetch('/api/google/drive/create-initial-structure', { method: 'POST' });
-        } catch (error) {
-            console.error("Fel vid skapande av mappstruktur:", error);
-            setMessages(prev => [...prev, { role: 'assistant', content: 'Åh nej, något gick fel.' }]);
-        }
+        const userMessage: ChatMessage = { role: 'user', content: 'Ja, skapa mappstrukturen.' };
+        setMessages(prev => [...prev, userMessage]);
+        // Anropa orkestreraren för att hantera detta
+        await handleSendMessage('Skapa en standardiserad mappstruktur i min Google Drive.', [userMessage]);
     };
 
-    // --- REN-LOGIK FÖR MEDDELANDEN (INGEN SIMULERING) ---
-    const handleSendMessage = async (messageContent?: string) => {
+    // --- HJÄRNAN: Skickar meddelande till Orkestreraren (PROMPT 9.0) ---
+    const handleSendMessage = async (messageContent?: string, messageHistory?: ChatMessage[]) => {
         const content = (messageContent || input).trim();
         if (!content) return;
 
-        const newMessages: ChatMessage[] = [...messages, { role: 'user', content }];
+        const userMessage: ChatMessage = { role: 'user', content };
+        const newMessages: ChatMessage[] = messageHistory ? [...messages, ...messageHistory] : [...messages, userMessage];
+        
         setMessages(newMessages);
-        setInput('');
+        if(!messageContent) setInput('');
+        setIsLoading(true);
+        setMessages(prev => [...prev, { role: 'assistant', content: '' }]); // Tom platshållare för svar
+
+        try {
+            const response = await fetch('/api/orchestrator', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages: newMessages }),
+            });
+
+            if (!response.body) throw new Error("Response body is missing");
+            if (!response.ok) throw new Error(`API Error: ${response.status} ${await response.text()}`);
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                const chunk = decoder.decode(value, { stream: true });
+                setMessages(prev => {
+                    const lastMessage = prev[prev.length - 1];
+                    const updatedMessages = [...prev.slice(0, -1), { ...lastMessage, content: lastMessage.content + chunk }];
+                    return updatedMessages;
+                });
+            }
+        } catch (error) {
+            console.error("Fel vid anrop till orkestreraren:", error);
+            setMessages(prev => {
+                const updated = [...prev.slice(0, -1)]; // Ta bort den tomma platshållaren
+                return [...updated, { role: 'assistant', content: "Ursäkta, ett fel uppstod. Jag kunde inte slutföra din förfrågan just nu." }];
+            });
+        } finally {
+            setIsLoading(false);
+            textareaRef.current?.focus();
+        }
     };
 
     // --- Hantera skicka med Enter-tangenten ---
@@ -112,7 +147,6 @@ export default function ChatWidget({ userProfile }: ChatWidgetProps) {
             <div 
                 className={`bg-background-secondary/90 backdrop-blur-lg border-t border-border-primary mx-auto max-w-7xl flex flex-col shadow-2xl-top transition-all duration-300 ease-in-out ${isExpanded ? 'h-[calc(100vh-5rem)] rounded-t-xl' : 'h-auto rounded-t-lg'}`}>
 
-                {/* Header */}
                 {isExpanded && (
                     <div className="flex items-center justify-between p-3 border-b border-border-primary flex-shrink-0">
                         <h2 className="text-lg font-semibold text-text-primary">ByggPilot</h2>
@@ -122,14 +156,12 @@ export default function ChatWidget({ userProfile }: ChatWidgetProps) {
                     </div>
                 )}
                 
-                {/* Meddelandelista med robust scrollbar-hantering */}
                 {isExpanded && (
                     <div className="flex-1 overflow-y-auto custom-scrollbar-hide">
                         <Chat messages={messages} isLoading={isLoading} />
                     </div>
                 )}
 
-                {/* Botten-sektion */}
                 <div className="p-3 flex-shrink-0">
                     {onboardingStep === 'drive_setup' && !isLoading && (
                         <div className="flex gap-2 mb-3 justify-center">
@@ -143,8 +175,9 @@ export default function ChatWidget({ userProfile }: ChatWidgetProps) {
                             {isExpanded ? <ChevronDownIcon className="h-6 w-6" /> : <ChevronUpIcon className="h-6 w-6" />}
                         </button>
 
-                        <button disabled className="p-2 text-text-secondary rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><PaperClipIcon className="h-6 w-6" /></button>
-                        <button disabled className="p-2 text-text-secondary rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><MicrophoneIcon className="h-6 w-6" /></button>
+                        {/* ÅTGÄRDAT: Knappar är nu aktiva för korrekt UI-känsla */}
+                        <button className="p-2 text-text-secondary rounded-full transition-colors hover:text-text-primary hover:bg-border-primary"><PaperClipIcon className="h-6 w-6" /></button>
+                        <button className="p-2 text-text-secondary rounded-full transition-colors hover:text-text-primary hover:bg-border-primary"><MicrophoneIcon className="h-6 w-6" /></button>
 
                         <textarea
                             ref={textareaRef}
@@ -155,7 +188,7 @@ export default function ChatWidget({ userProfile }: ChatWidgetProps) {
                             onFocus={() => !isExpanded && setIsExpanded(true)}
                             placeholder={placeholder}
                             className="flex-1 bg-border-primary/70 text-text-primary rounded-lg px-4 py-2.5 border border-transparent focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none max-h-48 custom-scrollbar-hide"
-                            disabled={onboardingStep === 'drive_setup' || isLoading}
+                            disabled={isLoading || onboardingStep === 'drive_setup'}
                         />
                         <button 
                             onClick={() => handleSendMessage()} 

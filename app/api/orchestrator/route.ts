@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { auth as adminAuth } from '@/app/lib/firebase/admin';
+import { auth as adminAuth } from '@/lib/firebase-admin'; // KORRIGERAD SÖKVÄG
 import { ChatMessage, FlowState } from '@/app/types';
 import { URL } from 'url';
 
