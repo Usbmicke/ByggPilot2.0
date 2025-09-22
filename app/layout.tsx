@@ -1,13 +1,14 @@
+
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Providers from "@/app/components/Providers"; // Importera den korrekta providern
+import { AuthProvider } from "@/app/providers/AuthProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "ByggPilot - Din Digitala Kollega",
-  description: "Mindre papperskaos. Mer tid att bygga.",
+  description: "AI-assistent för byggbranschen som automatiserar administration och arbetsflöden.",
 };
 
 export default function RootLayout({
@@ -17,9 +18,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="sv">
-      <body className={inter.className}>
-        {/* Omslut med den nya providern som innehåller SessionProvider */}
-        <Providers>{children}</Providers>
+      {/* 
+        Klasserna här säkerställer att body-elementet fyller hela skärmen 
+        och använder flexbox för att positionera sitt innehåll. 
+      */}
+      <body className={`${inter.className} h-full bg-gray-900 text-gray-100`}>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );
