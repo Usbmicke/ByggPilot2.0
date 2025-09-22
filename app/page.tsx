@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -28,7 +29,7 @@ export const IconLightbulb = (props) => (
 
 // --- REUSABLE COMPONENTS ---
 const cardBaseStyle = "bg-background-secondary/50 backdrop-blur-sm border border-border-primary rounded-xl p-6 transition-all duration-300";
-const cardHoverEffect = "hover:scale-105 hover:shadow-[0_0_25px_rgba(173,216,230,0.2)] hover:border-text-secondary/50";
+const cardHoverEffect = "hover:scale-105 hover:shadow-[0_0_25px_rgba(59,130,246,0.2)] hover:border-text-secondary/50";
 
 const SolutionStyle = ({ children }) => (
     <div className="mt-auto pt-4 border-t border-accent-blue/20">
@@ -55,10 +56,10 @@ const FeatureCard = ({ title, description }) => (
 // --- ANIMATION & BACKGROUND ---
 const CustomAnimationsStyle = () => (
   <style>{`
-    @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 12px 0px rgba(49, 130, 206, 0.3); } 50% { box-shadow: 0 0 20px 3px rgba(49, 130, 206, 0.5); } }
+    @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 12px 0px rgba(59,130,246, 0.3); } 50% { box-shadow: 0 0 20px 3px rgba(59,130,246, 0.5); } }
     .animate-pulse-glow { animation: pulse-glow 4s infinite ease-in-out; }
     @keyframes float-up { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: 0.8; } 90% { opacity: 0.8; } 100% { transform: translateY(-100vh); opacity: 0; } }
-    .particle { position: absolute; bottom: 0; border-radius: 50%; background: rgba(247, 250, 252, 0.15); animation-name: float-up; animation-timing-function: linear; animation-iteration-count: infinite; }
+    .particle { position: absolute; bottom: 0; border-radius: 50%; background: rgba(224, 224, 224, 0.15); animation-name: float-up; animation-timing-function: linear; animation-iteration-count: infinite; }
   `}</style>
 );
 
@@ -202,13 +203,13 @@ export default function LandingPage() {
               <div className="container mx-auto px-6">
                   <button 
                       onClick={() => setIsProTipsModalOpen(true)}
-                      className="group max-w-4xl mx-auto bg-background-secondary/50 border border-border-primary rounded-xl p-8 md:p-12 grid md:grid-cols-12 gap-8 items-center w-full text-left hover:border-accent-gold/50 hover:shadow-lg hover:shadow-accent-gold/10 transition-all duration-300"
+                      className="group max-w-4xl mx-auto bg-background-secondary/50 border border-border-primary rounded-xl p-8 md:p-12 grid md:grid-cols-12 gap-8 items-center w-full text-left hover:border-status-gold/50 hover:shadow-lg hover:shadow-status-gold/10 transition-all duration-300"
                   >
-                      <div className="md:col-span-2 flex justify-center"><div className="bg-accent-gold/20 p-4 rounded-full border border-accent-gold/60 group-hover:scale-110 transition-transform duration-300"><IconLightbulb className="w-12 h-12 text-accent-gold"/></div></div>
+                      <div className="md:col-span-2 flex justify-center"><div className="bg-status-gold/20 p-4 rounded-full border border-status-gold/60 group-hover:scale-110 transition-transform duration-300"><IconLightbulb className="w-12 h-12 text-status-gold"/></div></div>
                       <div className="md:col-span-10 text-center md:text-left">
                           <h2 className="text-2xl md:text-3xl font-bold text-text-primary mb-2">Vässa ditt företag – Tips för proffs</h2>
                           <p className="text-text-secondary">Få tillgång till vår kunskapsbank med guider för att arbeta smartare, undvika vanliga fallgropar och bygga ett mer lönsamt byggföretag.</p>
-                          <span className="mt-4 inline-block text-accent-gold font-semibold group-hover:underline">Öppna guiden &rarr;</span>
+                          <span className="mt-4 inline-block text-status-gold font-semibold group-hover:underline">Öppna guiden &rarr;</span>
                       </div>
                   </button>
               </div>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -54,9 +53,9 @@ export default function DashboardSummary({ updateTrigger }: DashboardSummaryProp
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {Array.from({ length: 3 }).map((_, i) => (
-                 <div key={i} className="bg-gray-800/50 p-6 rounded-lg border border-gray-700 animate-pulse">
-                    <div className="h-6 bg-gray-700 rounded w-3/4 mb-2"></div>
-                    <div className="h-10 bg-gray-700 rounded w-1/2"></div>
+                 <div key={i} className="bg-background-secondary p-6 rounded-lg border border-border-primary animate-pulse">
+                    <div className="h-6 bg-border-primary rounded w-3/4 mb-2"></div>
+                    <div className="h-10 bg-border-primary rounded w-1/2"></div>
                 </div>
             ))}
         </div>
@@ -70,19 +69,19 @@ export default function DashboardSummary({ updateTrigger }: DashboardSummaryProp
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-      <div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-400">Totalt antal projekt</h3>
-        <p className="text-4xl font-bold text-white mt-2">{summary.totalProjects}</p>
+      <div className="bg-background-secondary p-6 rounded-lg border border-border-primary">
+        <h3 className="text-lg font-semibold text-text-secondary">Totalt antal projekt</h3>
+        <p className="text-4xl font-bold text-text-primary mt-2">{summary.totalProjects}</p>
       </div>
 
-      <div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700">
-        <h3 className="text-lg font-semibold text-yellow-400">Pågående projekt</h3>
-        <p className="text-4xl font-bold text-white mt-2">{summary.ongoingProjects}</p>
+      <div className="bg-background-secondary p-6 rounded-lg border border-border-primary">
+        <h3 className="text-lg font-semibold text-status-gold">Pågående projekt</h3>
+        <p className="text-4xl font-bold text-text-primary mt-2">{summary.ongoingProjects}</p>
       </div>
 
-      <div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700">
-        <h3 className="text-lg font-semibold text-green-400">Totala intäkter (Fakturerat)</h3>
-        <p className="text-4xl font-bold text-white mt-2">{summary.invoicedValue.toFixed(2)} kr</p>
+      <div className="bg-background-secondary p-6 rounded-lg border border-border-primary">
+        <h3 className="text-lg font-semibold text-accent-blue">Totala intäkter (Fakturerat)</h3>
+        <p className="text-4xl font-bold text-text-primary mt-2">{summary.invoicedValue.toFixed(2)} kr</p>
       </div>
     </div>
   );

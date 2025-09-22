@@ -20,8 +20,8 @@ export default function DashboardLayout({ children }: Props) {
 
     if (status === 'loading') {
         return (
-            <div className="h-screen w-screen flex items-center justify-center bg-gray-900">
-                <p className="text-white">Laddar din session...</p>
+            <div className="h-screen w-screen flex items-center justify-center bg-background-primary">
+                <p className="text-text-primary">Laddar din session...</p>
             </div>
         );
     }
@@ -32,7 +32,7 @@ export default function DashboardLayout({ children }: Props) {
     }
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white">
+        <div className="min-h-screen bg-background-primary text-text-primary">
             <AnimatedBackground />
             <Sidebar />
             

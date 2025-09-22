@@ -137,13 +137,13 @@ export default function ChatWidget({ userProfile }: ChatWidgetProps) {
     return (
         <div className={`fixed bottom-0 left-0 md:left-64 right-0 z-40 transition-all duration-300 ease-in-out`}>
             <div 
-                className={`bg-gray-800/90 backdrop-blur-lg border-t border-gray-700 mx-auto max-w-7xl flex flex-col shadow-2xl-top transition-all duration-300 ease-in-out ${isExpanded ? 'h-[calc(100vh-5rem)] rounded-t-xl' : 'h-auto rounded-t-lg'}`}>
+                className={`bg-background-secondary/90 backdrop-blur-lg border-t border-border-primary mx-auto max-w-7xl flex flex-col shadow-2xl-top transition-all duration-300 ease-in-out ${isExpanded ? 'h-[calc(100vh-5rem)] rounded-t-xl' : 'h-auto rounded-t-lg'}`}>
 
                 {/* Header */}
                 {isExpanded && (
-                    <div className="flex items-center justify-between p-3 border-b border-gray-700 flex-shrink-0">
-                        <h2 className="text-lg font-semibold text-white">ByggPilot</h2>
-                        <button onClick={() => setIsExpanded(false)} className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-gray-700/70 transition-colors">
+                    <div className="flex items-center justify-between p-3 border-b border-border-primary flex-shrink-0">
+                        <h2 className="text-lg font-semibold text-text-primary">ByggPilot</h2>
+                        <button onClick={() => setIsExpanded(false)} className="p-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-border-primary transition-colors">
                             <ChevronDownIcon className="h-6 w-6" />
                         </button>
                     </div>
@@ -162,13 +162,13 @@ export default function ChatWidget({ userProfile }: ChatWidgetProps) {
                     {/* Särskilda knappar för onboarding-steget */}
                     {onboardingStep === 'drive_setup' && !isLoading && (
                         <div className="flex gap-2 mb-3 justify-center">
-                            <button onClick={handleCreateDriveStructure} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                            <button onClick={handleCreateDriveStructure} className="bg-accent-blue hover:opacity-90 text-white font-bold py-2 px-4 rounded-lg transition-colors">
                                 Ja, skapa struktur
                             </button>
                             <button onClick={() => {
                                 setMessages([{ role: 'assistant', content: ONBOARDING_WELCOME_MESSAGE }]);
                                 setOnboardingStep('complete');
-                            }} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                            }} className="bg-border-primary hover:opacity-90 text-text-primary font-bold py-2 px-4 rounded-lg transition-colors">
                                 Påminn mig senare
                             </button>
                         </div>
@@ -176,13 +176,13 @@ export default function ChatWidget({ userProfile }: ChatWidgetProps) {
 
                     {/* Input-fält och standardknappar */}
                     <div className="flex items-end gap-2">
-                        <button onClick={() => setIsExpanded(!isExpanded)} className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-gray-700/70 transition-colors">
+                        <button onClick={() => setIsExpanded(!isExpanded)} className="p-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-border-primary transition-colors">
                             {isExpanded ? <ChevronDownIcon className="h-6 w-6" /> : <ChevronUpIcon className="h-6 w-6" />}
                         </button>
-                        <button className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-gray-700/70 transition-colors" onClick={() => alert('Funktionen är under utveckling.')}>
+                        <button className="p-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-border-primary transition-colors" onClick={() => alert('Funktionen är under utveckling.')}>
                             <PaperClipIcon className="h-6 w-6" />
                         </button>
-                         <button className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-gray-700/70 transition-colors" onClick={() => alert('Funktionen är under utveckling.')}>
+                         <button className="p-2 text-text-secondary hover:text-text-primary rounded-full hover:bg-border-primary transition-colors" onClick={() => alert('Funktionen är under utveckling.')}>
                             <MicrophoneIcon className="h-6 w-6" />
                         </button>
 
@@ -194,13 +194,13 @@ export default function ChatWidget({ userProfile }: ChatWidgetProps) {
                             onKeyDown={handleKeyDown}
                             onFocus={() => !isExpanded && setIsExpanded(true)}
                             placeholder={placeholder}
-                            className="flex-1 bg-gray-700/70 text-white rounded-lg px-4 py-2.5 border border-transparent focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none max-h-48 transition-all duration-200"
+                            className="flex-1 bg-border-primary/70 text-text-primary rounded-lg px-4 py-2.5 border border-transparent focus:outline-none focus:ring-2 focus:ring-accent-blue resize-none max-h-48 transition-all duration-200"
                             disabled={onboardingStep === 'drive_setup' || isLoading}
                         />
                         <button 
                             onClick={() => handleSendMessage()} 
                             disabled={!input.trim() || isLoading || onboardingStep === 'drive_setup'}
-                            className="p-2 rounded-full transition-colors bg-cyan-600 text-white hover:bg-cyan-500 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
+                            className="p-2 rounded-full transition-colors bg-accent-blue text-white hover:opacity-90 disabled:bg-border-primary disabled:text-text-secondary disabled:cursor-not-allowed flex items-center justify-center"
                         >
                             <PaperAirplaneIcon className="h-6 w-6" />
                         </button>

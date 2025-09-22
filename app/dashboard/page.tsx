@@ -21,10 +21,10 @@ export default function DashboardPage() {
       <DashboardSummary updateTrigger={updateTrigger} />
 
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-white">Dina Projekt</h1>
+        <h1 className="text-3xl font-bold text-text-primary">Dina Projekt</h1>
         <button
           onClick={() => setModalOpen(true)}
-          className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+          className="bg-accent-blue hover:opacity-90 text-white font-bold py-2 px-4 rounded-lg transition-colors"
         >
           + Skapa Nytt Projekt
         </button>

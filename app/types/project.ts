@@ -1,4 +1,4 @@
-export type ProjectStatus = 'Offert' | 'Pågående' | 'Avslutat' | 'Fakturerat' | 'Arkiverat';
+export type ProjectStatus = 'Offert' | 'Pågående' | 'Avslutat' | 'Fakturerat' | 'Arkiverat' | 'Positiv' | 'Varning';
 
 export interface Project {
   id: string;

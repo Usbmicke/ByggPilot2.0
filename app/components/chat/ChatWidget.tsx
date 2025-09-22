@@ -12,43 +12,38 @@ export function ChatWidget() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Skrolla automatiskt till det senaste meddelandet
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Styr knappens utseende baserat på input och laddningsstatus
   const canSubmit = input.trim() !== '' && !isLoading;
 
   return (
-    <div className="flex flex-col h-full bg-gray-800 rounded-lg shadow-2xl">
-      {/* Meddelande-fönstret */}
+    <div className="flex flex-col h-full bg-background-secondary rounded-lg shadow-2xl">
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {messages.map(m => (
           <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-lg px-4 py-2 rounded-lg ${m.role === 'user' ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-200'}`}>
+            <div className={`max-w-lg px-4 py-2 rounded-lg ${m.role === 'user' ? 'bg-accent-blue' : 'bg-border-primary'} text-text-primary`}>
               <p className="text-sm whitespace-pre-wrap">{m.content}</p>
             </div>
           </div>
         ))}
-        {/* Tom div för att kunna skrolla längst ner */}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input-fält och skicka-knapp */}
-      <div className="border-t border-gray-700 p-4">
+      <div className="border-t border-border-primary p-4">
         <form onSubmit={handleSubmit} className="flex items-center space-x-3">
           <input
-            className="flex-1 w-full px-4 py-2 bg-gray-700 text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-shadow duration-200"
+            className="flex-1 w-full px-4 py-2 bg-background-primary text-text-primary rounded-md focus:outline-none focus:ring-2 focus:ring-accent-blue transition-shadow duration-200"
             value={input}
             onChange={handleInputChange}
             placeholder="Skriv ditt meddelande till ByggPilot..."
             aria-label="Chattinmatning"
-            disabled={isLoading} // Inaktivera input när AI svarar
+            disabled={isLoading}
           />
           <button 
             type="submit"
-            className={`p-3 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white ${canSubmit ? 'bg-cyan-600 hover:bg-cyan-700 text-white' : 'bg-gray-600 text-gray-400 cursor-not-allowed'}`}
+            className={`p-3 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background-secondary focus:ring-text-primary ${canSubmit ? 'bg-accent-blue hover:opacity-90 text-white' : 'bg-border-primary text-text-secondary cursor-not-allowed'}`}
             disabled={!canSubmit}
             aria-label="Skicka meddelande"
           >
