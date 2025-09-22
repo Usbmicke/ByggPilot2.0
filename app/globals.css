@@ -1,20 +1,10 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* 
-  Grundläggande återställning och layoutkontroll.
-  Detta är den kritiska ändringen som tar bort den globala scroll-listen.
-*/
-html,
-body {
-  height: 100%; /* Tvinga sidan att vara exakt 100% av skärmhöjden */
-  overflow: hidden; /* Dölj allt som försöker flöda utanför */
-  margin: 0;
-  padding: 0;
-  background-color: #111827; /* Sätt en standard bakgrundsfärg som matchar temat */
-}
+/* Vi tar bort de tidigare, alltför restriktiva reglerna för html och body.
+   Tailwind hanterar detta på ett bättre sätt som standard. 
+   Vi behåller animationerna eftersom de hör hemma här. */
 
 @keyframes pulse-glow {
   0%, 100% {
