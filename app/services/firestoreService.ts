@@ -1,5 +1,5 @@
 
-import { firestoreAdmin } from '@/app/lib/firebase/firebaseAdmin';
+import { firestoreAdmin } from '@/app/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { Project, RiskAnalysis } from '@/app/types';
 
