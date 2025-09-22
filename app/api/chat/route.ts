@@ -1,27 +1,19 @@
 
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, type Tool, FunctionDeclaration } from "@google/generative-ai";
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, type Tool } from "@google/generative-ai";
 import { NextResponse } from "next/server";
-import { streamToResponse, type Message } from "ai";
+import { type Message } from "ai";
+import { getServerSideConfig } from "@/app/lib/config";
 
-// --- Steg 1: Definiera verktygen som ByggPilot kan använda ---
-
-// Detta är ritningen för vårt första verktyg. Det talar om för AI:n att den KAN 
-// anropa en funktion som heter 'create_google_drive_folder_structure' och att den
-// inte kräver några argument.
+// --- Steg 1: Definiera verktygen (samma som tidigare) ---
 const createFolderStructureTool: Tool = {
   function_declarations: [
     {
       name: "create_google_drive_folder_structure",
-      description: "Skapar en standardiserad, grundläggande mappstruktur i användarens Google Drive för att organisera alla framtida projekt, dokument och filer.",
-      parameters: { 
-        type: "OBJECT", 
-        properties: {}, // Inga parametrar behövs för denna funktion
-        required: []
-      }
+      description: "Skapar en standardiserad, grundläggande mappstruktur i användarens Google Drive för att organisera alla framtida projekt, dokument och filer. Ska ANVÄNDAS när en ny användare har loggat in för första gången och bett om att få hjälp med att sätta upp sin struktur.",
+      parameters: { type: "OBJECT", properties: {}, required: [] }
     }
   ]
 };
-
 
 // --- Master-Prompt och säkerhetsinställningar (samma som tidigare) ---
 const masterPrompt = `
@@ -71,7 +63,8 @@ Du ska aktivt berika projekt med extern information.
 • Ingen Juridisk Rådgivning: Du ger ALDRIG definitiv finansiell, juridisk eller skatteteknisk rådgivning. Du presenterar information baserat på regelverk men avslutar ALLTID med en friskrivning: "Detta är en generell tolkning. För ett juridiskt bindande råd bör du alltid konsultera en expert, som en jurist eller revisor".
 • Dataintegritet: Du hanterar all användardata med högsta sekretess. Du agerar ALDRIG på data utan en uttrycklig instruktion från användaren.
 `;
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const config = getServerSideConfig();
+const genAI = new GoogleGenerativeAI(config.google.geminiApiKey);
 const safetySettings = [
   { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
   { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -79,61 +72,60 @@ const safetySettings = [
   { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
 ];
 
-// --- Steg 2: Uppdaterad logik för att hantera både text och verktygsanrop ---
 export async function POST(req: Request) {
-  const { messages }: { messages: Message[] } = await req.json();
+  const { messages, idToken }: { messages: Message[], idToken: string } = await req.json();
 
-  // Initiera modellen med FÖRMÅGAN att använda verktyg
   const model = genAI.getGenerativeModel({
     model: "gemini-1.5-pro-latest",
     systemInstruction: masterPrompt,
     safetySettings,
-    tools: [createFolderStructureTool], // <-- Här ger vi verktyget till modellen
+    tools: [createFolderStructureTool],
   });
 
-  // Bygg upp historiken på det nya, mer strukturerade sättet
   const history = messages.map(msg => ({
     role: msg.role === 'user' ? 'user' : 'model',
     parts: [{ text: msg.content }],
   }));
   
   const lastMessage = messages[messages.length - 1];
-
-  // Starta chatten med den nya, kompletta historiken
-  const chat = model.startChat({ history });
+  const chat = model.startChat({ history: history.slice(0, -1) }); // Skicka historik UTAN sista meddelandet
   
-  // Skicka det sista meddelandet och vänta på svar
   const result = await chat.sendMessageStream(lastMessage.content);
 
-  // Nu måste vi kunna hantera två typer av svar:
-  // 1. Ett vanligt text-svar (som förut)
-  // 2. En begäran om att få anropa en funktion/verktyg
   const stream = new ReadableStream({
     async start(controller) {
       for await (const chunk of result.stream) {
-        // Kontrollera om modellen vill anropa en funktion
         const functionCalls = chunk.functionCalls();
+        
         if (functionCalls && functionCalls.length > 0) {
-          // För nu loggar vi bara att modellen FÖRSÖKER anropa en funktion.
-          // I nästa steg ska vi faktiskt utföra handlingen här.
-          console.log("MODEL VILL ANROPA FUNKTION:", functionCalls[0]);
+          const call = functionCalls[0]; // Fokusera på det första anropet
+          console.log(`[Chat API] AI vill anropa verktyget: ${call.name}`);
 
-          // TODO: Här ska vi köra den riktiga Google Drive-logiken
+          if (call.name === 'create_google_drive_folder_structure') {
+            // Skicka en direkt arbetsorder till Orkestreraren
+            const orchestratorUrl = new URL('/api/orchestrator', req.url).toString();
+            const response = await fetch(orchestratorUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`,
+              },
+              body: JSON.stringify({ action: 'create_folder_structure' }),
+            });
 
-          // Skicka tillbaka ett temporärt svar till modellen så den vet att vi "jobbar på det"
-          const apiResponse = {
-            message: "Ok, jag har skapat mappstrukturen i din Google Drive. Var god och verifiera.",
-            status: "success"
-          };
-
-          // Skicka tillbaka svaret till modellen så den kan formulera ett svar till användaren
-          const result2 = await chat.sendMessageStream(JSON.stringify(apiResponse));
-          for await (const chunk2 of result2.stream) {
-            controller.enqueue(new TextEncoder().encode(chunk2.text()));
+            if (response.ok) {
+              const orchestratorResponse = await response.json();
+              // Ta textsvaret från Orkestreraren och strömma det till klienten
+              controller.enqueue(new TextEncoder().encode(orchestratorResponse.reply.content));
+            } else {
+              // Hantera fel från Orkestreraren
+              const errorText = "Jag stötte på ett problem när jag försökte kontakta min interna koordinator. Försök igen.";
+              controller.enqueue(new TextEncoder().encode(errorText));
+            }
           }
-
+          
         } else {
-          // Om det bara är text, skicka det direkt till klienten (som förut)
+          // Om det är vanligt text-svar, skicka det direkt
           const chunkText = chunk.text();
           controller.enqueue(new TextEncoder().encode(chunkText));
         }
