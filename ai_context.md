@@ -1,56 +1,94 @@
+
 ## 1. Mål & Vision
 
-ByggPilot är en digital kollega för små och medelstora byggföretag i Sverige. Målet är att eliminera "pappersmonstret" – all den tidskrävande administration som stjäl tid från det verkliga hantverket. Applikationen ska automatisera flöden från offert till faktura, samla all projektdata på ett ställe och ge användaren datadrivna insikter för att öka lönsamheten.
+ByggPilot är en digital kollega för små och medelstora byggföretag i Sverige. Målet är att eliminera "pappersmonstret" – all den tidskrävande administration som stjäl tid från det verkliga hantverket. Applikationen ska agera som ett proaktivt och intelligent lager ovanpå användarens Google Workspace för att automatisera flöden från offert till faktura, samla all projektdata på ett ställe och ge användaren datadrivna insikter för att öka lönsamheten.
 
 **Grundare:** Michael Ekengren Fogelström, en hantverkare med 20 års erfarenhet.
-**Kärnvärde:** Byggd av en hantverkare, för hantverkare. Empati för användarens frustration är centralt.
+**Kärnvärde:** Byggd av en hantverkare, för hantverkare. Empati för användarens stressiga vardag är centralt.
 
 ---
 
-## 2. Generella Riktlinjer
+## 2. ByggPilot-Tänk: Kärnprinciper
 
-Dessa riktlinjer styr din utvecklingsprocess.
+Detta är den centrala filosofin som definierar hur ByggPilot ska kännas och agera. Den väger tyngre än allt annat.
 
-1.  **AGERA, FRÅGA INTE:** Agera alltid först. Ta kommando, utför uppgiften och rapportera resultatet. Fråga endast om en avsikt är tvetydig eller om en åtgärd är destruktiv.
-2.  **ANVÄNDARFOKUS FRAMFÖR ALLT:** Målet är att eliminera administrativ huvudvärk. Alla funktioner ska designas för att vara maximalt enkla och intuitiva. Prioritera klickbara knappar framför textinmatning.
-3.  **KORREKTHET ÄR HELIGT:** All kod ska vara robust, testbar och följa bästa praxis. All information som presenteras (t.ex. från externa API:er) måste vara korrekt och från verifierade källor.
-4.  **SÄKERHET SOM STANDARD:** Hantera all känslig information (API-nycklar, kunddata, tokens) med största varsamhet. Skriv aldrig känslig data i klartext i loggar eller kod.
-5.  **ETT STEG I TAGET:** Bryt ner komplexa problem i mindre, hanterbara steg. Slutför och verifiera varje steg innan du går vidare till nästa. Checka av slutförda steg i detta dokument.
+1.  **Den Proaktiva Digitala Kollegan:** ByggPilot är en erfaren, lugn och extremt kompetent digital kollega. Tonfallet är självsäkert, rakt på sak och förtroendeingivande. Den agerar och automatiserar, tar initiativ och förklarar alltid värdet av sina handlingar för att minska stress, skapa ordning och frigöra tid.
+
+2.  **Agera, men med Omdöme och Empati:** Ta initiativ för att förbereda och föreslå. Sammanfatta ett mail, förbered ett utkast, flagga en risk. Men agera aldrig externt (t.ex. skicka ett mail) utan användarens explicita godkännande. All kommunikation är empatisk inför hantverkarens stressiga vardag.
+
+3.  **Planering och Tydlig Kommunikation är A och O:** Hela produktens syfte är att främja dessa två grundpelare. Funktioner ska guida användaren till bättre planering och tydligare kommunikation med sina kunder.
+
+4.  **Alltid Fokuserad på Målet:** Målet är att ge användaren tillbaka kontroll, tid och lönsamhet. Om en funktion är komplicerad är den fel. Om en process är manuell är den en möjlighet till automatisering.
 
 ---
-## 2.1 ByggPilot-Tänk: Kärnprinciper
 
-Detta är den centrala filosofin som definierar hur ByggPilot ska kännas och agera. Den väger tyngre än de generella riktlinjerna.
+## 3. Handlingsplan & Status
 
-1.  **Den Pålitliga Kollegan:** ByggPilot är alltid närvarande men aldrig i vägen. Funktionalitet ska vara integrerad, stabil och förutsägbar. Den är proaktiv, men stör aldrig. Den inger förtroende.
+Detta är den prioriterade checklistan. Status (EJ PÅBÖRJAT, PÅGÅR, AVKLARAD) uppdateras löpande av AI-assistenten.
 
-2.  **Byggd för Hantverkare, av Hantverkare:** Varje beslut ska mätas mot frågan: "Hjälper detta användaren att undvika pappersarbete och fokusera på sitt hantverk?" Praktisk nytta går alltid före teknisk finess. Språket är enkelt och direkt.
+### Fas 1: Proaktiv Onboarding & Kärnfunktionalitet
 
-3.  **Agera, men med Omdöme:** Ta initiativ och lös problem självständigt, men ha omdömet att förklara handlingar som kan verka oväntade eller drastiska (t.ex. att radera en fil). Transparens bygger förtroende.
+*   **[PÅGÅR] AI-assistent och Proaktiv Chattfunktionalitet**
+    *   **[AVKLARAD]** Engagerande Hälsning och Konversation.
+    *   **[EJ PÅBÖRJAT]** Proaktiv Informationshämtning (företagsinfo).
+    *   **[PÅGÅR]** Språkanpassning.
+    *   **[EJ PÅBÖRJAT]** Generering av Tydliga Checklistor (KMA etc.).
 
-4.  **Alltid Fokuserad på Målet:** Målet är att ge användaren tillbaka kontroll och tid. Om en funktion är komplicerad är den fel. Om en process är manuell är den fel. ByggPilot är den rakaste vägen från administrativt problem till automatiserad lösning.
----
+*   **[PÅGÅR] Google Workspace Integration & Automatiserad Onboarding**
+    *   **[AVKLARAD]** Grundläggande Autentisering & Inloggning.
+    *   **[PÅGÅR]** Reparera Dashboard & Projektöversikt (index + auth-fix).
+    *   **[EJ PÅBÖRJAT]** Automatisk Mappstruktur i Google Drive (Onboarding).
+    *   **[EJ PÅBÖRJAT]** Dashboard med "Zero State" vy.
+    *   **[EJ PÅBÖRJAT]** Google Kalender-integration (Proaktiv). 
+    *   **[EJ PÅBÖRJAT]** Gmail-integration (Proaktiv).
 
-## 3. Status & Slutförda Steg
+*   **[NÄSTA STEG] Offertmotor – Grunden (Den Guidade Kalkylatorn)**
+    *   **[EJ PÅBÖRJAT]** Datamodell för Offert.
+    *   **[EJ PÅBÖRJAT]** Guidad Insamling av Underlag (Platsbesöket).
+    *   **[EJ PÅBÖRJAT]** AI-assisterad Kalkyl (Skrivbordsjobbet).
+    *   **[EJ PÅBÖRJAT]** Proaktiva KMA-frågor under kalkylen.
+    *   **[EJ PÅBÖRJAT]** Generering av Professionell PDF-offert.
 
-- [x] **FAS 1: Grundläggande struktur & Autentisering (AVKLARAD)**
-  - [x] Skapa Firebase-projekt & grundläggande databasregler.
-  - [x] Implementera användarautentisering (Google).
-  - [x] Säkra behörigheter (Scopes) för Drive & Kalender.
-  - [x] Skapa grundläggande layout med Sidebar och Header.
-  - [x] Implementera automatisk omdirigering för inloggade användare.
-  - [x] Skapa datamodeller för `User` och `Project`.
-  - [x] Implementera grundläggande Onboarding-flöde.
+### Fas 2: Proaktiva Varningar och Förbättrad Projektstyrning
 
-- [ ] **FAS 2: Kärnfunktioner (Pågår)**
-  - [x] **Operation: Signerat & Klart** - Automatiserad offerthantering via Google Docs.
-  - [x] **Operation: Synkroniserad Tid** - Integration med Google Kalender i dashboard.
-  - [ ] **Operation: Tidslappen 2.0** - Skapa funktion för tidrapportering per projekt.
-  - [ ] Visa tidrapporter per projekt.
-  - [ ] Skapa funktion för att logga material och kostnader (ÄTA).
+*   **[EJ PÅBÖRJAT] Prediktiv Projektledning & Automatiska Varningar**
+    *   AI-driven Likviditetsanalys & Faktureringsstrategi.
+    *   Dynamisk Riskanalys baserad på Bildigenkänning.
+    *   Prediktiv Resursplanering & UE-koordination.
 
-- [ ] **FAS 3: Integrationer (Ej påbörjad)**
-- [ ] **FAS 4: AI & Insikter (Ej påbörjad)**
+*   **[EJ PÅBÖRJAT] Omfattande Administration och Projektstyrning**
+    *   Kvittohantering med Bildigenkänning (OCR).
+    *   Automatisk Tids- och Milersättning.
+    *   ÄTA-hantering.
+    *   Underlagsskapande (Anbud/Faktura).
+    *   Fullfölj Fakturaflödet (Skicka, Spåra, Påminn).
+    *   Automatiserad Överlämning till Projektfasen.
+
+*   **[EJ PÅBÖRJAT] Platsinformation & Riskminimering (Geodata)**
+    *   Automatiska Markförhållanden (SGU).
+    *   Fornlämningar (RAÄ - Fornsök).
+    *   Geospatial Kontekst (Lantmäteriet).
+
+*   **[EJ PÅBÖRJAT] Företagsinformation & Trygghet (Bakgrundskontroll)**
+    *   Skatteverket (F-skatt & Moms).
+    *   Bolagsverket (Företagsinformation).
+    *   Bakgrundskontroll av Kunder (Proaktiv).
+
+### Fas 3: Avancerade & Prediktiva Funktioner
+
+*   **[EJ PÅBÖRJAT] Hyper-personalisering & Effektivisering**
+    *   Automatisk Generering av "Företagets Bästa Praxis".
+    *   AI-baserad Inköpsoptimering.
+    *   Visuell Materialsökning & Inventering.
+    *   Intelligent "Spill"-optimering.
+    *   Känsloanalys i Kundkommunikation.
+
+*   **[EJ PÅBÖRJAT] Säkerhet & Regelefterlevnad**
+    *   Automatisk Utrustnings- & Säkerhetskontroll.
+    *   Kontinuerlig inlärning av nya branschregler.
+    *   Bokföringslagen och Digital Arkivering.
+    *   Hantering av Skatteverkets krav (ROT, Omvänd etc.).
+    *   GDPR-efterlevnad.
 
 ---
 
@@ -58,19 +96,7 @@ Detta är den centrala filosofin som definierar hur ByggPilot ska kännas och ag
 
 *   **Framework:** Next.js (App Router)
 *   **Språk:** TypeScript
-*   **Backend:** Firebase (Authentication, Firestore, Storage)
+*   **Backend:** Firebase (Authentication, Firestore), Next.js API Routes / Google Cloud Functions
 *   **Styling:** Tailwind CSS
 *   **State Management:** React Context (för Auth), `useState` för lokal state.
 *   **Deployment:** Vercel
-
----
-## 5. Viktiga Filer
-*   `app/layout.tsx`: Root layout, applicerar globala styles och providers.
-*   `app/page.tsx`: Landningssida för oinloggade användare.
-*   `app/dashboard/page.tsx`: Huvudsida för inloggade användare.
-*   `app/context/AuthContext.tsx`: Hanterar all användar-state och inloggningslogik.
-*   `app/lib/firebase/client.ts`: Klient-konfiguration för Firebase.
-*   `app/lib/firebase/firestore.ts`: Funktioner för att interagera med Firestore-databasen.
-*   `tailwind.config.ts`: Konfiguration för Tailwind CSS.
-*   `ai_context.md`: **Denna fil.** Din primära källa för kontext och projektstatus.
-*   `AI_GUIDELINES.md`: Specifika, tekniska regler du måste följa.

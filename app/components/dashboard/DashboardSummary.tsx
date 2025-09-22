@@ -22,7 +22,7 @@ export default function DashboardSummary({ updateTrigger }: DashboardSummaryProp
     const fetchSummary = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch('/api/dashboard/summary');
+        const response = await fetch('/api/dashboard/summary', { credentials: 'include' });
         if (!response.ok) {
           throw new Error('Kunde inte hämta summeringsdata.');
         }
