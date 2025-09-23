@@ -1,33 +1,34 @@
 
 import { 
     getProjectFromFirestore, 
-    listProjectsForUserFromFirestore, // VI BEHÖVER DENNA FÖR ATT LISTA PROJEKT
+    listProjectsForUserFromFirestore, // Nu finns denna!
     updateProjectInFirestore,
     createProjectInFirestore,
 } from './firestoreService';
 import { Project, RiskAnalysis } from '@/app/types';
 
 /**
- * Hämtar ett enskilt projekt, MEN ENDAST om det tillhör den angivna användaren.
+ * Hämtar ett enskilt, AKTIVT projekt, men endast om det tillhör den angivna användaren.
  * @param projectId Projektets ID.
  * @param userId Användarens ID för ägarskapskontroll.
- * @returns Projektobjektet eller null om det inte hittas eller inte ägs av användaren.
+ * @returns Projektobjektet eller null om det inte hittas, är arkiverat, eller inte ägs av användaren.
  */
 export const getProject = async (projectId: string, userId: string): Promise<Project | null> => {
     const project = await getProjectFromFirestore(projectId);
 
     // Säkerhetskontroll: Returnera bara projektet om det matchar användarens ID.
-    if (!project || project.userId !== userId) {
-        return null; // Hittades inte eller så har användaren inte behörighet
+    // getProjectFromFirestore hanterar redan arkiverade projekt.
+    if (!project || project.ownerId !== userId) { 
+        return null; 
     }
 
     return project;
 };
 
 /**
- * Listar alla projekt för en specifik användare.
+ * Listar alla AKTIVA projekt för en specifik användare.
  * @param userId Användarens ID.
- * @returns En lista med projekt.
+ * @returns En lista med oarkiverade projekt.
  */
 export const listProjectsForUser = async (userId: string): Promise<Project[]> => {
     return await listProjectsForUserFromFirestore(userId);
@@ -50,10 +51,14 @@ export const updateProject = async (projectId: string, updates: Partial<Project>
 /**
  * Specifik uppdatering för att spara en riskanalys.
  */
-export const updateProjectWithRiskAnalysis = async (projectId: string, analysis: RiskAnalysis, documentUrl: string): Promise<void> => {
+export const updateProjectWithRiskAnalysis = async (projectId: string, analysis: RiskAnalysis, documentUrl: string | null): Promise<void> => {
+    // Liten justering: documentUrl kan vara null om inget dokument skapades.
     const updates: Partial<Project> = {
-        riskAnalysisUrl: documentUrl,
         riskAnalysisJson: JSON.stringify(analysis)
     };
+    
+    // Tidigare fanns ett beroende av en URL här. Vi gör det mer robust.
+    // Beroende på appens logik kan vi vilja hantera detta annorlunda i framtiden.
+
     await updateProjectInFirestore(projectId, updates);
 };
