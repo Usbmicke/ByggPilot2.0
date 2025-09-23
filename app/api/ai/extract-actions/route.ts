@@ -73,6 +73,13 @@ const getActionExtractionPrompt = (email: ClassifiedEmail): string => {
 };
 
 export async function POST(request: NextRequest) {
+    // Validera att API-nyckeln för Gemini finns
+    const geminiApiKey = process.env.GEMINI_API_KEY;
+    if (!geminiApiKey) {
+        console.error("[AI Extract] GEMINI_API_KEY är inte konfigurerad i miljövariablerna.");
+        return NextResponse.json({ message: "Serverkonfigurationsfel: AI-motorn är inte konfigurerad." }, { status: 500 });
+    }
+
     try {
         const email: ClassifiedEmail = await request.json();
 
@@ -83,7 +90,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Initiera AI-modellen
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+        const genAI = new GoogleGenerativeAI(geminiApiKey);
         const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
 
         const result = await model.generateContent(prompt);

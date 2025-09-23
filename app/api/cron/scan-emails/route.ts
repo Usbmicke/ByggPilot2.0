@@ -59,6 +59,13 @@ const fetchNewEmails = async (accessToken: string) => {
 export async function GET() {
     console.log('\n--- [CRON-JOBB STARTAR]: Söker efter relevanta e-postmeddelanden... ---');
 
+    // Validera att API-nyckeln för Gemini finns
+    const geminiApiKey = process.env.GEMINI_API_KEY;
+    if (!geminiApiKey) {
+        console.error("[Cron Job] GEMINI_API_KEY är inte konfigurerad i miljövariablerna.");
+        return NextResponse.json({ message: "Serverkonfigurationsfel: AI-motorn är inte konfigurerad." }, { status: 500 });
+    }
+
     // 1. Hämta användarens token (Simulering)
     const refreshToken = await getRefreshTokenForUser('user_123');
     // I verkligheten: Byt refresh_token mot en ny access_token
@@ -69,8 +76,7 @@ export async function GET() {
     console.log(`Hämtade ${emails.length} nya e-postmeddelanden.`);
 
     // 3. Initiera AI-modellen
-    // OBS: I en riktig app hämtas API-nyckeln från en säker miljövariabel
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
 
     // 4. Bearbeta varje e-post med AI för klassificering

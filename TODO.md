@@ -9,7 +9,7 @@ Denna fil är en centraliserad lista över alla platshållare, simuleringar och 
 - [x] **Hemligheter för Google OAuth:** I `app/api/auth/integrations/google/connect/route.ts` och `.../callback/route.ts` är `GOOGLE_CLIENT_ID` och `GOOGLE_CLIENT_SECRET` hårdkodade som platshållare. Dessa måste flyttas till säkra miljövariabler (`.env.local`) och konfigureras i Google Cloud Console.
 - [x] **Säker Token-lagring:** `app/api/auth/integrations/google/callback/route.ts` simulerar kryptering och lagring av `access_token` och `refresh_token`. En robust krypteringsmekanism (t.ex. med `crypto`) måste implementeras och tokens måste sparas i Firestore-databasen, säkert kopplade till användaren.
 - [x] **Frånkopplingslogik:** `app/components/GoogleConnectButton.tsx` har en `handleDisconnect`-funktion som är en platshållare. Den måste anropa en API-rutt som raderar användarens tokens från databasen.
-- [ ] **API-Nyckel för Gemini:** `app/api/cron/scan-emails/route.ts` och `app/api/ai/extract-actions/route.ts` använder `process.env.GEMINI_API_KEY`. Detta måste konfigureras korrekt i produktionsmiljön.
+- [x] **API-Nyckel för Gemini:** `app/api/cron/scan-emails/route.ts` och `app/api/ai/extract-actions/route.ts` använder `process.env.GEMINI_API_KEY`. Detta måste konfigureras korrekt i produktionsmiljön.
 
 ### 2. Datainsamling (E-post-skanner)
 
