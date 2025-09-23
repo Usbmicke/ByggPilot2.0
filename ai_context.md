@@ -1,102 +1,127 @@
+# ByggPilot: Masterplan & Kärnfilosofi (v2.1)
 
-## 1. Mål & Vision
-
-ByggPilot är en digital kollega för små och medelstora byggföretag i Sverige. Målet är att eliminera "pappersmonstret" – all den tidskrävande administration som stjäl tid från det verkliga hantverket. Applikationen ska agera som ett proaktivt och intelligent lager ovanpå användarens Google Workspace för att automatisera flöden från offert till faktura, samla all projektdata på ett ställe och ge användaren datadrivna insikter för att öka lönsamheten.
-
-**Grundare:** Michael Ekengren Fogelström, en hantverkare med 20 års erfarenhet.
-**Kärnvärde:** Byggd av en hantverkare, för hantverkare. Empati för användarens stressiga vardag är centralt.
+Detta dokument är den enda, centrala källan till sanning för ByggPilot-projektet. All utveckling utgår härifrån.
 
 ---
 
-## 2. ByggPilot-Tänk: Kärnprinciper
+## 1. Vision & Kärnfilosofi: "ByggPilot-Tänket"
 
-Detta är den centrala filosofin som definierar hur ByggPilot ska kännas och agera. Den väger tyngre än allt annat.
+ByggPilot är inte ett verktyg; det är en **proaktiv digital kollega** för hantverkare i Sverige. Målet är att eliminera "pappersmonstret" och ge hantverkaren full kontroll över sin tid och lönsamhet.
 
-1.  **Den Proaktiva Digitala Kollegan:** ByggPilot är en erfaren, lugn och extremt kompetent digital kollega. Tonfallet är självsäkert, rakt på sak och förtroendeingivande. Den agerar och automatiserar, tar initiativ och förklarar alltid värdet av sina handlingar för att minska stress, skapa ordning och frigöra tid.
+**Grundare:** Michael Ekengren Fogelström.
+**Kärnvärde:** Byggd av en hantverkare, för hantverkare. Empati och förståelse för användarens vardag är allt.
 
-2.  **Agera, men med Omdöme och Empati:** Ta initiativ för att förbereda och föreslå. Sammanfatta ett mail, förbered ett utkast, flagga en risk. Men agera aldrig externt (t.ex. skicka ett mail) utan användarens explicita godkännande. All kommunikation är empatisk inför hantverkarens stressiga vardag.
+### Kärnprinciper:
 
-3.  **Planering och Tydlig Kommunikation är A och O:** Hela produktens syfte är att främja dessa två grundpelare. Funktioner ska guida användaren till bättre planering och tydligare kommunikation med sina kunder.
+1.  **Proaktivitet är Standard:** ByggPilot frågar inte "Vill du ha hjälp?". Den agerar.
+    *   **Fel:** "Ska vi göra en riskanalys?"
+    *   **Rätt:** "Jag har skapat ett utkast för riskanalysen baserat på platsen. Jag hittade 3 punkter vi bör titta på för att säkra kvaliteten och undvika merkostnader."
 
-4.  **Alltid Fokuserad på Målet:** Målet är att ge användaren tillbaka kontroll, tid och lönsamhet. Om en funktion är komplicerad är den fel. Om en process är manuell är den en möjlighet till automatisering.
+2.  **Agera med Omdöme:** ByggPilot förbereder och automatiserar internt (skapar utkast, analyserar data, hittar information). Den agerar **aldrig** externt (skickar mail, kontaktar kund) utan användarens explicita godkännande.
 
----
+3.  **Fokus på Värde:** Varje funktion, varje knapp, varje textrad måste svara på frågan: "Hur hjälper detta hantverkaren att spara tid, minska stress eller öka lönsamheten?" Om svaret är oklart är funktionen fel.
 
-## 3. Handlingsplan & Status
-
-Detta är den prioriterade checklistan. Status (EJ PÅBÖRJAT, PÅGÅR, AVKLARAD) uppdateras löpande av AI-assistenten.
-
-### Fas 1: Proaktiv Onboarding & Kärnfunktionalitet
-
-*   **[PÅGÅR] AI-assistent och Proaktiv Chattfunktionalitet**
-    *   **[AVKLARAD]** Engagerande Hälsning och Konversation.
-    *   **[EJ PÅBÖRJAT]** Proaktiv Informationshämtning (företagsinfo).
-    *   **[PÅGÅR]** Språkanpassning.
-    *   **[EJ PÅBÖRJAT]** Generering av Tydliga Checklistor (KMA etc.).
-
-*   **[PÅGÅR] Google Workspace Integration & Automatiserad Onboarding**
-    *   **[AVKLARAD]** Grundläggande Autentisering & Inloggning.
-    *   **[PÅGÅR]** Reparera Dashboard & Projektöversikt (index + auth-fix).
-    *   **[EJ PÅBÖRJAT]** Automatisk Mappstruktur i Google Drive (Onboarding).
-    *   **[EJ PÅBÖRJAT]** Dashboard med "Zero State" vy.
-    *   **[EJ PÅBÖRJAT]** Google Kalender-integration (Proaktiv). 
-    *   **[EJ PÅBÖRJAT]** Gmail-integration (Proaktiv).
-
-*   **[NÄSTA STEG] Offertmotor – Grunden (Den Guidade Kalkylatorn)**
-    *   **[EJ PÅBÖRJAT]** Datamodell för Offert.
-    *   **[EJ PÅBÖRJAT]** Guidad Insamling av Underlag (Platsbesöket).
-    *   **[EJ PÅBÖRJAT]** AI-assisterad Kalkyl (Skrivbordsjobbet).
-    *   **[EJ PÅBÖRJAT]** Proaktiva KMA-frågor under kalkylen.
-    *   **[EJ PÅBÖRJAT]** Generering av Professionell PDF-offert.
-
-### Fas 2: Proaktiva Varningar och Förbättrad Projektstyrning
-
-*   **[EJ PÅBÖRJAT] Prediktiv Projektledning & Automatiska Varningar**
-    *   AI-driven Likviditetsanalys & Faktureringsstrategi.
-    *   Dynamisk Riskanalys baserad på Bildigenkänning.
-    *   Prediktiv Resursplanering & UE-koordination.
-
-*   **[EJ PÅBÖRJAT] Omfattande Administration och Projektstyrning**
-    *   Kvittohantering med Bildigenkänning (OCR).
-    *   Automatisk Tids- och Milersättning.
-    *   ÄTA-hantering.
-    *   Underlagsskapande (Anbud/Faktura).
-    *   Fullfölj Fakturaflödet (Skicka, Spåra, Påminn).
-    *   Automatiserad Överlämning till Projektfasen.
-
-*   **[EJ PÅBÖRJAT] Platsinformation & Riskminimering (Geodata)**
-    *   Automatiska Markförhållanden (SGU).
-    *   Fornlämningar (RAÄ - Fornsök).
-    *   Geospatial Kontekst (Lantmäteriet).
-
-*   **[EJ PÅBÖRJAT] Företagsinformation & Trygghet (Bakgrundskontroll)**
-    *   Skatteverket (F-skatt & Moms).
-    *   Bolagsverket (Företagsinformation).
-    *   Bakgrundskontroll av Kunder (Proaktiv).
-
-### Fas 3: Avancerade & Prediktiva Funktioner
-
-*   **[EJ PÅBÖRJAT] Hyper-personalisering & Effektivisering**
-    *   Automatisk Generering av "Företagets Bästa Praxis".
-    *   AI-baserad Inköpsoptimering.
-    *   Visuell Materialsökning & Inventering.
-    *   Intelligent "Spill"-optimering.
-    *   Känsloanalys i Kundkommunikation.
-
-*   **[EJ PÅBÖRJAT] Säkerhet & Regelefterlevnad**
-    *   Automatisk Utrustnings- & Säkerhetskontroll.
-    *   Kontinuerlig inlärning av nya branschregler.
-    *   Bokföringslagen och Digital Arkivering.
-    *   Hantering av Skatteverkets krav (ROT, Omvänd etc.).
-    *   GDPR-efterlevnad.
+4.  **Företagsvisionen som Kompass:** Systemet ska erbjuda användaren att definiera sin företagsvision (t.ex. "välmående ekonomi, minskad stress, 100% nöjda kunder"). ByggPilot använder sedan denna vision som en extra kompass för sina rekommendationer och proaktiva handlingar.
 
 ---
 
-## 4. Teknisk Stack
+## 2. Teknisk Arkitektur & Filstruktur
 
-*   **Framework:** Next.js (App Router)
-*   **Språk:** TypeScript
-*   **Backend:** Firebase (Authentication, Firestore), Next.js API Routes / Google Cloud Functions
-*   **Styling:** Tailwind CSS
-*   **State Management:** React Context (för Auth), `useState` för lokal state.
-*   **Deployment:** Vercel
+För att undvika dubbelarbete och upprätthålla en ren kodbas följer vi denna struktur:
+
+*   **/app/api/**: All backend-logik och API-endpoints. Varje route har sin egen mapp (t.ex. `/app/api/projects/create/route.ts`).
+*   **/app/components/**: Alla återanvändbara React-komponenter.
+    *   `/dashboard/`: Komponenter specifika för Dashboarden.
+    *   `/modals/`: Alla modal-dialoger (t.ex. `CreateProjectModal`).
+    *   `/views/`: Större "vy"-komponenter (t.ex. `AtaView`).
+*   **/app/lib/**: Kärnbibliotek och konfigurationer (t.ex. `auth.ts`, `firebase.ts`, `prisma.ts`).
+*   **/app/services/**: Funktioner för att interagera med backend-tjänster och databaser (t.ex. `projectService.ts`).
+*   **/app/types/**: Centraliserade TypeScript-typer och interfaces.
+*   **/ai_context.md**: **Detta dokument.** Den enda källan till sanning för vision och planering.
+
+---
+
+## 3. Komplett Master-Checklista (Strategisk Roadmap)
+
+Status: `[VÄNTAR]`, `[PÅBÖRJAD]`, `[KLAR]`
+
+### Fas 0: Grundsystem & Stabilisering (95% KLAR)
+
+*   **Autentisering & Användare:**
+    *   [KLAR] Inloggning via Google (`NextAuth`).
+    *   [KLAR] Synkronisering `NextAuth` <-> `Firebase`.
+*   **Dashboard & Projekt:**
+    *   [KLAR] Grundläggande Dashboard-sida (`app/dashboard/page.tsx`).
+    *   [KLAR] Kritiska import/export-fel på Dashboard är lösta.
+    *   [KLAR] Modal för att skapa nya projekt (`CreateProjectModal`).
+    *   [KLAR] API för att skapa projekt.
+    *   [KLAR] Professionell, sekventiell projektnumrering (t.ex. `353-2475`).
+*   **ÄTA-hantering (Grundflöde):**
+    *   [KLAR] "ÄTA"-flik i projektvyn.
+    *   [KLAR] Modal för snabbinmatning av ÄTA (`CreateAtaModal`).
+    *   [KLAR] API för att skapa ÄTA-utkast.
+    *   [KLAR] Nyskapade ÄTA-utkast visas i en lista (`AtaView`).
+*   **Databas:**
+    *   [VÄNTAR] **KRITISKT:** Byta ut all *simulerad* datalagring mot **riktig, permanent databas-interaktion** (t.ex. med Prisma/Firestore).
+
+### Fas 1: Kärnprocesser & Intelligens (NÄSTA STEG)
+
+*   **Finalisera Chatt-Intelligens (Masterprompt 9.0):**
+    *   [VÄNTAR] Implementera "Masterprompt 9.0" fullt ut i `app/api/chat/route.ts` för att vässa den proaktiva personan.
+    *   [VÄNTAR] Definiera och implementera ett gränssnitt (API/events) för hur chatten kan styra och interagera med UI-komponenter (öppna modaler, navigera, uppdatera vyer).
+    *   [VÄNTAR] Full integration av röst-till-text-transkribering för att mata chatten.
+
+*   **Utökad Onboarding:**
+    *   [PÅBÖRJAD] "Zero State" / Onboarding-vy när inga projekt finns.
+    *   [VÄNTAR] Vid första inloggning: guida användaren genom en kort process.
+    *   [VÄNTAR] **Automatisk skapande av Google Drive-mappstruktur** (`/01_Kunder`, `/02_Projekt`, etc.) under onboardingen.
+    *   [VÄNTAR] Möjlighet att fylla i "Företagsvision" & policy-dokument som ByggPilot kan använda som kunskapsbank.
+    *   [VÄNTAR] Inkludera en smart, skyddande text om AI:ns roll, vikten av att dubbelkolla, och hur ByggPilot sparar tid.
+*   **Förädling av ÄTA-processen:**
+    *   [VÄNTAR] Gör ÄTA-listan klickbar för att öppna en detaljvy.
+    *   [VÄNTAR] I detaljvyn: möjlighet att lägga till/redigera pris, material, status (Utkast -> Skickad -> Godkänd).
+*   **Smarta Offertmotorn (Grundläggande "Text Calculator"):**
+    *   [VÄNTAR] Skapa en ny vy för kalkylering/offertskapande.
+    *   [VÄNTAR] Bygg en grundläggande "text-till-kalkyl"-motor där användaren kan skriva fritt och AI:n strukturerar det till offert-rader.
+    *   [VÄNTAR] Generera en enkel, professionell PDF-offert från kalkylen.
+
+### Fas 2: Funktions-Expansion & Effektivisering (PLANERAD)
+
+*   **Utökad ÄTA-insamling:**
+    *   [VÄNTAR] Implementera **röstmemo-inspelning** i `CreateAtaModal`.
+    *   [VÄNTAR] Implementera **bilduppladdning** (Ta/välj bild) i `CreateAtaModal`.
+    *   [VÄNTAR] Backend för att lagra dessa filer i projektets Drive-mapp.
+*   **Tid & Resor (Förenklad version):**
+    *   [VÄNTAR] Lägg till en "Logga Tid"-knapp på projektkort/vyer.
+    *   [VÄNTAR] I tidloggningen, erbjuda en enkel checkbox för "Biltillägg" eller liknande.
+    *   [VÄNTAR] Loggad tid och tillägg kopplas till projektets ekonomi.
+*   **Dokument & Underlag:**
+    *   [VÄNTAR] Skanna kvitton med OCR för att identifiera belopp och koppla till projekt.
+    *   [VÄNTAR] **Automatisk hämtning av Fastighetsbeteckning** via Lantmäteriet API vid ROT-arbeten.
+
+### Fas 3: Team, Samarbete & Säkerhet (FRAMTID)
+
+*   **Teamhantering (Multi-user):**
+    *   [VÄNTAR] Inför Företagskonton med roller: **Administratör** och **Anställd**.
+    *   [VÄNTAR] Admin kan bjudas in anställda, se alla projekt och hantera inställningar.
+    *   [VÄNTAR] Anställd kan se tilldelade projekt, rapportera tid/utlägg, och göra interna utbildningar.
+*   **Visuell Resursplanering:**
+    *   [VÄNTAR] En central vy för admin att se personalens beläggning.
+    *   [VÄNTAR] "Dra-och-släpp"-tilldelning av anställda till projekt.
+*   **Säkerhet & Regelefterlevnad:**
+    *   [VÄNTAR] **Automatiserad Kemikaliehantering:** Identifiera kemikalier från kvitton, presentera förenklad skyddsinfo proaktivt, och arkivera säkerhetsdatablad i projektmappen.
+*   **Intern Utbildning:**
+    *   [VÄNTAR] Företagets kunskapsbank baserad på dokument i en specifik Drive-mapp.
+    *   [VÄNTAR] Interaktivt "Quizz" för nyanställda baserat på kunskapsbanken.
+
+### Fas 4: Avancerad Automation & Intelligens (VISION)
+
+*   **Avancerad Körjournal (Ersätter den enkla tidloggen):**
+    *   [VÄNTAR] Fullfjädrad körjournal med "Start/Stopp"-knapp (ej GPS-spårning i bakgrunden), automatisk sträckberäkning och intelligent kategorisering (Projekt vs. Företagsresa).
+    *   [VÄNTAR] Generering av deklarationsfärdig PDF.
+*   **Proaktiv Resurshantering ("Jonas är sjuk"-scenariot):**
+    *   [VÄNTAR] Vid frånvaro: automatisk konsekvensanalys och förslag på omfördelning av personal.
+    *   [VÄNTAR] Förbereda utkast för kundkommunikation vid omprioriteringar.
+*   **Google Integration & Affärsmodell:**
+    *   [VÄNTAR] Proaktiv kontroll av Google Drive-lagringsutrymme med rekommendation om uppgradering som ett tecken på tillväxt.
+    *   [VÄNTAR] Säkerställ full funktionalitet med gratis Google-konton.
