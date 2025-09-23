@@ -1,101 +1,63 @@
-
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
-import { useSession } from 'next-auth/react';
-import { firestore as db } from '@/app/lib/firebase/client';
-import { Project } from '@/app/types/project';
+import React from 'react';
+import type { Project } from '@/app/types/project'; // Säkerställer korrekt typning
 import Link from 'next/link';
+import { FolderIcon } from '@heroicons/react/24/outline'; // Ikon för tomt tillstånd
 
-// Helper for status chip styling
+// Helper för status-chip styling, anpassad för mörkt tema
 const getStatusChipClass = (status: Project['status']) => {
   switch (status) {
-    case 'Positiv':
-      return 'bg-status-gold/20 text-status-gold';
-    case 'Varning':
-      return 'bg-status-danger/20 text-status-danger';
-    case 'Pågående':
-      return 'bg-status-gold/20 text-status-gold';
-    case 'Avslutat':
-    case 'Fakturerat':
-    case 'Offert':
-      return 'bg-accent-blue/20 text-accent-blue';
-    case 'Arkiverat':
-      return 'bg-background-primary/50 text-text-secondary';
-    default:
-      return 'bg-background-primary';
+    case 'Positiv': return 'bg-yellow-400/10 text-yellow-400 border border-yellow-400/30';
+    case 'Varning': return 'bg-red-400/10 text-red-400 border border-red-400/30';
+    case 'Pågående': return 'bg-blue-400/10 text-blue-400 border border-blue-400/30';
+    case 'Avslutad': return 'bg-green-400/10 text-green-400 border border-green-400/30';
+    case 'Fakturerat': return 'bg-purple-400/10 text-purple-400 border border-purple-400/30';
+    case 'Offert': return 'bg-cyan-400/10 text-cyan-400 border border-cyan-400/30';
+    case 'Arkiverat': return 'bg-gray-500/10 text-gray-400 border border-gray-500/30';
+    default: return 'bg-gray-700 text-gray-300';
   }
 };
 
-// Helper for project card styling
+// Helper för projekt-kort-styling, anpassad för mörkt tema
 const getProjectCardClass = (status: Project['status']) => {
-    const baseClasses = "block bg-background-secondary p-6 rounded-lg border transition-all duration-300 hover:shadow-lg";
-  
+    const baseClasses = "block bg-gray-800/50 p-6 rounded-lg border transition-all duration-300 hover:shadow-lg hover:scale-[1.02]";
     switch (status) {
-      case 'Positiv':
-        return `${baseClasses} border-status-gold/50 shadow-lg shadow-status-gold/10 animate-pulse-slow hover:border-status-gold hover:bg-background-primary`;
-      case 'Varning':
-        return `${baseClasses} border-status-danger/50 hover:border-status-danger hover:bg-background-primary`;
-      default:
-        return `${baseClasses} border-border-primary hover:bg-background-primary hover:border-accent-blue/50`;
+      case 'Positiv': return `${baseClasses} border-yellow-600/50 hover:border-yellow-500`;
+      case 'Varning': return `${baseClasses} border-red-600/50 hover:border-red-500`;
+      default: return `${baseClasses} border-gray-700 hover:border-indigo-500`;
     }
   };
 
 interface ProjectListProps {
-  updateTrigger: number;
+  projects: Project[];
+  isLoading: boolean;
 }
 
-export default function ProjectList({ updateTrigger }: ProjectListProps) {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const { data: session } = useSession();
+export function ProjectList({ projects, isLoading }: ProjectListProps) {
 
-  useEffect(() => {
-    if (session?.user?.id) {
-      const q = query(
-        collection(db, 'projects'),
-        where('userId', '==', session.user.id),
-        orderBy('createdAt', 'desc')
-      );
-
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const projectsData = querySnapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() } as Project))
-          .filter(project => project.status !== 'Arkiverat');
-
-        setProjects(projectsData);
-        setIsLoading(false);
-      }, (error) => {
-        console.error("Fel vid hämtning av projektlista:", error);
-        setIsLoading(false);
-      });
-
-      return () => unsubscribe();
-    } else {
-      setIsLoading(false);
-    }
-  }, [session, updateTrigger]);
-
+  // Laddnings-skelett som matchar det mörka temat
   if (isLoading) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="bg-background-secondary p-6 rounded-lg border border-border-primary animate-pulse">
-                    <div className="h-5 bg-border-primary rounded w-1/4 mb-2"></div>
-                    <div className="h-8 bg-border-primary rounded w-3/4 mb-4"></div>
-                    <div className="h-6 bg-border-primary rounded w-1/2"></div>
+            {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="bg-gray-800/50 p-6 rounded-lg border border-gray-700 animate-pulse">
+                    <div className="h-4 bg-gray-700 rounded w-1/4 mb-3"></div>
+                    <div className="h-6 bg-gray-600 rounded w-3/4 mb-5"></div>
+                    <div className="h-5 bg-gray-700 rounded w-1/2"></div>
                 </div>
             ))}
         </div>
     );
   }
 
+  // Förbättrat "tomt tillstånd" som passar designen
   if (projects.length === 0) {
     return (
-      <div className="text-center bg-background-secondary border border-dashed border-border-primary p-12 rounded-lg">
-        <h3 className="text-xl font-semibold text-text-primary">Du har inga aktiva projekt än.</h3>
-        <p className="text-text-secondary mt-2">Klicka på "+ Skapa Nytt Projekt" för att komma igång.</p>
+      <div className="text-center bg-gray-800/50 border-2 border-dashed border-gray-700 p-12 rounded-lg">
+        <FolderIcon className="mx-auto h-12 w-12 text-gray-500" />
+        <h3 className="mt-4 text-lg font-medium text-gray-300">Du har inga aktiva projekt.</h3>
+        <p className="mt-1 text-sm text-gray-500">Klicka på "+ Skapa Offert" i menyn för att komma igång.</p>
       </div>
     );
   }
@@ -104,14 +66,16 @@ export default function ProjectList({ updateTrigger }: ProjectListProps) {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {projects.map(project => (
         <Link href={`/dashboard/projects/${project.id}`} key={project.id} className={getProjectCardClass(project.status)}>
-          <div className="flex justify-between items-start">
-            <p className="text-sm text-accent-blue font-mono">#{project.projectNumber}</p>
-            <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${getStatusChipClass(project.status)}`}>
-              {project.status}
-            </span>
-          </div>
-          <h3 className="text-xl font-bold text-text-primary mt-2 truncate">{project.projectName}</h3>
-          <p className="text-text-secondary truncate">{project.clientName}</p>
+            <div className="flex justify-between items-start">
+                <p className="text-sm font-mono text-cyan-400">#{project.projectNumber || '---'}</p>
+                <span className={`px-2.5 py-0.5 text-xs font-semibold rounded-full ${getStatusChipClass(project.status)}`}>
+                    {project.status}
+                </span>
+            </div>
+            <div className="mt-3">
+                <h3 className="text-lg font-bold text-white truncate" title={project.projectName}>{project.projectName}</h3>
+                <p className="text-gray-400 truncate" title={project.clientName}>{project.clientName}</p>
+            </div>
         </Link>
       ))}
     </div>

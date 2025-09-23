@@ -6,7 +6,7 @@ import { firestoreAdmin } from "@/app/lib/firebase-admin";
 
 /**
  * API-rutt för att koppla från en Google-integration.
- * Raderar användarens Google-tokens från Firestore.
+ * Raderar användarens Google-tokens från Firestore och tar bort flaggan på användardokumentet.
  */
 export async function POST(request: NextRequest) {
     // 1. Hämta och validera den inloggade användarens session
@@ -20,14 +20,21 @@ export async function POST(request: NextRequest) {
     try {
         console.log(`[Disconnect] Påbörjar frånkoppling av Google för användare: ${userId}`);
         
-        // 2. Definiera sökvägen till integrationsdokumentet i Firestore
         const db = firestoreAdmin;
+        const batch = db.batch();
+
+        // 2. Definiera sökvägen till integrationsdokumentet och radera det
         const integrationRef = db.collection('users').doc(userId).collection('integrations').doc('google');
+        batch.delete(integrationRef);
 
-        // 3. Radera dokumentet
-        await integrationRef.delete();
+        // 3. Definiera sökvägen till huvudanvändardokumentet och ta bort flaggan
+        const userRef = db.collection('users').doc(userId);
+        batch.update(userRef, { hasGoogleIntegration: false });
 
-        console.log(`[Disconnect] Google-integrationen har raderats från Firestore för användare: ${userId}`);
+        // 4. Genomför båda operationerna atomärt
+        await batch.commit();
+
+        console.log(`[Disconnect] Google-integration har raderats och flagga har tagits bort för användare: ${userId}`);
 
         return NextResponse.json({ message: "Google-kontot har kopplats från." }, { status: 200 });
 

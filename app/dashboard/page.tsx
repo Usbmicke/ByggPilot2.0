@@ -1,60 +1,62 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import DashboardView from '@/app/components/views/DashboardView';
-import ZeroState from '@/app/components/dashboard/ZeroState';
-import { Project } from '@/app/types';
+import { ActionSuggestions } from "@/app/components/dashboard/ActionSuggestions";
+import { ProjectList } from "@/app/components/dashboard/ProjectList";
+import { WelcomeHeader } from "@/app/components/dashboard/WelcomeHeader";
+import type { Project } from "@/app/types/project";
 
-// Denna komponent blir nu huvudkontrollern för dashboarden.
 export default function DashboardPage() {
-  const { data: session, status } = useSession();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+    const { data: session, status } = useSession();
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Simulera hämtning av projekt. I en riktig applikation
-    // skulle detta vara ett API-anrop till Firestore baserat på användar-ID.
-    const fetchProjects = async () => {
-      if (status === 'authenticated') {
-        console.log("Simulerar projekt-hämtning för användare:", session?.user?.id);
-        // HÅRDKODAT: Sätt till en tom array för att tvinga ZeroState.
-        // Ändra detta till en icke-tom array för att testa DashboardView.
-        const fetchedProjects: Project[] = []; 
-        setProjects(fetchedProjects);
-      }
-      setIsLoading(false);
-    };
+    useEffect(() => {
+        const fetchProjects = async () => {
+            // Avbryt om sessionen inte är laddad eller om användaren inte är autentiserad
+            if (status !== 'authenticated') return;
 
-    fetchProjects();
-  }, [session, status]);
+            setIsLoading(true);
+            try {
+                const response = await fetch('/api/projects');
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Kunde inte hämta projekt');
+                }
+                const data: Project[] = await response.json();
+                setProjects(data);
+            } catch (err: any) {
+                console.error("Fel vid hämtning av projekt:", err);
+                setError(err.message);
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
-  // Medan session och data laddas, visa en Platshållare
-  if (status === 'loading' || isLoading) {
+        fetchProjects();
+    }, [status]); // Kör effekten när autentiseringsstatusen ändras
+
+    // Visa laddningsindikator medan sessionen verifieras
+    if (status === 'loading') {
+        return <div className="text-center p-8 text-gray-400">Laddar session...</div>;
+    }
+
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-pulse">
-            <div className="h-8 w-1/3 bg-gray-700 rounded mb-8"></div>
-            <div className="h-64 bg-gray-800/50 rounded-xl border border-dashed border-gray-600"></div>
+        <div className="space-y-12">
+            <WelcomeHeader />
+            
+            <section aria-labelledby="action-suggestions-heading">
+                <h2 id="action-suggestions-heading" className="text-2xl font-bold tracking-tight text-white mb-6">Dina föreslagna åtgärder</h2>
+                <ActionSuggestions />
+            </section>
+
+            <section aria-labelledby="project-list-heading">
+                <h2 id="project-list-heading" className="text-2xl font-bold tracking-tight text-white mb-6">Dina projekt</h2>
+                {error && <p className="text-red-400 bg-red-900/20 p-4 rounded-md">Kunde inte ladda projekt: {error}</p>}
+                <ProjectList projects={projects} isLoading={isLoading} />
+            </section>
         </div>
     );
-  }
-
-  // Om användaren inte är inloggad
-  if (status === 'unauthenticated') {
-      return <p className="text-center text-red-400 p-8">Du måste vara inloggad för att se denna sida.</p>;
-  }
-
-  // Huvudlogiken: Visa ZeroState om inga projekt finns, annars DashboardView
-  const hasProjects = projects.length > 0;
-  const username = session?.user?.name || 'Användare';
-
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {hasProjects ? (
-        <DashboardView username={username} />
-      ) : (
-        <ZeroState /> // Nu utan den borttagna prop:en
-      )}
-    </div>
-  );
 }

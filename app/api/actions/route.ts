@@ -1,57 +1,85 @@
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { firestoreAdmin } from "@/app/lib/firebase-admin";
 
-// Detta är en simulerad databas-fråga som hämtar färdigbearbetade "åtgärder" eller "förslag".
-// I en verklig applikation skulle detta vara resultatet av att `extract-actions`-skriptet 
-// har kört och sparat sina resultat i en Firestore-databas.
-const getSuggestedActions = async () => {
-    return [
-        {
-            "actionType": "PROJECT_LEAD",
-            "sourceEmailId": "msg-101",
-            "summary": "Nytt projekt: Altanbygge i Nacka",
-            "contact": {
-                "name": "Kalle Svensson",
-                "email": "kalle.svensson@gmail.com",
-                "phone": null
-            },
-            "details": "Kunden vill ha en offert på ett altanbygge på cirka 30 kvadratmeter.",
-            "suggestedNextStep": "Boka ett platsbesök för att diskutera detaljer och mått.",
-            "status": "new"
-        },
-        {
-            "actionType": "INVOICE_PROCESSING",
-            "sourceEmailId": "msg-102",
-            "vendorName": "Beijer Bygg",
-            "invoiceNumber": "2024-50123",
-            "amount": 15432,
-            "currency": "SEK",
-            "dueDate": "2024-07-30",
-            "suggestedNextStep": "Skicka för attestering till ansvarig projektledare.",
-            "status": "new"
-        },
-        {
-            "actionType": "PROJECT_LEAD",
-            "sourceEmailId": "msg-205",
-            "summary": "Takomläggning villa i Täby",
-            "contact": {
-                "name": "Anna Andersson",
-                "email": "anna.a@hotmail.com",
-                "phone": "070-123 45 67"
-            },
-            "details": "Hela villataket behöver läggas om. Gäller både tegel och papp. Önskar en skyndsam offert.",
-            "suggestedNextStep": "Ta fram en initial offert baserat på informationen och föreslå en tid för inspektion.",
-            "status": "new"
+/**
+ * API-rutt för att hämta alla nya, föreslagna åtgärder för en användare.
+ */
+export async function GET(request: NextRequest) {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.id) {
+        return NextResponse.json({ message: "Åtkomst nekad" }, { status: 401 });
+    }
+    const userId = session.user.id;
+
+    try {
+        const db = firestoreAdmin;
+        const actionsSnapshot = await db.collection('users').doc(userId)
+                                       .collection('actions')
+                                       .where('status', '==', 'new') // Hämta bara nya åtgärder
+                                       .orderBy('createdAt', 'desc') // De nyaste först
+                                       .get();
+
+        if (actionsSnapshot.empty) {
+            return NextResponse.json([]); // Returnera en tom lista om inga åtgärder finns
         }
-    ];
+
+        // Mappa dokumenten till en mer lätthanterlig array av objekt
+        const actions = actionsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+        }));
+
+        return NextResponse.json(actions);
+
+    } catch (error) {
+        console.error(`Fel vid hämtning av åtgärder för användare ${userId}:`, error);
+        return NextResponse.json({ message: "Ett internt serverfel inträffade." }, { status: 500 });
+    }
 }
 
-export async function GET() {
+/**
+ * API-rutt för att uppdatera statusen på en åtgärd (t.ex. ignorera den).
+ */
+export async function POST(request: NextRequest) {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.id) {
+        return NextResponse.json({ message: "Åtkomst nekad" }, { status: 401 });
+    }
+    const userId = session.user.id;
+
     try {
-        const actions = await getSuggestedActions();
-        return NextResponse.json(actions);
+        const { actionId, newStatus } = await request.json();
+
+        if (!actionId || !newStatus) {
+            return NextResponse.json({ message: "Action ID och ny status krävs." }, { status: 400 });
+        }
+
+        // Validera att den nya statusen är en av de tillåtna
+        const allowedStatus = ['ignored', 'archived', 'done'];
+        if (!allowedStatus.includes(newStatus)) {
+            return NextResponse.json({ message: "Ogiltig status." }, { status: 400 });
+        }
+
+        const db = firestoreAdmin;
+        const actionRef = db.collection('users').doc(userId).collection('actions').doc(actionId);
+
+        // Kontrollera att åtgärden faktiskt finns innan vi försöker uppdatera den
+        const doc = await actionRef.get();
+        if (!doc.exists) {
+            return NextResponse.json({ message: "Åtgärden hittades inte." }, { status: 404 });
+        }
+
+        await actionRef.update({ status: newStatus });
+
+        console.log(`Uppdaterade status för åtgärd ${actionId} till ${newStatus} för användare ${userId}`);
+
+        return NextResponse.json({ success: true });
+
     } catch (error) {
-        console.error('Fel i actions API:', error);
-        return NextResponse.json({ error: 'Kunde inte hämta föreslagna åtgärder.' }, { status: 500 });
+        console.error(`Fel vid uppdatering av åtgärd för användare ${userId}:`, error);
+        return NextResponse.json({ message: "Ett internt serverfel inträffade." }, { status: 500 });
     }
 }

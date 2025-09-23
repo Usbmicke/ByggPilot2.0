@@ -1,16 +1,20 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { firestoreAdmin } from '@/app/lib/firebase-admin';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../../auth/[...nextauth]/route';
 
-// Typdefinition för ett inkommande, klassificerat e-postmeddelande
 interface ClassifiedEmail {
     id: string;
     from: string;
     subject: string;
     snippet: string;
-    classification: string; // t.ex. 'Kundförfrågan', 'Leverantörsfaktura'
+    classification: string;
+    userId: string; // Viktigt: Vi måste veta vilken användare detta gäller
 }
 
+// ... (getActionExtractionPrompt förblir oförändrad)
 const getActionExtractionPrompt = (email: ClassifiedEmail): string => {
     const { id, from, subject, snippet, classification } = email;
 
@@ -73,49 +77,60 @@ const getActionExtractionPrompt = (email: ClassifiedEmail): string => {
 };
 
 export async function POST(request: NextRequest) {
-    // Validera att API-nyckeln för Gemini finns
     const geminiApiKey = process.env.GEMINI_API_KEY;
     if (!geminiApiKey) {
-        console.error("[AI Extract] GEMINI_API_KEY är inte konfigurerad i miljövariablerna.");
+        console.error("[AI Extract] GEMINI_API_KEY är inte konfigurerad.");
         return NextResponse.json({ message: "Serverkonfigurationsfel: AI-motorn är inte konfigurerad." }, { status: 500 });
     }
 
     try {
+        // Denna API-rutt anropas nu av en annan server-side rutt (cron job),
+        // så vi kan inte använda getServerSession på samma sätt. Vi måste skicka med userId.
         const email: ClassifiedEmail = await request.json();
 
-        const prompt = getActionExtractionPrompt(email);
-
-        if (!prompt) {
-            return NextResponse.json({ message: `Ingen åtgärd definierad för klassificeringen \"${email.classification}\".` }, { status: 200 });
+        if (!email.userId) {
+            return NextResponse.json({ error: 'Användar-ID saknas i förfrågan.' }, { status: 400 });
         }
 
-        // Initiera AI-modellen
+        const prompt = getActionExtractionPrompt(email);
+        if (!prompt) {
+            return NextResponse.json({ message: `Ingen åtgärd definierad för ${email.classification}.` }, { status: 200 });
+        }
+
         const genAI = new GoogleGenerativeAI(geminiApiKey);
         const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-
         const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const rawText = response.text();
-        
-        // Försök att parsa texten som JSON. Detta är ett kritiskt steg.
+        const rawText = result.response.text();
+
         let actionData;
         try {
-             // Vi måste rensa bort eventuella markdown-formateringar som AI:n kan lägga till
             const cleanedText = rawText.replace(/```json\n|```/g, '').trim();
             actionData = JSON.parse(cleanedText);
         } catch (e) {
-            console.error('JSON Parsing Error:', e);
-            console.error('Raw AI Response:', rawText); // Logga rådata för felsökning
-            return NextResponse.json({ error: 'Kunde inte tolka AI-svaret som giltig JSON.' }, { status: 500 });
+            console.error('JSON Parsing Error för användare', email.userId, e);
+            console.error('Rådata från AI:', rawText);
+            return NextResponse.json({ error: 'Kunde inte tolka AI-svaret.' }, { status: 500 });
         }
 
-        // I ett riktigt flöde skulle `actionData` nu sparas i en `actions`-tabell i databasen,
-        // redo att presenteras för användaren.
-        console.log('--- [AI ÅTGÄRDS-EXTRAKTION LYCKADES] ---');
-        console.log(actionData);
-        console.log('-------------------------------------');
+        // Spara den extraherade åtgärden i Firestore
+        const db = firestoreAdmin;
+        const actionRef = db.collection('users').doc(email.userId).collection('actions').doc();
+        
+        await actionRef.set({
+            ...actionData,
+            userId: email.userId,
+            status: 'new', // Initial status
+            createdAt: new Date(),
+            sourceEmail: {
+                id: email.id,
+                from: email.from,
+                subject: email.subject,
+            }
+        });
 
-        return NextResponse.json(actionData);
+        console.log(`[AI Extract] Sparade ny åtgärd ${actionRef.id} för användare ${email.userId}`);
+
+        return NextResponse.json({ success: true, actionId: actionRef.id });
 
     } catch (error) {
         console.error('Fel i extract-actions API:', error);

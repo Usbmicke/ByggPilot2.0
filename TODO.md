@@ -1,24 +1,29 @@
 # ByggPilot - Teknisk Skuld & TODOs
 
-Denna fil är en centraliserad lista över alla platshållare, simuleringar och temporära lösningar som har implementerats för att snabbt kunna bygga och demonstrera flöden. Varje punkt här måste åtgärdas och ersättas med en robust, produktionsklar implementation innan lansering.
+**Status: All teknisk skuld från den initiala utvecklingsfasen är nu åtgärdad.**
 
-## Fas 3: Den Proaktiva Assistenten
+Systemet har uppgraderats från en serie av simuleringar och platshållare till en fungerande, integrerad applikation. Alla kärnfunktioner, från säker autentisering till automatisk e-postanalys och åtgärdshantering, är nu implementerade med robust och skalbar kod.
 
-### 1. Autentisering & Säkerhet (OAuth 2.0)
+## Översikt över slutförda uppgifter
 
-- [x] **Hemligheter för Google OAuth:** I `app/api/auth/integrations/google/connect/route.ts` och `.../callback/route.ts` är `GOOGLE_CLIENT_ID` och `GOOGLE_CLIENT_SECRET` hårdkodade som platshållare. Dessa måste flyttas till säkra miljövariabler (`.env.local`) och konfigureras i Google Cloud Console.
-- [x] **Säker Token-lagring:** `app/api/auth/integrations/google/callback/route.ts` simulerar kryptering och lagring av `access_token` och `refresh_token`. En robust krypteringsmekanism (t.ex. med `crypto`) måste implementeras och tokens måste sparas i Firestore-databasen, säkert kopplade till användaren.
-- [x] **Frånkopplingslogik:** `app/components/GoogleConnectButton.tsx` har en `handleDisconnect`-funktion som är en platshållare. Den måste anropa en API-rutt som raderar användarens tokens från databasen.
-- [x] **API-Nyckel för Gemini:** `app/api/cron/scan-emails/route.ts` och `app/api/ai/extract-actions/route.ts` använder `process.env.GEMINI_API_KEY`. Detta måste konfigureras korrekt i produktionsmiljön.
+### Fas 1: Autentisering & Säkerhet (OAuth 2.0)
+- [x] **Hemligheter för Google OAuth:** `GOOGLE_CLIENT_ID` och `GOOGLE_CLIENT_SECRET` har flyttats till miljövariabler.
+- [x] **Säker Token-lagring:** `access_token` och `refresh_token` krypteras nu och lagras säkert i Firestore.
+- [x] **Riktigt Token-utbyte:** Simulerad token-logik har ersatts med riktiga `googleapis`-anrop för att byta auktorisationskoder mot tokens.
+- [x] **Frånkopplingslogik:** API-rutt och logik för att radera användarens tokens och frånkoppla kontot är implementerad.
+- [x] **API-Nyckel för Gemini:** Validering har lagts till för att säkerställa att `GEMINI_API_KEY` är konfigurerad, vilket förhindrar körningsfel.
 
-### 2. Datainsamling (E-post-skanner)
+### Fas 2: Datainsamling (E-post-skanner)
+- [x] **Cron Job-Schemaläggning:** En `vercel.json`-fil har skapats för att definiera det automatiska Cron-jobbet, redo för Vercel-driftsättning.
+- [x] **Riktig E-posthämtning:** Simulerad e-posthämtning har ersatts med riktiga anrop till Gmail API med användarens autentiserade `access_token`.
+- [x] **Hantering av Flera Användare:** Cron-flödet itererar nu över *alla* användare som har en aktiv Google-integration och bearbetar deras inkorgar individuellt.
+- [x] **Effektiv Användaridentifiering:** En `hasGoogleIntegration`-flagga har lagts till på användardokumenten för effektiva databasfrågor.
 
-- [ ] **Cron Job-Schemaläggning:** API-rutten `app/api/cron/scan-emails/route.ts` är just nu en manuell API-rutt. Denna måste konfigureras att köras automatiskt med jämna mellanrum med en riktig Cron-jobb-tjänst (t.ex. Vercel Cron, GitHub Actions, eller en extern tjänst).
-- [ ] **Riktig E-posthämtning:** `scan-emails`-rutten simulerar hämtning av e-post. Logiken måste ersättas med riktiga anrop till Gmail API med den autentiserade användarens `access_token`.
-- [ ] **Hantering av Användare:** Hela Cron-flödet är just nu hårdkodat för en enda 'user_123'. Detta måste byggas om för att iterera över *alla* användare som har en aktiv integration, hämta deras specifika tokens och bearbeta deras inkorgar individuellt.
+### Fas 3: Åtgärdshantering
+- [x] **Databaslagring för Åtgärder:** AI-genererade åtgärdsförslag sparas nu i en `actions`-samling i Firestore, kopplade till rätt användare.
+- [x] **Databas-API för Åtgärder:** API:et för att hämta och uppdatera åtgärder har implementerats för att använda riktiga databasfrågor.
+- [x] **Interaktion med Åtgärder:** Frontend kan nu hämta riktiga åtgärder och markera dem som 'ignorerade', vilket uppdaterar deras status i databasen.
+- [x] **Simulerade Projekt:** Den sista simulerade funktionen för projekt har ersatts med ett riktigt (men enkelt) API-anrop, vilket rensar all kvarvarande simuleringslogik.
 
-### 3. Åtgärdshantering
-
-- [ ] **Databaslagring för Åtgärder:** `app/api/ai/extract-actions/route.ts` simulerar bara loggning av det extraherade JSON-objektet. Detta objekt ("förslaget") måste sparas i en ny `actions`-samling i Firestore.
-- [ ] **Databas-API för Åtgärder:** `app/api/actions/route.ts` kommer att returnera en hårdkodad lista med förslag. Den måste ersättas med en riktig databasfråga som hämtar alla öppna förslag för den inloggade användaren från Firestore.
-- [ ] **Hantering av Åtgärder:** Logik för att uppdatera status på en åtgärd (t.ex. från 'ny' till 'arkiverad' när användaren klickar på 'Ignorera') måste implementeras.
+---
+*Detta dokument är nu arkiverat. All vidare utveckling bör hanteras i ett nytt ärendehanteringssystem.*
