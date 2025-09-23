@@ -2,18 +2,16 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/app/lib/auth';
 import { z } from 'zod';
+import { firestoreAdmin } from '@/app/lib/firebase-admin';
+import { Timestamp } from 'firebase-admin/firestore';
 
-// Zod-schema för att validera inkommande data
 const createAtaSchema = z.object({
-    projectId: z.string().nonempty(),
+    projectId: z.string().nonempty("Projekt-ID måste anges"),
     title: z.string().optional(),
     notes: z.string().optional(),
-    // Framtida fält för röstmemo-URL och bild-URL:er
-    // voiceMemoUrl: z.string().url().optional(),
-    // imageUrls: z.array(z.string().url()).optional(),
 });
 
-export async function POST(request: Request) {
+export async function POST(request: Request, { params }: { params: { projectId: string } }) {
     const session = await auth();
     const userId = session?.user?.id;
 
@@ -21,40 +19,50 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const projectId = params.projectId;
+
     try {
         const json = await request.json();
-        const body = createAtaSchema.parse(json);
+        // Injicera projectId från URL:en i objektet som ska valideras
+        const body = createAtaSchema.parse({ ...json, projectId });
 
-        // TODO: Verifiera att projektet (body.projectId) faktiskt tillhör den inloggade användaren (userId)
-        // Detta är ett kritiskt säkerhetssteg.
+        // Säkerhetskontroll: Verifiera att projektet tillhör den inloggade användaren
+        const projectRef = firestoreAdmin.collection('projects').doc(body.projectId);
+        const projectDoc = await projectRef.get();
 
-        console.log('--- Nytt ÄTA-utkast mottaget ---');
-        console.log('Projekt ID:', body.projectId);
-        console.log('Titel:', body.title);
-        console.log('Anteckningar:', body.notes);
-        console.log('-----------------------------------');
+        if (!projectDoc.exists) {
+            return NextResponse.json({ error: 'Projektet hittades inte.' }, { status: 404 });
+        }
 
-        // Här skulle vi normalt interagera med en databas, t.ex. Prisma
-        /*
-        const newAta = await prisma.ata.create({
-            data: {
-                projectId: body.projectId,
-                title: body.title,
-                description: body.notes,
-                status: 'DRAFT', // Status sätts till 'Utkast' som standard
-                // ... andra fält som createdBy, etc.
-            }
-        });
-        */
+        const projectData = projectDoc.data();
+        if (projectData?.userId !== userId) {
+            return NextResponse.json({ error: 'Användaren har inte behörighet till detta projekt.' }, { status: 403 });
+        }
+        
+        // Skapa den nya ÄTA:n i en sub-kollektion under projektet
+        const newAtaRef = projectRef.collection('atas').doc();
 
-        // Simulera ett framgångsrikt svar med den nya datan
-        const newAta = {
-            id: `ata-${Date.now()}`,
-            ...body,
+        const newAtaData = {
+            title: body.title || 'Namnlös ÄTA',
+            notes: body.notes || '',
             status: 'DRAFT',
+            createdAt: Timestamp.now(),
+            updatedAt: Timestamp.now(),
         };
 
-        return NextResponse.json(newAta, { status: 201 }); // 201 Created
+        await newAtaRef.set(newAtaData);
+
+        const createdAta = {
+            id: newAtaRef.id,
+            ...newAtaData
+        };
+        
+        console.log('--- Nytt ÄTA-utkast sparat i Firestore ---');
+        console.log('Projekt ID:', body.projectId);
+        console.log('ÄTA ID:', newAtaRef.id);
+        console.log('------------------------------------------');
+
+        return NextResponse.json(createdAta, { status: 201 }); // 201 Created
 
     } catch (error) {
         if (error instanceof z.ZodError) {

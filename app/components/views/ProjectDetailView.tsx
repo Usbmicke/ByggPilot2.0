@@ -2,6 +2,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { FolderIcon, DocumentIcon, ArrowUturnLeftIcon } from '@heroicons/react/24/outline';
+import AtaList from '@/app/components/ata/AtaList'; // STEG 3: Importera AtaList
 
 interface DriveFile {
   id: string;
@@ -11,7 +12,9 @@ interface DriveFile {
   webViewLink: string;
 }
 
+// STEG 1: Justera props
 interface ProjectDetailViewProps {
+  projectId: string; // <-- LÄGG TILL projectId
   projectName: string;
   folderId: string;
   onBack: () => void;
@@ -30,7 +33,7 @@ const getFileIcon = (mimeType: string) => {
     return <DocumentIcon className="w-6 h-6 text-gray-400" />;
 }
 
-const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projectName, folderId, onBack }) => {
+const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projectId, projectName, folderId, onBack }) => {
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +68,11 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projectName, fold
             <h1 className="text-3xl font-bold text-white truncate">{projectName}</h1>
         </div>
 
+        {/* Google Drive-fillistan (befintlig kod) */}
         <div className="bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden">
+             <div className="p-4 border-b border-gray-700">
+                <h3 className="text-lg font-semibold">Projektfiler (Google Drive)</h3>
+            </div>
             <div className="grid grid-cols-12 gap-4 p-4 border-b border-gray-700 text-gray-400 font-bold text-sm">
                 <div className="col-span-6">Namn</div>
                 <div className="col-span-3">Typ</div>
@@ -92,6 +99,10 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projectName, fold
                 </a>
             ))}
         </div>
+
+        {/* STEG 3: Rendera AtaList-komponenten */}
+        <AtaList projectId={projectId} />
+
     </div>
   );
 };

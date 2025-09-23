@@ -3,46 +3,61 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Bot, Settings, Info } from 'lucide-react';
+import { useChat } from '@/app/contexts/ChatContext';
+import { useUI } from '@/app/contexts/UIContext'; // STEG 4: Importera useUI
 
 interface OnboardingChatProps {
   onComplete: () => void;
 }
 
+const SETUP_COMMAND = "*Användare har godkänt onboarding. Kör `create_google_drive_folder_structure` för att sätta upp den initiala mappstrukturen i deras Google Drive.*";
+
 const OnboardingChat: React.FC<OnboardingChatProps> = ({ onComplete }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const { sendMessage } = useChat();
+  const { openModal } = useUI(); // Hämta openModal-funktionen
 
   const handleSelection = async (selection: 'accept' | 'decline') => {
-    setIsLoading(true);
-    console.log(`User selected: ${selection}`);
-    
-    // Simulera en kort fördröjning, t.ex. för ett API-anrop
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Anropa onComplete för att uppdatera status i databasen
-    // och trigga en omdirigering/vy-ändring i layout-komponenten.
-    onComplete();
+    if (selection === 'accept') {
+      setIsLoading(true);
+      try {
+        console.log("User accepted, sending setup command to AI...");
+        await sendMessage(SETUP_COMMAND);
+        console.log("AI command sent. Opening Company Vision modal...");
 
-    // Not: isLoading behöver inte sättas till false eftersom komponenten kommer att avmonteras.
+        // Öppna CompanyVisionModal som nästa steg i flödet
+        openModal('companyVision');
+
+      } catch (error) {
+        console.error("Ett fel uppstod under onboarding-processen:", error);
+      } finally {
+         // onComplete anropas nu av modalen eller när användaren stänger den,
+         // för att säkerställa att ZeroState inte försvinner för tidigt.
+         onComplete(); 
+         setIsLoading(false); 
+      }
+    } else {
+      console.log("User declined for now.");
+      onComplete();
+    }
   };
 
   return (
-    <div className="bg-gray-800 rounded-lg shadow-xl h-full flex flex-col p-4 md:p-6">
-      {/* Header med plats för flikar och inställningar */}
-      <div className="flex justify-between items-center border-b border-gray-700 pb-4 mb-4">
+    <div className="bg-background-secondary rounded-lg shadow-xl h-full flex flex-col p-4 md:p-6 border border-border-primary">
+      <div className="flex justify-between items-center border-b border-border-primary pb-4 mb-4">
         <div className="flex items-center gap-4">
-            <h2 className="text-xl font-bold text-white">Din Personliga Assistent</h2>
+            <h2 className="text-xl font-bold">Din Personliga Assistent</h2>
             <div className="flex gap-2">
-                <button className="p-2 rounded-md text-gray-400 hover:bg-gray-700 hover:text-white transition-colors">
+                <button className="p-2 rounded-md text-text-secondary hover:bg-border-primary hover:text-text-primary transition-colors">
                     <Info size={20} />
                 </button>
-                 <button className="p-2 rounded-md text-gray-400 hover:bg-gray-700 hover:text-white transition-colors">
+                 <button className="p-2 rounded-md text-text-secondary hover:bg-border-primary hover:text-text-primary transition-colors">
                     <Settings size={20} />
                 </button>
             </div>
         </div>
       </div>
 
-      {/* Huvudinnehåll för chatten */}
       <div className="flex-grow flex flex-col justify-center items-center text-center">
           <motion.div 
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -51,14 +66,14 @@ const OnboardingChat: React.FC<OnboardingChatProps> = ({ onComplete }) => {
             className="max-w-lg"
           >
             <div className="flex justify-center mb-6">
-              <div className="p-4 bg-gray-700 rounded-full">
-                  <Bot size={40} className="text-cyan-400" />
+              <div className="p-4 bg-border-primary rounded-full">
+                  <Bot size={40} className="text-accent-blue" />
               </div>
             </div>
 
-            <h3 className="text-2xl font-semibold text-white mb-3">Kom igång med ByggPilot</h3>
-            <p className="text-gray-300 mb-8">
-              För att ge dig den bästa hjälpen och automatisera dina dokument, behöver jag tillgång till ditt Google Drive-konto. Vill du koppla det nu?
+            <h3 className="text-2xl font-semibold mb-3">Steg 1: Skapa din mappstruktur</h3>
+            <p className="text-text-secondary mb-8">
+              Låt mig starta med att automatiskt skapa en standardiserad mappstruktur i din Google Drive för kunder, projekt och dokument. Detta är grunden för all framtida automation.
             </p>
 
             <div className="flex justify-center gap-4">
@@ -67,22 +82,22 @@ const OnboardingChat: React.FC<OnboardingChatProps> = ({ onComplete }) => {
                 disabled={isLoading}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="px-8 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-8 py-3 bg-accent-blue hover:bg-accent-blue-hover text-white font-bold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Ansluter...' : 'Ja, koppla Google Drive'}
+                {isLoading ? 'Skapar struktur...' : 'Ja, skapa mappstruktur'}
               </motion.button>
               <motion.button
                 onClick={() => handleSelection('decline')}
                 disabled={isLoading}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="px-8 py-3 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg transition-colors disabled:opacity-50"
+                className="px-8 py-3 bg-border-primary hover:bg-border-primary-hover font-bold rounded-lg transition-colors disabled:opacity-50"
               >
-                Kanske senare
+                Hoppa över
               </motion.button>
             </div>
-             <p className="text-xs text-gray-500 mt-6 max-w-sm mx-auto">
-              Genom att ansluta godkänner du att ByggPilot kan läsa och hantera filer relaterade till dina byggprojekt.
+             <p className="text-xs text-text-secondary/70 mt-6 max-w-sm mx-auto">
+              Du kan alltid skapa denna struktur manuellt senare via inställningar.
             </p>
           </motion.div>
       </div>

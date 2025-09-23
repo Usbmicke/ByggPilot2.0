@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/app/providers/AuthProvider";
+import { UIProvider } from "@/app/contexts/UIContext";
+import { ChatProvider } from "@/app/contexts/ChatContext"; // STEG 2: Importera ChatProvider
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,7 +21,11 @@ export default function RootLayout({
     <html lang="sv">
       <body className={`${inter.className} h-full bg-background-primary text-text-primary`}>
         <AuthProvider>
-          {children}
+          <UIProvider>
+            <ChatProvider> {/* Svep in med ChatProvider */}
+              {children}
+            </ChatProvider>
+          </UIProvider>
         </AuthProvider>
       </body>
     </html>

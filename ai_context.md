@@ -1,4 +1,4 @@
-# ByggPilot: Masterplan & Kärnfilosofi (v2.1)
+# ByggPilot: Masterplan & Kärnfilosofi (v2.4)
 
 Detta dokument är den enda, centrala källan till sanning för ByggPilot-projektet. All utveckling utgår härifrån.
 
@@ -6,7 +6,7 @@ Detta dokument är den enda, centrala källan till sanning för ByggPilot-projek
 
 ## 1. Vision & Kärnfilosofi: "ByggPilot-Tänket"
 
-ByggPilot är inte ett verktyg; det är en **proaktiv digital kollega** för hantverkare i Sverige. Målet är att eliminera "pappersmonstret" och ge hantverkaren full kontroll över sin tid och lönsamhet.
+ByggPilot är inte ett verktyg; det är en **proaktiv digital kollega** för hantverkare i Sverige. Målet är att eliminera "pappersmonstret" och ge hantverkaren full kontroll över sin tid och lönsamheten.
 
 **Grundare:** Michael Ekengren Fogelström.
 **Kärnvärde:** Byggd av en hantverkare, för hantverkare. Empati och förståelse för användarens vardag är allt.
@@ -29,15 +29,14 @@ ByggPilot är inte ett verktyg; det är en **proaktiv digital kollega** för han
 
 För att undvika dubbelarbete och upprätthålla en ren kodbas följer vi denna struktur:
 
-*   **/app/api/**: All backend-logik och API-endpoints. Varje route har sin egen mapp (t.ex. `/app/api/projects/create/route.ts`).
+*   **/app/api/**: All backend-logik och API-endpoints.
 *   **/app/components/**: Alla återanvändbara React-komponenter.
-    *   `/dashboard/`: Komponenter specifika för Dashboarden.
-    *   `/modals/`: Alla modal-dialoger (t.ex. `CreateProjectModal`).
-    *   `/views/`: Större "vy"-komponenter (t.ex. `AtaView`).
-*   **/app/lib/**: Kärnbibliotek och konfigurationer (t.ex. `auth.ts`, `firebase.ts`, `prisma.ts`).
-*   **/app/services/**: Funktioner för att interagera med backend-tjänster och databaser (t.ex. `projectService.ts`).
-*   **/app/types/**: Centraliserade TypeScript-typer och interfaces.
-*   **/ai_context.md**: **Detta dokument.** Den enda källan till sanning för vision och planering.
+*   **/app/contexts/**: Globala providers för state management (t.ex. `ChatContext.tsx`, `UIContext.tsx`).
+*   **/app/hooks/**: Återanvändbara React-hooks (t.ex. `useVoiceRecognition.ts`).
+*   **/app/lib/**: Kärnbibliotek och konfigurationer.
+*   **/app/services/**: Funktioner för att interagera med backend-tjänster.
+*   **/app/types/**: Centraliserade TypeScript-typer.
+*   **/ai_context.md**: **Detta dokument.**
 
 ---
 
@@ -45,83 +44,50 @@ För att undvika dubbelarbete och upprätthålla en ren kodbas följer vi denna 
 
 Status: `[VÄNTAR]`, `[PÅBÖRJAD]`, `[KLAR]`
 
-### Fas 0: Grundsystem & Stabilisering (95% KLAR)
+### Fas 0: Grundsystem & Stabilisering (100% KLAR)
 
-*   **Autentisering & Användare:**
-    *   [KLAR] Inloggning via Google (`NextAuth`).
-    *   [KLAR] Synkronisering `NextAuth` <-> `Firebase`.
-*   **Dashboard & Projekt:**
-    *   [KLAR] Grundläggande Dashboard-sida (`app/dashboard/page.tsx`).
-    *   [KLAR] Kritiska import/export-fel på Dashboard är lösta.
-    *   [KLAR] Modal för att skapa nya projekt (`CreateProjectModal`).
-    *   [KLAR] API för att skapa projekt.
-    *   [KLAR] Professionell, sekventiell projektnumrering (t.ex. `353-2475`).
-*   **ÄTA-hantering (Grundflöde):**
-    *   [KLAR] "ÄTA"-flik i projektvyn.
-    *   [KLAR] Modal för snabbinmatning av ÄTA (`CreateAtaModal`).
-    *   [KLAR] API för att skapa ÄTA-utkast.
-    *   [KLAR] Nyskapade ÄTA-utkast visas i en lista (`AtaView`).
-*   **Databas:**
-    *   [VÄNTAR] **KRITISKT:** Byta ut all *simulerad* datalagring mot **riktig, permanent databas-interaktion** (t.ex. med Prisma/Firestore).
+*   **Autentisering & Användare:** [KLAR]
+*   **Dashboard & Projekt:** [KLAR]
+*   **ÄTA-hantering (Grundflöde):** [KLAR]
+*   **Databas:** [KLAR]
 
-### Fas 1: Kärnprocesser & Intelligens (NÄSTA STEG)
+### Fas 1: Kärnprocesser & Intelligens (PÅBÖRJAD)
 
-*   **Finalisera Chatt-Intelligens (Masterprompt 9.0):**
-    *   [VÄNTAR] Implementera "Masterprompt 9.0" fullt ut i `app/api/chat/route.ts` för att vässa den proaktiva personan.
-    *   [VÄNTAR] Definiera och implementera ett gränssnitt (API/events) för hur chatten kan styra och interagera med UI-komponenter (öppna modaler, navigera, uppdatera vyer).
-    *   [VÄNTAR] Full integration av röst-till-text-transkribering för att mata chatten.
+*   **Finalisera Chatt-Intelligens (Masterprompt 9.2):**
+    *   [KLAR] Implementera "Masterprompt 9.2".
+    *   [KLAR] Gränssnitt för chatt-styrning av UI.
+    *   [KLAR] Full integration av röst-till-text.
 
 *   **Utökad Onboarding:**
-    *   [PÅBÖRJAD] "Zero State" / Onboarding-vy när inga projekt finns.
-    *   [VÄNTAR] Vid första inloggning: guida användaren genom en kort process.
-    *   [VÄNTAR] **Automatisk skapande av Google Drive-mappstruktur** (`/01_Kunder`, `/02_Projekt`, etc.) under onboardingen.
-    *   [VÄNTAR] Möjlighet att fylla i "Företagsvision" & policy-dokument som ByggPilot kan använda som kunskapsbank.
-    *   [VÄNTAR] Inkludera en smart, skyddande text om AI:ns roll, vikten av att dubbelkolla, och hur ByggPilot sparar tid.
+    *   [KLAR] "Zero State" / Onboarding-vy när inga projekt finns.
+    *   [KLAR] Vid första inloggning: guida användaren genom en kort process.
+    *   [KLAR] **Automatisk skapande av Google Drive-mappstruktur**.
+    *   [KLAR] **Möjlighet att fylla i "Företagsvisionen"** som AI:n använder som kompass.
+    *   [VÄNTAR] Inkludera en smart, skyddande text om AI:ns roll.
+
 *   **Förädling av ÄTA-processen:**
-    *   [VÄNTAR] Gör ÄTA-listan klickbar för att öppna en detaljvy.
-    *   [VÄNTAR] I detaljvyn: möjlighet att lägga till/redigera pris, material, status (Utkast -> Skickad -> Godkänd).
+    *   [VÄNTAR] Gör ÄTA-listan klickbar för detaljvy.
+    *   [VÄNTAR] I detaljvyn: redigera pris, material, status.
 *   **Smarta Offertmotorn (Grundläggande "Text Calculator"):**
-    *   [VÄNTAR] Skapa en ny vy för kalkylering/offertskapande.
-    *   [VÄNTAR] Bygg en grundläggande "text-till-kalkyl"-motor där användaren kan skriva fritt och AI:n strukturerar det till offert-rader.
-    *   [VÄNTAR] Generera en enkel, professionell PDF-offert från kalkylen.
+    *   [VÄNTAR] Skapa kalkylering/offert-vy.
+    *   [VÄNTAR] Bygg "text-till-kalkyl"-motor.
+    *   [VÄNTAR] Generera PDF-offert.
 
 ### Fas 2: Funktions-Expansion & Effektivisering (PLANERAD)
 
-*   **Utökad ÄTA-insamling:**
-    *   [VÄNTAR] Implementera **röstmemo-inspelning** i `CreateAtaModal`.
-    *   [VÄNTAR] Implementera **bilduppladdning** (Ta/välj bild) i `CreateAtaModal`.
-    *   [VÄNTAR] Backend för att lagra dessa filer i projektets Drive-mapp.
-*   **Tid & Resor (Förenklad version):**
-    *   [VÄNTAR] Lägg till en "Logga Tid"-knapp på projektkort/vyer.
-    *   [VÄNTAR] I tidloggningen, erbjuda en enkel checkbox för "Biltillägg" eller liknande.
-    *   [VÄNTAR] Loggad tid och tillägg kopplas till projektets ekonomi.
-*   **Dokument & Underlag:**
-    *   [VÄNTAR] Skanna kvitton med OCR för att identifiera belopp och koppla till projekt.
-    *   [VÄNTAR] **Automatisk hämtning av Fastighetsbeteckning** via Lantmäteriet API vid ROT-arbeten.
+*   **Utökad ÄTA-insamling:** Röstmemo, bilduppladdning, fillagring.
+*   **Tid & Resor (Förenklad version):** Logga tid, biltillägg.
+*   **Dokument & Underlag:** Skanna kvitton med OCR, hämta fastighetsbeteckning.
 
 ### Fas 3: Team, Samarbete & Säkerhet (FRAMTID)
 
-*   **Teamhantering (Multi-user):**
-    *   [VÄNTAR] Inför Företagskonton med roller: **Administratör** och **Anställd**.
-    *   [VÄNTAR] Admin kan bjudas in anställda, se alla projekt och hantera inställningar.
-    *   [VÄNTAR] Anställd kan se tilldelade projekt, rapportera tid/utlägg, och göra interna utbildningar.
-*   **Visuell Resursplanering:**
-    *   [VÄNTAR] En central vy för admin att se personalens beläggning.
-    *   [VÄNTAR] "Dra-och-släpp"-tilldelning av anställda till projekt.
-*   **Säkerhet & Regelefterlevnad:**
-    *   [VÄNTAR] **Automatiserad Kemikaliehantering:** Identifiera kemikalier från kvitton, presentera förenklad skyddsinfo proaktivt, och arkivera säkerhetsdatablad i projektmappen.
-*   **Intern Utbildning:**
-    *   [VÄNTAR] Företagets kunskapsbank baserad på dokument i en specifik Drive-mapp.
-    *   [VÄNTAR] Interaktivt "Quizz" för nyanställda baserat på kunskapsbanken.
+*   **Teamhantering (Multi-user):** Roller, inbjudningar.
+*   **Visuell Resursplanering:** Personalöversikt, dra-och-släpp-tilldelning.
+*   **Säkerhet & Regelefterlevnad:** Automatiserad kemikaliehantering.
+*   **Intern Utbildning:** Företagets kunskapsbank med interaktivt quizz.
 
 ### Fas 4: Avancerad Automation & Intelligens (VISION)
 
-*   **Avancerad Körjournal (Ersätter den enkla tidloggen):**
-    *   [VÄNTAR] Fullfjädrad körjournal med "Start/Stopp"-knapp (ej GPS-spårning i bakgrunden), automatisk sträckberäkning och intelligent kategorisering (Projekt vs. Företagsresa).
-    *   [VÄNTAR] Generering av deklarationsfärdig PDF.
-*   **Proaktiv Resurshantering ("Jonas är sjuk"-scenariot):**
-    *   [VÄNTAR] Vid frånvaro: automatisk konsekvensanalys och förslag på omfördelning av personal.
-    *   [VÄNTAR] Förbereda utkast för kundkommunikation vid omprioriteringar.
-*   **Google Integration & Affärsmodell:**
-    *   [VÄNTAR] Proaktiv kontroll av Google Drive-lagringsutrymme med rekommendation om uppgradering som ett tecken på tillväxt.
-    *   [VÄNTAR] Säkerställ full funktionalitet med gratis Google-konton.
+*   **Avancerad Körjournal:** Start/stopp, automatisk sträckberäkning, PDF-export.
+*   **Proaktiv Resurshantering:** Konsekvensanalys vid frånvaro, förslag till omfördelning.
+*   **Google Integration & Affärsmodell:** Proaktiv kontroll av lagringsutrymme.

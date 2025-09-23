@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link'; // STEG 1: Importera Link
 import { Project } from '@/app/types/project';
-import { PlusIcon, PencilIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, CheckCircleIcon, ChevronRightIcon } from '@/heroicons/react/24/outline';
 import CreateAtaModal from '@/app/components/modals/CreateAtaModal';
 
-// Definiera en typ för ÄTA-objektet för att få bättre typsäkerhet
 type Ata = {
     id: string;
     title?: string;
@@ -17,8 +17,8 @@ interface AtaViewProps {
   project: Project;
 }
 
-// Komponenten för att rendera listan med ÄTA-arbeten
-const AtaList = ({ atas }: { atas: Ata[] }) => {
+// STEG 3: Skicka med projectId för att bygga länken
+const AtaList = ({ atas, projectId }: { atas: Ata[], projectId: string }) => {
     const getStatusChip = (status: Ata['status']) => {
         switch (status) {
             case 'DRAFT':
@@ -35,14 +35,20 @@ const AtaList = ({ atas }: { atas: Ata[] }) => {
     return (
         <ul className="divide-y divide-gray-700">
             {atas.map(ata => (
-                <li key={ata.id} className="px-6 py-4 flex justify-between items-center hover:bg-gray-700/50 transition-colors cursor-pointer">
-                    <div>
-                        <p className="font-semibold text-white">{ata.title || 'Namnlöst utkast'}</p>
-                        <p className="text-sm text-gray-400 truncate max-w-md">{ata.notes || 'Inga anteckningar'}</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        {getStatusChip(ata.status)}
-                    </div>
+                // STEG 2: Gör varje rad till en klickbar länk
+                <li key={ata.id}>
+                    <Link href={`/projects/${projectId}/ata/${ata.id}`} className="block px-6 py-4 hover:bg-gray-700/50 transition-colors">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <p className="font-semibold text-white">{ata.title || 'Namnlöst utkast'}</p>
+                                <p className="text-sm text-gray-400 truncate max-w-md">{ata.notes || 'Inga anteckningar'}</p>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                {getStatusChip(ata.status)}
+                                <ChevronRightIcon className="h-5 w-5 text-gray-500" />
+                            </div>
+                        </div>
+                    </Link>
                 </li>
             ))}
         </ul>
@@ -51,14 +57,33 @@ const AtaList = ({ atas }: { atas: Ata[] }) => {
 
 export default function AtaView({ project }: AtaViewProps) {
     const [isAtaModalOpen, setIsAtaModalOpen] = useState(false);
-    // Sätt typen för state-variabeln
     const [atas, setAtas] = useState<Ata[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchAtas = async () => {
+            setIsLoading(true);
+            try {
+                const response = await fetch(`/api/projects/${project.id}/atas/list`);
+                if (!response.ok) {
+                    throw new Error('Något gick fel vid hämtning av ÄTA-poster.');
+                }
+                const data = await response.json();
+                setAtas(data.atas || []);
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchAtas();
+    }, [project.id]);
 
     const handleNewAta = () => {
         setIsAtaModalOpen(true);
     };
 
-    // Denna funktion tar emot det nya ÄTA-objektet från modalen
     const handleAtaCreated = (newAta: Ata) => {
         setAtas(prevAtas => [newAta, ...prevAtas]);
     };
@@ -69,7 +94,7 @@ export default function AtaView({ project }: AtaViewProps) {
                 isOpen={isAtaModalOpen}
                 onClose={() => setIsAtaModalOpen(false)}
                 projectId={project.id}
-                onAtaCreated={handleAtaCreated} // Skicka med callback-funktionen
+                onAtaCreated={handleAtaCreated}
             />
 
             <div className="p-4 sm:p-6 md:p-8">
@@ -85,13 +110,16 @@ export default function AtaView({ project }: AtaViewProps) {
                 </div>
 
                 <div className="bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden">
-                    {atas.length === 0 ? (
+                    {isLoading ? (
+                        <div className="text-center py-16 px-6"><p className="text-gray-400">Laddar ÄTA-arbeten...</p></div>
+                    ) : atas.length === 0 ? (
                          <div className="text-center py-16 px-6">
                             <h3 className="text-lg font-semibold text-white">Inga ÄTA-arbeten</h3>
                             <p className="text-gray-400 mt-2">Klicka på 'Nytt ÄTA' för att registrera ett ändrings-, tilläggs- eller avvikelsearbete.</p>
                         </div>
                     ) : (
-                        <AtaList atas={atas} />
+                        // STEG 3: Skicka med projectId till AtaList
+                        <AtaList atas={atas} projectId={project.id} />
                     )}
                 </div>
             </div>
