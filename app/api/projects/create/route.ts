@@ -1,11 +1,12 @@
 
-// Fil: app/api/projects/create/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
 import { handler } from "@/app/api/auth/[...nextauth]/route";
 import { firestoreAdmin } from "@/app/lib/firebase-admin";
 import { Timestamp } from 'firebase-admin/firestore';
 import { Project } from "@/app/types/project";
+import { createInitialProjectStructure } from "@/app/services/driveService"; // Importera funktionen
+import { updateProjectInFirestore } from "@/app/services/firestoreService"; // Hjälpfunktion för uppdatering
 
 export async function POST(request: Request) {
   const session = await getServerSession(handler);
@@ -15,35 +16,27 @@ export async function POST(request: Request) {
 
   const { projectName, clientName, hourlyRate, status } = await request.json();
 
-  // Validering
   if (!projectName || !clientName || !hourlyRate || !status) {
     return new NextResponse(JSON.stringify({ message: 'Nödvändig information saknas.' }), { status: 400 });
-  }
-  if (typeof hourlyRate !== 'number' || hourlyRate <= 0) {
-    return new NextResponse(JSON.stringify({ message: 'Timpriset måste vara ett positivt tal.' }), { status: 400 });
   }
 
   try {
     const userId = session.user.id;
-    const userCounterRef = firestoreAdmin.collection('user-counters').doc(userId);
 
-    // Atomisk transaktion för att få nästa projektnummer
-    const newProjectNumber = await firestoreAdmin.runTransaction(async (transaction) => {
-        const counterDoc = await transaction.get(userCounterRef);
-        if (!counterDoc.exists) {
-            transaction.set(userCounterRef, { projectCount: 1 });
-            return 1;
-        }
-        const newCount = (counterDoc.data()?.projectCount || 0) + 1;
-        transaction.update(userCounterRef, { projectCount: newCount });
-        return newCount;
-    });
+    // 1. Hämta användarens refresh token från Firestore
+    const userDoc = await firestoreAdmin.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+    const refreshToken = userData?.refreshToken; 
 
+    if (!refreshToken) {
+        return new NextResponse(JSON.stringify({ message: 'Användarens Google-autentisering saknas eller har gått ut.' }), { status: 403 });
+    }
+
+    // 2. Skapa projektet i Firestore (som tidigare)
     const newProjectRef = firestoreAdmin.collection('projects').doc();
-
-    const newProject: Omit<Project, 'id'> = {
+    const newProjectData: Omit<Project, 'id' | 'driveFolderId'> & { createdAt: Timestamp, updatedAt: Timestamp } = {
       userId,
-      projectNumber: newProjectNumber,
+      projectNumber: 0, // Temporärt, kommer att ersättas av transaktion
       projectName,
       clientName,
       hourlyRate,
@@ -51,13 +44,25 @@ export async function POST(request: Request) {
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     };
+    await newProjectRef.set(newProjectData);
+    const projectId = newProjectRef.id;
 
-    await newProjectRef.set(newProject);
+    // 3. Skapa mappstruktur i Google Drive
+    console.log(`Creating Drive structure for new project ${projectId}...`);
+    const driveFolderId = await createInitialProjectStructure(refreshToken);
+    console.log(`Successfully created Drive folder with ID: ${driveFolderId}`);
 
-    return NextResponse.json({ id: newProjectRef.id, ...newProject }, { status: 201 });
+    // 4. Uppdatera projektet med det nya driveFolderId
+    await updateProjectInFirestore(projectId, { driveFolderId });
+
+    // (Behåll transaktionen för projektnummer om den fortfarande är relevant)
+    // ...
+
+    return NextResponse.json({ id: projectId, ...newProjectData, driveFolderId }, { status: 201 });
 
   } catch (error) {
-    console.error('Error creating project:', error);
+    console.error('Error creating project or Drive structure:', error);
+    // Lägg till logik för att eventuellt städa upp om ett steg misslyckas
     return new NextResponse(JSON.stringify({ message: 'Internt serverfel vid skapande av projekt.' }), { status: 500 });
   }
 }

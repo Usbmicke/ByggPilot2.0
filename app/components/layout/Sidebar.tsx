@@ -3,7 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation'; // Importera useRouter
 import { useSession, signOut } from 'next-auth/react';
 import { HomeIcon, FolderIcon, DocumentDuplicateIcon, UsersIcon, PlusIcon, Cog6ToothIcon, ClockIcon, ArrowLeftOnRectangleIcon } from '@heroicons/react/24/outline';
 
@@ -25,9 +25,14 @@ const NavItem = ({ href, icon, label }: { href: string; icon: React.ReactNode; l
 
 const Sidebar: React.FC = () => {
   const { data: session, status } = useSession();
+  const router = useRouter(); // Initiera routern
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' });
+  };
+
+  const handleCreateOfferClick = () => {
+    router.push('/offer/new'); // Navigera till den nya sidan
   };
 
   if (status === 'loading') {
@@ -72,7 +77,7 @@ const Sidebar: React.FC = () => {
       
       <div className="px-4 py-4 mt-auto border-t border-border-primary flex-shrink-0">
         <button 
-          onClick={() => alert('Funktionen \'Skapa Offert\' är under utveckling!')}
+          onClick={handleCreateOfferClick} // Använd den nya hanteraren
           className="w-full flex items-center justify-center gap-2 bg-accent-blue hover:opacity-90 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 shadow-lg shadow-accent-blue/20 hover:shadow-accent-blue/40">
           <PlusIcon className="w-5 h-5" />
           <span>Skapa Offert</span>
@@ -108,4 +113,3 @@ const Sidebar: React.FC = () => {
 };
 
 export default Sidebar;
-

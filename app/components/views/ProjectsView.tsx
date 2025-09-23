@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -7,15 +6,13 @@ import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 import { Project } from '@/app/types';
 import NewProjectModal from '@/app/components/NewProjectModal';
 
+// --- Sub-komponent för en projektrad --- 
 const ProjectRow = ({ project }: { project: Project }) => {
   const router = useRouter();
 
+  // Navigera till den specifika projektsidan vid klick.
   const handleRowClick = () => {
-    // I en demo-kontext är projekt-ID inte en siffra, så vi navigerar inte.
-    if (typeof project.id === 'number') { 
-      router.push(`/projects/${project.id}`);
-    }
-    // Om det är en demo, gör inget vid klick, eller visa ett meddelande.
+    router.push(`/projects/${project.id}`);
   };
 
   return (
@@ -24,11 +21,11 @@ const ProjectRow = ({ project }: { project: Project }) => {
       onClick={handleRowClick}
     >
       <div className="col-span-4 font-medium text-white truncate">{project.name}</div>
-      <div className="col-span-3 text-gray-400 truncate">{project.customerName}</div> 
-      <div className="col-span-2 text-gray-400">{new Date(project.lastActivity).toLocaleDateString('sv-SE')}</div>
+      <div className="col-span-3 text-gray-400 truncate">{project.customerName || 'N/A'}</div> 
+      <div className="col-span-2 text-gray-400">{project.lastActivity ? new Date(project.lastActivity).toLocaleDateString('sv-SE') : '-'}</div>
       <div className="col-span-2 flex items-center">
         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${project.status === 'Pågående' ? 'bg-green-500/20 text-green-300' : project.status === 'Anbud' ? 'bg-yellow-500/20 text-yellow-300' : 'bg-gray-500/20 text-gray-300'}`}>
-          {project.status}
+          {project.status || 'Okänd'}
         </span>
       </div>
       <div className="col-span-1 text-right text-gray-400">...</div>
@@ -36,10 +33,10 @@ const ProjectRow = ({ project }: { project: Project }) => {
   );
 };
 
-export default function ProjectsView({ projects: initialProjects, customers, todos }) {
-  const [projects, setProjects] = useState<Project[]>(initialProjects || []);
-  // Ladda bara om initialProjects inte finns.
-  const [loading, setLoading] = useState(!initialProjects);
+// --- Huvudkomponenten för projektvyn --- 
+export default function ProjectsView() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -47,38 +44,23 @@ export default function ProjectsView({ projects: initialProjects, customers, tod
     const fetchProjects = async () => {
       setLoading(true);
       try {
-        const response = await fetch('/api/projects/list'); 
+        // Anropa den nya API-endpointen för att lista projekt
+        const response = await fetch('/api/projects'); 
         if (!response.ok) {
-            // Försök att läsa felmeddelandet som JSON
-            try {
-              const errorData = await response.json();
-              throw new Error(errorData.message || `Fel från server: ${response.status}`);
-            } catch (jsonError) {
-              // Om det inte är JSON, läs som text
-              const errorText = await response.text();
-              throw new Error(`Kunde inte tolka serverns svar. Status: ${response.status}, Svar: ${errorText}`);
-            }
+          const errorData = await response.json();
+          throw new Error(errorData.message || `Serverfel: ${response.status}`);
         }
         const data: Project[] = await response.json();
         setProjects(data);
       } catch (e) {
-        if (e instanceof Error) {
-            setError(e.message);
-        }
-         else {
-            setError('Ett okänt fel inträffade');
-        }
+        setError(e instanceof Error ? e.message : 'Ett okänt fel inträffade');
       } finally {
         setLoading(false);
       }
     };
     
-    // Hämta bara data om ingen initial data har skickats med.
-    if (!initialProjects) {
-        fetchProjects();
-    }
-
-  }, [initialProjects]);
+    fetchProjects();
+  }, []);
 
   const handleProjectCreated = (newProject: Project) => {
     setProjects(currentProjects => [newProject, ...currentProjects]);
@@ -101,6 +83,7 @@ export default function ProjectsView({ projects: initialProjects, customers, tod
       </div>
 
       <div className="bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden">
+        {/* Tabell-headers */}
         <div className="hidden md:grid grid-cols-12 gap-4 p-4 border-b border-gray-700 text-gray-400 font-bold text-sm">
           <div className="col-span-4">Projektnamn</div>
           <div className="col-span-3">Kund</div>
@@ -109,11 +92,14 @@ export default function ProjectsView({ projects: initialProjects, customers, tod
           <div className="col-span-1"></div>
         </div>
         
+        {/* Laddnings- & Felhantering */}
         {loading && <div className="p-4 text-center text-gray-400">Laddar projekt...</div>}
-        {error && <div className="p-4 text-center text-red-400">Kunde inte ladda projekt. {error.includes('Authentication required') ? 'Du måste vara inloggad.' : `Fel: ${error}`}</div>}
+        {error && <div className="p-4 text-center text-red-400">{`Kunde inte ladda projekt: ${error}`}</div>}
         
+        {/* Projektlista */}
         {!loading && !error && projects.map(p => <ProjectRow key={p.id} project={p} />)}
 
+        {/* Tomt tillstånd (om inga projekt finns) */}
         {!loading && !error && projects.length === 0 && (
             <div className="p-8 text-center text-gray-400">
                 <h3 className="text-lg font-semibold text-white">Inga projekt hittades</h3>
@@ -122,6 +108,7 @@ export default function ProjectsView({ projects: initialProjects, customers, tod
         )}
 
       </div>
+      {/* Modal för att skapa nytt projekt */}
       <NewProjectModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

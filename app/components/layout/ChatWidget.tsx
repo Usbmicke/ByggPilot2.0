@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, FormEvent } from 'react';
 import {
     PaperClipIcon,
     MicrophoneIcon,
@@ -64,7 +64,9 @@ export default function ChatWidget({ userProfile }: ChatWidgetProps) {
         }
     };
 
-    const handleSendMessage = async () => {
+    const handleSendMessage = async (e?: FormEvent<HTMLFormElement>) => {
+        if (e) e.preventDefault();
+        
         const content = input.trim();
         if (!content || !firebaseUser) return;
 
@@ -113,11 +115,12 @@ export default function ChatWidget({ userProfile }: ChatWidgetProps) {
             handleSendMessage();
         }
     };
-
+    
     useEffect(() => {
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+            const scrollHeight = textareaRef.current.scrollHeight;
+            textareaRef.current.style.height = `${scrollHeight}px`;
         }
     }, [input]);
     
@@ -135,12 +138,12 @@ export default function ChatWidget({ userProfile }: ChatWidgetProps) {
                 {isExpanded && <div className="flex-1 overflow-y-auto"><Chat messages={messages} isLoading={isLoading} /></div>}
 
                 <div className="p-3">
-                    <div className="flex items-end gap-2">
-                        <button type="button" onClick={() => setIsExpanded(!isExpanded)} className="p-2"><ChevronUpIcon className="h-6 w-6" /></button>
+                    <form onSubmit={handleSendMessage} className="flex items-end gap-2">
+                        <button type="button" onClick={() => setIsExpanded(!isExpanded)} className="p-2 self-end"><ChevronUpIcon className="h-6 w-6" /></button>
                         
                         <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-                        <button type="button" onClick={handleAttachmentClick} disabled={isChatDisabled} className="p-2 disabled:opacity-50"><PaperClipIcon className="h-6 w-6" /></button>
-                        <button type="button" onClick={handleMicClick} disabled={isChatDisabled} className="p-2 disabled:opacity-50"><MicrophoneIcon className="h-6 w-6" /></button>
+                        <button type="button" onClick={handleAttachmentClick} disabled={isChatDisabled} className="p-2 self-end disabled:opacity-50"><PaperClipIcon className="h-6 w-6" /></button>
+                        <button type="button" onClick={handleMicClick} disabled={isChatDisabled} className="p-2 self-end disabled:opacity-50"><MicrophoneIcon className="h-6 w-6" /></button>
 
                         <textarea
                             ref={textareaRef}
@@ -153,10 +156,10 @@ export default function ChatWidget({ userProfile }: ChatWidgetProps) {
                             className="flex-1 bg-border-primary/70 rounded-lg px-4 py-2.5 resize-none max-h-48"
                             disabled={isChatDisabled}
                         />
-                        <button type="button" onClick={handleSendMessage} disabled={!input.trim() || isChatDisabled} className="p-2 bg-accent-blue text-white rounded-full disabled:bg-border-primary">
+                        <button type="submit" disabled={!input.trim() || isChatDisabled} className="p-2 bg-accent-blue text-white rounded-full self-end disabled:bg-border-primary">
                             <PaperAirplaneIcon className="h-6 w-6" />
                         </button>
-                    </div>
+                    </form>
                 </div>
             </div>
         </div>
