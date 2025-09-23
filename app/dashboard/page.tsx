@@ -1,62 +1,61 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { ActionSuggestions } from "@/app/components/dashboard/ActionSuggestions";
-import { ProjectList } from "@/app/components/dashboard/ProjectList";
-import { WelcomeHeader } from "@/app/components/dashboard/WelcomeHeader";
-import type { Project } from "@/app/types/project";
+import React, { useState } from 'react';
+// Korrigerade importer med { }
+import { WelcomeHeader } from '@/app/components/dashboard/WelcomeHeader';
+import DashboardSummary from '@/app/components/dashboard/DashboardSummary';
+import { ProjectList } from '@/app/components/dashboard/ProjectList';
+import { ActionSuggestions } from '@/app/components/dashboard/ActionSuggestions';
+import ZeroState from '@/app/components/dashboard/ZeroState';
+
+// Importera den nya, kraftfulla modalen för att skapa projekt
+import CreateProjectModal from '@/app/components/dashboard/CreateProjectModal';
+
+// Exempeldata, i en riktig app skulle detta komma från ett API
+const projects = [
+    { id: '1', name: 'Renovering kök, familjen Andersson', status: 'Pågående', lastActivity: '2 timmar sedan' },
+    { id: '2', name: 'Altanbygge, Brf. Solsidan', status: 'Väntar på kund', lastActivity: '1 dag sedan' },
+    { id: '3', name: 'Stambyte, HSB Stockholm', status: 'Planerad', lastActivity: '3 dagar sedan' },
+];
 
 export default function DashboardPage() {
-    const { data: session, status } = useSession();
-    const [projects, setProjects] = useState<Project[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [showOnboarding, setShowOnboarding] = useState(false);
+    
+    // State för att kontrollera synligheten av vår nya modal
+    const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
 
-    useEffect(() => {
-        const fetchProjects = async () => {
-            // Avbryt om sessionen inte är laddad eller om användaren inte är autentiserad
-            if (status !== 'authenticated') return;
+    const user = { name: 'Sven' }; // Exempelanvändare
 
-            setIsLoading(true);
-            try {
-                const response = await fetch('/api/projects');
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Kunde inte hämta projekt');
-                }
-                const data: Project[] = await response.json();
-                setProjects(data);
-            } catch (err: any) {
-                console.error("Fel vid hämtning av projekt:", err);
-                setError(err.message);
-            } finally {
-                setIsLoading(false);
-            }
-        };
+    // Funktion för att hantera klick på "Nytt Projekt"-knappen
+    const handleNewProject = () => {
+        setIsCreateProjectModalOpen(true);
+    };
 
-        fetchProjects();
-    }, [status]); // Kör effekten när autentiseringsstatusen ändras
-
-    // Visa laddningsindikator medan sessionen verifieras
-    if (status === 'loading') {
-        return <div className="text-center p-8 text-gray-400">Laddar session...</div>;
+    if (showOnboarding) {
+        return <ZeroState onFinished={() => setShowOnboarding(false)} />;
     }
 
     return (
-        <div className="space-y-12">
-            <WelcomeHeader />
-            
-            <section aria-labelledby="action-suggestions-heading">
-                <h2 id="action-suggestions-heading" className="text-2xl font-bold tracking-tight text-white mb-6">Dina föreslagna åtgärder</h2>
-                <ActionSuggestions />
-            </section>
+        <>
+            {/* Lägg till modal-komponenten här. Den är osynlig tills `isOpen` är true. */}
+            <CreateProjectModal 
+                isOpen={isCreateProjectModalOpen} 
+                onClose={() => setIsCreateProjectModalOpen(false)} 
+            />
 
-            <section aria-labelledby="project-list-heading">
-                <h2 id="project-list-heading" className="text-2xl font-bold tracking-tight text-white mb-6">Dina projekt</h2>
-                {error && <p className="text-red-400 bg-red-900/20 p-4 rounded-md">Kunde inte ladda projekt: {error}</p>}
-                <ProjectList projects={projects} isLoading={isLoading} />
-            </section>
-        </div>
+            <div className="p-4 sm:p-6 md:p-8 animate-fade-in space-y-8">
+                <WelcomeHeader user={user} />
+                <DashboardSummary projectCount={projects.length} />
+                
+                <div className="flex flex-col md:flex-row gap-8">
+                    <div className="w-full md:w-2/3">
+                         <ProjectList projects={projects} onNewProject={handleNewProject} />
+                    </div>
+                    <div className="w-full md:w-1/3">
+                        <ActionSuggestions onNewProject={handleNewProject} />
+                    </div>
+                </div>
+            </div>
+        </>
     );
 }

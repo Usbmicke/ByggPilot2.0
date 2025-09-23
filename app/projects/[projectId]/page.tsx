@@ -7,18 +7,23 @@ import ViewTabs from '@/app/components/ViewTabs';
 import DocumentView from '@/app/components/views/DocumentView';
 import ChatView from '@/app/components/views/ChatView';
 import InvoicingView from '@/app/components/views/InvoicingView';
-import DashboardView from '@/app/components/views/DashboardView'; // Importera den nya vyn
+import DashboardView from '@/app/components/views/DashboardView';
+import AtaView from '@/app/components/views/AtaView'; // STEG 1: Importera den nya vyn
 
 interface ProjectPageProps {
     params: { projectId: string; };
     searchParams: { view?: string; };
 }
 
-// Definiera de tillgängliga vyerna
+// STEG 2: Lägg till den nya vyn i listan över tillgängliga vyer
 const views = {
     'dashboard': {
         name: 'Översikt',
         component: DashboardView,
+    },
+    'ata': { // Nyckeln som används i URL:en, t.ex. /projects/123?view=ata
+        name: 'ÄTA', // Namnet som visas på fliken
+        component: AtaView, // Komponenten som renderas
     },
     'documents': {
         name: 'Dokument',
@@ -43,7 +48,6 @@ export default async function ProjectPage({ params, searchParams }: ProjectPageP
     const project = await getProject(params.projectId, userId);
     if (!project) { notFound(); }
 
-    // Bestäm vilken vy som ska visas. Fallback till 'dashboard'.
     const currentViewKey = searchParams.view && Object.keys(views).includes(searchParams.view) 
         ? searchParams.view 
         : 'dashboard';
