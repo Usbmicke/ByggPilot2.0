@@ -3,7 +3,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { IconX } from '@/app/constants';
-// **STEG 1: Importera de nya, korrekta typerna**
 import { Project, ProjectStatus } from '@/app/types';
 
 interface GoogleContact {
@@ -20,7 +19,6 @@ type NewProjectModalProps = {
 export default function NewProjectModal({ isOpen, onClose, onProjectCreated }: NewProjectModalProps) {
   const [projectName, setProjectName] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
-  // **STEG 2: Använd ProjectStatus enum för state**
   const [status, setStatus] = useState<ProjectStatus>(ProjectStatus.QUOTE);
   
   const [contacts, setContacts] = useState<GoogleContact[]>([]);
@@ -31,7 +29,6 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated }: N
 
   useEffect(() => {
     if (isOpen) {
-      // Återställ formuläret med den nya enum-standarden
       setProjectName('');
       setSelectedCustomerId('');
       setStatus(ProjectStatus.QUOTE);
@@ -40,6 +37,7 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated }: N
       const fetchContacts = async () => {
         setIsLoadingContacts(true);
         try {
+          // Notera: Detta API-anrop har inte verifierats än, men vi fokuserar på att skapa projektet först.
           const response = await fetch('/api/google/people/list-contacts');
           if (!response.ok) {
             throw new Error('Kunde inte hämta kundlistan från Google');
@@ -48,7 +46,7 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated }: N
           const sortedContacts = (data.contacts || []).sort((a: GoogleContact, b: GoogleContact) => a.name.localeCompare(b.name));
           setContacts(sortedContacts);
         } catch (err: any) {
-          setError('Kunde inte ladda Google-kontakter. Prova att logga ut och in igen.');
+          setError('Kunde inte ladda Google-kontakter. Är du säker på att API-nyckeln är korrekt konfigurerad?');
         }
         setIsLoadingContacts(false);
       };
@@ -76,21 +74,22 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated }: N
     }
 
     try {
-      // **STEG 3: Skicka med det korrekta enum-värdet**
-      const response = await fetch('/api/projects/route', {
+      // **KORRIGERING: Anropar nu den korrekta endpointen '/api/projects'**
+      const response = await fetch('/api/projects', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: projectName,
+          // **KORRIGERING: Fältet heter 'name', inte 'projectName' i API:et**
+          name: projectName, 
           customerId: selectedContact.id,
           customerName: selectedContact.name,
-          status: status // Skickar nu 'Anbud', 'Planering', etc.
+          status: status
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Något gick fel');
+        throw new Error(errorData.message || 'Något gick fel vid skapandet av projektet');
       }
 
       const newProject: Project = await response.json();
@@ -131,7 +130,6 @@ export default function NewProjectModal({ isOpen, onClose, onProjectCreated }: N
             </div>
             <div>
               <label htmlFor="status" className="block text-sm font-medium text-gray-300 mb-1">Status</label>
-              {/* **STEG 4: Fyll i listan från enum för att göra den dynamisk** */}
               <select id="status" value={status} onChange={e => setStatus(e.target.value as ProjectStatus)} className="w-full bg-gray-900 border-gray-700 rounded-lg p-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
                 {Object.values(ProjectStatus).map(s => (
                     <option key={s} value={s}>{s}</option>
