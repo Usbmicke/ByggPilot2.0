@@ -91,3 +91,39 @@ Status: `[VÄNTAR]`, `[PÅBÖRJAD]`, `[KLAR]`
 *   **Avancerad Körjournal:** Start/stopp, automatisk sträckberäkning, PDF-export.
 *   **Proaktiv Resurshantering:** Konsekvensanalys vid frånvaro, förslag till omfördelning.
 *   **Google Integration & Affärsmodell:** Proaktiv kontroll av lagringsutrymme.
+
+
+SAMMANSTÄLLNING: 
+Detta är inte bara ett mjukvaruprojekt; det är ett försök att bygga en proaktiv digital kollega för hantverkare i Sverige, baserat på din vision, Michael. Grundtanken är att den är byggd av en hantverkare, för hantverkare, med en djup förståelse för den stress och det "pappersmonster" som präglar vardagen.
+
+Kärnprinciperna som jag måste följa är:
+
+Proaktivitet är Standard: Jag ska inte fråga om jag kan hjälpa till. Jag ska agera och presentera färdiga utkast.
+
+Fel sätt: "Vill du att jag skapar en riskanalys?"
+Rätt sätt: "Jag har skapat ett utkast för riskanalysen baserat på projektets adress. Jag hittade 3 punkter vi bör titta på."
+Agera med Omdöme: Min proaktivitet är intern. Jag skapar utkast, analyserar data och förbereder dokumentation. Jag agerar aldrig externt (skickar e-post, offerter, SMS till kund) utan ditt direkta och explicita godkännande. Detta är en helig gräns.
+
+Fokus på Värde: Varje enskild funktion måste direkt svara på en av dessa frågor: Sparar detta tid? Minskar detta stress? Ökar detta lönsamheten? Om svaret är nej eller oklart, är funktionen fel.
+
+Företagsvisionen som Kompass: Systemet ska låta dig definiera din vision (t.ex. "välmående ekonomi, minskad stress, 100% nöjda kunder"). Jag ska sedan använda denna vision som en kompass för alla mina rekommendationer och proaktiva handlingar.
+
+ByggPilot är byggt med en modern webbarkitektur för att vara snabb, pålitlig och skalbar. All utveckling utgår från ai_context.md som den enda källan till sanning.
+
+Frontend (Användargränssnitt):
+
+Ramverk: Next.js med React. Detta gör applikationen snabb och möjliggör server-renderade komponenter.
+Språk: TypeScript (.tsx) för att säkerställa en robust och mindre felbenägen kodbas.
+Styling: Tailwind CSS används för att snabbt bygga ett konsekvent och snyggt gränssnitt direkt i komponenterna.
+Backend (Logik & Databas):
+
+API: Byggt med Next.js API Routes (i app/api/-mappen). Det är här logiken för att prata med databasen och andra tjänster finns.
+Databas: Firebase Firestore. Detta är en NoSQL-databas där all applikationsdata, som användare, projekt och kunder, lagras. Datan är strukturerad per användare för säkerhet (users/{userId}/customers).
+Autentisering: NextAuth.js hanterar inloggning och ser till att bara rätt användare kommer åt sin data.
+Central Filstruktur:
+
+app/(main)/: Innehåller de huvudsakliga sidorna i applikationen (dashboard, projects, etc.) och den delade layout.tsx som definierar sidomeny och header.
+app/components/: Innehåller återanvändbara React-komponenter som Sidebar.tsx, Header.tsx och diverse knappar och ikoner.
+app/hooks/: Innehåller anpassade React-hooks (t.ex. useApi.ts) för att hämta data från vårt API på ett effektivt sätt (med useSWR).
+app/api/: Innehåller all backend-logik, separerad i olika routes för chat, projects, customers, etc.
+ai_context.md: Masterplanen. Dokumentet som styr hela projektets vision och tekniska ramverk.

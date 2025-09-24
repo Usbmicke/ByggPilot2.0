@@ -4,27 +4,35 @@
 import React, { useState } from 'react';
 import Sidebar from '@/app/components/layout/Sidebar';
 import Header from '@/app/components/layout/Header';
-import ChatWidget from '@/app/components/layout/ChatWidget';
+import { usePathname } from 'next/navigation';
+import ChatInput from '@/app/components/chat/ChatInput';
 
-export default function MainAppLayout({ children }: { children: React.ReactNode }) {
+const MainAppLayout = ({ children }: { children: React.ReactNode }) => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Dölj huvudlayouten för vissa specifika sidor
+  if (pathname === '/login' || pathname === '/register') {
+    return <>{children}</>;
+  }
 
   return (
-    <div className="h-screen w-full bg-background-primary text-text-primary overflow-hidden">
-      {/* Sidebar och Header är nu syskon, båda med fast positionering. */}
+    <div className="h-screen flex flex-col bg-background-primary">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setSidebarOpen(false)} />
-      {/* @ts-ignore */}
-      <Header onMenuClick={() => setSidebarOpen(true)} />
-
-      {/* Huvudinnehållet får en marginal på desktop för att inte hamna bakom sidomenyn
-          och padding upptill för att inte hamna bakom headern. */}
-      <div className="md:ml-64 pt-16 h-full">
-        <main className="h-full overflow-y-auto p-4 sm:p-6 md:p-8">
+      
+      <div className="flex-1 flex flex-col md:ml-64">
+        <Header onMenuClick={() => setSidebarOpen(true)} />
+        
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 mt-16">
           {children}
         </main>
+
+        <div className="p-4 border-t border-border-primary">
+          <ChatInput />
+        </div>
       </div>
-      
-      <ChatWidget />
     </div>
   );
-}
+};
+
+export default MainAppLayout;

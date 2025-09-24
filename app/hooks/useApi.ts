@@ -1,6 +1,6 @@
 
 import useSWR from 'swr';
-import { Project, Task } from '@/app/types';
+import { Project, Task, Customer } from '@/app/types';
 
 // En generisk fetcher-funktion som kan användas av SWR
 const fetcher = (url: string) => fetch(url).then(res => {
@@ -21,6 +21,19 @@ export function useProjects() {
         mutate
     };
 }
+
+// *** NY HOOK för att hämta kundlistan ***
+export function useCustomers() {
+    const { data, error, isLoading, mutate } = useSWR<any>('/api/customers/list', fetcher);
+
+    return {
+        customers: data?.customers as Customer[],
+        isLoading,
+        isError: error,
+        mutate
+    };
+}
+
 
 // Hook för att hämta uppgifter för ett specifikt projekt
 export function useTasks(projectId: string | null) {

@@ -7,21 +7,23 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import {
-  HomeIcon, 
-  FolderIcon, 
-  UsersIcon, 
-  CogIcon, 
-  ArchiveBoxIcon, 
-  ChevronLeftIcon, 
-  ArrowRightOnRectangleIcon
+  HomeIcon,
+  FolderIcon,
+  UsersIcon,
+  ClockIcon,
+  DocumentDuplicateIcon,
+  ChevronLeftIcon,
+  ArrowRightOnRectangleIcon,
+  PlusIcon
 } from '@heroicons/react/24/outline';
 
+// KORRIGERING: Menyalternativ återställda till den gamla, korrekta designen.
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
+  { name: 'Översikt', href: '/dashboard', icon: HomeIcon },
   { name: 'Projekt', href: '/projects', icon: FolderIcon },
+  { name: 'Tidrapportering', href: '/time-tracking', icon: ClockIcon },
+  { name: 'Dokument', href: '/documents', icon: DocumentDuplicateIcon },
   { name: 'Kunder', href: '/customers', icon: UsersIcon },
-  { name: 'Arkiv', href: '/archive', icon: ArchiveBoxIcon },
-  { name: 'Inställningar', href: '/settings', icon: CogIcon },
 ];
 
 interface SidebarProps {
@@ -49,7 +51,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       <aside className={`fixed top-0 left-0 w-64 h-full bg-background-secondary z-40 transform transition-transform duration-300 ease-in-out \
         ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 md:flex md:flex-col md:border-r md:border-border-primary`}>
         
-        <div className="flex items-center justify-between p-4 border-b border-border-primary">
+        <div className="flex items-center justify-between p-4 border-b border-border-primary h-[65px]">
           <Link href="/dashboard" className="flex items-center gap-2">
             <Image src="/images/byggpilotlogga1.png" alt="ByggPilot Logotyp" width={32} height={32} />
             <span className="font-bold text-xl text-text-primary">ByggPilot</span>
@@ -58,28 +60,38 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
              <ChevronLeftIcon className="h-6 w-6" />
            </button>
         </div>
+        
+        <div className="flex flex-col flex-1 p-4">
+          {/* Navigationslänkar - tar upp tillgängligt utrymme */}
+          <nav className="flex-1">
+            <ul>
+              {navigation.map((item) => {
+                const isActive = pathname.startsWith(item.href);
+                return (
+                  <li key={item.name}>
+                    <Link href={item.href} legacyBehavior>
+                      <a className={`flex items-center gap-3 px-4 py-2.5 my-1 rounded-lg transition-colors duration-200 \
+                        ${isActive 
+                          ? 'bg-accent-blue text-white shadow-sm' 
+                          : 'text-text-secondary hover:bg-background-tertiary hover:text-text-primary'}`}>
+                        <item.icon className="h-5 w-5" />
+                        <span className="font-medium text-sm">{item.name}</span>
+                      </a>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
 
-        {/* Navigationslänkar - tar upp resterande utrymme */}
-        <nav className="flex-1 p-4">
-          <ul>
-            {navigation.map((item) => {
-              const isActive = pathname.startsWith(item.href);
-              return (
-                <li key={item.name}>
-                  <Link href={item.href} legacyBehavior>
-                    <a className={`flex items-center gap-3 px-4 py-2.5 my-1 rounded-lg transition-colors duration-200 \
-                      ${isActive 
-                        ? 'bg-accent-blue text-white shadow-sm' 
-                        : 'text-text-secondary hover:bg-background-tertiary hover:text-text-primary'}`}>
-                      <item.icon className="h-5 w-5" />
-                      <span className="font-medium text-sm">{item.name}</span>
-                    </a>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+          {/* NYTT: Knappen "Skapa Offert" tillagd enligt gammal design */}
+          <div className="py-4">
+              <button className="w-full flex items-center justify-center gap-2 bg-accent-blue text-white font-semibold py-3 rounded-lg hover:bg-accent-blue-dark transition-colors duration-200 shadow">
+                  <PlusIcon className="h-5 w-5" />
+                  <span>Skapa Offert</span>
+              </button>
+          </div>
+        </div>
 
         {/* Användarinfo och Logga ut - längst ner */}
         <div className="p-4 border-t border-border-primary">
@@ -95,6 +107,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-text-primary truncate">{session.user.name}</p>
+                   <Link href="/settings" className="text-xs text-text-secondary hover:underline">Inställningar</Link>
                 </div>
               </div>
               <button 

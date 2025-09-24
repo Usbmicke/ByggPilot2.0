@@ -1,21 +1,32 @@
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from '@/app/lib/auth';
-import { listCustomers } from '@/app/services/customerService';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { db } from '@/app/firebase';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { Customer } from '@/app/types';
 
 export async function GET() {
-  try {
-    const session = await getServerSession();
-    if (!session?.user?.id) {
-      return new NextResponse(JSON.stringify({ message: 'Authentication required' }), { status: 401 });
-    }
+  const session = await getServerSession(authOptions);
 
-    const customers = await listCustomers(session.user.id);
-    return NextResponse.json(customers);
+  if (!session || !session.user || !session.user.uid) {
+    return NextResponse.json({ error: 'Användaren är inte autentiserad.' }, { status: 401 });
+  }
+
+  try {
+    const customersRef = collection(db, 'users', session.user.uid, 'customers');
+    const q = query(customersRef);
+    const querySnapshot = await getDocs(q);
+
+    const customers = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Customer[];
+
+    return NextResponse.json({ customers });
 
   } catch (error) {
-    console.error("Error in GET /api/customers/list: ", error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new NextResponse(JSON.stringify({ message: `Internal Server Error: ${errorMessage}` }), { status: 500 });
+    console.error("Fel vid hämtning av kunder från Firestore: ", error);
+    return NextResponse.json({ error: 'Internt serverfel' }, { status: 500 });
   }
 }
