@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ArchiveBoxIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { ArchiveBoxIcon } from '@heroicons/react/24/outline';
 
 const ProjectsPage = () => {
   return (
@@ -11,10 +11,6 @@ const ProjectsPage = () => {
             <button className="flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary bg-background-secondary px-4 py-2 rounded-lg border border-border-primary transition-colors">
                 <ArchiveBoxIcon className="h-5 w-5" />
                 Arkiverade projekt
-            </button>
-            <button className="flex items-center gap-2 text-sm text-white bg-accent-blue hover:bg-accent-blue-dark px-4 py-2 rounded-lg transition-colors shadow">
-                <PlusIcon className="h-5 w-5" />
-                Nytt Projekt
             </button>
         </div>
       </div>

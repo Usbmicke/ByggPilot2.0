@@ -1,4 +1,5 @@
-# ByggPilot: Masterplan & Kärnfilosofi (v2.4)
+
+# ByggPilot: Masterplan & Kärnfilosofi (v2.5)
 
 Detta dokument är den enda, centrala källan till sanning för ByggPilot-projektet. All utveckling utgår härifrån.
 
@@ -21,7 +22,16 @@ ByggPilot är inte ett verktyg; det är en **proaktiv digital kollega** för han
 
 3.  **Fokus på Värde:** Varje funktion, varje knapp, varje textrad måste svara på frågan: "Hur hjälper detta hantverkaren att spara tid, minska stress eller öka lönsamheten?" Om svaret är oklart är funktionen fel.
 
-4.  **Företagsvisionen som Kompass:** Systemet ska erbjuda användaren att definiera sin företagsvision (t.ex. "välmående ekonomi, minskad stress, 100% nöjda kunder"). ByggPilot använder sedan denna vision som en extra kompass för sina rekommendationer och proaktiva handlingar.
+### Strikta Arbetsregler (Kritiska):
+
+**Dessa regler är absoluta och får aldrig brytas:**
+
+1.  **Verifiera Alltid Före Handling:** Innan någon fil skapas, modifieras eller raderas, måste jag **alltid** först använda `list_files` eller `read_file` för att verifiera filsystemets nuvarande tillstånd. Jag får aldrig agera på antaganden om en fils existens eller innehåll.
+
+2.  **Analysera Före Agerande:** Innan jag skriver någon kod måste jag analysera all relevant kontext. Detta inkluderar att läsa innehållet i filer jag avser att ändra för att förstå deras syfte, beroenden och relation till andra delar av kodbasen. Jag får aldrig agera på ofullständig information.
+
+3.  **Rapportera Plan, Invänta Godkännande:** Efter analys måste jag presentera en tydlig sammanfattning av mina fynd och en detaljerad, steg-för-steg-plan för dig. Jag får **absolut inte** påbörja någon kodning förrän jag har fått ditt explicita **OK**.
+
 
 ---
 
@@ -42,88 +52,30 @@ För att undvika dubbelarbete och upprätthålla en ren kodbas följer vi denna 
 
 ## 3. Komplett Master-Checklista (Strategisk Roadmap)
 
-Status: `[VÄNTAR]`, `[PÅBÖRJAD]`, `[KLAR]`
+Status: `[VÄNTAR]`, `[PÅBÖRJAD]`, `[KLAR]`, `[TRÄFFAD AV REGRESSION]`
 
-### Fas 0: Grundsystem & Stabilisering (100% KLAR)
+### Fas 0.5: Återställning & Kvalitetssäkring (PÅGÅR)
 
-*   **Autentisering & Användare:** [KLAR]
-*   **Dashboard & Projekt:** [KLAR]
-*   **ÄTA-hantering (Grundflöde):** [KLAR]
-*   **Databas:** [KLAR]
+*   **Återställa UI:**
+    *   [VÄNTAR] Ta bort duplicerade knappar på kund- & projektsidor.
+    *   [VÄNTAR] Åtgärda felaktig styling ("vit ruta") på kundsidan.
+    *   [VÄNTAR] Återställ bredden på sökfältet i headern.
 
-### Fas 1: Kärnprocesser & Intelligens (PÅBÖRJAD)
+*   **Återställa Kärnfunktionalitet:**
+    *   [VÄNTAR] Återställ den fullständiga chatt-komponenten (`MessageInput.tsx`) med alla funktioner (ljud, bild, förslag).
+    *   [VÄNTAR] Återställ aviseringsknappens funktion i headern.
 
-*   **Finalisera Chatt-Intelligens (Masterprompt 9.2):**
-    *   [KLAR] Implementera "Masterprompt 9.2".
-    *   [KLAR] Gränssnitt för chatt-styrning av UI.
-    *   [KLAR] Full integration av röst-till-text.
+*   **Åtgärda Brutna Länkar (404-fel):**
+    *   [VÄNTAR] Skapa platshållarsidor för `Tidrapportering` och `Dokument`.
 
-*   **Utökad Onboarding:**
-    *   [KLAR] "Zero State" / Onboarding-vy när inga projekt finns.
-    *   [KLAR] Vid första inloggning: guida användaren genom en kort process.
-    *   [KLAR] **Automatisk skapande av Google Drive-mappstruktur**.
-    *   [KLAR] **Möjlighet att fylla i "Företagsvisionen"** som AI:n använder som kompass.
-    *   [VÄNTAR] Inkludera en smart, skyddande text om AI:ns roll.
+### Fas 1: Kärnprocesser & Intelligens (Pausad p.g.a. Regression)
 
-*   **Förädling av ÄTA-processen:**
-    *   [VÄNTAR] Gör ÄTA-listan klickbar för detaljvy.
-    *   [VÄNTAR] I detaljvyn: redigera pris, material, status.
-*   **Smarta Offertmotorn (Grundläggande "Text Calculator"):**
-    *   [VÄNTAR] Skapa kalkylering/offert-vy.
-    *   [VÄNTAR] Bygg "text-till-kalkyl"-motor.
-    *   [VÄNTAR] Generera PDF-offert.
+*   **Finalisera Chatt-Intelligens:** [TRÄFFAD AV REGRESSION]
+*   **Utökad Onboarding:** [KLAR]
+*   **Förädling av ÄTA-processen:** [VÄNTAR]
+*   **Smarta Offertmotorn:** [VÄNTAR]
 
-### Fas 2: Funktions-Expansion & Effektivisering (PLANERAD)
+(Resterande faser är oförändrade men kan inte påbörjas förrän Fas 0.5 är klar.)
 
-*   **Utökad ÄTA-insamling:** Röstmemo, bilduppladdning, fillagring.
-*   **Tid & Resor (Förenklad version):** Logga tid, biltillägg.
-*   **Dokument & Underlag:** Skanna kvitton med OCR, hämta fastighetsbeteckning.
+---
 
-### Fas 3: Team, Samarbete & Säkerhet (FRAMTID)
-
-*   **Teamhantering (Multi-user):** Roller, inbjudningar.
-*   **Visuell Resursplanering:** Personalöversikt, dra-och-släpp-tilldelning.
-*   **Säkerhet & Regelefterlevnad:** Automatiserad kemikaliehantering.
-*   **Intern Utbildning:** Företagets kunskapsbank med interaktivt quizz.
-
-### Fas 4: Avancerad Automation & Intelligens (VISION)
-
-*   **Avancerad Körjournal:** Start/stopp, automatisk sträckberäkning, PDF-export.
-*   **Proaktiv Resurshantering:** Konsekvensanalys vid frånvaro, förslag till omfördelning.
-*   **Google Integration & Affärsmodell:** Proaktiv kontroll av lagringsutrymme.
-
-
-SAMMANSTÄLLNING: 
-Detta är inte bara ett mjukvaruprojekt; det är ett försök att bygga en proaktiv digital kollega för hantverkare i Sverige, baserat på din vision, Michael. Grundtanken är att den är byggd av en hantverkare, för hantverkare, med en djup förståelse för den stress och det "pappersmonster" som präglar vardagen.
-
-Kärnprinciperna som jag måste följa är:
-
-Proaktivitet är Standard: Jag ska inte fråga om jag kan hjälpa till. Jag ska agera och presentera färdiga utkast.
-
-Fel sätt: "Vill du att jag skapar en riskanalys?"
-Rätt sätt: "Jag har skapat ett utkast för riskanalysen baserat på projektets adress. Jag hittade 3 punkter vi bör titta på."
-Agera med Omdöme: Min proaktivitet är intern. Jag skapar utkast, analyserar data och förbereder dokumentation. Jag agerar aldrig externt (skickar e-post, offerter, SMS till kund) utan ditt direkta och explicita godkännande. Detta är en helig gräns.
-
-Fokus på Värde: Varje enskild funktion måste direkt svara på en av dessa frågor: Sparar detta tid? Minskar detta stress? Ökar detta lönsamheten? Om svaret är nej eller oklart, är funktionen fel.
-
-Företagsvisionen som Kompass: Systemet ska låta dig definiera din vision (t.ex. "välmående ekonomi, minskad stress, 100% nöjda kunder"). Jag ska sedan använda denna vision som en kompass för alla mina rekommendationer och proaktiva handlingar.
-
-ByggPilot är byggt med en modern webbarkitektur för att vara snabb, pålitlig och skalbar. All utveckling utgår från ai_context.md som den enda källan till sanning.
-
-Frontend (Användargränssnitt):
-
-Ramverk: Next.js med React. Detta gör applikationen snabb och möjliggör server-renderade komponenter.
-Språk: TypeScript (.tsx) för att säkerställa en robust och mindre felbenägen kodbas.
-Styling: Tailwind CSS används för att snabbt bygga ett konsekvent och snyggt gränssnitt direkt i komponenterna.
-Backend (Logik & Databas):
-
-API: Byggt med Next.js API Routes (i app/api/-mappen). Det är här logiken för att prata med databasen och andra tjänster finns.
-Databas: Firebase Firestore. Detta är en NoSQL-databas där all applikationsdata, som användare, projekt och kunder, lagras. Datan är strukturerad per användare för säkerhet (users/{userId}/customers).
-Autentisering: NextAuth.js hanterar inloggning och ser till att bara rätt användare kommer åt sin data.
-Central Filstruktur:
-
-app/(main)/: Innehåller de huvudsakliga sidorna i applikationen (dashboard, projects, etc.) och den delade layout.tsx som definierar sidomeny och header.
-app/components/: Innehåller återanvändbara React-komponenter som Sidebar.tsx, Header.tsx och diverse knappar och ikoner.
-app/hooks/: Innehåller anpassade React-hooks (t.ex. useApi.ts) för att hämta data från vårt API på ett effektivt sätt (med useSWR).
-app/api/: Innehåller all backend-logik, separerad i olika routes för chat, projects, customers, etc.
-ai_context.md: Masterplanen. Dokumentet som styr hela projektets vision och tekniska ramverk.

@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import Sidebar from '@/app/components/layout/Sidebar';
 import Header from '@/app/components/layout/Header';
 import { usePathname } from 'next/navigation';
-import ChatInput from '@/app/components/chat/ChatInput';
+import MessageInput from '@/app/components/MessageInput';
 
 const MainAppLayout = ({ children }: { children: React.ReactNode }) => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -28,7 +28,7 @@ const MainAppLayout = ({ children }: { children: React.ReactNode }) => {
         </main>
 
         <div className="p-4 border-t border-border-primary">
-          <ChatInput />
+          <MessageInput />
         </div>
       </div>
     </div>

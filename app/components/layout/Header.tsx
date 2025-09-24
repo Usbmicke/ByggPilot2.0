@@ -44,7 +44,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
     <header className="fixed top-0 left-0 md:left-64 right-0 bg-background-secondary border-b border-border-primary p-4 z-20">
       <div className="flex items-center justify-between">
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-1">
           <button 
             onClick={onMenuClick}
             className="md:hidden text-text-secondary hover:text-text-primary"
@@ -52,7 +52,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             <Bars3Icon className="h-6 w-6" />
           </button>
 
-          <div className="relative flex-1 max-w-2xl hidden md:block">
+          <div className="relative w-full max-w-lg hidden md:block">
             <MagnifyingGlassIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-text-secondary" />
             <input 
               type="search" 
@@ -60,8 +60,8 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setIsSearchFocused(true)}
-              onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)} // Liten fördröjning för att klick ska hinna registreras
-              className="w-full bg-background-primary border border-border-primary text-text-primary rounded-lg pl-11 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all duration-200" 
+              onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+              className="w-full bg-background-primary border border-border-primary text-text-primary rounded-lg pl-11 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent-blue transition-all duration-200"
             />
             {isSearchFocused && searchQuery && (
               <SearchResults query={searchQuery} onResultClick={handleSearchResultClick} />
@@ -73,10 +73,14 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           <Clock />
 
           <button 
-            className="p-2 rounded-full hover:bg-border-primary transition-colors text-text-secondary hover:text-text-primary"
-            onClick={() => alert('Notisfunktionen är under utveckling!')}
+            className="p-2 rounded-full hover:bg-border-primary transition-colors text-text-secondary hover:text-text-primary relative group"
+            onClick={() => alert('Simulerad notis: Ett nytt ÄTA-förslag har inkommit för Projekt X.')}
           >
             <BellIcon className="h-6 w-6" />
+            <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-red opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-accent-red"></span>
+            </span>
           </button>
 
           {session && session.user && (
