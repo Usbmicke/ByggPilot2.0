@@ -16,7 +16,6 @@ const getWeatherIcon = (code: number): { icon: React.ReactNode; description: str
     if (code >= 1 && code <= 3) return { icon: <IconCloud className="w-10 h-10 text-gray-400" />, description: 'Molnigt' };
     if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return { icon: <IconCloudRain className="w-10 h-10 text-blue-400" />, description: 'Regn' };
     if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return { icon: <IconSnowflake className="w-10 h-10 text-white" />, description: 'Snö' };
-    // Fler koder (dimma, åska etc.) kan läggas till här
     return { icon: <IconCloud className="w-10 h-10 text-gray-500" />, description: 'Väder' };
 };
 
@@ -30,7 +29,7 @@ export default function WeatherWidget() {
       try {
         const response = await fetch('/api/weather');
         if (!response.ok) {
-          throw new Error('Kunde inte hämta väder.');
+          throw new Error('Nätverksfel vid hämtning av väderdata.');
         }
         const data = await response.json();
         setWeather(data);
@@ -44,9 +43,9 @@ export default function WeatherWidget() {
   }, []);
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4 flex items-center justify-between">
-        {loading && <p className="text-gray-400">Laddar väder...</p>}
-        {error && <p className="text-red-400">Väderfel</p>}
+    <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4 flex items-center justify-between min-h-[92px]">
+        {loading && <p className="text-gray-400 w-full text-center">Laddar väder...</p>}
+        {error && <p className="text-red-400 w-full text-center">Kunde inte ladda väder</p>}
         {weather && (
             <div className="flex items-center gap-4 w-full animate-fade-in-fast">
                 <div className="flex-shrink-0">

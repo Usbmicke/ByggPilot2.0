@@ -1,114 +1,114 @@
+
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation'; // Importera useRouter
+import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { HomeIcon, FolderIcon, DocumentDuplicateIcon, UsersIcon, PlusIcon, Cog6ToothIcon, ClockIcon, ArrowLeftOnRectangleIcon } from '@heroicons/react/24/outline';
+import {
+  HomeIcon, 
+  FolderIcon, 
+  UsersIcon, 
+  CogIcon, 
+  ArchiveBoxIcon, 
+  ChevronLeftIcon, 
+  ArrowRightOnRectangleIcon
+} from '@heroicons/react/24/outline';
 
-const NavItem = ({ href, icon, label }: { href: string; icon: React.ReactNode; label: string; }) => {
+const navigation = [
+  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
+  { name: 'Projekt', href: '/projects', icon: FolderIcon },
+  { name: 'Kunder', href: '/customers', icon: UsersIcon },
+  { name: 'Arkiv', href: '/archive', icon: ArchiveBoxIcon },
+  { name: 'Inställningar', href: '/settings', icon: CogIcon },
+];
+
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const pathname = usePathname();
-  const isActive = pathname === href;
+  const { data: session } = useSession();
 
-  return (
-    <Link href={href} className={`flex items-center w-full px-4 py-2.5 rounded-lg transition-colors duration-200 text-left ${
-        isActive
-          ? 'bg-accent-blue text-white shadow-md'
-          : 'text-text-secondary hover:bg-border-primary hover:text-text-primary'
-      }`}>
-        {icon}
-        <span className="ml-4 font-medium">{label}</span>
-    </Link>
-  );
-};
-
-const Sidebar: React.FC = () => {
-  const { data: session, status } = useSession();
-  const router = useRouter(); // Initiera routern
-
-  const handleSignOut = () => {
-    signOut({ callbackUrl: '/' });
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return '??';
+    return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
   };
 
-  const handleCreateOfferClick = () => {
-    router.push('/offer/new'); // Navigera till den nya sidan
-  };
-
-  if (status === 'loading') {
-    return (
-      <aside className="hidden md:flex flex-col w-64 bg-background-secondary border-r border-border-primary p-4 fixed h-full z-40">
-          <div className="animate-pulse w-full">
-              <div className="h-10 bg-border-primary rounded mb-10"></div>
-              <div className="space-y-4">
-                  <div className="h-8 bg-border-primary rounded"></div>
-                  <div className="h-8 bg-border-primary rounded"></div>
-                  <div className="h-8 bg-border-primary rounded"></div>
-              </div>
-              <div className="mt-auto pt-10 absolute bottom-4 left-4 right-4">
-                  <div className="h-12 bg-border-primary rounded mb-6"></div>
-                  <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 bg-border-primary rounded-full"></div>
-                      <div className="flex-1 space-y-2">
-                          <div className="h-4 bg-border-primary rounded"></div>
-                          <div className="h-3 bg-border-primary rounded w-3/4"></div>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      </aside>
-    );
-  }
-
   return (
-    <aside className="hidden md:flex flex-col w-64 bg-background-secondary border-r border-border-primary text-text-primary fixed h-full z-40">
-      <div className="flex items-center justify-center h-20 flex-shrink-0 px-4">
-        <Image src="/images/byggpilotlogga1.png" alt="ByggPilot Logotyp" width={32} height={32} />
-        <h1 className="text-2xl font-bold ml-3">ByggPilot</h1>
-      </div>
-      
-      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-        <NavItem href="/dashboard" icon={<HomeIcon className="w-6 h-6" />} label="Översikt" />
-        <NavItem href="/projects" icon={<FolderIcon className="w-6 h-6" />} label="Projekt" />
-        <NavItem href="/time-reporting" icon={<ClockIcon className="w-6 h-6" />} label="Tidrapportering" />
-        <NavItem href="/documents" icon={<DocumentDuplicateIcon className="w-6 h-6" />} label="Dokument" />
-        <NavItem href="/customers" icon={<UsersIcon className="w-6 h-6" />} label="Kunder" />
-      </nav>
-      
-      <div className="px-4 py-4 mt-auto border-t border-border-primary flex-shrink-0">
-        <button 
-          onClick={handleCreateOfferClick} // Använd den nya hanteraren
-          className="w-full flex items-center justify-center gap-2 bg-accent-blue hover:opacity-90 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-300 shadow-lg shadow-accent-blue/20 hover:shadow-accent-blue/40">
-          <PlusIcon className="w-5 h-5" />
-          <span>Skapa Offert</span>
-        </button>
-      </div>
-      
-      <div className="border-t border-border-primary p-4 flex-shrink-0">
-        {session && session.user && (
-            <div className="flex items-center gap-3 mb-4">
-                <Image 
-                    src={session.user.image || './images/default-profile.png'}
-                    alt="Profilbild"
-                    width={40} 
-                    height={40} 
-                    className="rounded-full bg-border-primary"
-                />
-                <div className="truncate">
-                    <p className="font-semibold text-text-primary text-sm">{session.user.name || 'Användare'}</p>
-                    <p className="text-text-secondary text-xs truncate">{session.user.email}</p>
+    <>
+      <div 
+        className={`fixed inset-0 bg-black/60 z-30 md:hidden transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      <aside className={`fixed top-0 left-0 w-64 h-full bg-background-secondary z-40 transform transition-transform duration-300 ease-in-out \
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 md:flex md:flex-col md:border-r md:border-border-primary`}>
+        
+        <div className="flex items-center justify-between p-4 border-b border-border-primary">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <Image src="/images/byggpilotlogga1.png" alt="ByggPilot Logotyp" width={32} height={32} />
+            <span className="font-bold text-xl text-text-primary">ByggPilot</span>
+          </Link>
+           <button onClick={onClose} className="md:hidden p-1 text-text-secondary hover:text-text-primary">
+             <ChevronLeftIcon className="h-6 w-6" />
+           </button>
+        </div>
+
+        {/* Navigationslänkar - tar upp resterande utrymme */}
+        <nav className="flex-1 p-4">
+          <ul>
+            {navigation.map((item) => {
+              const isActive = pathname.startsWith(item.href);
+              return (
+                <li key={item.name}>
+                  <Link href={item.href} legacyBehavior>
+                    <a className={`flex items-center gap-3 px-4 py-2.5 my-1 rounded-lg transition-colors duration-200 \
+                      ${isActive 
+                        ? 'bg-accent-blue text-white shadow-sm' 
+                        : 'text-text-secondary hover:bg-background-tertiary hover:text-text-primary'}`}>
+                      <item.icon className="h-5 w-5" />
+                      <span className="font-medium text-sm">{item.name}</span>
+                    </a>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+
+        {/* Användarinfo och Logga ut - längst ner */}
+        <div className="p-4 border-t border-border-primary">
+          {session && session.user && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-accent-blue flex items-center justify-center text-white font-bold text-sm overflow-hidden">
+                  {session.user.image ? (
+                    <Image src={session.user.image} alt="Profilbild" width={40} height={40} className="rounded-full" />
+                  ) : (
+                    getInitials(session.user.name)
+                  )}
                 </div>
+                <div>
+                  <p className="text-sm font-semibold text-text-primary truncate">{session.user.name}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => signOut({ callbackUrl: '/' })}
+                className="p-2 text-text-secondary hover:text-status-danger rounded-md transition-colors"
+                title="Logga ut"
+              >
+                <ArrowRightOnRectangleIcon className="h-6 w-6" />
+              </button>
             </div>
-        )}
-        <NavItem href="/settings" icon={<Cog6ToothIcon className="w-6 h-6" />} label="Inställningar" />
-        <button 
-          onClick={handleSignOut}
-          className="flex items-center w-full px-4 py-2.5 mt-2 rounded-lg transition-colors duration-200 text-left text-text-secondary hover:bg-status-danger/20 hover:text-status-danger">
-          <ArrowLeftOnRectangleIcon className="w-6 h-6" />
-          <span className="ml-4 font-medium">Logga ut</span>
-        </button>
-      </div>
-    </aside>
+          )}
+        </div>
+      </aside>
+    </>
   );
 };
 

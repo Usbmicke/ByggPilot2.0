@@ -10,17 +10,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Definiera den nya, professionella färgpaletten
-        'background-primary': '#1A1A1A', // Mörk, mjuk grå (ersätter kolsvart)
-        'background-secondary': '#2C2C2C', // Något ljusare grå för kort
-        'text-primary': '#E0E0E0',       // Bruten vit/off-white för text
-        'text-secondary': '#A0A0A0',      // Mörkare grå för sekundär text
-        'border-primary': '#404040',       // Kantlinjefärg
-        'accent-blue': '#3B82F6',        // Dovblå primär accentfärg (ersätter cyan)
+        // ÅTERSTÄLLD: Den klassiska blå färgpaletten för ByggPilot
+        'background-primary': '#0F172A', // Mörkblå "Natt-himmel" för huvudbakgrunden
+        'background-secondary': '#1E293B', // Något ljusare "Skymningsblå" för sidomeny och kort
+        'text-primary': '#F1F5F9',       // Klar vit med en gnutta blått
+        'text-secondary': '#94A3B8',      // Dämpad blå-grå för sekundär text
+        'border-primary': '#334155',       // En tydlig blå-grå kantlinje
+        'accent-blue': '#3B82F6',        // Behåller den starka och klara accent-blå för knappar
 
-        // Statusfärger för projektkort
-        'status-gold': '#FFD700',      // Guld för positiv status
-        'status-red': '#DC2626',       // Röd för varningsstatus
+        // Statusfärger (behålls som de är)
+        'status-gold': '#FFD700',
+        'status-red': '#DC2626',
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',

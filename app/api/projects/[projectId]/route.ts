@@ -21,7 +21,8 @@ export async function GET(request: Request, { params }: { params: { projectId: s
     const docRef = doc(db, "projects", projectId);
     const docSnap = await getDoc(docRef);
 
-    if (!docSnap.exists() || docSnap.data().ownerId !== session.user.id) {
+    // KORRIGERING: Ändrat från ownerId till det korrekta fältet 'userId'
+    if (!docSnap.exists() || docSnap.data().userId !== session.user.id) {
         return new NextResponse(JSON.stringify({ message: 'Project not found or access denied' }), { status: 404 });
     }
 
@@ -34,7 +35,7 @@ export async function GET(request: Request, { params }: { params: { projectId: s
       customerId: data.customerId,
       customerName: data.customerName,
       status: data.status,
-      ownerId: data.ownerId,
+      userId: data.userId, // KORRIGERING: Ändrat från ownerId till userId
       driveFolderId: data.driveFolderId ?? null,
       address: data.address ?? null,
       lat: data.lat ?? undefined,

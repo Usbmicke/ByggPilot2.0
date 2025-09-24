@@ -1,31 +1,29 @@
 
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import Sidebar from '@/app/components/layout/Sidebar';
 import Header from '@/app/components/layout/Header';
 import ChatWidget from '@/app/components/layout/ChatWidget';
 
-/**
- * Detta är den huvudsakliga, persistenta layouten för applikationen.
- * Den innehåller Sidebar, Header och Chat-fönstret.
- * Alla sidor inom (main)-gruppen kommer att renderas som `children` här.
- */
 export default function MainAppLayout({ children }: { children: React.ReactNode }) {
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
+
   return (
-    <div className="h-screen w-full flex bg-gray-900 text-white overflow-hidden">
-      {/* Statisk sidobar till vänster */}
-      <Sidebar />
+    <div className="h-screen w-full bg-background-primary text-text-primary overflow-hidden">
+      {/* Sidebar och Header är nu syskon, båda med fast positionering. */}
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {/* @ts-ignore */}
+      <Header onMenuClick={() => setSidebarOpen(true)} />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Statisk header högst upp i innehållsytan */}
-        <Header />
-
-        {/* Huvudinnehållet på sidan, detta är den del som byts ut vid navigering */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
+      {/* Huvudinnehållet får en marginal på desktop för att inte hamna bakom sidomenyn
+          och padding upptill för att inte hamna bakom headern. */}
+      <div className="md:ml-64 pt-16 h-full">
+        <main className="h-full overflow-y-auto p-4 sm:p-6 md:p-8">
           {children}
         </main>
       </div>
-
-      {/* Statisk chatt-widget till höger */}
+      
       <ChatWidget />
     </div>
   );

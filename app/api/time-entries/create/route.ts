@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
 import { handler } from "@/app/api/auth/[...nextauth]/route";
 import { firestoreAdmin } from "@/app/lib/firebase-admin";
-import { TimeEntry } from "@/app/types/time"; // Importera vår nya datamodell
+import { TimeEntry } from "@/app/types/time";
 
 export async function POST(request: Request) {
   const session = await getServerSession(handler);
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { projectId, date, hours, description } = body;
 
-    // Validering
+    // Steg 1: Validering av indata
     if (!projectId || !date || hours === undefined || !description) {
       return new NextResponse(JSON.stringify({ message: 'Alla fält är obligatoriska.' }), { status: 400 });
     }
@@ -24,6 +24,16 @@ export async function POST(request: Request) {
         return new NextResponse(JSON.stringify({ message: 'Antal timmar måste vara ett positivt tal.' }), { status: 400 });
     }
 
+    // **STEG 2: KRITISK SÄKERHETSKONTROLL - Verifiera ägarskap av projektet**
+    const projectRef = firestoreAdmin.collection('projects').doc(projectId);
+    const projectDoc = await projectRef.get();
+
+    if (!projectDoc.exists() || projectDoc.data()?.userId !== session.user.id) {
+        // Om projektet inte finns, eller om dess userId inte matchar den inloggade användaren, neka åtkomst.
+        return new NextResponse(JSON.stringify({ message: 'Åtkomst nekad: Du äger inte detta projekt.' }), { status: 403 });
+    }
+
+    // Steg 3: Skapa tidrapporten (nu när vi vet att användaren har behörighet)
     const newTimeEntry: Omit<TimeEntry, 'id' | 'createdAt'> = {
       userId: session.user.id,
       projectId,
@@ -32,10 +42,9 @@ export async function POST(request: Request) {
       description,
     };
 
-    // Skapa ett nytt dokument i 'time-entries' samlingen
     const docRef = await firestoreAdmin.collection('time-entries').add({
         ...newTimeEntry,
-        createdAt: new Date(), // Lägg till serverns tidsstämpel
+        createdAt: new Date(),
     });
 
     return NextResponse.json({ id: docRef.id, ...newTimeEntry }, { status: 201 });

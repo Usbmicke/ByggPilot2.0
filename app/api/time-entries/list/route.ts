@@ -1,41 +1,13 @@
 
 import { NextResponse, NextRequest } from 'next/server';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, orderBy } from 'firebase/firestore';
 import { db } from '@/app/services/firestoreService';
-import { getServerSession } from '@/app/lib/auth'; // KORRIGERAD SÖKVÄG
+import { getServerSession } from '@/app/lib/auth';
 import { TimeEntry } from '@/app/types';
 
-/**
- * @swagger
- * /api/time-entries/list:
- *   get:
- *     summary: List time entries for a project
- *     tags:
- *       - Time Entries
- *     parameters:
- *       - in: query
- *         name: projectId
- *         required: true
- *         schema:
- *           type: string
- *         description: The ID of the project to fetch time entries for.
- *     responses:
- *       200:
- *         description: A list of time entries.
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/TimeEntry'
- *       401:
- *         description: Authentication required.
- *       500:
- *         description: Internal server error.
- */
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(); // KORRIGERAD FUNKTION
+    const session = await getServerSession();
     if (!session?.user?.id) {
       return new NextResponse(JSON.stringify({ message: 'Authentication required' }), { status: 401 });
     }
@@ -47,12 +19,21 @@ export async function GET(request: NextRequest) {
       return new NextResponse(JSON.stringify({ message: 'Project ID is required' }), { status: 400 });
     }
 
-    // TODO: Add extra validation to ensure the user owns the project associated with the time entries
+    // **SÄKERHETSÅTGÄRD: Verifiera att användaren äger projektet**
+    const projectRef = doc(db, "projects", projectId);
+    const projectSnap = await getDoc(projectRef);
 
+    if (!projectSnap.exists() || projectSnap.data().userId !== session.user.id) {
+        // Om projektet inte existerar, eller om ägaren inte matchar, neka åtkomst.
+        // Vi returnerar 404 för att inte läcka information om att projektet existerar.
+        return new NextResponse(JSON.stringify({ message: 'Project not found or access denied' }), { status: 404 });
+    }
+
+    // Nu är det säkert att hämta tidrapporterna
     const q = query(
-      collection(db, 'timeEntries'),
+      collection(db, 'timeEntries'), // Korrekt collection name är 'timeEntries'
       where('projectId', '==', projectId),
-      orderBy('startTime', 'desc')
+      orderBy('date', 'desc') // Sorterar på 'date' istället för 'startTime' som inte finns i datamodellen
     );
 
     const querySnapshot = await getDocs(q);

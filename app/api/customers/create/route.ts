@@ -14,17 +14,29 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { name, email, phone, isCompany } = body;
 
-    if (!name) {
-      return new NextResponse(JSON.stringify({ message: 'Name is required' }), { status: 400 });
+    // **FÖRBÄTTRAD INDATA-VALIDERING**
+    if (!name || typeof name !== 'string' || name.trim() === '') {
+      return new NextResponse(JSON.stringify({ message: 'Kundnamn är obligatoriskt.' }), { status: 400 });
     }
 
-    // Skapa ett kundobjekt som matchar den nya datamodellen
+    const hasEmail = email && typeof email === 'string' && email.trim() !== '';
+    const hasPhone = phone && typeof phone === 'string' && phone.trim() !== '';
+
+    if (!hasEmail && !hasPhone) {
+      return new NextResponse(JSON.stringify({ message: 'Antingen e-post eller telefonnummer är obligatoriskt.' }), { status: 400 });
+    }
+
+    // (Valfritt men rekommenderat: E-post validering)
+    if (hasEmail && !/\S+@\S+\.\S+/.test(email)) {
+        return new NextResponse(JSON.stringify({ message: 'Ogiltigt e-postformat.' }), { status: 400 });
+    }
+
     const customerData: Omit<Customer, 'id' | 'createdAt'> = {
-      name,
-      email: email || '',
-      phone: phone || '',
+      name: name.trim(), // Trimma namnet för att ta bort onödiga mellanslag
+      email: hasEmail ? email.trim() : '',
+      phone: hasPhone ? phone.trim() : '',
       isCompany: isCompany || false,
-      userId: session.user.id, // Korrekt fältnamn
+      userId: session.user.id, 
     };
 
     const newCustomer = await createCustomer(customerData);

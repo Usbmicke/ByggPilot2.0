@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
@@ -14,13 +15,12 @@ import {
     MicrophoneIcon as MicOutline
 } from '@heroicons/react/24/outline';
 import Chat from '@/app/components/Chat';
-import { useChat } from '@/app/contexts/ChatContext'; // STEG 3: Importera useChat
+import { useChat } from '@/app/contexts/ChatContext';
 import { useVoiceRecognition } from '@/app/hooks/useVoiceRecognition';
 
 const promptSuggestions = ["Skapa ett nytt projekt...", "Sammanfatta tidrapporter...", "Ge mig en checklista..."];
 
 export default function ChatWidget() {
-    // All state-hantering är borttagen, hämtas från context istället
     const { messages, isLoading, firebaseUser, sendMessage } = useChat();
     
     const [isExpanded, setIsExpanded] = useState(false);
@@ -29,12 +29,10 @@ export default function ChatWidget() {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Röstigenkänning kopplas till den lokala input-staten
     const { isListening, error: voiceError, startListening, stopListening } = useVoiceRecognition((transcript) => {
         setInput(prev => prev + transcript);
     });
 
-    // Hantera placeholder-rotation
     useEffect(() => {
         const interval = setInterval(() => {
             setPlaceholder(p => promptSuggestions[(promptSuggestions.indexOf(p) + 1) % promptSuggestions.length]);
@@ -42,13 +40,12 @@ export default function ChatWidget() {
         return () => clearInterval(interval);
     }, []);
 
-    // Hanterare för UI-interaktioner
     const handleAttachmentClick = () => fileInputRef.current?.click();
     const handleMicClick = () => {
         if (isListening) {
             stopListening();
         } else {
-            setInput(''); // Rensa input innan lyssning startar
+            setInput('');
             startListening();
         }
     };
@@ -60,7 +57,6 @@ export default function ChatWidget() {
         }
     };
 
-    // Skicka meddelande via context-funktionen
     const handleSendMessage = async (e?: FormEvent<HTMLFormElement>) => {
         if (e) e.preventDefault();
         if (isListening) stopListening();
@@ -72,7 +68,6 @@ export default function ChatWidget() {
         setInput('');
     };
 
-    // Hantera Enter-tryck
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -80,7 +75,6 @@ export default function ChatWidget() {
         }
     };
     
-    // Justera höjden på textarean
     useEffect(() => {
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
@@ -131,6 +125,10 @@ export default function ChatWidget() {
                             <PaperAirplaneIcon className="h-6 w-6" />
                         </button>
                     </form>
+                    {/* -- FRISKRIVNING TILLAGD HÄR -- */}
+                    <p className="text-xs text-gray-500 text-center mt-2">
+                        AI-svar kan innehålla felaktigheter. Verifiera alltid kritisk information.
+                    </p>
                 </div>
             </div>
         </div>

@@ -5,29 +5,29 @@ import { SessionProvider, useSession } from 'next-auth/react';
 import React, { useEffect, useState } from 'react';
 import { auth as firebaseAuth } from '@/app/lib/firebase/client';
 import { signInWithCustomToken, signOut } from 'firebase/auth';
+import { useUI } from '@/app/contexts/UIContext'; // **STEG 1: Importera useUI**
 
 // =============================================================================
-// HJÄRNAN FÖR SYNKRONISERING MELLAN NEXT-AUTH OCH FIREBASE
+// HJÄRNAN FÖR SYNKRONISERING OCH ONBOARDING
 // =============================================================================
 
-const FirebaseSync = ({ children }: { children: React.ReactNode }) => {
+const FirebaseSyncAndOnboarding = ({ children }: { children: React.ReactNode }) => {
   const { data: session, status } = useSession();
   const [isFirebaseAuthenticated, setIsFirebaseAuthenticated] = useState(false);
+  const ui = useUI(); // **STEG 2: Hämta UI-kontexten**
 
+  // Effekt för att synkronisera NextAuth -> Firebase Auth
   useEffect(() => {
-    if (status === 'loading') return; // Vänta tills NextAuth-sessionen är laddad
+    if (status === 'loading') return;
 
     const syncAuth = async () => {
       if (status === 'authenticated' && session) {
-        // Användare är inloggad i NextAuth
         if (!isFirebaseAuthenticated) {
           try {
-            // 1. Hämta anpassad Firebase-token från vårt nya API
             const response = await fetch('/api/auth/firebase', { method: 'POST' });
             const data = await response.json();
 
             if (response.ok && data.firebaseToken) {
-              // 2. Logga in i Firebase med den anpassade token
               await signInWithCustomToken(firebaseAuth, data.firebaseToken);
               setIsFirebaseAuthenticated(true);
               console.log('[AuthProvider] Synkronisering lyckades: NextAuth -> Firebase');
@@ -36,13 +36,11 @@ const FirebaseSync = ({ children }: { children: React.ReactNode }) => {
             }
           } catch (error) {
             console.error('[AuthProvider] Fel vid Firebase-inloggning:', error);
-            // Om detta misslyckas, logga ut helt för att undvika osynk
             await signOut(firebaseAuth);
             setIsFirebaseAuthenticated(false);
           }
         }
       } else if (status === 'unauthenticated') {
-        // Användare är utloggad från NextAuth, säkerställ utloggning från Firebase
         if (isFirebaseAuthenticated) {
           await signOut(firebaseAuth);
           setIsFirebaseAuthenticated(false);
@@ -52,8 +50,24 @@ const FirebaseSync = ({ children }: { children: React.ReactNode }) => {
     };
 
     syncAuth();
-
   }, [status, session, isFirebaseAuthenticated]);
+
+  // **STEG 3: Effekt för att hantera Onboarding**
+  useEffect(() => {
+    // Kör bara när sessionen är fullt laddad och autentiserad
+    if (status === 'authenticated' && session) {
+      // @ts-ignore - Vi vet att isNewUser finns baserat på vår backend-logik
+      if (session.user?.isNewUser) {
+        // Öppna onboarding-modalen. Vi använder en liten fördröjning
+        // för att säkerställa att all rendering är klar och upplevelsen blir mjukare.
+        setTimeout(() => {
+          ui.openModal('companyVision');
+        }, 1000); // 1 sekunds fördröjning
+      }
+    }
+  // Vi vill att denna effekt endast ska köras en gång när sessionen blir autentiserad.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, session]);
 
   return <>{children}</>;
 };
@@ -65,9 +79,9 @@ const FirebaseSync = ({ children }: { children: React.ReactNode }) => {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <SessionProvider>
-      <FirebaseSync>
+      <FirebaseSyncAndOnboarding>
         {children}
-      </FirebaseSync>
+      </FirebaseSyncAndOnboarding>
     </SessionProvider>
   );
 };
