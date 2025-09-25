@@ -94,6 +94,18 @@ export const addFileToProject = async (projectId: string, fileData: Document): P
     await updateProjectInFirestore(projectId, {});
 };
 
+export const getFilesForProject = async (projectId: string): Promise<Document[]> => {
+    const filesRef = projectsCollection.doc(projectId).collection('files');
+    const snapshot = await filesRef.orderBy('createdAt', 'desc').get();
+    if (snapshot.empty) return [];
+
+    const files: Document[] = [];
+    snapshot.forEach(doc => {
+        files.push(doc.data() as Document);
+    });
+    return files;
+};
+
 // ===============================================
 // KOMMUNIKATIONS-FUNKTIONER
 // ===============================================

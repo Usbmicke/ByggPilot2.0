@@ -17,7 +17,7 @@ const MainAppLayout = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background-primary">
+    <div className="h-screen flex bg-background-primary">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <div className="flex-1 flex flex-col md:ml-64">
@@ -27,6 +27,7 @@ const MainAppLayout = ({ children }: { children: React.ReactNode }) => {
           {children}
         </main>
 
+        {/* MessageInput har flyttats utanför den marginalsatta diven, men är kvar inom samma flex-kolumn för att hålla sig längst ner. */}
         <div className="p-4 border-t border-border-primary">
           <MessageInput />
         </div>
