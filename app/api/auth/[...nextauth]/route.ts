@@ -63,15 +63,19 @@ export const authOptions: AuthOptions = {
                     const userData = userDoc.data();
                     // Bifoga isNewUser-flaggan till sessionen.
                     session.user.isNewUser = userData?.isNewUser ?? false;
+                    // **NYTT TILLÄGG:** Bifoga även termsAccepted för att styra onboarding-flödet
+                    session.user.termsAccepted = userData?.termsAccepted ?? false;
                 } else {
                     // Detta är en säkerhetslina om dokumentet raderats manuellt.
-                    console.warn(`[Auth Warning] Användardokument ${token.sub} saknas. Tvingar isNewUser=true.`);
+                    console.warn(`[Auth Warning] Användardokument ${token.sub} saknas. Tvingar isNewUser=true och termsAccepted=false.`);
                     session.user.isNewUser = true;
+                    session.user.termsAccepted = false;
                 }
             } catch (error) {
                 console.error("[Auth Critical] Fel vid hämtning av användardata i session: ", error);
                 // Om databasen är nere, anta att det inte är en ny användare för att undvika oönskad omdirigering.
                 session.user.isNewUser = false; 
+                session.user.termsAccepted = false;
             }
         }
         return session;
@@ -99,7 +103,6 @@ export const authOptions: AuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 };
 
+// KORRIGERING & ÅTERSTÄLLNING: Denna syntax är den enda korrekta för NextAuth med App Router.
 const handler = NextAuth(authOptions);
-
 export { handler as GET, handler as POST };
-

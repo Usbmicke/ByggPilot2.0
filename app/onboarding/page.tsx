@@ -1,12 +1,12 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useTransition } from 'react'; // Importera useTransition
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import CompanyInfoForm from '@/app/components/auth/CompanyInfoForm';
 import OnboardingFlow from '@/app/components/onboarding/OnboardingFlow';
-import OnboardingModal from '@/app/components/OnboardingModal'; // Återanvänder denna!
+import OnboardingModal from '@/app/components/OnboardingModal';
 import Image from 'next/image';
 import { updateUserTermsStatus } from '@/app/actions/userActions';
 
@@ -14,25 +14,21 @@ export default function OnboardingPage() {
   const { data: session, status, update } = useSession();
   const router = useRouter();
   
-  // Ny state för att hantera de olika delarna av onboardingen
+  const [isPending, startTransition] = useTransition(); // Skapa transition-hook
   const [hasCompletedForm, setHasCompletedForm] = useState(false);
-  const [hasAcknowledgedTerms, setHasAcknowledgedTerms] = useState(session?.user?.termsAccepted || false);
+  const [hasAcknowledgedTerms, setHasAcknowledgedTerms] = useState(false);
 
+  // Synkronisera state med sessionen när den laddas eller uppdateras
   useEffect(() => {
-    // Om sessionen uppdateras (t.ex. efter villkorsgodkännande), uppdatera vår state
-    setHasAcknowledgedTerms(session?.user?.termsAccepted || false);
+    if (session?.user?.termsAccepted) {
+        setHasAcknowledgedTerms(true);
+    }
   }, [session]);
 
-  // Om sessionen laddas, visa en enkel laddningsskärm.
   if (status === 'loading') {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-900 text-white">
-        <p>Laddar session...</p>
-      </div>
-    );
+    return <div className="flex min-h-screen items-center justify-center bg-gray-900 text-white"><p>Laddar session...</p></div>;
   }
 
-  // Om användaren av någon anledning inte är autentiserad, skicka tillbaka till startsidan.
   if (status === 'unauthenticated') {
     router.replace('/');
     return null;
@@ -40,36 +36,39 @@ export default function OnboardingPage() {
 
   const handleTermsAcknowledged = async () => {
     if (!session?.user?.id) return;
-    // Anropa server action för att uppdatera användaren i databasen
-    const result = await updateUserTermsStatus(session.user.id, true);
-    if (result.success) {
-      // Tvinga en session-uppdatering för att hämta den nya 'termsAccepted'-statusen
-      await update(); 
-    } else {
-      // Hantera eventuellt fel. Kasta ett fel så att OnboardingModal kan fånga det.
-      throw new Error(result.error || 'Kunde inte spara villkors-status.');
-    }
+
+    // KORRIGERING: Använd startTransition för att förhindra felaktig form-hantering
+    startTransition(async () => {
+      const result = await updateUserTermsStatus(session.user.id, true);
+      if (result.success) {
+        await update(); // Tvinga session-uppdatering
+      } else {
+        console.error("Fel vid uppdatering av villkor:", result.error);
+        // Kasta ett fel för att modalen ska kunna hantera det
+        throw new Error(result.error || 'Kunde inte spara villkors-status.');
+      }
+    });
   };
 
-  // Denna funktion körs när CompanyInfoForm är framgångsrikt inskickat.
-  // Istället för att omdirigera, signalerar den nu att det är dags för nästa steg.
   const handleFormSuccess = () => {
     setHasCompletedForm(true);
   };
 
+  // Bestäm om modalen ska visas. Explicit kontroll är mer robust.
+  const showModal = status === 'authenticated' && !session.user.termsAccepted;
+
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4">
       
-      {/* STEG 0: Godkänn villkor (om inte redan gjort) */}
-      {!hasAcknowledgedTerms && session?.user?.name && (
+      {showModal && session?.user?.name && (
         <OnboardingModal 
           userName={session.user.name}
           onAcknowledge={handleTermsAcknowledged} 
         />
       )}
 
-      {/* Visa detta endast om villkoren är godkända */}
-      {hasAcknowledgedTerms && (
+      {/* Visa resten av sidan endast om villkoren är godkända */}
+      {!showModal && (
         <div className="w-full max-w-2xl mx-auto">
           <div className="text-center mb-8">
               <Image src="/images/byggpilotlogga1.png" alt="ByggPilot Logotyp" width={60} height={60} className="mx-auto mb-4"/>
@@ -81,16 +80,9 @@ export default function OnboardingPage() {
               ) : null}
           </div>
           
-          {/* STEG 1: Företagsinformation */}
           {!hasCompletedForm ? 
             <CompanyInfoForm onSuccess={handleFormSuccess} /> : 
-            null
-          }
-
-          {/* STEG 2: Interaktiv Onboarding-flöde */}
-          {hasCompletedForm ? 
-            <OnboardingFlow /> : 
-            null 
+            <OnboardingFlow />
           }
 
           {!hasCompletedForm && (
