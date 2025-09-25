@@ -6,11 +6,9 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
 import ProTipsModal from '@/app/components/ProTipsModal';
+import GoogleIcon from '@/app/components/icons/GoogleIcon';
 
-// --- IKONER & TEKNISKA KOMPONENTER (Orörda) ---
-const GoogleIcon = (props) => (
-    <svg {...props} viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></svg>
-);
+// --- IKONER & TEKNISKA KOMPONENTER ---
 const IconStressClock = (props) => (
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
 );
@@ -48,8 +46,6 @@ const FeatureCard = ({ title, description }) => (
 );
 const CustomAnimationsStyle = () => (
   <style>{`
-    @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 15px 0px rgba(59,130,246, 0.4); } 50% { box-shadow: 0 0 25px 5px rgba(59,130,246, 0.6); } }
-    .animate-pulse-glow { animation: pulse-glow 4s infinite ease-in-out; }
     @keyframes float-up { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: 0.8; } 90% { opacity: 0.8; } 100% { transform: translateY(-100vh); opacity: 0; } }
     .particle { position: absolute; bottom: 0; border-radius: 50%; background: rgba(224, 224, 224, 0.1); animation-name: float-up; animation-timing-function: linear; animation-iteration-count: infinite; }
   `}</style>
@@ -78,13 +74,13 @@ export default function LandingPage() {
 
   useEffect(() => {
     if (status === 'authenticated') {
-      router.push('/dashboard'); // KORRIGERAD
+      router.push('/dashboard');
     }
   }, [status, router]);
 
   const handleSignIn = async () => {
       setIsSigningIn(true);
-      signIn('google', { callbackUrl: '/dashboard' }).catch(error => { // KORRIGERAD
+      signIn('google', { callbackUrl: '/dashboard' }).catch(error => {
         console.error("NextAuth signIn error: ", error);
         setIsSigningIn(false);
       });
@@ -104,47 +100,43 @@ export default function LandingPage() {
       <AnimatedBackground />
       
       <div className="relative z-10 flex flex-col min-h-screen bg-transparent">
-        {/* --- HEADER --- */}
+        {/* --- HEADER (MED KORREKT GOOGLE-KNAPP) --- */}
         <header className="sticky top-0 z-50 bg-gray-900/80 backdrop-blur-sm border-b border-gray-700/60">
           <div className="container mx-auto px-4 sm:px-6 py-3 flex justify-between items-center">
             <div className="flex items-center gap-2 sm:gap-3">
               <Image src="/images/byggpilotlogga1.png" alt="ByggPilot Logotyp" width={36} height={36} />
               <span className="text-2xl font-bold text-white">ByggPilot</span>
             </div>
-            <nav className="flex items-center gap-2 sm:gap-4">
+            <nav>
                 <button 
                   onClick={handleSignIn} 
                   disabled={isSigningIn}
-                  className="inline-flex items-center justify-center gap-2 bg-white text-gray-900 font-semibold py-2 px-4 rounded-md shadow-sm hover:bg-gray-200 transition-colors duration-300 disabled:opacity-50"
+                  className="flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-150 disabled:opacity-60"
                 >
                     {isSigningIn ? 
-                        <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900"></span> : 
-                        <GoogleIcon className="w-5 h-5" /> }
-                    <span className="hidden sm:inline text-sm">Logga in & Få Kontroll</span>
-                    <span className="sm:hidden text-sm">Logga in</span>
+                        <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-700"></span> : 
+                        <GoogleIcon />
+                    }
+                    <span className='ml-3'>
+                      {isSigningIn ? 'Ansluter...' : 'Logga in med Google'}
+                    </span>
                 </button>
             </nav>
           </div>
         </header>
 
         <main className="flex-grow">
-          {/* --- HERO SECTION (OMSKRIVEN) --- */}
+          {/* --- HERO SECTION (UTAN KNAPP) --- */}
           <section className="text-center py-24 md:py-32">
             <div className="container mx-auto px-6">
               <h1 className="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-4">Från Övertid till Översikt.<br/>Omedelbart.</h1>
               <p className="max-w-3xl mx-auto text-lg md:text-xl text-gray-400 mb-8">ByggPilot är din proaktiva, digitala arbetsledare. Vi tar inte bort administrationen – vi gör den osynlig. Få total kontroll över dina projekt, din tid och din lönsamhet.</p>
-                <button onClick={handleSignIn} disabled={isSigningIn} className="animate-pulse-glow inline-flex items-center justify-center gap-3 bg-blue-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-blue-500 transition-all duration-300 transform hover:scale-105 disabled:opacity-50">
-                    {isSigningIn ? 
-                         <span className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></span> : 
-                         <GoogleIcon className="w-6 h-6" />
-                    }
-                    {isSigningIn ? 'Ansluter till Google...' : 'Ta Kontrollen på 5 Minuter'}
-                </button>
-              <p className="text-xs text-gray-500 mt-4">Använder Googles kostnadsfria verktyg. Inget nytt att installera. <a href="https://accounts.google.com/signup" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline ml-1">Skaffa ett Google-konto här.</a></p>
+              
+              <p className="text-xs text-gray-500 mt-4">Använder ditt befintliga Google-konto. Säkert, snabbt och enkelt. <a href="https://accounts.google.com/signup" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline ml-1">Inget konto? Skaffa ett här.</a></p>
             </div>
           </section>
 
-          {/* --- PROBLEM SECTION (VÄSSAD) --- */}
+          {/* --- PROBLEM SECTION --- */}
           <section className="py-16 md:py-24">
             <div className="container mx-auto px-6">
               <h2 className="text-3xl md:text-4xl font-bold text-center text-white mb-12">Känner du igen dig i kaoset?</h2>
@@ -168,7 +160,7 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* --- FEATURES SECTION (OMSKRIVEN) --- */}
+          {/* --- FEATURES SECTION --- */}
           <section className="py-16 md:py-24">
               <div className="container mx-auto px-6">
                   <div className="text-center max-w-3xl mx-auto">
@@ -184,7 +176,7 @@ export default function LandingPage() {
               </div>
           </section>
 
-          {/* --- PRO TIPS SECTION (ORÖRD) --- */}
+          {/* --- PRO TIPS SECTION --- */}
           <section className="py-16 md:py-24">
               <div className="container mx-auto px-6">
                   <button 
@@ -201,7 +193,7 @@ export default function LandingPage() {
               </div>
           </section>
 
-          {/* --- GRUNDARE-SEKTION (VÄSSAD) --- */}
+          {/* --- GRUNDARE-SEKTION --- */}
           <section className="py-16 md:py-24">
             <div className="container mx-auto px-6">
               <div className="max-w-4xl mx-auto bg-gray-900/50 border border-gray-700/50 rounded-xl p-8 md:p-12 grid md:grid-cols-3 gap-8 items-center">

@@ -1,122 +1,115 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { admin, db } from '@/app/lib/firebase/admin';
-import { AnthropicStream, StreamingTextResponse } from 'ai';
-import Anthropic from '@anthropic-ai/sdk';
 
-// Initialisera Anthropic-klienten
-const anthropic = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
-});
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { NextRequest, NextResponse } from "next/server";
 
-// Hjälpfunktion för att validera Firebase ID-token och hämta UID
-async function getUidFromToken(req: NextRequest): Promise<string | null> {
-    const authorization = req.headers.get('Authorization');
-    if (authorization?.startsWith('Bearer ')) {
-        const idToken = authorization.split('Bearer ')[1];
-        try {
-            const decodedToken = await admin.auth().verifyIdToken(idToken);
-            return decodedToken.uid;
-        } catch (error) {
-            console.error('Error verifying Firebase ID token:', error);
-            return null;
+// Korrigerad för att matcha .env.local-konfigurationen
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+
+const systemInstruction = `
+Du är "ByggPilot AI", en avancerad AI-assistent och expert inom svensk byggindustri. Din primära roll är att agera som en digital projektledare, KMA-samordnare (Kvalitet, Miljö, Arbetsmiljö) och effektivitetskonsult.
+
+**Ditt Mål:**
+Hjälp användaren att spara tid, minimera risker, säkerställa regelefterlevnad (särskilt enligt svenska Arbetsmiljöverkets föreskrifter, AFS) och maximera lönsamheten i sina byggprojekt.
+
+**Dina Förmågor:**
+1.  **Förstå Avsikt:** Tolka användarens meddelanden för att identifiera deras verkliga behov (t.ex. "jag behöver hjälp med ett altanbygge" -> avsikt att skapa ett nytt projekt).
+2.  **Agera Proaktivt:** Ge användbara, kontextuella förslag även om användaren inte explicit frågar efter dem. Om ett projekt nämns, föreslå en riskanalys. Om en ny kund nämns, föreslå att kunden skapas i systemet.
+3.  **Strukturera Svar:** Ditt svar måste ALLTID vara en JSON-sträng. Denna JSON-sträng ska innehålla två fält: "text" och "actions".
+    - `text`: En vänlig, hjälpande textrespons på svenska som sammanfattar ditt svar eller ställer en uppföljningsfråga.
+    - `actions`: En array av "action"-objekt. Ett action-objekt representerar en funktion i ByggPilot-appen som du vill föreslå. Om du inte har några actions att föreslå ska arrayen vara tom `[]`.
+
+**Tillgängliga Actions (Verktyg):**
+Du kan för närvarande föreslå följande actions:
+
+*   `{
+      "action": "createProject",
+      "label": "Skapa Projekt",
+      "payload": { "projectName": "<extraherat projektnamn>", "customerName": "<extraherat kundnamn>" }
+    }`
+    - Använd detta när användaren uttrycker en avsikt att starta ett nytt projekt.
+
+*   `{
+      "action": "createCustomer",
+      "label": "Skapa Kund",
+      "payload": { "customerName": "<extraherat kundnamn>", "contactPerson": "<extraherat kontakperson>" }
+    }`
+    - Använd detta när en ny kund eller ett nytt företag nämns som inte verkar finnas i systemet.
+
+*   `{
+      "action": "createRiskAnalysis",
+      "label": "Skapa Riskanalys",
+      "payload": { "project": "<projektnamn>", "risks": ["<risk 1>", "<risk 2>"] }
+    }`
+    - Använd detta för att proaktivt identifiera och föreslå hantering av risker relaterade till ett projekt (t.ex. arbete på hög höjd, vinterförhållanden, tunga lyft).
+
+**Exempel på Interaktion:**
+
+*   **Användare:** "Hej, jag ska bygga en carport åt Nisse på Bygg AB."
+*   **Ditt Svar (JSON):**
+    `{
+      "text": "Absolut! Låt oss skapa ett nytt projekt för carporten och lägga till Nisse på Bygg AB som kund.",
+      "actions": [
+        {
+          "action": "createProject",
+          "label": "Skapa Projekt: Carport",
+          "payload": { "projectName": "Carport", "customerName": "Nisse på Bygg AB" }
+        },
+        {
+          "action": "createCustomer",
+          "label": "Skapa Kund: Nisse på Bygg AB",
+          "payload": { "customerName": "Nisse på Bygg AB", "contactPerson": "Nisse" }
         }
-    }
-    return null;
-}
+      ]
+    }`
 
-// --- Masterprompt v9.3 --- HÄR ÄR HJÄRNAN (KORRIGERAD) ---
-async function getMasterPrompt(uid: string): Promise<string> {
-    let userProfile;
-    let companyVision = "Ingen vision specificerad.";
-
-    try {
-        const userProfileRef = db.collection('userProfiles').doc(uid);
-        const doc = await userProfileRef.get();
-        if (doc.exists) {
-            userProfile = doc.data();
-            if (userProfile?.companyVision) {
-                companyVision = userProfile.companyVision;
-            }
-        }
-    } catch (error) {
-        console.error("Kunde inte hämta företagsvision:", error);
-    }
-
-    // Den uppdaterade masterprompten
-    return `
-Du är "ByggPilot", en proaktiv, AI-driven digital kollega för hantverkare i Sverige. Din personlighet är kompetent, stödjande och alltid steget före. Du är byggd av hantverkare, för hantverkare. Kommunicera på svenska.
-
-**DITT UPPDRAG:** Automatisera administration, eliminera "pappersmonstret", och agera som en strategisk partner för användaren. Ditt mål är att hjälpa dem spara tid, minska stress och öka lönsamheten.
-
-**ANVÄNDARENS FÖRETAGSVISION:**
-"${companyVision}"
-
-**KÄRNPRINCIPER:**
-1.  **Analysera Visionen:** Använd **alltid** användarens företagsvision som din primära kompass. Alla dina råd, förslag och proaktiva handlingar måste vara i linje med denna vision.
-2.  **Agera, Fråga Inte:** Skapa utkast, förbered dokument och analysera data utan att be om lov. Presentera resultatet som ett färdigt förslag. Exempel: "Jag har skapat ett utkast för ÄTA-rapporten baserat på din senaste röstanteckning."
-3.  **Använd Dina Verktyg:** Du har tillgång till en uppsättning kraftfulla verktyg. Använd dem proaktivt när en användarförfrågan eller en situation antyder att de skulle vara användbara. Om en användare säger "Jag måste skapa ett nytt projekt för Lundströms", är det en direkt signal att du ska initiera 'create_project'-verktyget.
-4.  **UI-interaktion:** När ett verktyg kräver användarinput (t.ex. ett projektnamn), använd 'UI_ACTION' för att öppna relevanta modaler. Svara **endast** med ett giltigt JSON-objekt för UI-actions, inget annat text.
-
-**TILLGÄNGLIGA VERKTYG:**
-
-1.  **create_project(projectName: string, customerName: string, projectAddress: string):** Skapar ett nytt projekt. Du måste ha all information för att köra detta.
-    *   **Användning:** Kräver att användaren specificerar parametrar. Om de saknas, be om dem.
-    *   **UI-Interaktion:** Om användaren bara säger "skapa ett projekt", svara med: '{"type": "UI_ACTION", "action": "open_modal", "payload": {"modalId": "createProject"}}'
-
-2.  **create_ata(description: string, projectNumber: string):** Skapar ett utkast för en ÄTA (Ändring, Tillägg, Avgående).
-    *   **UI-Interaktion:** Om en användare nämner en oförutsedd händelse eller ett extra jobb, öppna modalen: '{"type": "UI_ACTION", "action": "open_modal", "payload": {"modalId": "createAta"}}'
-
-3.  **create_google_drive_folder_structure():** Skapar en standardiserad mappstruktur i användarens Google Drive ('/01_Kunder', '/02_Projekt', etc.).
-    *   **Användning:** Används typiskt under onboarding eller om användaren uttryckligen ber om det.
-    *   **Svar efter körning:** "Jag har nu skapat en mappstruktur i din Google Drive för att hålla ordning på kunder och projekt."
+**Viktiga Regler:**
+- Svara ALLTID med en giltig JSON-sträng och inget annat.
+- Inkludera aldrig markdown eller andra formateringar i JSON-strängen.
+- Fyll i `payload` med så mycket information som du kan extrahera från användarens meddelande.
+- Var koncis men hjälpfull i din `text`-respons.
 `;
-}
 
-// Huvud-API-funktionen
 export async function POST(req: NextRequest) {
-    try {
-        const uid = await getUidFromToken(req);
-        if (!uid) {
-            return new NextResponse('Unauthorized', { status: 401 });
-        }
+  try {
+    const { message } = await req.json();
 
-        const { messages } = await req.json();
-        const lastMessage = messages[messages.length - 1];
-
-        const masterPrompt = await getMasterPrompt(uid);
-        
-        // Mock-svar för verktygskörning (exempel)
-        if (lastMessage.content.includes('create_google_drive_folder_structure')) {
-            // Här skulle den faktiska Google Drive API-interaktionen ske.
-            // Vi simulerar ett framgångsrikt resultat.
-            console.log(`[API] Simulerar körning av 'create_google_drive_folder_structure' för UID: ${uid}`);
-            const responseText = "Jag har nu skapat en mappstruktur i din Google Drive för att hålla ordning på kunder och projekt.";
-            
-            // Skapa en simpel text-stream som svar
-            const stream = new ReadableStream({
-                start(controller) {
-                    controller.enqueue(new TextEncoder().encode(responseText));
-                    controller.close();
-                }
-            });
-            return new StreamingTextResponse(stream);
-        }
-
-        const response = await anthropic.messages.create({
-            model: 'claude-3-haiku-20240307',
-            // model: 'claude-3-opus-20240229',
-            // model: 'claude-3-sonnet-20240229',
-            max_tokens: 1024,
-            system: masterPrompt,
-            messages: messages.map((msg: any) => ({ role: msg.role, content: msg.content })),
-            stream: true,
-        });
-
-        const stream = AnthropicStream(response);
-        return new StreamingTextResponse(stream);
-
-    } catch (error) {
-        console.error('Error in chat API:', error);
-        return new NextResponse('Internal Server Error', { status: 500 });
+    if (!message) {
+      return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
+    
+    // Korrigerad för att matcha .env.local-konfigurationen
+    if (!process.env.GEMINI_API_KEY) {
+        throw new Error("GEMINI_API_KEY is not configured in .env.local");
+    }
+
+    // Välj Gemini-modellen
+    const model = genAI.getGenerativeModel({ 
+        model: "gemini-1.5-flash",
+        systemInstruction: systemInstruction
+    });
+
+    // Skapa chatten och skicka meddelandet
+    const chat = model.startChat();
+    const result = await chat.sendMessage(message);
+    const response = await result.response;
+    const responseText = response.text();
+
+    try {
+      const parsedResponse = JSON.parse(responseText);
+      return NextResponse.json(parsedResponse);
+    } catch (e) {
+      console.error("AI response was not valid JSON:", responseText);
+      return NextResponse.json({
+          text: "Ett internt fel uppstod när jag försökte tolka svaret. Försök igen.",
+          actions: []
+      }, { status: 500 });
+    }
+
+  } catch (error) {
+    console.error("Error in chat API:", error);
+    return NextResponse.json(
+      { error: "An internal server error occurred." },
+      { status: 500 }
+    );
+  }
 }
