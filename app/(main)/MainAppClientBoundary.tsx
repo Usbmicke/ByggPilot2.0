@@ -1,12 +1,33 @@
+
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from '@/app/components/layout/Sidebar';
 import Header from '@/app/components/layout/Header';
 import MessageInput from '@/app/components/MessageInput';
 
-const MainAppClientBoundary = ({ children }: { children: React.ReactNode }) => {
+interface MainAppClientBoundaryProps {
+  children: React.ReactNode;
+  isNewUser: boolean;
+}
+
+const MainAppClientBoundary = ({ children, isNewUser }: MainAppClientBoundaryProps) => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    // === VAKTEN: Klient-sidans omdirigeringslogik ===
+    if (isNewUser && pathname !== '/onboarding') {
+      router.replace('/onboarding');
+    }
+  }, [isNewUser, pathname, router]);
+
+  // Om vi håller på att omdirigera, visa en tom skärm för att undvika en flash av felaktigt innehåll.
+  if (isNewUser && pathname !== '/onboarding') {
+    return null; 
+  }
 
   return (
     <div className="h-screen flex bg-background-primary">
