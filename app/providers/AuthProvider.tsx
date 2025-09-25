@@ -5,12 +5,13 @@ import { SessionProvider, useSession } from 'next-auth/react';
 import React, { useEffect, useState } from 'react';
 import { auth as firebaseAuth } from '@/app/lib/firebase/client';
 import { signInWithCustomToken, signOut } from 'firebase/auth';
-import { useRouter } from 'next/navigation'; // Importera useRouter
+import { useRouter, usePathname } from 'next/navigation'; // Importera useRouter och usePathname
 
 const FirebaseSyncManager = ({ children }: { children: React.ReactNode }) => {
   const { data: session, status } = useSession();
   const [isFirebaseAuthenticated, setIsFirebaseAuthenticated] = useState(false);
-  const router = useRouter(); // Använd useRouter-hooken
+  const router = useRouter();
+  const pathname = usePathname(); // Hämta den aktuella URL-sökvägen
 
   // Effekt för att synkronisera NextAuth -> Firebase Auth
   useEffect(() => {
@@ -30,7 +31,7 @@ const FirebaseSyncManager = ({ children }: { children: React.ReactNode }) => {
 
               // **KORRIGERAD LOGIK: Omdirigering för nya användare**
               // @ts-ignore - Vi vet att isNewUser finns baserat på vår backend-logik
-              if (session.user?.isNewUser) {
+              if (session.user?.isNewUser && pathname !== '/onboarding') {
                 console.log('[AuthProvider] Ny användare upptäckt. Omdirigerar till /onboarding.');
                 router.push('/onboarding');
               }
@@ -55,7 +56,7 @@ const FirebaseSyncManager = ({ children }: { children: React.ReactNode }) => {
 
     syncAuth();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, session]); 
+  }, [status, session, pathname]); // Lade till pathname som dependency
 
   return <>{children}</>;
 };

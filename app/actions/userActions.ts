@@ -72,3 +72,27 @@ export async function getUserData(userId: string) {
     return null; 
   }
 }
+
+/**
+ * Uppdaterar status för användarvillkoren för en specifik användare.
+ * @param userId Användarens ID.
+ * @param accepted Om användaren har accepterat villkoren.
+ * @returns Ett resultatobjekt.
+ */
+export async function updateUserTermsStatus(userId: string, accepted: boolean) {
+  if (!userId) {
+    return { success: false, error: 'Användar-ID saknas.' };
+  }
+
+  try {
+    const userDocRef = firestoreAdmin.collection('users').doc(userId);
+    await userDocRef.set({
+      termsAccepted: accepted,
+      termsAcceptedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return { success: true };
+  } catch (error) {
+    console.error(`[CRITICAL] Fel vid uppdatering av villkors-status för användare ${userId}:`, error);
+    return { success: false, error: 'Kunde inte uppdatera status för villkor.' };
+  }
+}
