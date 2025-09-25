@@ -1,12 +1,10 @@
-
 'use client';
 
 import React, { useState } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
-import { useAuth } from '@/app/context/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react'; // KORREKT HOOK
 import toast from 'react-hot-toast';
-import { updateCompanyInfo } from '@/app/actions/userActions'; // Importera server-action
+import { updateCompanyInfo } from '@/app/actions/userActions';
 
 interface IFormInput {
   companyName: string;
@@ -39,21 +37,21 @@ interface CompanyInfoFormProps {
 
 const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ onSuccess }) => {
   const { register, handleSubmit, formState: { errors } } = useForm<IFormInput>();
-  const { user } = useAuth();
+  const { data: session } = useSession(); // KORREKT SÄTT ATT HÄMTA SESSION
   const [isLoading, setIsLoading] = useState(false);
 
   const onSubmit: SubmitHandler<IFormInput> = async (data) => {
-    if (!user) {
-        toast.error('Ingen användare är inloggad.');
+    if (!session?.user?.id) { // KORREKT KONTROLL
+        toast.error('Ingen användarsession hittades. Prova att logga in igen.');
         return;
     }
 
     setIsLoading(true);
-    const result = await updateCompanyInfo(data, user.uid);
+    const result = await updateCompanyInfo(data, session.user.id); // KORREKT ANVÄNDAR-ID
 
     if (result.success) {
       toast.success('Information sparad!');
-      onSuccess(); // Anropa callback för att meddela föräldern
+      onSuccess();
     } else {
       toast.error(result.error || 'Ett okänt fel uppstod.');
       setIsLoading(false);
@@ -76,7 +74,7 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ onSuccess }) => {
         <div>
             <button 
                 type="submit" 
-                disabled={isLoading}
+                disabled={isLoading || !session} // Inaktivera om sessionen inte har laddats
                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-transform hover:scale-105 disabled:bg-gray-500 disabled:cursor-not-allowed"
             >
                 {isLoading ? 'Sparar...' : 'Spara och fortsätt'}
