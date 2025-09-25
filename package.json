@@ -10,7 +10,9 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@headlessui/react": "^2.2.8",
     "@heroicons/react": "^2.2.0",
+    "@radix-ui/react-popover": "^1.1.15",
     "ai": "^5.0.48",
     "chart.js": "^4.5.0",
     "firebase": "^10.12.2",

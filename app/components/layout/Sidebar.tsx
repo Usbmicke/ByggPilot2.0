@@ -16,8 +16,8 @@ import {
   ArrowRightOnRectangleIcon,
   PlusIcon
 } from '@heroicons/react/24/outline';
+import Popover from '@/app/components/shared/Popover'; // Importerad!
 
-// KORRIGERING: Menyalternativ återställda till den gamla, korrekta designen.
 const navigation = [
   { name: 'Översikt', href: '/dashboard', icon: HomeIcon },
   { name: 'Projekt', href: '/projects', icon: FolderIcon },
@@ -39,6 +39,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     if (!name) return '??';
     return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
   };
+  
+  const popoverContent = (
+    <div className="text-sm text-text-secondary">
+      Denna funktion är under utveckling.
+    </div>
+  );
 
   return (
     <>
@@ -62,7 +68,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         </div>
         
         <div className="flex flex-col flex-1 p-4">
-          {/* Navigationslänkar - tar upp tillgängligt utrymme */}
           <nav className="flex-1">
             <ul>
               {navigation.map((item) => {
@@ -84,16 +89,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </ul>
           </nav>
 
-          {/* NYTT: Knappen "Skapa Offert" tillagd enligt gammal design */}
           <div className="py-4">
+            <Popover content={popoverContent} trigger={
               <button className="w-full flex items-center justify-center gap-2 bg-accent-blue text-white font-semibold py-3 rounded-lg hover:bg-accent-blue-dark transition-colors duration-200 shadow">
                   <PlusIcon className="h-5 w-5" />
                   <span>Skapa Offert</span>
               </button>
+            } />
           </div>
         </div>
 
-        {/* Användarinfo och Logga ut - längst ner */}
         <div className="p-4 border-t border-border-primary">
           {session && session.user && (
             <div className="flex items-center justify-between">

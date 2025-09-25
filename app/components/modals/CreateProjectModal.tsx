@@ -1,101 +1,136 @@
 
 'use client';
 
-import React, { useState } from 'react';
-import { ProjectStatus } from '@/app/types/project';
+import React, { useState, useEffect } from 'react';
+import Modal from '@/app/components/shared/Modal';
+import { useUI } from '@/app/context/UIContext';
+import { createProject } from '@/app/actions/projectActions';
+import { getCustomers } from '@/app/actions/customerActions';
+import { useSession } from 'next-auth/react';
 
-interface CreateProjectModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onProjectCreated: () => void;
-}
+// Förenklad typ för kund-data i modalen
+type Customer = { id: string; name: string; };
 
-export default function CreateProjectModal({ isOpen, onClose, onProjectCreated }: CreateProjectModalProps) {
-  const [projectName, setProjectName] = useState('');
-  const [clientName, setClientName] = useState('');
-  const [hourlyRate, setHourlyRate] = useState('');
-  const [status, setStatus] = useState<ProjectStatus>('Offert');
+const CreateProjectModal = () => {
+  const { isModalOpen, closeModal, getModalPayload } = useUI();
+  const { data: session } = useSession();
+
+  // Formulärdata
+  const [name, setName] = useState('');
+  const [address, setAddress] = useState('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  
+  // State för att hantera kunder i dropdown
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isCustomerLoading, setIsCustomerLoading] = useState(false);
+
+  const modalPayload = getModalPayload('createProject');
+
+  // Hämta kunder när modalen öppnas
+  useEffect(() => {
+    if (isModalOpen('createProject') && session?.user?.id) {
+        setIsCustomerLoading(true);
+        getCustomers(session.user.id)
+            .then(res => {
+                if (res.success && res.data) {
+                    setCustomers(res.data as Customer[]);
+                }
+            })
+            .finally(() => setIsCustomerLoading(false));
+    }
+  }, [isModalOpen, session?.user?.id]);
+
+  // Sätt initialvärden från payload (t.ex. AI-förslag)
+  useEffect(() => {
+    if (modalPayload) {
+        setName(modalPayload.projectName || '');
+        setSelectedCustomerId(modalPayload.customerId || '');
+    }
+  }, [modalPayload]);
+
+  const handleClose = () => {
+    // Återställ allt state
+    setName('');
+    setAddress('');
+    setSelectedCustomerId('');
+    setCustomers([]);
+    closeModal('createProject');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    const rate = parseFloat(hourlyRate);
-    if (isNaN(rate) || rate <= 0) {
-      setError('Ange ett giltigt timpris.');
-      setIsLoading(false);
-      return;
+    if (!session?.user?.id || !selectedCustomerId) {
+        alert("Du måste vara inloggad och välja en kund.");
+        return;
     }
+    setIsLoading(true);
+    const result = await createProject({ 
+        name, 
+        address, 
+        customerId: selectedCustomerId,
+        status: 'active'
+    }, session.user.id);
+    setIsLoading(false);
 
-    try {
-      const response = await fetch('/api/projects/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectName,
-          clientName,
-          hourlyRate: rate,
-          status,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Kunde inte skapa projektet.');
-      }
-
-      onProjectCreated();
-      onClose();
-
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
+    if (result.success) {
+      alert(`Projekt "${name}" skapades!`);
+      handleClose();
+      // TODO: Invalidera cachen för projektlistan
+    } else {
+      alert(`Fel: ${result.error}`);
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-2xl max-w-lg w-full border border-gray-700">
-        <h2 className="text-2xl font-bold text-white mb-6">Skapa Nytt Projekt</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="projectName" className="block text-sm font-medium text-gray-300 mb-2">Projektnamn</label>
-            <input id="projectName" type="text" value={projectName} onChange={(e) => setProjectName(e.target.value)} required className="w-full bg-gray-700 p-2 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="t.ex. Renovering Kök" />
-          </div>
-          <div>
-            <label htmlFor="clientName" className="block text-sm font-medium text-gray-300 mb-2">Kundnamn</label>
-            <input id="clientName" type="text" value={clientName} onChange={(e) => setClientName(e.target.value)} required className="w-full bg-gray-700 p-2 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="t.ex. Kalle Anka" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <Modal isOpen={isModalOpen('createProject')} onClose={handleClose} title="Skapa Nytt Projekt">
+      <form onSubmit={handleSubmit}>
+        <div className="space-y-4">
             <div>
-              <label htmlFor="hourlyRate" className="block text-sm font-medium text-gray-300 mb-2">Timpris (kr/tim)</label>
-              <input id="hourlyRate" type="number" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} required className="w-full bg-gray-700 p-2 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="850" />
+                <label htmlFor="project-name" className="block text-sm font-medium text-text-secondary">Projektnamn</label>
+                <input 
+                    type="text"
+                    id="project-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    className="mt-1 block w-full rounded-md border-border-primary bg-background-primary shadow-sm p-2.5"
+                />
             </div>
             <div>
-              <label htmlFor="status" className="block text-sm font-medium text-gray-300 mb-2">Status</label>
-              <select id="status" value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus)} className="w-full bg-gray-700 p-2 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                <option value="Offert">Offert</option>
-                <option value="Pågående">Pågående</option>
-                <option value="Avslutat">Avslutat</option>
-                <option value="Fakturerat">Fakturerat</option>
-              </select>
+                <label htmlFor="project-address" className="block text-sm font-medium text-text-secondary">Adress</label>
+                <input 
+                    type="text"
+                    id="project-address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    required
+                    className="mt-1 block w-full rounded-md border-border-primary bg-background-primary shadow-sm p-2.5"
+                />
             </div>
-          </div>
-          {error && <p className="text-red-400 text-sm">{error}</p>}
-          <div className="flex justify-end space-x-4 pt-4">
-            <button type="button" onClick={onClose} disabled={isLoading} className="text-gray-400 hover:text-white transition-colors">Avbryt</button>
-            <button type="submit" disabled={isLoading} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-gray-500">
-              {isLoading ? 'Skapar...' : 'Skapa Projekt'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+             <div>
+                <label htmlFor="customer-select" className="block text-sm font-medium text-text-secondary">Välj Kund</label>
+                <select
+                    id="customer-select"
+                    value={selectedCustomerId}
+                    onChange={e => setSelectedCustomerId(e.target.value)}
+                    required
+                    disabled={isCustomerLoading}
+                    className="mt-1 block w-full rounded-md border-border-primary bg-background-primary shadow-sm p-2.5"
+                >
+                    <option value="" disabled>{isCustomerLoading ? 'Laddar kunder...' : 'Välj en befintlig kund'}</option>
+                    {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                 {/* TODO: Lägg till knapp för att skapa ny kund direkt härifrån */}
+            </div>
+        </div>
+        <div className="mt-6 flex justify-end gap-3">
+            <button type="button" onClick={handleClose} className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">Avbryt</button>
+            <button type="submit" disabled={isLoading || isCustomerLoading} className="rounded-md border border-transparent bg-accent-blue px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-accent-blue-hover disabled:bg-gray-400">{isLoading ? 'Sparar...' : 'Spara Projekt'}</button>
+        </div>
+      </form>
+    </Modal>
   );
-}
+};
+
+export default CreateProjectModal;

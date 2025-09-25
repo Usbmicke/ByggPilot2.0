@@ -1,93 +1,79 @@
+
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
-// Definierar gränssnittet för taligenkänning för att inkludera TypeScript-stöd
-interface SpeechRecognition extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  start(): void;
-  stop(): void;
-  onresult: (event: any) => void;
-  onerror: (event: any) => void;
-  onend: () => void;
-}
+// Denna hook hanterar Web Speech API för röstigenkänning.
+const useVoiceRecognition = (onTranscriptChange: (transcript: string) => void) => {
+  const [isRecording, setIsRecording] = useState(false);
+  const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
 
-// Deklarerar SpeechRecognition-konstruktorn på window-objektet
-declare global {
-  interface Window {
-    SpeechRecognition: new () => SpeechRecognition;
-    webkitSpeechRecognition: new () => SpeechRecognition;
-  }
-}
-
-// Hooken returnerar status och funktioner för att kontrollera röstigenkänning
-export const useVoiceRecognition = (onTranscript: (transcript: string) => void) => {
-  const [isListening, setIsListening] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-
+  // Initiera SpeechRecognition API när komponenten monteras
   useEffect(() => {
-    // Kontrollerar webbläsarstöd vid montering
+    // Kontrollera webbläsarstöd
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      setError('Röstigenkänning stöds inte i din webbläsare.');
+      console.warn('Web Speech API stöds inte i denna webbläsare.');
       return;
     }
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true; // Fortsätt lyssna även efter pauser
-    recognition.interimResults = true; // Få resultat medan användaren pratar
-    recognition.lang = 'sv-SE'; // Sätt språket till svenska
+    const rec = new SpeechRecognition();
+    rec.continuous = true; // Fortsätt lyssna
+    rec.lang = 'sv-SE'; // Sätt språket till svenska
+    rec.interimResults = false; // Vi vill bara ha det slutgiltiga resultatet
 
-    // Hanterar resultat från API:et
-    recognition.onresult = (event) => {
-      let finalTranscript = '';
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
-        }
-      }
-      if (finalTranscript) {
-        onTranscript(finalTranscript);
-      }
+    // Hantera resultatet från API:et
+    rec.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map(result => result[0])
+        .map(result => result.transcript)
+        .join('');
+      
+      // Anropa callback-funktionen med det igenkända talet
+      onTranscriptChange(transcript);
     };
 
-    // Hanterar fel
-    recognition.onerror = (event) => {
+    rec.onerror = (event) => {
       console.error('Fel vid röstigenkänning:', event.error);
-      setError(`Fel: ${event.error}`);
-      setIsListening(false);
+      setIsRecording(false);
     };
 
-    // Återställer status när lyssningen avslutas
-    recognition.onend = () => {
-      setIsListening(false);
+    rec.onend = () => {
+      if (isRecording) {
+        // Om inspelningen ska fortsätta, starta om den
+        rec.start();
+      } else {
+        setIsRecording(false);
+      }
     };
 
-    recognitionRef.current = recognition;
+    setRecognition(rec);
 
-    // Städfunktion för att säkerställa att lyssningen avbryts när komponenten avmonteras
+    // Städa upp när komponenten avmonteras
     return () => {
-      recognition.stop();
+      rec.stop();
     };
-  }, [onTranscript]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const startListening = () => {
-    if (recognitionRef.current && !isListening) {
-      recognitionRef.current.start();
-      setIsListening(true);
-      setError(null);
+  const startRecording = useCallback(() => {
+    if (recognition && !isRecording) {
+      console.log("Startar röstigenkänning...");
+      recognition.start();
+      setIsRecording(true);
     }
-  };
+  }, [recognition, isRecording]);
 
-  const stopListening = () => {
-    if (recognitionRef.current && isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
+  const stopRecording = useCallback(() => {
+    if (recognition && isRecording) {
+      console.log("Stoppar röstigenkänning...");
+      recognition.stop();
+      setIsRecording(false);
     }
-  };
+  }, [recognition, isRecording]);
 
-  return { isListening, error, startListening, stopListening };
+  // Exponera tillstånd och kontroller
+  return { isRecording, startRecording, stopRecording, browserSupportsSpeechRecognition: !!recognition };
 };
+
+export default useVoiceRecognition;

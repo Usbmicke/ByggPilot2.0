@@ -15,6 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 import SearchResults from '@/app/components/layout/SearchResults';
 import Clock from '@/app/components/layout/Clock';
+import Popover from '@/app/components/shared/Popover'; // Importerad!
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -34,11 +35,17 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
     return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
   };
 
-  // Funktion för att stänga sökresultaten och rensa sökfältet
   const handleSearchResultClick = () => {
     setSearchQuery('');
     setIsSearchFocused(false);
   };
+
+  // Innehåll för popovers
+  const popoverContent = (
+    <div className="text-sm text-text-secondary">
+      Denna funktion är under utveckling.
+    </div>
+  );
 
   return (
     <header className="fixed top-0 left-0 md:left-64 right-0 bg-background-secondary border-b border-border-primary p-4 z-20">
@@ -72,16 +79,15 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
         <div className="flex items-center gap-2 md:gap-4">
           <Clock />
 
-          <button 
-            className="p-2 rounded-full hover:bg-border-primary transition-colors text-text-secondary hover:text-text-primary relative group"
-            onClick={() => alert('Simulerad notis: Ett nytt ÄTA-förslag har inkommit för Projekt X.')}
-          >
-            <BellIcon className="h-6 w-6" />
-            <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-red opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-accent-red"></span>
-            </span>
-          </button>
+          <Popover content={popoverContent} trigger={
+            <button className="p-2 rounded-full hover:bg-border-primary transition-colors text-text-secondary hover:text-text-primary relative group">
+              <BellIcon className="h-6 w-6" />
+              <span className="absolute top-1.5 right-1.5 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-red opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-accent-red"></span>
+              </span>
+            </button>
+          } />
 
           {session && session.user && (
              <div className="relative group">
@@ -111,13 +117,12 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                                 Inställningar
                             </a>
                         </Link>
-                        <button
-                            onClick={() => alert("Profilsidan är under utveckling")}
-                            className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-text-secondary hover:bg-background-tertiary hover:text-text-primary"
-                        >
-                            <UserCircleIcon className="h-5 w-5" />
-                            Min Profil
-                        </button>
+                        <Popover content={popoverContent} trigger={
+                            <button className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-text-secondary hover:bg-background-tertiary hover:text-text-primary">
+                                <UserCircleIcon className="h-5 w-5" />
+                                Min Profil
+                            </button>
+                        } />
                     </div>
                     <div className="py-1.5 border-t border-border-primary">
                         <button
