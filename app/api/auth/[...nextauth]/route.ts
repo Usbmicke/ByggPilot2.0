@@ -1,10 +1,30 @@
 
-import NextAuth, { AuthOptions } from 'next-auth';
+import NextAuth, { AuthOptions, Account } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import { admin, firestoreAdmin } from '@/app/lib/firebase-admin';
+import { JWT } from 'next-auth/jwt';
 
-// Denna version är helt självförsörjande och robust. 
-// Inga externa userActions behövs för själva autentiseringen.
+// HJÄLPFUNKTION: För att uppdatera tokens i Firestore
+async function updateAccountTokens(userId: string, account: Account) {
+  try {
+    const accountData: any = {
+      provider: account.provider,
+      providerAccountId: account.providerAccountId,
+      access_token: account.access_token,
+      expires_at: account.expires_at,
+    };
+    // Spara refresh_token endast om den finns (Google skickar den bara första gången)
+    if (account.refresh_token) {
+      accountData.refresh_token = account.refresh_token;
+    }
+
+    await firestoreAdmin.collection('users').doc(userId).collection('accounts').doc(account.provider).set(accountData, { merge: true });
+    console.log(`[Auth Success] Tokens för användare ${userId} uppdaterade för provider ${account.provider}.`);
+
+  } catch (error) {
+    console.error(`[Auth Critical] Kunde inte spara tokens för användare ${userId}:`, error);
+  }
+}
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -23,36 +43,66 @@ export const authOptions: AuthOptions = {
   ],
 
   callbacks: {
-    // signIn körs vid inloggning. Perfekt för att skapa användare.
-    async signIn({ profile }) {
-      if (!profile?.email) {
-        console.error("[Auth Error] Ingen e-post från Google profilen.");
-        return '/auth/error?error=EmailRequired';
-      }
-
-      try {
-        const usersRef = firestoreAdmin.collection('users');
-        const querySnapshot = await usersRef.where('email', '==', profile.email).get();
-
-        if (querySnapshot.empty) {
-          console.log(`[Auth Success] Ny användare: ${profile.email}. Skapar dokument.`);
-          // ROBUST HANTERING: Använder e-post som fallback för namn.
-          await usersRef.add({
-            name: profile.name ?? profile.email, 
-            email: profile.email,
-            image: profile.picture ?? null,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            isNewUser: true, 
-          });
+    // JWT-callbacken körs FÖRE session-callbacken. Den är perfekt för att hantera tokens.
+    async jwt({ token, user, account }: { token: JWT; user?: any; account?: Account | null }): Promise<JWT> {
+        // Första inloggningen efter autentisering
+        if (account && user) {
+            // Hitta användarens Firestore-ID baserat på e-post.
+            const usersRef = firestoreAdmin.collection('users');
+            const querySnapshot = await usersRef.where('email', '==', user.email).limit(1).get();
+            
+            if (!querySnapshot.empty) {
+                const userId = querySnapshot.docs[0].id;
+                token.sub = userId; // Sätt Firestore-ID som subject för token
+                token.uid = userId; // Behåll uid för konsekvens
+                await updateAccountTokens(userId, account); // Spara tokens!
+            } else {
+                // Detta block bör teoretiskt sett inte köras pga signIn-callbacken, men är en bra säkerhetsåtgärd.
+                console.warn(`[Auth Warning] Användare ${user.email} hittades inte i JWT-callbacken trots lyckad inloggning.`);
+            }
+            return token;
         }
-        return true;
-      } catch (error) {
-        console.error("[Auth Critical] Databasfel vid signIn: ", error);
-        return '/auth/error?error=DatabaseError';
-      }
+
+        // Vid efterföljande anrop, token finns redan och vi behöver inte göra något mer här.
+        return token;
     },
 
-    // session körs varje gång en session efterfrågas. Perfekt för att synka data.
+    async signIn({ profile, account }) {
+        if (!profile?.email || !account) {
+          console.error("[Auth Error] Profil eller konto saknas vid signIn.");
+          return '/auth/error?error=SignInError';
+        }
+  
+        try {
+          const usersRef = firestoreAdmin.collection('users');
+          const querySnapshot = await usersRef.where('email', '==', profile.email).get();
+  
+          let userId;
+          if (querySnapshot.empty) {
+            console.log(`[Auth Success] Ny användare: ${profile.email}. Skapar dokument.`);
+            const newUserRef = await usersRef.add({
+              name: profile.name ?? profile.email,
+              email: profile.email,
+              image: profile.picture ?? null,
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+              isNewUser: true,
+              termsAccepted: false, // Se till att detta är falskt från början
+            });
+            userId = newUserRef.id;
+          } else {
+            userId = querySnapshot.docs[0].id;
+          }
+
+          // Spara/uppdatera alltid tokens, oavsett om användaren är ny eller inte.
+          await updateAccountTokens(userId, account);
+
+          return true;
+        } catch (error) {
+          console.error("[Auth Critical] Databasfel vid signIn: ", error);
+          return '/auth/error?error=DatabaseError';
+        }
+    },
+
     async session({ session, token }) {
         if (session.user && token.sub) {
             session.user.id = token.sub;
@@ -61,39 +111,20 @@ export const authOptions: AuthOptions = {
                 const userDoc = await firestoreAdmin.collection('users').doc(token.sub).get();
                 if (userDoc.exists) {
                     const userData = userDoc.data();
-                    // Bifoga isNewUser-flaggan till sessionen.
                     session.user.isNewUser = userData?.isNewUser ?? false;
-                    // **NYTT TILLÄGG:** Bifoga även termsAccepted för att styra onboarding-flödet
                     session.user.termsAccepted = userData?.termsAccepted ?? false;
                 } else {
-                    // Detta är en säkerhetslina om dokumentet raderats manuellt.
-                    console.warn(`[Auth Warning] Användardokument ${token.sub} saknas. Tvingar isNewUser=true och termsAccepted=false.`);
+                    console.warn(`[Auth Warning] Användardokument ${token.sub} saknas.`);
                     session.user.isNewUser = true;
                     session.user.termsAccepted = false;
                 }
             } catch (error) {
                 console.error("[Auth Critical] Fel vid hämtning av användardata i session: ", error);
-                // Om databasen är nere, anta att det inte är en ny användare för att undvika oönskad omdirigering.
                 session.user.isNewUser = false; 
                 session.user.termsAccepted = false;
             }
         }
         return session;
-    },
-
-    // jwt anropas för att koda sessionens token.
-    async jwt({ token, profile }) {
-        if (profile?.email) {
-            // Hitta användaren i databasen för att få Firestore-dokumentets ID.
-            const usersRef = firestoreAdmin.collection('users');
-            const querySnapshot = await usersRef.where('email', '==', profile.email).limit(1).get();
-            
-            if (!querySnapshot.empty) {
-                // Spara Firestore-IDt i token, INTE Google-IDt.
-                token.sub = querySnapshot.docs[0].id;
-            }
-        }
-        return token;
     },
   },
 
@@ -103,6 +134,5 @@ export const authOptions: AuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 };
 
-// KORRIGERING & ÅTERSTÄLLNING: Denna syntax är den enda korrekta för NextAuth med App Router.
 const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
