@@ -24,4 +24,3 @@ const auth = getAuth(app);
 
 // Exporterar tjänsterna så andra komponenter kan använda dem
 export { app, firestore, auth };
-
