@@ -14,7 +14,7 @@ interface CompanyData {
 }
 
 /**
- * Sparar eller uppdaterar en användares företagsinformation och sätter en custom claim.
+ * Sparar eller uppdaterar en användares företagsinformation och markerar onboarding som klar.
  */
 export async function updateCompanyInfo(companyData: CompanyData, userId: string) {
   if (!userId) {
@@ -22,7 +22,6 @@ export async function updateCompanyInfo(companyData: CompanyData, userId: string
   }
 
   try {
-    // Steg 1: Spara företagsinformationen i Firestore
     const companyDocRef = firestoreAdmin.collection('companies').doc(userId);
     await companyDocRef.set({
       ...companyData,
@@ -31,25 +30,45 @@ export async function updateCompanyInfo(companyData: CompanyData, userId: string
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
 
-    // Steg 2: Sätt en custom claim för användaren för att markera onboarding som klar
-    const auth = admin.auth();
-    await auth.setCustomUserClaims(userId, { onboardingComplete: true });
-    
-    // **NYTT STEG 3: Ta bort isNewUser-flaggan från användardokumentet**
-    // Detta förhindrar att onboarding-modalen visas igen vid nästa inloggning.
     const userDocRef = firestoreAdmin.collection('users').doc(userId);
     await userDocRef.update({
-        isNewUser: false,
+        isNewUser: false, // Markera onboarding som slutförd
         updatedAt: FieldValue.serverTimestamp()
     });
 
-
-    console.log(`Företagsinformation uppdaterad för användare ${userId}, onboarding-status satt och isNewUser-flagga borttagen.`);
+    console.log(`Företagsinformation uppdaterad och onboarding slutförd för ${userId}.`);
 
     return { success: true };
 
   } catch (error) {
     console.error("Fel vid uppdatering av företagsinformation:", error);
     return { success: false, error: 'Kunde inte spara informationen på servern.' };
+  }
+}
+
+/**
+ * Hämtar en specifik användares data från Firestore.
+ * @param userId Användarens unika ID (samma som dokument-ID i Firestore).
+ * @returns Användardataobjektet eller null om det inte hittas.
+ */
+export async function getUserData(userId: string) {
+  if (!userId) {
+    console.error('getUserData anropades utan userId.');
+    return null;
+  }
+
+  try {
+    const userDocRef = firestoreAdmin.collection('users').doc(userId);
+    const docSnap = await userDocRef.get();
+
+    if (docSnap.exists()) {
+      return docSnap.data() as { isNewUser?: boolean; [key: string]: any; };
+    } else {
+      console.warn(`Ingen användare med ID ${userId} hittades i databasen.`);
+      return null;
+    }
+  } catch (error) {
+    console.error(`Fel vid hämtning av användardata för ${userId}:`, error);
+    return null; // Returnerar null vid fel för att undvika att appen kraschar.
   }
 }
