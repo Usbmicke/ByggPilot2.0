@@ -1,16 +1,20 @@
 
 import React from 'react';
-import { auth } from '@/app/lib/auth';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { getProjects } from '@/app/services/projectService';
 import ProjectsView from '@/app/components/views/ProjectsView';
 
 const ProjectsPage = async () => {
-  const session = await auth();
+  // Korrekt, standardiserad metod för att hämta sessionen i en Server Component.
+  const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
 
-  // Om ingen userId finns, returnera en tom vy.
-  // Detta bör i praktiken inte hända tack vare NextAuth middleware.
+  // Om ingen userId finns, returnera en tom vy. 
+  // Detta bör inte hända tack vare vår middleware, men är en bra säkerhetsåtgärd.
   if (!userId) {
+    console.error("[ProjectsPage] Ingen användar-ID hittades i sessionen.");
+    // Returnerar en tom vy för att undvika en krasch.
     return <ProjectsView projects={[]} />;
   }
 

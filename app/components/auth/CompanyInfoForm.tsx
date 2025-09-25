@@ -1,8 +1,9 @@
+
 'use client';
 
 import React, { useState } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
-import { useSession } from 'next-auth/react'; // KORREKT HOOK
+import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 import { updateCompanyInfo } from '@/app/actions/userActions';
 
@@ -15,6 +16,7 @@ interface IFormInput {
   phone: string;
 }
 
+// Input-komponenten är oförändrad, men inkluderad för fullständighet.
 const Input = ({ label, id, type = 'text', register, error, disabled }) => (
     <div>
         <label htmlFor={id} className="block text-sm font-medium text-gray-300 mb-1">
@@ -37,27 +39,36 @@ interface CompanyInfoFormProps {
 
 const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ onSuccess }) => {
   const { register, handleSubmit, formState: { errors } } = useForm<IFormInput>();
-  const { data: session } = useSession(); // KORREKT SÄTT ATT HÄMTA SESSION
+  // Hämta både session-data och den kritiska update-funktionen.
+  const { data: session, update } = useSession(); 
   const [isLoading, setIsLoading] = useState(false);
 
   const onSubmit: SubmitHandler<IFormInput> = async (data) => {
-    if (!session?.user?.id) { // KORREKT KONTROLL
+    if (!session?.user?.id) {
         toast.error('Ingen användarsession hittades. Prova att logga in igen.');
         return;
     }
 
     setIsLoading(true);
-    const result = await updateCompanyInfo(data, session.user.id); // KORREKT ANVÄNDAR-ID
+    const result = await updateCompanyInfo(data, session.user.id);
 
     if (result.success) {
       toast.success('Information sparad!');
+      
+      // **DEN KRITISKA FIXEN:** Tvinga en uppdatering av klientsessionen.
+      // Detta hämtar den nya `isNewUser: false`-statusen från servern.
+      await update(); 
+
+      // Körs efter att sessionen är synkroniserad, vilket förhindrar omdirigeringsloopen.
       onSuccess();
+
     } else {
       toast.error(result.error || 'Ett okänt fel uppstod.');
       setIsLoading(false);
     }
   };
 
+  // JSX för formuläret är oförändrat.
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-gray-800/50 p-8 rounded-lg border border-gray-700">
         <Input label="Företagsnamn" id="companyName" register={register} error={errors.companyName} disabled={isLoading} />
@@ -74,7 +85,7 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ onSuccess }) => {
         <div>
             <button 
                 type="submit" 
-                disabled={isLoading || !session} // Inaktivera om sessionen inte har laddats
+                disabled={isLoading || !session}
                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-transform hover:scale-105 disabled:bg-gray-500 disabled:cursor-not-allowed"
             >
                 {isLoading ? 'Sparar...' : 'Spara och fortsätt'}
