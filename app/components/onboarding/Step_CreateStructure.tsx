@@ -14,7 +14,7 @@ const Step_CreateStructure: React.FC = () => {
         {/* Spinner-animation */}
         <div className="absolute inset-0 border-4 border-t-4 border-gray-600 border-t-cyan-500 rounded-full animate-spin"></div>
 
-        {/* ByggPilot-logotyp i mitten */}
+        {/* ByggPilot-logotyp i mitten (Återställd) */}
         <Image 
           src="/images/byggpilotlogga1.png" 
           alt="ByggPilot Logotyp" 

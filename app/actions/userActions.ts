@@ -103,3 +103,28 @@ export async function updateUserTermsStatus(userId: string, accepted: boolean) {
     return { success: false, error: 'Kunde inte uppdatera status för villkor.' };
   }
 }
+
+/**
+ * NY FUNKTION: Markerar användarens onboarding som slutförd.
+ * Detta är det sista steget som anropas när användaren klickar på "Gå till Dashboard".
+ */
+export async function completeOnboarding(userId: string) {
+  if (!userId) {
+    console.error('completeOnboarding anropades utan userId.');
+    return { success: false, error: 'Användar-ID saknas.' };
+  }
+
+  try {
+    const userDocRef = firestoreAdmin.collection('users').doc(userId);
+    await userDocRef.update({
+      onboardingCompleted: true,
+      isNewUser: false, // Sista bekräftelsen på att användaren inte längre är ny
+      onboardingCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    console.log(`[ACTION SUCCESS] Onboarding markerad som slutförd för användare ${userId}.`);
+    return { success: true };
+  } catch (error) {
+    console.error(`[ACTION CRITICAL] Fel vid slutförande av onboarding för ${userId}:`, error);
+    return { success: false, error: 'Kunde inte slutföra onboarding-processen.' };
+  }
+}

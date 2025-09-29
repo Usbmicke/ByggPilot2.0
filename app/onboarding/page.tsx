@@ -70,8 +70,14 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4 relative">
+    // Ändrad layout för att positionera loggan
+    <div className="min-h-screen bg-gray-900 text-white p-4 relative">
       
+      {/* Logotypen i övre vänstra hörnet */}
+      <div className="absolute top-6 left-6 z-50">
+          <Image src="/images/byggpilotlogga1.png" alt="ByggPilot Logotyp" width={50} height={50} className="opacity-75"/>
+      </div>
+
       {!termsAccepted && session?.user?.name && (
         <OnboardingModal 
           userName={session.user.name}
@@ -87,9 +93,9 @@ export default function OnboardingPage() {
           <XIcon size={24} />
       </button>
 
-      <div className="w-full max-w-2xl mx-auto">
+      {/* Centrerat innehåll */}
+      <div className="w-full max-w-2xl mx-auto flex flex-col items-center justify-center min-h-screen">
           <div className="text-center mb-8">
-              <Image src="/images/byggpilotlogga1.png" alt="ByggPilot Logotyp" width={60} height={60} className="mx-auto mb-4"/>
               {!hasCompletedForm ? (
                 <>
                   <h1 className="text-3xl font-bold text-white">Välkommen till ByggPilot!</h1>

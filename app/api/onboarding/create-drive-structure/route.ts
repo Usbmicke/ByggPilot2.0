@@ -5,7 +5,6 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { getGoogleDriveService } from '@/app/lib/google';
 import { firestoreAdmin } from '@/app/lib/firebase-admin';
 
-// Denna endpoint är skyddad och kräver en aktiv NextAuth-session.
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
 
@@ -16,44 +15,40 @@ export async function POST(req: Request) {
   const userId = session.user.id;
 
   try {
-    // Hämta användarens företagsuppgifter från Firestore för att namnge mappen.
     const userDocRef = firestoreAdmin.collection('users').doc(userId);
     const userDocSnap = await userDocRef.get();
 
-    // KORRIGERING: Använder .exists (property) istället för .exists() (funktion) för Admin SDK.
     if (!userDocSnap.exists) {
         return NextResponse.json({ success: false, error: 'User not found in Firestore' }, { status: 404 });
     }
 
     const userData = userDocSnap.data();
-    // Säkerställ att companyName inte är tomt eller odefinierat
     const companyName = userData?.company?.name?.trim();
     if (!companyName) {
         console.warn(`[API-WARN] Företagsnamn saknas för användare ${userId}. Använder fallback.`);
     }
     const rootFolderName = `ByggPilot - ${companyName || 'Mitt Företag'}`;
 
-    // Hämta en autentiserad Google Drive-klient med den NYA, korrekta tjänsten
     const drive = await getGoogleDriveService(userId);
     if (!drive) {
-        return NextResponse.json({ success: false, error: 'Could not authenticate with Google Drive. User may need to re-authenticate.' }, { status: 500 });
+        return NextResponse.json({ success: false, error: 'Could not authenticate with Google Drive.' }, { status: 500 });
     }
 
-    // 1. Skapa rotmappen
     const rootFolder = await drive.files.create({
         requestBody: {
             name: rootFolderName,
             mimeType: 'application/vnd.google-apps.folder',
         },
-        fields: 'id',
+        fields: 'id, webViewLink',
     });
 
     const rootFolderId = rootFolder.data.id;
-    if (!rootFolderId) {
-        throw new Error('Failed to create root folder in Google Drive.');
+    const rootFolderUrl = rootFolder.data.webViewLink;
+
+    if (!rootFolderId || !rootFolderUrl) {
+        throw new Error('Failed to create root folder or get its URL.');
     }
 
-    // 2. Definiera och skapa undermapparna
     const subFolders = [
       '01 Projekt', 
       '02 Kunder', 
@@ -73,16 +68,16 @@ export async function POST(req: Request) {
         })
     ));
 
-    // 3. När allt är klart, uppdatera användaren i databasen för att avsluta onboardingen.
+    // Uppdatera Firestore med enbart Drive-informationen. Onboarding-status hanteras separat.
     await userDocRef.update({
-        onboardingCompleted: true,
-        isNewUser: false, // Sätt isNewUser till false för att slutföra processen
         driveRootFolderId: rootFolderId,
-        driveRootFolderName: rootFolderName
+        driveRootFolderName: rootFolderName,
+        driveRootFolderUrl: rootFolderUrl,
     });
 
-    console.log(`[API-SUCCESS] Drive-struktur skapad och onboarding slutförd för användare ${userId}.`);
-    return NextResponse.json({ success: true, folderId: rootFolderId, folderName: rootFolderName });
+    console.log(`[API-SUCCESS] Drive-struktur skapad för användare ${userId}.`);
+    
+    return NextResponse.json({ success: true, folderUrl: rootFolderUrl });
 
   } catch (error) {
     console.error('[API-ERROR] create-drive-structure:', error);
