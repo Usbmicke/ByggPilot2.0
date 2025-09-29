@@ -85,7 +85,7 @@ export default function ChatWidget() {
     const isChatDisabled = !firebaseUser || isLoading;
 
     return (
-        <div className={`fixed bottom-0 left-0 md:left-64 right-0 z-40`}>
+        <div id="tour-step-4-chat" className={`fixed bottom-0 left-0 md:left-64 right-0 z-40`}>
             <div className={`bg-background-secondary/90 backdrop-blur-lg border-t border-border-primary mx-auto max-w-7xl flex flex-col shadow-2xl-top rounded-t-lg transition-all duration-300 ${isExpanded ? 'h-[calc(100vh-5rem)]' : 'h-auto'}`}>
                 {isExpanded && (
                      <div className="flex items-center justify-between p-3 border-b border-border-primary">

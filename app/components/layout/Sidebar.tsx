@@ -20,10 +20,10 @@ import Popover from '@/app/components/shared/Popover'; // Importerad!
 
 const navigation = [
   { name: 'Översikt', href: '/dashboard', icon: HomeIcon },
-  { name: 'Projekt', href: '/projects', icon: FolderIcon },
-  { name: 'Tidrapportering', href: '/time-tracking', icon: ClockIcon },
-  { name: 'Dokument', href: '/documents', icon: DocumentDuplicateIcon },
-  { name: 'Kunder', href: '/customers', icon: UsersIcon },
+  { name: 'Projekt', href: '/dashboard/projects', icon: FolderIcon },
+  { name: 'Tidrapportering', href: '/dashboard/tidrapportering', icon: ClockIcon },
+  { name: 'Dokument', href: '/dashboard/dokument', icon: DocumentDuplicateIcon },
+  { name: 'Kunder', href: '/dashboard/customers', icon: UsersIcon },
 ];
 
 interface SidebarProps {
@@ -72,8 +72,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             <ul>
               {navigation.map((item) => {
                 const isActive = pathname.startsWith(item.href);
+                const isCustomers = item.name === 'Kunder';
                 return (
-                  <li key={item.name}>
+                  <li key={item.name} id={isCustomers ? 'tour-step-3-customers' : undefined}>
                     <Link href={item.href} legacyBehavior>
                       <a className={`flex items-center gap-3 px-4 py-2.5 my-1 rounded-lg transition-colors duration-200 \
                         ${isActive 
@@ -93,7 +94,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             <Popover content={popoverContent} trigger={
               <button className="w-full flex items-center justify-center gap-2 bg-accent-blue text-white font-semibold py-3 rounded-lg hover:bg-accent-blue-dark transition-colors duration-200 shadow">
                   <PlusIcon className="h-5 w-5" />
-                  <span>Skapa Offert</span>
+                  <span>Skapa Offort</span>
               </button>
             } />
           </div>

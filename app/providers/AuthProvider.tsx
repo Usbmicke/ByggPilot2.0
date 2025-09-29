@@ -2,18 +2,19 @@
 'use client';
 
 import { SessionProvider, useSession } from 'next-auth/react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useTransition } from 'react';
 import { auth as firebaseAuth } from '@/app/lib/firebase/client';
 import { signInWithCustomToken, signOut } from 'firebase/auth';
-import { useRouter, usePathname } from 'next/navigation'; // Importera useRouter och usePathname
+import { useRouter, usePathname } from 'next/navigation';
 
 const FirebaseSyncManager = ({ children }: { children: React.ReactNode }) => {
-  const { data: session, status } = useSession();
+  // ANVÄND UPDATE-FUNKTIONEN FRÅN USESESSION
+  const { data: session, status, update } = useSession();
   const [isFirebaseAuthenticated, setIsFirebaseAuthenticated] = useState(false);
   const router = useRouter();
-  const pathname = usePathname(); // Hämta den aktuella URL-sökvägen
+  const pathname = usePathname();
+  const [isPending, startTransition] = useTransition();
 
-  // Effekt för att synkronisera NextAuth -> Firebase Auth
   useEffect(() => {
     if (status === 'loading') return;
 
@@ -29,11 +30,22 @@ const FirebaseSyncManager = ({ children }: { children: React.ReactNode }) => {
               setIsFirebaseAuthenticated(true);
               console.log('[AuthProvider] Synkronisering lyckades: NextAuth -> Firebase');
 
-              // **KORRIGERAD LOGIK: Omdirigering för nya användare**
-              // @ts-ignore - Vi vet att isNewUser finns baserat på vår backend-logik
-              if (session.user?.isNewUser && pathname !== '/onboarding') {
-                console.log('[AuthProvider] Ny användare upptäckt. Omdirigerar till /onboarding.');
-                router.push('/onboarding');
+              // **DEN SLUTGILTIGA FIXEN: REVALIDERING AV SESSION**
+              // @ts-ignore
+              if (session.user?.isNewUser) {
+                // Använd startTransition för att undvika abrupta UI-förändringar under uppdateringen
+                startTransition(async () => {
+                  console.log('[AuthProvider] Ny användare upptäckt. Validerar sessionen mot servern...');
+                  const newSession = await update(); // Tvinga fram en uppdatering från servern
+                  
+                  // @ts-ignore
+                  if (newSession?.user?.isNewUser && pathname !== '/onboarding') {
+                    console.log('[AuthProvider] Validering klar. Användaren är fortfarande ny. Omdirigerar till /onboarding.');
+                    router.push('/onboarding');
+                  } else {
+                    console.log('[AuthProvider] Validering klar. Användaren har slutfört onboarding. Ingen omdirigering behövs.');
+                  }
+                });
               }
 
             } else {
@@ -56,7 +68,7 @@ const FirebaseSyncManager = ({ children }: { children: React.ReactNode }) => {
 
     syncAuth();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, session, pathname]); // Lade till pathname som dependency
+  }, [status, session, pathname]); // Behåll dependencies som de är
 
   return <>{children}</>;
 };

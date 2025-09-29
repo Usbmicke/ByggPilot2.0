@@ -10,12 +10,16 @@ import Step_SecurityInfo from './Step_SecurityInfo';
 import Step_CreateStructure from './Step_CreateStructure';
 import Step_Success from './Step_Success';
 
-// Definition av de olika stegen i flödet
 export type OnboardingStep = 'welcome' | 'security' | 'creating' | 'success';
 
-export default function OnboardingFlow() {
+interface OnboardingFlowProps {
+    companyName: string;
+}
+
+export default function OnboardingFlow({ companyName }: OnboardingFlowProps) {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
   const [error, setError] = useState<string | null>(null);
+  const [folderUrl, setFolderUrl] = useState<string | null>(null); // Ny state för mappens URL
   const { data: session } = useSession();
   const router = useRouter();
 
@@ -31,26 +35,30 @@ export default function OnboardingFlow() {
       }
 
       const result = await response.json();
-      if(result.success) {
+      if(result.success && result.folderUrl) {
+        setFolderUrl(result.folderUrl); // Spara URL:en
         setCurrentStep('success');
       } else {
-        throw new Error(result.error || 'Ett okänt serverfel inträffade.');
+        throw new Error(result.error || 'Kunde inte hämta mappens URL från servern.');
       }
     } catch (err) {
       setError(err.message);
-      // Om det blir ett fel, stanna på "creating"-steget men visa ett felmeddelande.
-      // I en framtida version kan vi ha ett dedikerat fel-steg.
     }
   };
   
+  const handleComplete = () => {
+      // Omdirigera till dashboarden, men med en parameter som indikerar att touren ska starta
+      router.push('/dashboard?tour=true');
+  };
+  
   const renderStep = () => {
-    // Visa ett felmeddelande om ett sådant finns
     if (error) {
       return (
-        <div className="text-center text-red-400">
-          <p>Kunde inte skapa mappstrukturen:</p>
-          <p className="font-mono text-sm">{error}</p>
-          <button onClick={() => router.push('/dashboard')} className="mt-4 bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg">Gå till Dashboard</button>
+        <div className="text-center text-red-400 bg-gray-800 p-8 rounded-lg border border-red-500/50">
+          <h3 className="font-bold text-lg text-white">Kunde inte skapa mappstrukturen</h3>
+          <p className="mt-2">{error}</p>
+          <p className="mt-4 text-sm text-gray-300">Om problemet kvarstår, kontakta supporten via chatten på din dashboard.</p>
+          <button onClick={() => router.push('/dashboard')} className="mt-6 bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg">Gå till Dashboard</button>
         </div>
       );
     }
@@ -60,18 +68,19 @@ export default function OnboardingFlow() {
         return <Step_Welcome 
                   userName={session?.user?.name || ''} 
                   onProceed={handleCreateStructure} 
-                  onSkip={() => router.push('/dashboard')}
+                  onSkip={() => router.push('/dashboard')} 
                   onShowSecurity={() => setCurrentStep('security')} 
                 />;
       case 'security':
-        return <Step_SecurityInfo 
-                  onProceed={handleCreateStructure} 
-                  onGoBack={() => setCurrentStep('welcome')} 
-                />;
+        return <Step_SecurityInfo onProceed={handleCreateStructure} onGoBack={() => setCurrentStep('welcome')} />;
       case 'creating':
         return <Step_CreateStructure />;
       case 'success':
-        return <Step_Success onComplete={() => router.push('/dashboard')} />;
+        return <Step_Success 
+                  onComplete={handleComplete} 
+                  companyName={companyName} // Skicka med namnet
+                  folderUrl={folderUrl}       // Skicka med URL:en
+                />;
       default:
         return null;
     }
