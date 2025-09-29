@@ -1,60 +1,58 @@
+
 'use client';
 
 import React, { useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { WelcomeHeader } from '@/app/components/dashboard/WelcomeHeader';
 import DashboardSummary from '@/app/components/dashboard/DashboardSummary';
 import { ProjectList } from '@/app/components/dashboard/ProjectList';
 import { ActionSuggestions } from '@/app/components/dashboard/ActionSuggestions';
-import ZeroState from '@/app/components/dashboard/ZeroState';
 import CreateProjectModal from '@/app/components/dashboard/CreateProjectModal';
-import GuidedTour from '@/app/components/tour/GuidedTour'; // IMPORTERAD
+import GuidedTour from '@/app/components/tour/GuidedTour';
 
-// TÖMD FÖR ATT VISA TOMT LÄGE FÖR TOUREN
-const projects = [];
+// Wrapper för att hantera sökparametrar för turen
+const TourWrapper = () => {
+    const searchParams = useSearchParams();
+    const startTour = searchParams.get('tour') === 'true';
+    return startTour ? <GuidedTour /> : null;
+};
 
 export default function DashboardPage() {
-    const [showOnboarding, setShowOnboarding] = useState(false);
-    const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
+    const [isCreateProjectModalOpen, setCreateProjectModalOpen] = useState(false);
 
-    const user = { name: 'Sven' }; // Dummy-användare, kommer ersättas av riktig data
+    const user = { name: 'Sven' }; // Dummy-data
 
+    // Funktion för att öppna modalen. Denna skickas nu ner till ProjectList.
     const handleNewProject = () => {
-        setIsCreateProjectModalOpen(true);
+        setCreateProjectModalOpen(true);
     };
 
-    // Denna logik verkar vara för en äldre onboarding-process, kan tas bort senare.
-    if (showOnboarding) {
-        return <ZeroState onFinished={() => setShowOnboarding(false)} />;
-    }
-
     return (
-        // Använd Suspense för att säkerställa att tour-parametern läses korrekt
         <Suspense fallback={<div>Laddar översikt...</div>}>
             <CreateProjectModal 
                 isOpen={isCreateProjectModalOpen} 
-                onClose={() => setIsCreateProjectModalOpen(false)} 
+                onClose={() => setCreateProjectModalOpen(false)} 
             />
-            {/* GUIDED TOUR-KOMPONENTEN TILLAGD HÄR */}
-            <GuidedTour />
+            
+            <TourWrapper />
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="animate-fade-in space-y-8 py-8">
-                    {/* ID TILLAGT FÖR STEG 1 I TOUREN */}
                     <div id="tour-step-1-welcome">
                         <WelcomeHeader user={user} />
                     </div>
 
-                    <DashboardSummary projectCount={projects.length} />
+                    <DashboardSummary projectCount={0} />
                     
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div className="lg:col-span-2">
-                            {/* ID TILLAGT FÖR STEG 2 I TOUREN */}
                             <div id="tour-step-2-projects">
-                                <ProjectList projects={projects} onNewProject={handleNewProject} />
+                                {/* Skicka ner handleNewProject som en prop */}
+                                <ProjectList onNewProject={handleNewProject} />
                             </div>
                         </div>
                         <div>
-                            <ActionSuggestions onNewProject={handleNewProject} />
+                            <ActionSuggestions />
                         </div>
                     </div>
                 </div>

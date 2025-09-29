@@ -4,34 +4,37 @@
 import React, { useState, useEffect } from 'react';
 import type { Project } from '@/app/types/project';
 import Link from 'next/link';
-import { FolderIcon } from '@heroicons/react/24/outline';
+import { FolderPlusIcon } from '@heroicons/react/24/outline'; // Byt till en mer passande ikon
 
-// Helper-funktioner för styling förblir oförändrade, de är redan av hög kvalitet.
+// Props-definitionen utökas för att kunna hantera ett klick-event
+interface ProjectListProps {
+  onNewProject: () => void;
+}
+
+// Helper-funktioner förblir oförändrade
 const getStatusChipClass = (status: Project['status']) => {
-  // ... (samma som tidigare)
     switch (status) {
-    case 'Positiv': return 'bg-yellow-400/10 text-yellow-400 border border-yellow-400/30';
-    case 'Varning': return 'bg-red-400/10 text-red-400 border border-red-400/30';
-    case 'Pågående': return 'bg-blue-400/10 text-blue-400 border border-blue-400/30';
-    case 'Avslutad': return 'bg-green-400/10 text-green-400 border border-green-400/30';
-    case 'Fakturerat': return 'bg-purple-400/10 text-purple-400 border border-purple-400/30';
-    case 'Offert': return 'bg-cyan-400/10 text-cyan-400 border border-cyan-400/30';
-    case 'Arkiverat': return 'bg-gray-500/10 text-gray-400 border border-gray-500/30';
-    default: return 'bg-gray-700 text-gray-300';
-  }
+        case 'Positiv': return 'bg-yellow-400/10 text-yellow-400 border border-yellow-400/30';
+        case 'Varning': return 'bg-red-400/10 text-red-400 border border-red-400/30';
+        case 'Pågående': return 'bg-blue-400/10 text-blue-400 border border-blue-400/30';
+        case 'Avslutad': return 'bg-green-400/10 text-green-400 border border-green-400/30';
+        case 'Fakturerat': return 'bg-purple-400/10 text-purple-400 border border-purple-400/30';
+        case 'Offert': return 'bg-cyan-400/10 text-cyan-400 border border-cyan-400/30';
+        case 'Arkiverat': return 'bg-gray-500/10 text-gray-400 border border-gray-500/30';
+        default: return 'bg-gray-700 text-gray-300';
+    }
 };
 
 const getProjectCardClass = (status: Project['status']) => {
     const baseClasses = "block bg-gray-800/50 p-6 rounded-lg border transition-all duration-300 hover:shadow-lg hover:scale-[1.02]";
     switch (status) {
-      case 'Positiv': return `${baseClasses} border-yellow-600/50 hover:border-yellow-500`;
-      case 'Varning': return `${baseClasses} border-red-600/50 hover:border-red-500`;
-      default: return `${baseClasses} border-gray-700 hover:border-indigo-500`;
+        case 'Positiv': return `${baseClasses} border-yellow-600/50 hover:border-yellow-500`;
+        case 'Varning': return `${baseClasses} border-red-600/50 hover:border-red-500`;
+        default: return `${baseClasses} border-gray-700 hover:border-indigo-500`;
     }
-  };
+};
 
-// Huvudkomponent, nu med egen datahämtning och NAMED EXPORT.
-export function ProjectList() {
+export function ProjectList({ onNewProject }: ProjectListProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,9 +44,7 @@ export function ProjectList() {
       setIsLoading(true);
       try {
         const response = await fetch('/api/projects/list');
-        if (!response.ok) {
-          throw new Error('Kunde inte hämta projekt.');
-        }
+        if (!response.ok) throw new Error('Kunde inte hämta projekt.');
         const data = await response.json();
         setProjects(data.projects || []);
       } catch (err: any) {
@@ -55,7 +56,6 @@ export function ProjectList() {
     fetchProjects();
   }, []);
 
-  // Laddnings-skelett
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
@@ -70,18 +70,23 @@ export function ProjectList() {
     );
   }
 
-  // Felmeddelande
   if (error) {
     return <p className="text-center text-red-400">Fel: {error}</p>;
   }
 
-  // Korrigerat "tomt tillstånd"
+  // Förbättrat "tomt tillstånd" med en tydlig call-to-action
   if (projects.length === 0) {
     return (
       <div className="text-center bg-gray-800/50 border-2 border-dashed border-gray-700 p-12 rounded-lg">
-        <FolderIcon className="mx-auto h-12 w-12 text-gray-500" />
+        <FolderPlusIcon className="mx-auto h-12 w-12 text-gray-500" />
         <h3 className="mt-4 text-lg font-medium text-white">Du har inga aktiva projekt.</h3>
-        <p className="mt-1 text-sm text-gray-500">Klicka på "+ Nytt Projekt" i sidomenyn för att komma igång.</p>
+        <p className="mt-1 text-sm text-gray-500 mb-6">Kom igång genom att skapa ditt första projekt.</p>
+        <button
+          onClick={onNewProject} // Anropar funktionen från DashboardPage
+          className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-semibold rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-colors"
+        >
+          Skapa ditt första projekt
+        </button>
       </div>
     );
   }

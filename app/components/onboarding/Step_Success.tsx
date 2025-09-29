@@ -30,7 +30,7 @@ const Step_Success: React.FC<StepSuccessProps> = ({ companyName, folderUrl }) =>
 
     if (result.success) {
       // 2. Omdirigera ENBART om databasen har uppdaterats korrekt
-      router.push('/dashboard');
+      router.push('/dashboard?tour=true');
     } else {
       console.error('Kunde inte spara onboarding-status:', result.error);
       // Visa ett felmeddelande för användaren här

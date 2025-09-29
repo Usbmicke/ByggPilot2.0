@@ -94,7 +94,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             <Popover content={popoverContent} trigger={
               <button className="w-full flex items-center justify-center gap-2 bg-accent-blue text-white font-semibold py-3 rounded-lg hover:bg-accent-blue-dark transition-colors duration-200 shadow">
                   <PlusIcon className="h-5 w-5" />
-                  <span>Skapa Offort</span>
+                  <span>Skapa Offert</span>
               </button>
             } />
           </div>
