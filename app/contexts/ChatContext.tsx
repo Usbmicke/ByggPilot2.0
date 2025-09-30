@@ -6,9 +6,8 @@ import { ChatMessage, FileAttachment } from '@/app/types';
 import { useUI, UIAction } from '@/app/contexts/UIContext';
 import { auth } from '@/app/lib/firebase/client';
 import { User, onAuthStateChanged } from 'firebase/auth';
-import { SYSTEM_PROMPT } from '@/app/ai/prompts'; // Importera system-prompten
+import { SYSTEM_PROMPT } from '@/app/ai/prompts';
 
-// --- Hjälpfunktion för filkonvertering ---
 const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -18,7 +17,6 @@ const fileToBase64 = (file: File): Promise<string> => {
     });
 };
 
-// --- Typ för kontextens värde ---
 interface ChatContextType {
   messages: ChatMessage[];
   isLoading: boolean;
@@ -46,50 +44,29 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       }
     });
     return () => unsubscribe();
-  }, [messages.length]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Körs endast en gång vid montering
 
   const sendMessage = useCallback(async (content: string, file?: File) => {
     if ((!content || !content.trim()) && !file || !firebaseUser) return;
 
-    setIsLoading(true);
-    
-    let fileAttachment: FileAttachment | undefined;
-    if (file) {
-        try {
-            const base64File = await fileToBase64(file);
-            fileAttachment = {
-                name: file.name,
-                type: file.type,
-                content: base64File,
-            };
-        } catch (error) {
-            console.error("Fel vid konvertering av fil:", error);
-            const errorMsg: ChatMessage = {
-                role: 'assistant',
-                content: `Det gick inte att läsa filen: ${file.name}`,
-            };
-            setMessages(prev => [...prev, errorMsg]);
-            setIsLoading(false);
-            return;
-        }
-    }
+    let userMessage: ChatMessage;
+    const tempId = `temp_${Date.now()}`;
 
-    const userMessage: ChatMessage = { 
-        role: 'user', 
-        content: content, 
-        ...(fileAttachment && { attachment: fileAttachment })
-    };
+    // Skapa och lägg till meddelandet direkt
+    // Hantera fil-logik här om det behövs
+    userMessage = { role: 'user', content: content };
     
-    setMessages(prev => [...prev, userMessage]);
+    // Bygg den nya meddelandelistan FÖRST
+    const newMessages: ChatMessage[] = [...messages, userMessage];
+    // Uppdatera state direkt så att UI:t reagerar
+    setMessages(newMessages);
+    setIsLoading(true);
 
     try {
       const idToken = await firebaseUser.getIdToken(true);
-
-      // Skapa system-prompt meddelandet
       const systemMessage: ChatMessage = { role: 'system', content: SYSTEM_PROMPT };
-      
-      // Skicka system-prompten följt av resten av konversationen
-      const messagesToSend = [systemMessage, ...messages, userMessage];
+      const messagesToSend = [systemMessage, ...newMessages];
 
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -97,12 +74,16 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         body: JSON.stringify({ messages: messagesToSend }),
       });
 
-      if (!response.ok) throw new Error((await response.json()).error || 'Okänt serverfel');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Okänt serverfel');
+      }
       if (!response.body) throw new Error('Saknar svarskropp');
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let assistantResponse = '';
+
       setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
       while (true) {
@@ -115,21 +96,14 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         });
       }
 
-      try {
-        const parsedAction: UIAction = JSON.parse(assistantResponse);
-        if (parsedAction.type === 'UI_ACTION' && parsedAction.action === 'open_modal') {
-          openModal(parsedAction.payload.modalId, parsedAction.payload);
-          setMessages(prev => prev.slice(0, -1));
-        }
-      } catch (e) { /* Inte en UI action */ }
-
     } catch (error) {
       console.error("Fel i sendMessage:", error);
       const errorMsg: ChatMessage = {
         role: 'assistant',
         content: `Ett tekniskt fel uppstod: ${error instanceof Error ? error.message : String(error)}`,
       };
-      setMessages(prev => [...prev, errorMsg]);
+       // Ersätt den väntande "..." med ett felmeddelande
+      setMessages(prev => [...prev.slice(0, -1), errorMsg]);
     } finally {
       setIsLoading(false);
     }

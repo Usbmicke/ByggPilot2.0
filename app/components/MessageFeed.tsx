@@ -1,76 +1,62 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
-import { Message } from '@/app/types'; // Importera den korrekta typen
+import React, { useRef, useEffect } from 'react';
+import { ChatMessage } from '@/app/types';
+import Spinner from '@/app/components/Spinner';
+import ReactMarkdown from 'react-markdown';
+import { PaperClipIcon } from '@heroicons/react/24/solid';
 
 interface MessageFeedProps {
-    projectId: string;
+  messages: ChatMessage[];
 }
 
-export default function MessageFeed({ projectId }: MessageFeedProps) {
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+export default function MessageFeed({ messages }: MessageFeedProps) {
+  const endOfMessagesRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        const fetchMessages = async () => {
-            if (!projectId) return;
-            
-            setLoading(true);
-            setError(null);
+  useEffect(() => {
+    endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
-            try {
-                const response = await fetch(`/api/communication/messages?projectId=${projectId}`);
-                if (!response.ok) {
-                    throw new Error('Något gick fel vid hämtning av meddelanden.');
-                }
-                const data: Message[] = await response.json();
-                setMessages(data);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'Ett okänt fel inträffade.');
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchMessages();
-    }, [projectId]);
-
-    if (loading) {
-        return <p className="text-center text-gray-500">Laddar meddelanden...</p>;
-    }
-
-    if (error) {
-        return <p className="text-center text-red-500">Fel: {error}</p>;
-    }
-
-    if (messages.length === 0) {
-        return <p className="text-center text-gray-500">Inga meddelanden än. Bli den första att skriva något!</p>;
-    }
-
+  if (!messages || messages.length === 0) {
     return (
-        <div className="space-y-6">
-            {messages.map((message) => (
-                <div key={message.id} className="flex items-start gap-4">
-                    <Image 
-                        src={message.author.avatarUrl || '/default-avatar.png'}
-                        alt={`${message.author.name} avatar`}
-                        width={40}
-                        height={40}
-                        className="rounded-full bg-gray-600"
-                    />
-                    <div className="flex-grow">
-                        <div className="flex items-baseline gap-2">
-                             <p className="font-semibold text-white">{message.author.name}</p>
-                             <p className="text-xs text-gray-500">{new Date(message.timestamp).toLocaleString('sv-SE')}</p>
-                        </div>
-                        <div className="mt-1 bg-gray-900/70 p-3 rounded-lg rounded-tl-none">
-                            <p className="text-gray-300 whitespace-pre-wrap">{message.text}</p>
-                        </div>
-                    </div>
-                </div>
-            ))}
+        <div className="flex-1 flex items-center justify-center">
+            <p className="text-center text-text-secondary">Inga meddelanden än. Starta en konversation!</p>
         </div>
     );
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto pr-4 space-y-6">
+        {messages.map((message, index) => (
+            <div key={index} className={`flex items-start gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                {message.role === 'assistant' && (
+                    <div className="w-8 h-8 rounded-full bg-accent-blue flex items-center justify-center font-bold text-white flex-shrink-0">
+                        BP
+                    </div>
+                )}
+
+                <div className={`rounded-lg px-4 py-2 max-w-2xl break-words ${message.role === 'user' ? 'bg-accent-blue text-white' : 'bg-background-tertiary'}`}>
+                    {message.role === 'assistant' && message.content === '' ? (
+                        <Spinner />
+                    ) : (
+                        <div className="prose prose-invert prose-sm max-w-none">
+                            <ReactMarkdown components={{ a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-accent-blue-light hover:underline"/>}}>
+                                {message.content}
+                            </ReactMarkdown>
+                        </div>
+                    )}
+                    {message.attachment && (
+                        <div className="mt-2 p-2.5 bg-background-primary/50 rounded-lg border border-border-primary">
+                           <div className="flex items-center gap-2 text-sm">
+                                <PaperClipIcon className="h-5 w-5"/>
+                                <span>{message.attachment.name}</span>
+                           </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        ))}
+        <div ref={endOfMessagesRef} />
+    </div>
+  );
 }

@@ -1,57 +1,91 @@
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, Content } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 import { SYSTEM_PROMPT } from "@/app/ai/prompts";
+import { ChatMessage } from "@/app/types";
 
-// Korrigerad för att matcha .env.local-konfigurationen
+// Konfigurera Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+
+// Mappa om vår interna ChatMessage-roll till Geminis roll
+const roleMap: Record<ChatMessage['role'], 'user' | 'model'> = {
+    user: 'user',
+    assistant: 'model',
+    system: 'user' // Gemini har inte en 'system'-roll, vi behandlar den som en del av user/model-historiken
+};
+
+// Säkerhetsinställningar
+const safetySettings = [
+  {
+    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+  {
+    category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+    threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+  },
+];
+
+// Formatera historiken för Gemini API
+const buildFormattedHistory = (messages: ChatMessage[]): Content[] => {
+    // Filtrera bort system-meddelanden då de hanteras av `systemInstruction`
+    return messages
+        .filter(m => m.role === 'user' || m.role === 'assistant')
+        .map(m => ({
+            role: roleMap[m.role],
+            parts: [{ text: m.content }],
+        }));
+};
+
 
 export async function POST(req: NextRequest) {
   try {
-    const { message } = await req.json();
+    const { messages } = await req.json();
 
-    if (!message) {
-      return NextResponse.json({ error: "Message is required" }, { status: 400 });
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return NextResponse.json({ error: "Messages are required and must be a non-empty array" }, { status: 400 });
     }
-    
-    // Korrigerad för att matcha .env.local-konfigurationen
+
     if (!process.env.GEMINI_API_KEY) {
         throw new Error("GEMINI_API_KEY is not configured in .env.local");
     }
 
-    // Välj Gemini-modellen och applicera system-prompten
-    const model = genAI.getGenerativeModel({ 
+    const model = genAI.getGenerativeModel({
         model: "gemini-1.5-flash",
         systemInstruction: SYSTEM_PROMPT
     });
 
-    // Skapa chatten och skicka meddelandet
-    const chat = model.startChat();
-    const result = await chat.sendMessage(message);
+    const lastUserMessage = messages[messages.length - 1]?.content || "";
+    const history = buildFormattedHistory(messages.slice(0, -1));
+
+    const chat = model.startChat({
+        history,
+        safetySettings,
+    });
+    
+    const result = await chat.sendMessage(lastUserMessage);
     const response = await result.response;
     const responseText = response.text();
 
-    try {
-      // Försök att tolka svaret som JSON
-      const parsedResponse = JSON.parse(responseText);
-      return NextResponse.json(parsedResponse);
-    } catch (e) {
-      console.error("AI response was not valid JSON:", responseText);
-      // Om AI:n inte svarar med giltig JSON, skicka ett standardfel-objekt
-      // Detta förhindrar att klienten kraschar om den får ett icke-JSON-svar.
-      return NextResponse.json({
-          text: "Ett internt fel uppstod när jag försökte tolka svaret från AI:n. Svaret var inte giltig JSON. Försök igen.",
-          actions: []
-      }, { status: 500 });
-    }
-
+    return new Response(responseText, {
+      headers: { 'Content-Type': 'text/plain' },
+    });
+    
   } catch (error) {
     console.error("Error in chat API:", error);
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
     return NextResponse.json(
       { 
-        // Skicka ett mer informativt felobjekt till klienten
-        text: "Ett allvarligt internt serverfel inträffade. Kontrollera serverloggarna.",
-        actions: [] 
+        error: "An internal server error occurred.",
+        details: errorMessage
       },
       { status: 500 }
     );
