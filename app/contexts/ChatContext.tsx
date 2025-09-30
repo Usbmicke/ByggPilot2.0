@@ -2,10 +2,11 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { ChatMessage, FileAttachment } from '@/app/types'; // Uppdaterad import
+import { ChatMessage, FileAttachment } from '@/app/types';
 import { useUI, UIAction } from '@/app/contexts/UIContext';
 import { auth } from '@/app/lib/firebase/client';
 import { User, onAuthStateChanged } from 'firebase/auth';
+import { SYSTEM_PROMPT } from '@/app/ai/prompts'; // Importera system-prompten
 
 // --- Hjälpfunktion för filkonvertering ---
 const fileToBase64 = (file: File): Promise<string> => {
@@ -22,7 +23,7 @@ interface ChatContextType {
   messages: ChatMessage[];
   isLoading: boolean;
   firebaseUser: User | null;
-  sendMessage: (content: string, file?: File) => Promise<void>; // Uppdaterad signatur
+  sendMessage: (content: string, file?: File) => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -47,7 +48,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, [messages.length]);
 
-  // --- Kärnfunktionen för att skicka meddelanden, nu med filhantering ---
   const sendMessage = useCallback(async (content: string, file?: File) => {
     if ((!content || !content.trim()) && !file || !firebaseUser) return;
 
@@ -77,15 +77,19 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     const userMessage: ChatMessage = { 
         role: 'user', 
         content: content, 
-        ...(fileAttachment && { attachment: fileAttachment }) // Lägg till bilaga om den finns
+        ...(fileAttachment && { attachment: fileAttachment })
     };
     
     setMessages(prev => [...prev, userMessage]);
 
     try {
       const idToken = await firebaseUser.getIdToken(true);
-      // Skicka hela meddelandehistoriken, inklusive det nya meddelandet
-      const messagesToSend = [...messages, userMessage];
+
+      // Skapa system-prompt meddelandet
+      const systemMessage: ChatMessage = { role: 'system', content: SYSTEM_PROMPT };
+      
+      // Skicka system-prompten följt av resten av konversationen
+      const messagesToSend = [systemMessage, ...messages, userMessage];
 
       const response = await fetch('/api/chat', {
         method: 'POST',

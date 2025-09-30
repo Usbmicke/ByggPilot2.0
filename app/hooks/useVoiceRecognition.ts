@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 // Denna hook hanterar Web Speech API för röstigenkänning.
-const useVoiceRecognition = (onTranscriptChange: (transcript: string) => void) => {
+export const useVoiceRecognition = (onTranscriptChange: (transcript: string) => void) => {
   const [isRecording, setIsRecording] = useState(false);
   const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
 
@@ -75,5 +75,3 @@ const useVoiceRecognition = (onTranscriptChange: (transcript: string) => void) =
   // Exponera tillstånd och kontroller
   return { isRecording, startRecording, stopRecording, browserSupportsSpeechRecognition: !!recognition };
 };
-
-export default useVoiceRecognition;

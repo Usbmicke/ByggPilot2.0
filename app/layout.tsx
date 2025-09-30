@@ -6,6 +6,7 @@ import { AuthProvider } from "@/app/providers/AuthProvider";
 import { UIProvider } from "@/app/contexts/UIContext";
 import { ChatProvider } from "@/app/contexts/ChatContext";
 import CookieBanner from "@/app/components/CookieBanner";
+import ChatWidget from "@/app/components/layout/ChatWidget";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,16 +23,11 @@ export default function RootLayout({
   return (
     <html lang="sv">
       <body className={`${inter.className} h-full bg-background-primary text-text-primary`}>
-        {/*
-          KORREKT PROVIDER-ORDNING:
-          1. UIProvider: Tillhandahåller UI-kontext (t.ex. för att öppna modaler).
-          2. AuthProvider: Använder UI-kontexten för onboarding och hanterar session-data.
-          3. ChatProvider: Använder både UI- och Auth-kontexter.
-        */}
         <UIProvider>
           <AuthProvider>
             <ChatProvider>
               {children}
+              <ChatWidget />
             </ChatProvider>
           </AuthProvider>
         </UIProvider>
