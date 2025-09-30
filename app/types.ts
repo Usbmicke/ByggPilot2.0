@@ -1,4 +1,9 @@
+
 import { FieldValue } from 'firebase-admin/firestore';
+
+// ===============================================
+// GRUNDLÄGGANDE DATAMODELLER
+// ===============================================
 
 // Grundläggande användarinformation från NextAuth
 export interface UserProfile {
@@ -7,6 +12,33 @@ export interface UserProfile {
     email?: string | null;
     image?: string | null;
 }
+
+// ===============================================
+// CHATT-RELATERADE TYPER (GULDSTANDARD)
+// ===============================================
+
+/**
+ * Representerar en bilaga i ett chattmeddelande.
+ * Innehållet är en Base64-kodad sträng.
+ */
+export interface FileAttachment {
+    name: string;
+    type: string;
+    content: string; // Base64 encoded file
+}
+
+/**
+ * Representerar ett enskilt meddelande i chattflödet.
+ */
+export interface ChatMessage {
+    role: 'user' | 'assistant';
+    content: string;
+    attachment?: FileAttachment; // Frivillig bilaga
+}
+
+// ===============================================
+// PROJEKT-RELATERADE TYPER
+// ===============================================
 
 // Projektstatus
 export enum ProjectStatus {
@@ -32,24 +64,6 @@ export interface Project {
     archivedAt: string | null; 
 }
 
-// Representerar en riskfaktor i kalkylen
-export interface RiskFactor {
-    name: string;
-    probability: 'Låg' | 'Medel' | 'Hög';
-    consequence: 'Låg' | 'Medel' | 'Hög';
-    mitigation: string;
-}
-
-// Hela riskanalys-objektet
-export interface RiskAnalysis {
-    materialCost: number;
-    laborCost: number;
-    otherCosts: number;
-    subcontractorCosts: number;
-    riskFactors: RiskFactor[];
-    profitMarginPercentage: number;
-}
-
 // Representerar ett dokument kopplat till ett projekt
 export interface Document {
     id: string; 
@@ -60,20 +74,8 @@ export interface Document {
     uploadedAt: string;
 }
 
-// Representerar ett meddelande i kommunikationsflödet
-export interface Message {
-    id: string;
-    author: {
-        id: string;
-        name: string;
-        avatarUrl: string;
-    };
-    text: string;
-    timestamp: string; 
-}
-
 // ===============================================
-// NYA DATAMODELLER FÖR FAS 2
+// MODAL- & VERKTYGS-RELATERADE TYPER
 // ===============================================
 
 /**
@@ -125,4 +127,22 @@ export interface RotDeduction {
     propertyId: string;           // Fastighetsbeteckning
     laborCost: number;            // Total arbetskostnad för ROT-arbetet
     requestedAmount: number;      // Det belopp som söks i avdrag
+}
+
+// Representerar en riskfaktor i kalkylen
+export interface RiskFactor {
+    name: string;
+    probability: 'Låg' | 'Medel' | 'Hög';
+    consequence: 'Låg' | 'Medel' | 'Hög';
+    mitigation: string;
+}
+
+// Hela riskanalys-objektet
+export interface RiskAnalysis {
+    materialCost: number;
+    laborCost: number;
+    otherCosts: number;
+    subcontractorCosts: number;
+    riskFactors: RiskFactor[];
+    profitMarginPercentage: number;
 }

@@ -1,33 +1,40 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { ChatMessage } from '@/app/types';
-import { useUI, UIAction } from '@/app/contexts/UIContext'; // KORRIGERAD SÖKVÄG
+import { ChatMessage, FileAttachment } from '@/app/types'; // Uppdaterad import
+import { useUI, UIAction } from '@/app/contexts/UIContext';
 import { auth } from '@/app/lib/firebase/client';
 import { User, onAuthStateChanged } from 'firebase/auth';
 
-// Typ för kontextens värde
+// --- Hjälpfunktion för filkonvertering ---
+const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = error => reject(error);
+    });
+};
+
+// --- Typ för kontextens värde ---
 interface ChatContextType {
   messages: ChatMessage[];
   isLoading: boolean;
   firebaseUser: User | null;
-  sendMessage: (content: string) => Promise<void>;
+  sendMessage: (content: string, file?: File) => Promise<void>; // Uppdaterad signatur
 }
 
-// Skapa kontexten
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-// Onboarding-meddelande
 const ONBOARDING_WELCOME_MESSAGE = `**Välkommen till ByggPilot!**\n\nJag är din digitala kollega. Vad kan jag hjälpa dig med?`;
 
-// Provider-komponent
 export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const { openModal } = useUI();
 
-  // Hantera användarens autentiseringsstatus
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setFirebaseUser(user);
@@ -40,21 +47,50 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, [messages.length]);
 
-  // Kärnfunktionen för att skicka meddelanden till AI:n
-  const sendMessage = useCallback(async (content: string) => {
-    const trimmedContent = content.trim();
-    if (!trimmedContent || !firebaseUser) return;
+  // --- Kärnfunktionen för att skicka meddelanden, nu med filhantering ---
+  const sendMessage = useCallback(async (content: string, file?: File) => {
+    if ((!content || !content.trim()) && !file || !firebaseUser) return;
 
-    const userMessage: ChatMessage = { role: 'user', content: trimmedContent };
-    setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
+    
+    let fileAttachment: FileAttachment | undefined;
+    if (file) {
+        try {
+            const base64File = await fileToBase64(file);
+            fileAttachment = {
+                name: file.name,
+                type: file.type,
+                content: base64File,
+            };
+        } catch (error) {
+            console.error("Fel vid konvertering av fil:", error);
+            const errorMsg: ChatMessage = {
+                role: 'assistant',
+                content: `Det gick inte att läsa filen: ${file.name}`,
+            };
+            setMessages(prev => [...prev, errorMsg]);
+            setIsLoading(false);
+            return;
+        }
+    }
+
+    const userMessage: ChatMessage = { 
+        role: 'user', 
+        content: content, 
+        ...(fileAttachment && { attachment: fileAttachment }) // Lägg till bilaga om den finns
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
 
     try {
       const idToken = await firebaseUser.getIdToken(true);
+      // Skicka hela meddelandehistoriken, inklusive det nya meddelandet
+      const messagesToSend = [...messages, userMessage];
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-        body: JSON.stringify({ messages: [...messages, userMessage] }),
+        body: JSON.stringify({ messages: messagesToSend }),
       });
 
       if (!response.ok) throw new Error((await response.json()).error || 'Okänt serverfel');
@@ -75,14 +111,13 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         });
       }
 
-      // Hantera UI Actions
       try {
         const parsedAction: UIAction = JSON.parse(assistantResponse);
         if (parsedAction.type === 'UI_ACTION' && parsedAction.action === 'open_modal') {
           openModal(parsedAction.payload.modalId, parsedAction.payload);
-          setMessages(prev => prev.slice(0, -1)); // Ta bort action-meddelandet
+          setMessages(prev => prev.slice(0, -1));
         }
-      } catch (e) { /* Inte en UI action, fortsätt som vanligt */ }
+      } catch (e) { /* Inte en UI action */ }
 
     } catch (error) {
       console.error("Fel i sendMessage:", error);
@@ -101,7 +136,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 };
 
-// Custom hook för att enkelt komma åt kontexten
 export const useChat = () => {
   const context = useContext(ChatContext);
   if (context === undefined) {
