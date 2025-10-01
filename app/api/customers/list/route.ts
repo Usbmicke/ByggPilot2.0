@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { db } from '@/app/firebase';
+import { db } from '@/app/services/firestoreService'; // KORREKT SÖKVÄG
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { Customer } from '@/app/types';
 
