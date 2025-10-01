@@ -6,7 +6,6 @@ import { AuthProvider } from "@/app/providers/AuthProvider";
 import { UIProvider } from "@/app/contexts/UIContext";
 import { ChatProvider } from "@/app/contexts/ChatContext";
 import CookieBanner from "@/app/components/CookieBanner";
-import ChatWidget from "@/app/components/layout/ChatWidget";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -27,7 +26,6 @@ export default function RootLayout({
           <AuthProvider>
             <ChatProvider>
               {children}
-              <ChatWidget />
             </ChatProvider>
           </AuthProvider>
         </UIProvider>

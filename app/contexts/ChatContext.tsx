@@ -2,20 +2,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { ChatMessage, FileAttachment } from '@/app/types';
-import { useUI, UIAction } from '@/app/contexts/UIContext';
+import { ChatMessage } from '@/app/types';
+import { useUI } from '@/app/contexts/UIContext';
 import { auth } from '@/app/lib/firebase/client';
 import { User, onAuthStateChanged } from 'firebase/auth';
-import { SYSTEM_PROMPT } from '@/app/ai/prompts';
-
-const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = error => reject(error);
-    });
-};
 
 interface ChatContextType {
   messages: ChatMessage[];
@@ -45,51 +35,56 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     });
     return () => unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Körs endast en gång vid montering
+  }, []);
 
   const sendMessage = useCallback(async (content: string, file?: File) => {
-    if ((!content || !content.trim()) && !file || !firebaseUser) return;
+    if (!content.trim() && !file || !firebaseUser) return;
 
-    let userMessage: ChatMessage;
-    const tempId = `temp_${Date.now()}`;
-
-    // Skapa och lägg till meddelandet direkt
-    // Hantera fil-logik här om det behövs
-    userMessage = { role: 'user', content: content };
-    
-    // Bygg den nya meddelandelistan FÖRST
+    const userMessage: ChatMessage = { role: 'user', content };
     const newMessages: ChatMessage[] = [...messages, userMessage];
-    // Uppdatera state direkt så att UI:t reagerar
+    
     setMessages(newMessages);
     setIsLoading(true);
 
     try {
       const idToken = await firebaseUser.getIdToken(true);
-      const systemMessage: ChatMessage = { role: 'system', content: SYSTEM_PROMPT };
-      const messagesToSend = [systemMessage, ...newMessages];
+
+      // **KORRIGERINGEN:** Filtrera bort det initiala UI-meddelandet.
+      // Detta säkerställer att konversationshistoriken som skickas till API:et
+      // alltid startar med ett "user"-meddelande om det är den första vändan.
+      const messagesForApi = newMessages.filter((msg, index) => {
+        return !(index === 0 && msg.role === 'assistant');
+      });
 
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-        body: JSON.stringify({ messages: messagesToSend }),
+        headers: { 
+          'Content-Type': 'application/json', 
+          'Authorization': `Bearer ${idToken}` 
+        },
+        body: JSON.stringify({ messages: messagesForApi }), // Använder den filtrerade historiken
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Okänt serverfel');
+        // Använd den detaljerade felinformationen från servern
+        throw new Error(errorData.error || 'Ett okänt serverfel uppstod');
       }
-      if (!response.body) throw new Error('Saknar svarskropp');
+      
+      if (!response.body) throw new Error('Saknar svarskropp från servern');
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let assistantResponse = '';
 
+      // Lägg till en platshållare för assistentens svar
       setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         assistantResponse += decoder.decode(value, { stream: true });
+        // Uppdatera platshållaren med det streamade svaret
         setMessages(prev => {
           const last = prev[prev.length - 1];
           return [...prev.slice(0, -1), { ...last, content: assistantResponse }];
@@ -100,14 +95,14 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       console.error("Fel i sendMessage:", error);
       const errorMsg: ChatMessage = {
         role: 'assistant',
-        content: `Ett tekniskt fel uppstod: ${error instanceof Error ? error.message : String(error)}`,
+        content: `Ett tekniskt fel uppstod. ${error instanceof Error ? error.message : String(error)}`,
       };
-       // Ersätt den väntande "..." med ett felmeddelande
+      // Ersätt den tomma platshållaren med felmeddelandet
       setMessages(prev => [...prev.slice(0, -1), errorMsg]);
     } finally {
       setIsLoading(false);
     }
-  }, [firebaseUser, messages, openModal]);
+  }, [firebaseUser, messages]);
 
   const value = { messages, isLoading, firebaseUser, sendMessage };
 

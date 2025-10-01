@@ -8,6 +8,7 @@ import Header from '@/app/components/layout/Header';
 import { useChat } from '@/app/contexts/ChatContext';
 import ChatInput from '@/app/components/chat/ChatInput';
 import MessageFeed from '@/app/components/MessageFeed';
+import ChatWidget from '@/app/components/layout/ChatWidget';
 
 interface MainAppClientBoundaryProps {
   children: React.ReactNode;
@@ -53,13 +54,8 @@ const MainAppClientBoundary = ({ children, isNewUser }: MainAppClientBoundaryPro
           </div>
         </main>
 
-        <div className="p-4 border-t border-border-primary">
-          <ChatInput 
-            onSendMessage={sendMessage}
-            isChatDisabled={isLoading || !firebaseUser}
-            onFocus={handleFocus}
-          />
-        </div>
+        <ChatWidget />
+
       </div>
     </div>
   );

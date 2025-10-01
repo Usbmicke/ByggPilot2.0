@@ -1,8 +1,9 @@
+
 'use client';
 
 import React, { useRef, useEffect } from 'react';
 import { ChatMessage } from '@/app/types';
-import Spinner from '@/app/components/Spinner';
+import { BeatLoader } from 'react-spinners'; // Korrekt, robust import
 import ReactMarkdown from 'react-markdown';
 import { PaperClipIcon } from '@heroicons/react/24/solid';
 
@@ -37,7 +38,7 @@ export default function MessageFeed({ messages }: MessageFeedProps) {
 
                 <div className={`rounded-lg px-4 py-2 max-w-2xl break-words ${message.role === 'user' ? 'bg-accent-blue text-white' : 'bg-background-tertiary'}`}>
                     {message.role === 'assistant' && message.content === '' ? (
-                        <Spinner />
+                        <BeatLoader color="#3B82F6" size={8} /> // Ersatt med en fungerande spinner
                     ) : (
                         <div className="prose prose-invert prose-sm max-w-none">
                             <ReactMarkdown components={{ a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-accent-blue-light hover:underline"/>}}>

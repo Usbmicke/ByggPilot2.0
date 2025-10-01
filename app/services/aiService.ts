@@ -1,13 +1,13 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Validera att API-nyckeln finns.
-if (!process.env.GOOGLE_AI_API_KEY) {
-  throw new Error("Google AI API key is not configured in .env.local. Please add GOOGLE_AI_API_KEY.");
+// **KORRIGERING:** Standardiserar till att använda GEMINI_API_KEY, i enlighet med resten av applikationen.
+if (!process.env.GEMINI_API_KEY) {
+  throw new Error("API-nyckeln GEMINI_API_KEY är inte konfigurerad i .env.local.");
 }
 
-// Initiera Google AI-klienten med nyckeln från .env.local
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
+// Initiera Google AI-klienten med den korrekta, standardiserade nyckeln.
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export interface RiskAnalysis {
   summary: string;
@@ -23,7 +23,8 @@ export interface RiskAnalysis {
  * Genererar en avancerad, initial riskanalys för ett svenskt byggprojekt med Google Gemini.
  */
 export async function generateInitialRiskAnalysis(projectName: string, projectDescription: string): Promise<RiskAnalysis | null> {
-  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+  // Använder en specifik, stabil version av modellen för att undvika tvetydighet.
+  const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
 
   const systemPrompt = `
     Du är ByggPilot AI, en Sveriges ledande experter på KMA (Kvalitet, Miljö, Arbetsmiljö) och riskhantering inom bygg- och anläggningssektorn.
@@ -41,7 +42,6 @@ export async function generateInitialRiskAnalysis(projectName: string, projectDe
     const response = await result.response;
     const text = response.text();
     
-    // Rensa svar från eventuell markdown-formatering
     const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
     const analysis: RiskAnalysis = JSON.parse(cleanedText);
@@ -60,7 +60,7 @@ export async function generateInitialRiskAnalysis(projectName: string, projectDe
  * Uppdaterar en befintlig riskanalys med nya risker från en arbetsorder med Google Gemini.
  */
 export async function generateRiskAnalysisUpdate(existingAnalysis: RiskAnalysis, workOrder: string): Promise<RiskAnalysis | null> {
-  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+  const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
 
   const systemPrompt = `
     Du är ByggPilot AI, en expert på KMA i den svenska byggbranschen.
@@ -83,7 +83,6 @@ export async function generateRiskAnalysisUpdate(existingAnalysis: RiskAnalysis,
     const response = await result.response;
     const text = response.text();
 
-    // Rensa svar från eventuell markdown-formatering
     const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
     const updatedAnalysis: RiskAnalysis = JSON.parse(cleanedText);
