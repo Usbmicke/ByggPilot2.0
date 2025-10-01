@@ -6,9 +6,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from '@/app/components/layout/Sidebar';
 import Header from '@/app/components/layout/Header';
 import { useChat } from '@/app/contexts/ChatContext';
-import ChatInput from '@/app/components/chat/ChatInput';
-import MessageFeed from '@/app/components/MessageFeed';
 import ChatWidget from '@/app/components/layout/ChatWidget';
+import ModalRenderer from '@/app/components/layout/ModalRenderer'; // STEG 1: Importera ModalRenderer
 
 interface MainAppClientBoundaryProps {
   children: React.ReactNode;
@@ -30,10 +29,6 @@ const MainAppClientBoundary = ({ children, isNewUser }: MainAppClientBoundaryPro
   if (isNewUser && pathname !== '/onboarding') {
     return null;
   }
-  
-  const handleFocus = () => {
-    // Logic to handle focus if needed, e.g., scroll to bottom
-  };
 
   return (
     <div className="h-screen flex bg-background-primary">
@@ -43,18 +38,15 @@ const MainAppClientBoundary = ({ children, isNewUser }: MainAppClientBoundaryPro
         <Header onMenuClick={() => setSidebarOpen(true)} />
         
         <main className="flex-1 flex flex-col overflow-y-auto mt-16">
-          {/* Main content from Next.js page */}
           <div className="flex-1 p-4 md:p-6">
             {children}
-          </div>
-
-          {/* Chat-specific content */}
-          <div className="p-4 md:p-6">
-              <MessageFeed messages={messages} />
           </div>
         </main>
 
         <ChatWidget />
+
+        {/* STEG 2: Lägg till ModalRenderer här */}
+        <ModalRenderer />
 
       </div>
     </div>

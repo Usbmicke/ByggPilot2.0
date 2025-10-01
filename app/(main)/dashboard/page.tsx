@@ -7,7 +7,7 @@ import { WelcomeHeader } from '@/app/components/dashboard/WelcomeHeader';
 import DashboardSummary from '@/app/components/dashboard/DashboardSummary';
 import { ProjectList } from '@/app/components/dashboard/ProjectList';
 import { ActionSuggestions } from '@/app/components/dashboard/ActionSuggestions';
-import CreateProjectModal from '@/app/components/dashboard/CreateProjectModal';
+import CreateProjectModal from '@/app/components/modals/CreateProjectModal'; // <-- KORRIGERAD SÖKVÄG
 import GuidedTour from '@/app/components/tour/GuidedTour';
 
 // Wrapper för att hantera sökparametrar för turen

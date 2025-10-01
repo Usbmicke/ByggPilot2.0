@@ -1,11 +1,9 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import CreateProjectModal from '@/app/components/modals/CreateProjectModal';
-import CreateAtaModal from '@/app/components/modals/CreateAtaModal';
-import CompanyVisionModal from '@/app/components/modals/CompanyVisionModal'; // STEG 1: Importera den nya modalen
 
-// Typdefinition för AI-kommandon (oförändrad)
+// TYPERNA ÄR KORREKTA OCH FÖRBLIR OFÖRÄNDRADE
 export type UIAction = {
   type: 'UI_ACTION';
   action: 'open_modal';
@@ -15,33 +13,22 @@ export type UIAction = {
   };
 };
 
-// Typdefinition för kontextens värde (oförändrad)
 interface UIContextType {
+  activeModal: string | null;
   openModal: (modalId: string, payload?: Record<string, any>) => void;
   closeModal: () => void;
   isModalOpen: (modalId: string) => boolean;
-  modalPayload: Record<string, any> | null;
+  getModalPayload: <T>(modalId: string) => T | null; 
 }
 
 const UIContext = createContext<UIContextType | undefined>(undefined);
 
-// STEG 2: Mappa modal-ID:n till deras komponenter
-const modalComponents: { [key: string]: React.FC<any> } = {
-  createProject: CreateProjectModal,
-  createAta: CreateAtaModal,
-  companyVision: CompanyVisionModal, // Lägg till den nya modalen i mappningen
-};
-
-// Provider-komponenten, nu med renderingslogik
+// REPARERAD UI-PROVIDER. ALLA BEROENDEN TILL SPECIFIKA MODALER ÄR BORTTAGNA.
 export const UIProvider = ({ children }: { children: ReactNode }) => {
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [modalPayload, setModalPayload] = useState<Record<string, any> | null>(null);
 
   const openModal = (modalId: string, payload?: Record<string, any>) => {
-    if (!modalComponents[modalId]) {
-      console.error(`Modal med ID "${modalId}" finns inte.`);
-      return;
-    }
     setActiveModal(modalId);
     setModalPayload(payload || null);
   };
@@ -53,34 +40,29 @@ export const UIProvider = ({ children }: { children: ReactNode }) => {
 
   const isModalOpen = (modalId: string) => activeModal === modalId;
 
-  const value = { openModal, closeModal, isModalOpen, modalPayload };
+  // Denna funktion är nu säker eftersom den bara läser state, den orsakar inga sidoeffekter.
+  const getModalPayload = <T,>(modalId: string): T | null => {
+    if (activeModal === modalId) {
+        return modalPayload as T | null;
+    }
+    return null;
+  }
 
-  // Hämta den aktiva modalkomponenten för rendering
-  const ActiveModalComponent = activeModal ? modalComponents[activeModal] : null;
+  const value = { activeModal, openModal, closeModal, isModalOpen, getModalPayload };
 
   return (
     <UIContext.Provider value={value}>
       {children}
-      {/* STEG 3: Centraliserad renderingslogik för modaler */}
-      {ActiveModalComponent && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4"
-          onClick={closeModal} // Stäng modalen vid klick på bakgrunden
-        >
-          <div onClick={(e) => e.stopPropagation()}> {/* Förhindra att klick inuti modalen stänger den */} 
-            <ActiveModalComponent />
-          </div>
-        </div>
-      )}
+      {/* All renderingslogik är borttagen härifrån för att bryta den cirkulära beroendekedjan */}
     </UIContext.Provider>
   );
 };
 
-// Custom hook (oförändrad)
+// HOOKEN ÄR KORREKT OCH FÖRBLIR OFÖRÄNDRAD
 export const useUI = () => {
   const context = useContext(UIContext);
   if (context === undefined) {
-    throw new Error('useUI måste användas inom en UIProvider');
+    throw new Error('useUI must be used within a UIProvider');
   }
   return context;
 };
