@@ -83,7 +83,7 @@ const ProTipsModal = ({ isOpen, onClose }) => {
                             <p>Att veta vilket standardavtal som gäller (AB 04, ABT 06, Hantverkarformuläret 17) visar professionalism och säkerställer att du och din beställare har samsyn kring ansvaret.</p>
                             <div className="mt-4 p-4 bg-yellow-900/30 border border-yellow-700/50 rounded-lg">
                                  <div className="flex items-center gap-3 mb-2"><IconTrendingUp className="w-5 h-5 text-yellow-300"/><h4 className="text-md font-bold text-white">Framtidssäkra ditt företag: Nya regler 2025</h4></div>
-                                <p className="text-yellow-200/90 text-xs">Stora förändringar är på väg. Företag som förbereder sig nu kommer att ha ett stort försprång. Begreppet \"ÄTA-jobb\" ersätts med \"ändring av entreprenaden\" för att tvinga fram bättre förfrågningsunderlag från start.</p>
+                                <p className="text-yellow-200/90 text-xs">Stora förändringar är på väg. Företag som förbereder sig nu kommer att ha ett stort försprång. Begreppet '''ÄTA-jobb''' ersätts med '''ändring av entreprenaden''' för att tvinga fram bättre förfrågningsunderlag från start.</p>
                             </div>
                         </TipCard>
 
@@ -99,7 +99,7 @@ const ProTipsModal = ({ isOpen, onClose }) => {
                             <p>Att visa en beställare att du har en plan för vad som kan gå fel är ett kraftfullt sätt att sticka ut. Det visar att du planerar för ett lyckat projekt, inte bara hoppas på det bästa.</p>
                              <ul className="list-disc list-inside pl-2 mt-3 space-y-2 text-gray-400">
                                 <li><strong>Börja med en SWOT-analys:</strong> Identifiera snabbt projektets Styrkor, Svagheter, Möjligheter och Hot.</li>
-                                <li><strong>Gör en enkel riskanalys:</strong> \"Svagheter\" och \"Hot\" från din SWOT blir underlaget. Bedöm sannolikhet och konsekvens.</li>
+                                <li><strong>Gör en enkel riskanalys:</strong> '''Svagheter''' och '''Hot''' från din SWOT blir underlaget. Bedöm sannolikhet och konsekvens.</li>
                             </ul>
                         </TipCard>
                         
@@ -121,7 +121,7 @@ const ProTipsModal = ({ isOpen, onClose }) => {
                         </TipCard>
 
                          <TipCard icon={<IconScale className="w-6 h-6" />} title="Ritning vs. Beskrivning – Vad gäller vid en tvist?">
-                           <p>Om ritningen och den tekniska beskrivningen säger olika saker finns en tydlig rangordning i standardavtalen (som AB 04). Förenklat gäller: Kontraktet > Beskrivningar > Ritningar. En textbeskrivning väger alltså tyngre än en ritning.</p>
+                           <p>Om ritningen och den tekniska beskrivningen säger olika saker finns en tydlig rangordning i standardavtalen (som AB 04). Förenklat gäller: Kontraktet &gt; Beskrivningar &gt; Ritningar. En textbeskrivning väger alltså tyngre än en ritning.</p>
                         </TipCard>
 
                     </div>

@@ -49,9 +49,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     try {
       const idToken = await firebaseUser.getIdToken(true);
 
-      // **KORRIGERINGEN:** Filtrera bort det initiala UI-meddelandet.
-      // Detta säkerställer att konversationshistoriken som skickas till API:et
-      // alltid startar med ett "user"-meddelande om det är den första vändan.
       const messagesForApi = newMessages.filter((msg, index) => {
         return !(index === 0 && msg.role === 'assistant');
       });
@@ -62,34 +59,29 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
           'Content-Type': 'application/json', 
           'Authorization': `Bearer ${idToken}` 
         },
-        body: JSON.stringify({ messages: messagesForApi }), // Använder den filtrerade historiken
+        body: JSON.stringify({ messages: messagesForApi }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        // Använd den detaljerade felinformationen från servern
         throw new Error(errorData.error || 'Ett okänt serverfel uppstod');
       }
       
-      if (!response.body) throw new Error('Saknar svarskropp från servern');
+      // **NY LOGIK: Hantera JSON-svar, inte stream**
+      const responseData = await response.json();
+      const assistantContent = responseData.text;
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let assistantResponse = '';
-
-      // Lägg till en platshållare för assistentens svar
-      setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        assistantResponse += decoder.decode(value, { stream: true });
-        // Uppdatera platshållaren med det streamade svaret
-        setMessages(prev => {
-          const last = prev[prev.length - 1];
-          return [...prev.slice(0, -1), { ...last, content: assistantResponse }];
-        });
+      if (!assistantContent) {
+        throw new Error("Fick ett tomt eller felformaterat svar från servern.");
       }
+
+      const assistantMessage: ChatMessage = {
+        role: 'assistant',
+        content: assistantContent,
+      };
+
+      // Lägg till det kompletta svaret i chatthistoriken
+      setMessages(prev => [...prev, assistantMessage]);
 
     } catch (error) {
       console.error("Fel i sendMessage:", error);
@@ -97,8 +89,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         role: 'assistant',
         content: `Ett tekniskt fel uppstod. ${error instanceof Error ? error.message : String(error)}`,
       };
-      // Ersätt den tomma platshållaren med felmeddelandet
-      setMessages(prev => [...prev.slice(0, -1), errorMsg]);
+      // Lägg till felmeddelandet i chatthistoriken
+      setMessages(prev => [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
     }

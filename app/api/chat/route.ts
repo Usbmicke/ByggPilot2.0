@@ -1,44 +1,50 @@
 
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { StreamingTextResponse, streamText, type CoreMessage } from 'ai';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { type CoreMessage } from 'ai';
 
-// REPARATION: Tvingar AI-biblioteket att använda den stabila v1-versionen av API:et,
-// istället för den föråldrade v1beta-versionen.
-const google = createGoogleGenerativeAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  apiVersion: 'v1', // Tvinga användning av den korrekta API-versionen.
-});
+// FINAL VERSION with role mapping
 
 export async function POST(req: NextRequest) {
   try {
     const { messages }: { messages: CoreMessage[] } = await req.json();
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY is not configured in environment variables.');
+    }
 
-    const result = await streamText({
-      // Använder nu en modern och kapabel modell, vilket är möjligt tack vare rätt API-version.
-      model: google('gemini-1.5-flash-latest'),
-      messages: messages,
-      safetySettings: [
-        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-      ],
+    // Format the conversation history, mapping 'assistant' to 'model' as required by the Gemini API.
+    const formattedHistory = messages.map(message => ({
+      // THE FIX: Conditionally change the role name.
+      role: message.role === 'assistant' ? 'model' : message.role,
+      parts: [{ text: message.content as string }],
+    }));
+
+    const payload = {
+      contents: formattedHistory,
+    };
+
+    const modelName = 'gemini-2.5-flash';
+    const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
     });
 
-    return new StreamingTextResponse(result.stream);
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Google API Error (After Role Fix):', errorData);
+      throw new Error(errorData.error.message || 'An error occurred with the Google API.');
+    }
 
-  } catch (error) {
-    console.error("Ett fel uppstod i /api/chat:", error);
-    return new Response(
-      JSON.stringify({ 
-        error: 'Ett internt serverfel uppstod. Vänligen försök igen senare.',
-        details: error instanceof Error ? error.message : String(error) 
-      }),
-      { 
-        status: 500, 
-        headers: { 'Content-Type': 'application/json' } 
-      }
-    );
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Jag fick ett oväntat svar från AI:n, försök igen.";
+
+    return NextResponse.json({ text });
+
+  } catch (error: any) {
+    console.error('Internal API Error in /api/chat:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
