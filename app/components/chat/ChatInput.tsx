@@ -27,13 +27,17 @@ interface ChatInputProps {
     stop: () => void;
 }
 
-// Nya, mer kraftfulla och professionella förslag
+// --- FÖRBÄTTRADE FÖRSLAG VÄRLDSKLASS ---
 const promptSuggestions = [
-    "Starta ett nytt projekt för [Kund] på [Adress]...",
-    "Ge mig en sammanfattning av alla projekt markerade som \"pausade\".",
-    "Sök i företagsminnet efter våra garantivillkor för badrum.",
-    "Skapa en checklista för en säker arbetsplats vid takbyte.",
-    "Lär dig: Vår standard för regelavstånd är cc600 för innerväggar."
+    "Starta projekt för [Kund] på [Adress], sätt status \"aktiv\".",
+    "Vilka projekt är pausade? Sammanfatta status och nästa steg för varje.",
+    "Sök i minnet efter monteringsanvisningar för fönstermodell \"TX-25\".",
+    "Lär dig: Vår nya kontakt hos [Leverantör] är [Namn], [telefon/epost].",
+    "Skapa en detaljerad checklista för en slutbesiktning av ett kök.",
+    "Generera ett utkast för ett e-postmeddelande till kund om en kommande faktura.",
+    "Identifiera alla kunder i [Stad] och lista deras senaste projekt.",
+    "Baserat på projekt [Projektnamn], identifiera potentiella risker och föreslå en åtgärdsplan.",
+    "Sammanfatta garantivillkoren vi har för utomhusmålning."
 ];
 
 const ChatInput = ({ onSendMessage, isChatDisabled, onFocus, isExpanded, setIsExpanded, isLoading, stop }: ChatInputProps) => {
@@ -50,7 +54,7 @@ const ChatInput = ({ onSendMessage, isChatDisabled, onFocus, isExpanded, setIsEx
     useEffect(() => {
         const interval = setInterval(() => {
             setPlaceholder(p => promptSuggestions[(promptSuggestions.indexOf(p) + 1) % promptSuggestions.length]);
-        }, 4000); // Längre intervall för mer komplexa förslag
+        }, 4500); // Ökad tid för att läsa de mer avancerade förslagen
         return () => clearInterval(interval);
     }, []);
 

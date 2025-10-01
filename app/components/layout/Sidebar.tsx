@@ -11,7 +11,8 @@ import { ChevronLeftIcon, PlusIcon } from '@heroicons/react/24/outline';
 // Importera centraliserad data och den nya komponenten
 import { primaryNavigation } from '@/app/constants/navigation';
 import SidebarUserProfile from '@/app/components/layout/SidebarUserProfile';
-import Popover from '@/app/components/shared/Popover';
+import Popover from '@/app/components/shared/Popover'; // Behölls för framtida bruk
+import { useUI } from '@/app/contexts/UIContext'; // Importera UI-kontexten
 
 interface SidebarProps {
   isOpen: boolean;
@@ -22,16 +23,19 @@ interface SidebarProps {
  * Sidebar-komponenten har refaktorerats för att agera som en ren layout-container.
  * Navigationsdatan importeras från en centraliserad konstantfil och
  * användarprofilen renderas av en dedikerad underkomponent.
+ * KNAPPEN '+ Skapa Offert' har bytts ut mot '+ Skapa Nytt' enligt Kungstandard.
  */
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const { openModal } = useUI(); // Hämta funktionen för att öppna modalen
 
-  const wipPopoverContent = (
-    <div className="text-sm text-text-secondary">
-      Denna funktion är under utveckling.
-    </div>
-  );
+  // Denna funktion kommer att öppna den nya "Skapa Nytt"-dialogen.
+  // För nuvarande öppnar den en placeholder.
+  const handleCreateNew = () => {
+    // NÄR MODALEN FINNS: openModal('CREATE_NEW_MODAL');
+    alert('Funktion för att skapa Nytt [Projekt], [Offert], [Kund] kommer snart!');
+  };
 
   return (
     <>
@@ -78,14 +82,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </ul>
           </nav>
 
-          {/* CTA-knapp */}
+          {/* CTA-knapp enligt Kungstandard */}
           <div className="py-4">
-            <Popover content={wipPopoverContent} trigger={
-              <button className="w-full flex items-center justify-center gap-2 bg-accent-blue text-white font-semibold py-3 rounded-lg hover:bg-accent-blue-dark transition-colors duration-200 shadow">
+              <button 
+                onClick={handleCreateNew}
+                className="w-full flex items-center justify-center gap-2 bg-accent-blue text-white font-semibold py-3 rounded-lg hover:bg-accent-blue-dark transition-colors duration-200 shadow">
                   <PlusIcon className="h-5 w-5" />
-                  <span>Skapa Offert</span>
+                  <span>Skapa Nytt</span>
               </button>
-            } />
           </div>
         </div>
 

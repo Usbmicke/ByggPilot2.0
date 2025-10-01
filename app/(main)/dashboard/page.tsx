@@ -7,8 +7,9 @@ import { WelcomeHeader } from '@/app/components/dashboard/WelcomeHeader';
 import DashboardSummary from '@/app/components/dashboard/DashboardSummary';
 import { ProjectList } from '@/app/components/dashboard/ProjectList';
 import { ActionSuggestions } from '@/app/components/dashboard/ActionSuggestions';
-import CreateProjectModal from '@/app/components/modals/CreateProjectModal'; // <-- KORRIGERAD SÖKVÄG
+import CreateProjectModal from '@/app/components/modals/CreateProjectModal';
 import GuidedTour from '@/app/components/tour/GuidedTour';
+import TimeLoggerWidget from '@/app/components/dashboard/TimeLoggerWidget'; // Importera den nya widgeten
 
 // Wrapper för att hantera sökparametrar för turen
 const TourWrapper = () => {
@@ -20,15 +21,15 @@ const TourWrapper = () => {
 export default function DashboardPage() {
     const [isCreateProjectModalOpen, setCreateProjectModalOpen] = useState(false);
 
-    const user = { name: 'Sven' }; // Dummy-data
+    // Dummy-data, kommer att ersättas med riktig data från sessionen
+    const user = { name: 'Michael' }; 
 
-    // Funktion för att öppna modalen. Denna skickas nu ner till ProjectList.
     const handleNewProject = () => {
         setCreateProjectModalOpen(true);
     };
 
     return (
-        <Suspense fallback={<div>Laddar översikt...</div>}>
+        <Suspense fallback={<div className='text-center p-8'>Laddar översikt...</div>}>
             <CreateProjectModal 
                 isOpen={isCreateProjectModalOpen} 
                 onClose={() => setCreateProjectModalOpen(false)} 
@@ -42,18 +43,24 @@ export default function DashboardPage() {
                         <WelcomeHeader user={user} />
                     </div>
 
+                    {/* KPI-korten */}
                     <DashboardSummary projectCount={0} />
                     
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        
+                        {/* Huvudkolumn (vänster) */}
                         <div className="lg:col-span-2">
                             <div id="tour-step-2-projects">
-                                {/* Skicka ner handleNewProject som en prop */}
                                 <ProjectList onNewProject={handleNewProject} />
                             </div>
                         </div>
-                        <div>
+                        
+                        {/* Sidokolumn (höger) med de nya widgetarna */}
+                        <div className="space-y-8">
+                            <TimeLoggerWidget />
                             <ActionSuggestions />
                         </div>
+
                     </div>
                 </div>
             </div>

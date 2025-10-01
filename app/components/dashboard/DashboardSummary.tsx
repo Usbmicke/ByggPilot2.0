@@ -1,88 +1,91 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react'; // KORREKT IMPORT
+import { useSession } from 'next-auth/react';
+import { ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/solid';
 
 interface SummaryData {
   totalProjects: number;
   ongoingProjects: number;
   invoicedValue: number;
+  // Framtida jämförelsedata
+  totalProjectsChange: number;
+  ongoingProjectsChange: number;
+  invoicedValueChangePercent: number;
 }
 
-interface DashboardSummaryProps {
-  updateTrigger: number;
-}
-
-export default function DashboardSummary({ updateTrigger }: DashboardSummaryProps) {
-  const { data: session, status } = useSession(); // Använder NextAuth:s useSession hook
-  const [summary, setSummary] = useState<SummaryData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchSummary = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch('/api/dashboard/summary', { credentials: 'include' });
-        if (!response.ok) {
-          // Misslyckas tyst, logga endast i konsolen för felsökning
-          console.warn(`DashboardSummary: Failed to fetch summary data. Status: ${response.status}`);
-          return; 
-        }
-        const data = await response.json();
-        setSummary(data);
-      } catch (err: any) {
-        console.error('DashboardSummary fetch error:', err.message); // Logga felet för felsökning
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    // Kör bara fetchSummary om NextAuth rapporterar att användaren är autentiserad
-    if (status === 'authenticated') {
-      fetchSummary();
-    } else if (status === 'unauthenticated') {
-      // Om användaren inte är inloggad, sluta ladda direkt.
-      setIsLoading(false);
-    }
-    // Om status är 'loading', fortsätter isLoading att vara true, vilket är korrekt.
-
-  }, [updateTrigger, status]); // Kör om effekten när status ändras
-
-  // Visa en snygg laddnings-animation medan vi väntar på data
-  if (isLoading) {
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {Array.from({ length: 3 }).map((_, i) => (
-                 <div key={i} className="bg-background-secondary p-6 rounded-lg border border-border-primary animate-pulse">
-                    <div className="h-6 bg-border-primary rounded w-3/4 mb-2"></div>
-                    <div className="h-10 bg-border-primary rounded w-1/2"></div>
-                </div>
-            ))}
-        </div>
-    );
-  }
+// Guldstandard-komponent för ett enskilt KPI-kort
+const StatCard: React.FC<{ title: string; value: string; change: number; changeType: 'percent' | 'absolute' | 'none'; changeText?: string; icon: React.ReactNode }> = ({ title, value, change, changeType, changeText, icon }) => {
+  const isPositive = change >= 0;
+  const ChangeIcon = isPositive ? ArrowUpIcon : ArrowDownIcon;
   
-  // Om vi inte har någon data efter laddning (t.ex. vid ett tyst fel), rendera ingenting.
-  if (!summary) {
-      return null; 
-  }
+  // Skapar den dynamiska texten för förändring
+  let changeString = '';
+  if (changeType === 'percent') {
+    changeString = `${Math.abs(change)}%`;
+  } else if (changeType === 'absolute') {
+    changeString = `${isPositive ? '+' : ''}${change}`;
+  } 
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-      <div className="bg-background-secondary p-6 rounded-lg border border-border-primary">
-        <h3 className="text-lg font-semibold text-text-secondary">Totalt antal projekt</h3>
-        <p className="text-4xl font-bold text-text-primary mt-2">{summary.totalProjects}</p>
-      </div>
+    <div className="flex items-center gap-4 p-4 bg-background-tertiary rounded-lg border border-border-primary">
+        <div className="flex-shrink-0">
+            {icon}
+        </div>
+        <div>
+            <p className="text-sm font-medium text-text-secondary truncate">{title}</p>
+            <p className="text-2xl font-bold text-text-primary">{value}</p>
+             {changeType !== 'none' && (
+                <div className={`flex items-center text-xs ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                    <ChangeIcon className="h-3 w-3 mr-1" />
+                    <strong>{changeString}</strong>
+                    {changeText && <span className="text-text-secondary ml-1">{changeText}</span>}
+                </div>
+            )}
+        </div>
+    </div>
+  );
+};
 
-      <div className="bg-background-secondary p-6 rounded-lg border border-border-primary">
-        <h3 className="text-lg font-semibold text-status-gold">Pågående projekt</h3>
-        <p className="text-4xl font-bold text-text-primary mt-2">{summary.ongoingProjects}</p>
-      </div>
 
-      <div className="bg-background-secondary p-6 rounded-lg border border-border-primary">
-        <h3 className="text-lg font-semibold text-accent-blue">Totala intäkter (Fakturerat)</h3>
-        <p className="text-4xl font-bold text-text-primary mt-2">{summary.invoicedValue.toFixed(2)} kr</p>
-      </div>
+export default function DashboardSummary() {
+  // Dummy-data för att illustrera Guldstandard-konceptet
+  const summary: SummaryData = {
+      totalProjects: 12,
+      ongoingProjects: 5,
+      invoicedValue: 125350,
+      totalProjectsChange: 2, // +2 projekt
+      ongoingProjectsChange: -1, // -1 projekt
+      invoicedValueChangePercent: 15.2, // +15.2%
+  };
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <StatCard 
+            title="Totala Intäkter" 
+            value={`${(summary.invoicedValue / 1000).toFixed(1)}k kr`} 
+            change={summary.invoicedValueChangePercent}
+            changeType='percent'
+            changeText="vs. förra månaden"
+            icon={<div className="w-10 h-10 flex items-center justify-center rounded-lg bg-accent-blue/10 text-accent-blue">$</div>}
+        />
+        <StatCard 
+            title="Pågående Projekt" 
+            value={summary.ongoingProjects.toString()} 
+            change={summary.ongoingProjectsChange}
+            changeType='absolute'
+            changeText="vs. förra kvartalet"
+            icon={<div className="w-10 h-10 flex items-center justify-center rounded-lg bg-status-gold/10 text-status-gold">?</div>} 
+        />
+        <StatCard 
+            title="Avslutade Projekt" 
+            value={summary.totalProjects.toString()} 
+            change={summary.totalProjectsChange}
+            changeType='absolute'
+            changeText="i år"
+            icon={<div className="w-10 h-10 flex items-center justify-center rounded-lg bg-green-500/10 text-green-500">?</div>} 
+        />
     </div>
   );
 }

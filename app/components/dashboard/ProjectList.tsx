@@ -4,14 +4,12 @@
 import React, { useState, useEffect } from 'react';
 import type { Project } from '@/app/types/project';
 import Link from 'next/link';
-import { FolderPlusIcon } from '@heroicons/react/24/outline'; // Byt till en mer passande ikon
+import { FolderPlusIcon } from '@heroicons/react/24/outline';
 
-// Props-definitionen utökas för att kunna hantera ett klick-event
 interface ProjectListProps {
   onNewProject: () => void;
 }
 
-// Helper-funktioner förblir oförändrade
 const getStatusChipClass = (status: Project['status']) => {
     switch (status) {
         case 'Positiv': return 'bg-yellow-400/10 text-yellow-400 border border-yellow-400/30';
@@ -26,11 +24,11 @@ const getStatusChipClass = (status: Project['status']) => {
 };
 
 const getProjectCardClass = (status: Project['status']) => {
-    const baseClasses = "block bg-gray-800/50 p-6 rounded-lg border transition-all duration-300 hover:shadow-lg hover:scale-[1.02]";
+    const baseClasses = "block bg-background-secondary p-6 rounded-lg border transition-all duration-300 hover:shadow-lg hover:scale-[1.02]";
     switch (status) {
         case 'Positiv': return `${baseClasses} border-yellow-600/50 hover:border-yellow-500`;
         case 'Varning': return `${baseClasses} border-red-600/50 hover:border-red-500`;
-        default: return `${baseClasses} border-gray-700 hover:border-indigo-500`;
+        default: return `${baseClasses} border-border-primary hover:border-accent-blue`;
     }
 };
 
@@ -58,12 +56,12 @@ export function ProjectList({ onNewProject }: ProjectListProps) {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="bg-gray-800/50 p-6 rounded-lg border border-gray-700">
-            <div className="h-4 bg-gray-700 rounded w-1/4 mb-3"></div>
-            <div className="h-6 bg-gray-600 rounded w-3/4 mb-5"></div>
-            <div className="h-5 bg-gray-700 rounded w-1/2"></div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-pulse">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <div key={i} className="bg-background-secondary p-6 rounded-lg border border-border-primary">
+            <div className="h-4 bg-background-tertiary rounded w-1/4 mb-3"></div>
+            <div className="h-6 bg-gray-700 rounded w-3/4 mb-5"></div>
+            <div className="h-5 bg-background-tertiary rounded w-1/2"></div>
           </div>
         ))}
       </div>
@@ -74,18 +72,18 @@ export function ProjectList({ onNewProject }: ProjectListProps) {
     return <p className="text-center text-red-400">Fel: {error}</p>;
   }
 
-  // Förbättrat "tomt tillstånd" med en tydlig call-to-action
   if (projects.length === 0) {
     return (
-      <div className="text-center bg-gray-800/50 border-2 border-dashed border-gray-700 p-12 rounded-lg">
-        <FolderPlusIcon className="mx-auto h-12 w-12 text-gray-500" />
-        <h3 className="mt-4 text-lg font-medium text-white">Du har inga aktiva projekt.</h3>
-        <p className="mt-1 text-sm text-gray-500 mb-6">Kom igång genom att skapa ditt första projekt.</p>
+      <div className="text-center bg-background-secondary border-2 border-dashed border-border-primary p-12 rounded-lg flex flex-col items-center justify-center min-h-[300px]">
+        <FolderPlusIcon className="mx-auto h-12 w-12 text-text-secondary" />
+        <p className="mt-4 max-w-md mx-auto text-lg text-text-secondary">
+          Välkommen! Allt börjar med ett projekt. Skapa ditt första för att samla offerter, dokument och tidrapporter på ett och samma ställe.
+        </p>
         <button
-          onClick={onNewProject} // Anropar funktionen från DashboardPage
-          className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-semibold rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-colors"
+          onClick={onNewProject}
+          className="mt-8 inline-flex items-center px-8 py-4 border border-transparent text-base font-semibold rounded-lg shadow-sm text-white bg-accent-blue hover:bg-accent-blue-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-blue transition-all duration-300 ease-in-out transform hover:scale-105"
         >
-          Skapa ditt första projekt
+          + Skapa ditt första projekt
         </button>
       </div>
     );
@@ -93,8 +91,11 @@ export function ProjectList({ onNewProject }: ProjectListProps) {
 
   return (
     <div>
-      <h2 className="text-xl font-bold text-white mb-4">Dina Projekt</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold text-text-primary">Dina Projekt</h2>
+        <button onClick={onNewProject} className="text-sm font-medium text-accent-blue hover:text-accent-blue-dark">+ Skapa nytt projekt</button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {projects.map(project => (
           <Link href={`/projects/${project.id}`} key={project.id} className={getProjectCardClass(project.status)}>
               <div className="flex justify-between items-start">
