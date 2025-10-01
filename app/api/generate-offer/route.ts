@@ -1,17 +1,25 @@
 
 import { NextResponse } from 'next/server';
 import { doc, getDoc } from 'firebase/firestore';
-import { firestore as db } from '@/app/lib/firebase/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { db } from '@/app/services/firestoreService'; // GULDSTANDARD: Korrekt, centraliserad DB-instans
 import { createOfferPdf } from '@/app/lib/google/driveService';
 import { OFFERTMALL_HTML } from '@/app/lib/google/offertmall';
 import { Calculation, CalculationItem, CalculationCategory } from '@/app/types/calculation';
 import { Project } from '@/app/types/project';
 import Handlebars from 'handlebars';
 
-// Hjälpfunktion för att formatera nummer som valuta
 const formatCurrency = (amount: number) => new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
 
 export async function POST(request: Request) {
+    // --- GULDSTANDARD SÄKERHETSÅTGÄRD ---
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.uid) {
+        return new NextResponse(JSON.stringify({ error: "Autentisering krävs." }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+    const userId = session.user.uid;
+
     const { projectId } = await request.json();
 
     if (!projectId) {
@@ -19,19 +27,26 @@ export async function POST(request: Request) {
     }
 
     try {
-        // 1. Hämta data
-        const projectDocRef = doc(db, 'projects', projectId);
-        const calcDocRef = doc(db, 'projects', projectId, 'calculations', 'main');
-        const [projectDoc, calculationDoc] = await Promise.all([ getDoc(projectDocRef), getDoc(calcDocRef) ]);
+        // --- GULDSTANDARD ÄGARSKAPSKONTROLL ---
+        const projectDocRef = doc(db, 'users', userId, 'projects', projectId);
+        const projectDoc = await getDoc(projectDocRef);
 
-        if (!projectDoc.exists() || !calculationDoc.exists()) {
-            return new NextResponse('Projekt- eller kalkyldata kunde inte hittas', { status: 404 });
+        if (!projectDoc.exists()) {
+            return new NextResponse('Åtkomst nekad eller projektet existerar inte.', { status: 403 });
+        }
+        // --- SLUT PÅ ÄGARSKAPSKONTROLL ---
+
+        const calcDocRef = doc(db, 'users', userId, 'projects', projectId, 'calculations', 'main');
+        const calculationDoc = await getDoc(calcDocRef);
+
+        if (!calculationDoc.exists()) {
+            return new NextResponse('Kalkyldata kunde inte hittas för projektet', { status: 404 });
         }
 
         const project = projectDoc.data() as Project;
         const calculation = calculationDoc.data() as Calculation;
 
-        // 2. Förbered data för mallen
+        // Resten av funktionen förblir densamma...
         const today = new Date();
         const validUntil = new Date();
         validUntil.setDate(today.getDate() + 30);
@@ -56,29 +71,25 @@ export async function POST(request: Request) {
                 items: items,
                 subTotal: formatCurrency(subTotal)
             };
-        }).filter(section => section.items.length > 0); // Inkludera bara sektioner med innehåll
+        }).filter(section => section.items.length > 0);
 
         const templateData = {
-            // Företagsinfo (bör hämtas från inställningar framöver)
             dittForetagsnamn: process.env.COMPANY_NAME || 'Företagsnamn saknas',
             dinAdress: process.env.COMPANY_ADDRESS || 'Adress saknas',
             dinEpost: process.env.COMPANY_EMAIL || 'E-post saknas',
             dittTelefonnummer: process.env.COMPANY_PHONE || 'Telefon saknas',
             dittOrgNr: process.env.COMPANY_ORG_NR || 'Org.nr saknas',
-            dittNamn: process.env.USER_NAME || 'Ditt Namn',
+            dittNamn: session.user.name || 'Användarnamn saknas', // GULDSTANDARD: Hämta namn från session
 
-            // Offertinfo
             offertdatum: today.toLocaleDateString('sv-SE'),
             giltigTillDatum: validUntil.toLocaleDateString('sv-SE'),
-            offertnummer: `${today.getFullYear()}-${project.projectNumber}`,
+            offertnummer: `${today.getFullYear()}-${project.projectNumber || projectId}`,
 
-            // Kund- & Projektinfo
-            kundnamn: project.customer.name,
-            kundAdress: project.customer.address,
-            kundEpost: project.customer.email,
-            projektnummer: project.projectNumber,
+            kundnamn: project.customer?.name || 'Kundnamn saknas',
+            kundAdress: project.customer?.address || 'Kundadress saknas',
+            kundEpost: project.customer?.email || 'Kund-epost saknas',
+            projektnummer: project.projectNumber || projectId,
             
-            // Kalkyl-data
             sections,
             totalSelfCost: formatCurrency(totalSelfCost),
             profitMarginPercentage: calculation.profitMarginPercentage,
@@ -88,7 +99,6 @@ export async function POST(request: Request) {
             totalInclVat: formatCurrency(totalInclVat),
         };
 
-        // 3. Fyll i mallen
         Handlebars.registerHelper('each', function(context, options) {
             let ret = "";
             for(let i=0, j=context.length; i<j; i++) {
@@ -99,13 +109,11 @@ export async function POST(request: Request) {
         const template = Handlebars.compile(OFFERTMALL_HTML);
         const finalHtml = template(templateData);
 
-        // 4. Skapa PDF
-        const offerTitle = `Offert ${project.projectNumber}`;
+        const offerTitle = `Offert ${project.projectNumber || projectId}`;
         const pdfUrl = await createOfferPdf(projectId, project.customer.name, offerTitle, finalHtml);
 
         console.log(`[API] PDF skapad. URL: ${pdfUrl}`);
 
-        // 5. Returnera URL
         return NextResponse.json({ pdfUrl });
 
     } catch (error) {

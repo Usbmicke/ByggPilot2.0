@@ -1,60 +1,69 @@
 
 'use server';
 
-import { firestoreAdmin } from '@/app/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { db } from '@/app/services/firestoreService';
+import { collection, addDoc, getDocs, query, serverTimestamp } from 'firebase/firestore';
+import { Customer } from '@/app/types';
 
-interface CustomerData {
-  name: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  orgNumber?: string;
-  // userId för att veta vilken användare kunden tillhör
-  userId: string; 
-}
-
-// Funktion för att skapa en ny kund
-export async function createCustomer(data: Omit<CustomerData, 'userId'>, userId: string) {
-  if (!userId) {
-    return { success: false, error: 'Användar-ID saknas.' };
+/**
+ * GULDSTANDARD ACTION: `createCustomer`
+ * Skapar en ny kund för den autentiserade användaren.
+ * Hämtar användar-ID säkert från server-sessionen.
+ */
+export async function createCustomer(customerData: Omit<Customer, 'id' | 'createdAt' | 'userId'>) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.uid) {
+    return { success: false, error: 'Autentisering krävs.' };
   }
+  const userId = session.user.uid;
 
   try {
-    const newCustomerRef = firestoreAdmin.collection('customers').doc();
-    await newCustomerRef.set({
-      ...data,
-      id: newCustomerRef.id,
-      userId: userId,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
+    // Indata-validering (kan utökas vid behov)
+    if (!customerData.name) {
+      return { success: false, error: 'Kundnamn är obligatoriskt.' };
+    }
+
+    const customersCollectionRef = collection(db, 'users', userId, 'customers');
+    
+    const newDocRef = await addDoc(customersCollectionRef, {
+      ...customerData,
+      userId: userId, // Säkerställ att rätt userId associeras
+      createdAt: serverTimestamp(),
     });
-    console.log(`Ny kund skapad med ID: ${newCustomerRef.id} för användare ${userId}`);
-    return { success: true, customerId: newCustomerRef.id };
+
+    return { success: true, customerId: newDocRef.id };
+
   } catch (error) {
-    console.error("Fel vid skapande av kund:", error);
-    return { success: false, error: 'Kunde inte skapa kund på servern.' };
+    console.error('Fel vid skapande av kund:', error);
+    return { success: false, error: 'Ett serverfel uppstod vid skapande av kund.' };
   }
 }
 
-// Funktion för att hämta alla kunder för en specifik användare
-export async function getCustomers(userId: string) {
-  if (!userId) {
-    return { success: false, error: 'Användar-ID saknas.' };
+/**
+ * GULDSTANDARD ACTION: `getCustomers`
+ * Hämtar alla kunder för den autentiserade användaren.
+ * Hämtar användar-ID säkert från server-sessionen.
+ */
+export async function getCustomers() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.uid) {
+    return { success: false, error: 'Autentisering krävs.' };
   }
+  const userId = session.user.uid;
 
   try {
-    const customersSnapshot = await firestoreAdmin
-      .collection('customers')
-      .where('userId', '==', userId)
-      .orderBy('createdAt', 'desc')
-      .get();
+    const customersCollectionRef = collection(db, 'users', userId, 'customers');
+    const q = query(customersCollectionRef); // Ingen 'where'-sats behövs, sökvägen är säker nog.
+    const querySnapshot = await getDocs(q);
 
-    const customers = customersSnapshot.docs.map(doc => doc.data());
+    const customers = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Customer[];
+
     return { success: true, data: customers };
 
   } catch (error) {
-    console.error("Fel vid hämtning av kunder:", error);
-    return { success: false, error: 'Kunde inte hämta kunder från servern.' };
+    console.error('Fel vid hämtning av kunder:', error);
+    return { success: false, error: 'Ett serverfel uppstod vid hämtning av kunder.' };
   }
 }

@@ -1,33 +1,43 @@
 
 'use server';
 
-import { firestoreAdmin } from '@/app/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { db } from '@/app/services/firestoreService'; // GULDSTANDARD: Korrekt, centraliserad DB-instans
+import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 
+// GULDSTANDARD: Interface uppdaterat för att exkludera userId, då det hanteras internt.
 interface ProjectData {
   name: string;
   address: string;
-  customerId: string; // Varje projekt måste kopplas till en kund
+  customerId: string; 
   status: 'active' | 'completed' | 'paused';
-  // userId för att veta vilken användare projektet tillhör
-  userId: string;
 }
 
-// Funktion för att skapa ett nytt projekt
-export async function createProject(data: Omit<ProjectData, 'userId'>, userId: string) {
-  if (!userId || !data.customerId) {
-    return { success: false, error: 'Användar-ID eller Kund-ID saknas.' };
+async function getUserId() {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user || !session.user.uid) {
+    throw new Error('Användaren är inte autentiserad eller så saknas UID.');
+  }
+  return session.user.uid;
+}
+
+// GULDSTANDARD: Funktionen accepterar inte längre ett osäkert, externt userId.
+export async function createProject(data: ProjectData) {
+  const userId = await getUserId(); // Säkrar userId internt.
+
+  if (!data.customerId) {
+    return { success: false, error: 'Kund-ID saknas.' };
   }
 
   try {
-    const newProjectRef = firestoreAdmin.collection('projects').doc();
-    await newProjectRef.set({
-      ...data,
-      id: newProjectRef.id,
-      userId: userId,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
+    const projectsCollectionRef = collection(db, 'users', userId, 'projects');
+    const newProjectRef = await addDoc(projectsCollectionRef, {
+        ...data,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
     });
+    
     console.log(`Nytt projekt skapat med ID: ${newProjectRef.id} för användare ${userId}`);
     return { success: true, projectId: newProjectRef.id };
   } catch (error) {
@@ -36,20 +46,16 @@ export async function createProject(data: Omit<ProjectData, 'userId'>, userId: s
   }
 }
 
-// Funktion för att hämta alla projekt för en specifik användare
-export async function getProjects(userId: string) {
-  if (!userId) {
-    return { success: false, error: 'Användar-ID saknas.' };
-  }
+// GULDSTANDARD: Funktionen accepterar inte längre ett osäkert, externt userId.
+export async function getProjects() {
+  const userId = await getUserId(); // Säkrar userId internt.
 
   try {
-    const projectsSnapshot = await firestoreAdmin
-      .collection('projects')
-      .where('userId', '==', userId)
-      .orderBy('createdAt', 'desc')
-      .get();
+    const projectsCollectionRef = collection(db, 'users', userId, 'projects');
+    const q = query(projectsCollectionRef, where("userId", "==", userId)); // Dubbelkoll för säkerhet
+    const querySnapshot = await getDocs(q);
 
-    const projects = projectsSnapshot.docs.map(doc => doc.data());
+    const projects = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     return { success: true, data: projects };
 
   } catch (error) {

@@ -1,9 +1,13 @@
 
 import { Message } from 'ai';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { getMemory, saveToMemory } from '@/app/services/memoryService';
 import { createProject, getProjects } from '@/app/actions/projectActions';
-import { getCustomers } from '@/app/actions/customerActions';
+// GULDSTANDARD: Importera createCustomer tillsammans med getCustomers
+import { createCustomer, getCustomers } from '@/app/actions/customerActions';
+import { createProjectFolderStructure } from '@/app/actions/driveActions';
 
 const tools = {
   saveToMemory: {
@@ -16,6 +20,11 @@ const tools = {
       },
       required: ['textToSave']
     }
+  },
+  createProjectFolderStructure: {
+    name: "createProjectFolderStructure",
+    description: "Skapar den initiala mappstrukturen i användarens Google Drive.",
+    parameters: { type: "OBJECT", properties: {}, required: [] }
   },
   getProjects: {
     name: "getProjects",
@@ -36,6 +45,22 @@ const tools = {
       required: ['name', 'address', 'customerId', 'status']
     }
   },
+  // GULDSTANDARD: Lägg till det nya verktyget `createCustomer`
+  createCustomer: {
+    name: "createCustomer",
+    description: "Skapar en ny kund (antingen privatperson eller företag).",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        name: { type: "STRING", description: "Fullständigt namn på kunden." },
+        email: { type: "STRING", description: "Kundens e-postadress." },
+        phone: { type: "STRING", description: "Kundens telefonnummer." },
+        address: { type: "STRING", description: "Kundens postadress." },
+        orgNumber: { type: "STRING", description: "Organisationsnummer (om det är ett företag)." },
+      },
+      required: ['name']
+    }
+  },
   getCustomers: {
     name: "getCustomers",
     description: "Hämtar en lista över alla kunder för den aktuella användaren.",
@@ -45,11 +70,12 @@ const tools = {
 
 export async function POST(req: Request) {
   try {
-    const { messages, userId } = await req.json();
-
-    if (!userId) {
-      return new Response(JSON.stringify({ error: "Användar-ID saknas" }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user || !session.user.uid) {
+      return new Response(JSON.stringify({ error: "Autentisering krävs. Sessionen är ogiltig." }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
+    
+    const { messages } = await req.json();
 
     const latestUserMessage = messages[messages.length - 1]?.content || '';
     
@@ -62,18 +88,15 @@ Följande är ditt permanenta minne, sparat från tidigare konversationer i en f
 ${memoryContent}
 --- SLUT PÅ MINNE ---
 
-Använd de tillgängliga verktygen för att svara på användarens begäran. Om du får en direkt order att spara information, använd verktyget 'saveToMemory'.`;
+Använd de tillgängliga verktygen för att svara på användarens begäran.`;
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-
-    // SLUTGILTIG KORRIGERING: Använd den BEVISAT fungerande modellen från historiken.
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-1.5-flash-latest', 
       systemInstruction: systemPrompt,
       tools: [{ functionDeclarations: Object.values(tools) }]
     });
 
-    // KORRIGERING B: Mappa 'assistant'-rollen till 'model' enligt API-krav.
     const chat = model.startChat({ history: messages.map((msg: Message) => ({ role: msg.role === 'assistant' ? 'model' : msg.role, parts: [{ text: msg.content }] })) });
     const result = await chat.sendMessageStream(latestUserMessage);
     
@@ -91,12 +114,17 @@ Använd de tillgängliga verktygen för att svara på användarens begäran. Om 
               try {
                 if (name === 'saveToMemory') {
                   responsePayload = await saveToMemory(args.textToSave as string);
+                } else if (name === 'createProjectFolderStructure') {
+                  responsePayload = await createProjectFolderStructure();
                 } else if (name === 'createProject') {
-                  responsePayload = await createProject(args as any, userId);
+                  responsePayload = await createProject(args as any);
                 } else if (name === 'getProjects') {
-                  responsePayload = await getProjects(userId);
+                  responsePayload = await getProjects();
+                // GULDSTANDARD: Lägg till anropet för det nya verktyget
+                } else if (name === 'createCustomer') {
+                  responsePayload = await createCustomer(args as any);
                 } else if (name === 'getCustomers') {
-                  responsePayload = await getCustomers(userId);
+                  responsePayload = await getCustomers();
                 } else {
                   responsePayload = { success: false, error: `Verktyget '${name}' hittades inte.` };
                 }
@@ -130,7 +158,7 @@ Använd de tillgängliga verktygen för att svara på användarens begäran. Om 
     });
 
   } catch (error: any) {
-    console.error('[API_ROUTE_ERROR]', error);
+    console.error('[CHAT_API_ROUTE_ERROR]', error);
     return new Response(JSON.stringify({ error: error.message || "An unknown error occurred" }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

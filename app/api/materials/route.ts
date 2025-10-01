@@ -1,16 +1,18 @@
 
-// Fil: app/api/materials/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { handler } from "@/app/api/auth/[...nextauth]/route";
-import { firestoreAdmin } from "@/app/lib/firebase-admin";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // GULDSTANDARD: Korrekt authOptions import
+import { db } from "@/app/services/firestoreService'; // GULDSTANDARD: Korrekt, centraliserad DB-instans
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { MaterialCost } from "@/app/types/material";
 
 export async function GET(request: Request) {
-  const session = await getServerSession(handler);
-  if (!session || !session.user || !session.user.id) {
+  const session = await getServerSession(authOptions);
+  // GULDSTANDARD: Använd session.user.uid för konsekvens
+  if (!session || !session.user || !session.user.uid) {
     return new NextResponse(JSON.stringify({ message: 'Användaren är inte auktoriserad.' }), { status: 401 });
   }
+  const userId = session.user.uid;
 
   const { searchParams } = new URL(request.url);
   const projectId = searchParams.get('projectId');
@@ -20,16 +22,16 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Verifiera att projektet tillhör den inloggade användaren
-    const projectDoc = await firestoreAdmin.collection('projects').doc(projectId).get();
-    if (!projectDoc.exists || projectDoc.data()?.userId !== session.user.id) {
+    // GULDSTANDARD: Verifiera ägarskap mot den nya databasstrukturen
+    const projectDocRef = doc(db, 'users', userId, 'projects', projectId);
+    const projectDoc = await getDoc(projectDocRef);
+    if (!projectDoc.exists()) {
         return new NextResponse(JSON.stringify({ message: 'Åtkomst nekad till projektet.' }), { status: 403 });
     }
 
-    const materialCostsRef = firestoreAdmin.collection('material-costs');
-    const q = materialCostsRef
-      .where('projectId', '==', projectId)
-      .orderBy('date', 'desc'); // Sortera med senaste först
+    // GULDSTANDARD: Hämta materialkostnader från sub-collection
+    const materialCostsRef = collection(db, 'users', userId, 'projects', projectId, 'material-costs');
+    const q = query(materialCostsRef, where("projectId", "==", projectId));
 
     const snapshot = await q.get();
 

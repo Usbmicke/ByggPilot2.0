@@ -1,6 +1,8 @@
 
 import { google, drive_v3 } from 'googleapis';
 import { Readable } from 'stream';
+import { db } from '@/app/services/firestoreService';
+import { doc, updateDoc, FieldValue } from 'firebase/firestore';
 
 // =======================================================================
 // AUTHENTICATION
