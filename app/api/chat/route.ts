@@ -5,14 +5,14 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { getMemory, saveToMemory } from '@/app/services/memoryService';
 import { createProject, getProjects } from '@/app/actions/projectActions';
-// GULDSTANDARD: Importera createCustomer tillsammans med getCustomers
 import { createCustomer, getCustomers } from '@/app/actions/customerActions';
+import { createTimeEntry, getTimeEntries } from '@/app/actions/timeEntryActions'; // GULDSTANDARD: Importera de nya tid-åtgärderna
 import { createProjectFolderStructure } from '@/app/actions/driveActions';
 
 const tools = {
   saveToMemory: {
     name: "saveToMemory",
-    description: "Sparar en specifik bit text till det långsiktiga minnet. Använd detta när användaren explicit ber dig att komma ihåg eller lära dig något.",
+    description: "Sparar en specifik bit text till det långsiktiga minnet.",
     parameters: { 
       type: "OBJECT",
       properties: {
@@ -33,22 +33,20 @@ const tools = {
   },
   createProject: {
     name: "createProject",
-    description: "Skapar ett nytt projekt med namn, adress och kund-ID.",
+    description: "Skapar ett nytt projekt.",
     parameters: { 
       type: "OBJECT",
       properties: {
         name: { type: "STRING", description: "Projektets namn" },
-        address: { type: "STRING", description: "Projektets adress" },
         customerId: { type: "STRING", description: "ID för kunden som projektet tillhör" },
         status: { type: "STRING", enum: ['active', 'completed', 'paused'], description: "Projektets status" }
       },
-      required: ['name', 'address', 'customerId', 'status']
+      required: ['name', 'customerId']
     }
   },
-  // GULDSTANDARD: Lägg till det nya verktyget `createCustomer`
   createCustomer: {
     name: "createCustomer",
-    description: "Skapar en ny kund (antingen privatperson eller företag).",
+    description: "Skapar en ny kund.",
     parameters: {
       type: "OBJECT",
       properties: {
@@ -65,6 +63,32 @@ const tools = {
     name: "getCustomers",
     description: "Hämtar en lista över alla kunder för den aktuella användaren.",
     parameters: { type: "OBJECT", properties: {}, required: [] }
+  },
+  // GULDSTANDARD: Lägg till de nya verktygen för tidrapportering
+  createTimeEntry: {
+    name: "createTimeEntry",
+    description: "Skapar en ny tidrapport för ett specifikt projekt.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        projectId: { type: "STRING", description: "ID för projektet tidrapporten tillhör." },
+        date: { type: "STRING", description: "Datum för arbetet (YYYY-MM-DD)." },
+        hours: { type: "NUMBER", description: "Antal arbetade timmar." },
+        description: { type: "STRING", description: "En kort beskrivning av arbetet som utförts." },
+      },
+      required: ['projectId', 'date', 'hours', 'description']
+    }
+  },
+  getTimeEntries: {
+    name: "getTimeEntries",
+    description: "Hämtar alla tidrapporter för ett specifikt projekt.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        projectId: { type: "STRING", description: "ID för projektet vars tidrapporter ska hämtas." }
+      },
+      required: ['projectId']
+    }
   }
 };
 
@@ -76,9 +100,7 @@ export async function POST(req: Request) {
     }
     
     const { messages } = await req.json();
-
     const latestUserMessage = messages[messages.length - 1]?.content || '';
-    
     const memoryContent = await getMemory();
     
     const systemPrompt = `Du är ByggPilot, en AI-assistent för ett byggföretag. Svara alltid på svenska.
@@ -120,11 +142,15 @@ Använd de tillgängliga verktygen för att svara på användarens begäran.`;
                   responsePayload = await createProject(args as any);
                 } else if (name === 'getProjects') {
                   responsePayload = await getProjects();
-                // GULDSTANDARD: Lägg till anropet för det nya verktyget
                 } else if (name === 'createCustomer') {
                   responsePayload = await createCustomer(args as any);
                 } else if (name === 'getCustomers') {
                   responsePayload = await getCustomers();
+                // GULDSTANDARD: Lägg till anropen för de nya tid-verktygen
+                } else if (name === 'createTimeEntry') {
+                  responsePayload = await createTimeEntry(args as any);
+                } else if (name === 'getTimeEntries') {
+                  responsePayload = await getTimeEntries(args.projectId as string);
                 } else {
                   responsePayload = { success: false, error: `Verktyget '${name}' hittades inte.` };
                 }
