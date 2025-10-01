@@ -2,13 +2,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import { useChat } from '@/app/contexts/ChatContext';
 import ChatInput from '@/app/components/chat/ChatInput';
-import MessageFeed from '@/app/components/MessageFeed'; // Korrigerad import
+import MessageFeed from '@/app/components/MessageFeed';
 
 export default function ChatWidget() {
-    const { messages, isLoading, firebaseUser, sendMessage } = useChat();
+    const { messages, isLoading, firebaseUser, sendMessage, stop } = useChat();
     const [isExpanded, setIsExpanded] = useState(false);
 
     useEffect(() => {
@@ -42,7 +42,6 @@ export default function ChatWidget() {
                 
                 {isExpanded && (
                      <div className="flex items-center justify-between p-3 border-b border-border-primary">
-                        {/* ChatTabs borttagen här */}
                         <h2 className="text-lg font-semibold text-center flex-1">ByggPilot</h2>
                         <button type="button" onClick={() => setIsExpanded(false)}><ChevronDownIcon className="h-6 w-6" /></button>
                     </div>
@@ -51,16 +50,14 @@ export default function ChatWidget() {
                 {isExpanded && <MessageFeed messages={messages} />}
 
                 <div className="p-3">
-                    {!isExpanded && (
-                        <div className="flex justify-center mb-2">
-                            <button type="button" onClick={() => setIsExpanded(true)} className="p-2"><ChevronUpIcon className="h-6 w-6" /></button>
-                        </div>
-                    )}
-
                     <ChatInput 
                         onSendMessage={handleSendMessage} 
                         isChatDisabled={isChatDisabled}
-                        onFocus={() => !isExpanded && setIsExpanded(true)} 
+                        onFocus={() => !isExpanded && setIsExpanded(true)}
+                        isExpanded={isExpanded}
+                        setIsExpanded={setIsExpanded}
+                        isLoading={isLoading}
+                        stop={stop}
                     />
 
                     <p className="text-xs text-gray-500 text-center mt-2">

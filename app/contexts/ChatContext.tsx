@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { ChatMessage } from '@/app/types';
 import { useUI } from '@/app/contexts/UIContext';
 import { auth } from '@/app/lib/firebase/client';
@@ -12,6 +12,7 @@ interface ChatContextType {
   isLoading: boolean;
   firebaseUser: User | null;
   sendMessage: (content: string, file?: File) => Promise<void>;
+  stop: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -23,6 +24,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const { openModal } = useUI();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -37,66 +39,91 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const stop = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setIsLoading(false);
+    }
+  }, []);
+
   const sendMessage = useCallback(async (content: string, file?: File) => {
     if (!content.trim() && !file || !firebaseUser) return;
 
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+
     const userMessage: ChatMessage = { role: 'user', content };
-    const newMessages: ChatMessage[] = [...messages, userMessage];
-    
-    setMessages(newMessages);
+    const newMessages = [...messages, userMessage];
+
+    setMessages([...newMessages, { role: 'assistant', content: '' }]);
     setIsLoading(true);
 
     try {
-      const idToken = await firebaseUser.getIdToken(true);
+        const idToken = await firebaseUser.getIdToken(true);
 
-      const messagesForApi = newMessages.filter((msg, index) => {
-        return !(index === 0 && msg.role === 'assistant');
-      });
+        const messagesForApi = newMessages.filter((msg, index) => {
+            return !(index === 0 && msg.role === 'assistant');
+        });
 
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json', 
-          'Authorization': `Bearer ${idToken}` 
-        },
-        body: JSON.stringify({ messages: messagesForApi }),
-      });
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+            },
+            // Inkludera userId i anropet
+            body: JSON.stringify({ messages: messagesForApi, userId: firebaseUser.uid }),
+            signal: signal, 
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Ett okänt serverfel uppstod');
-      }
-      
-      // **NY LOGIK: Hantera JSON-svar, inte stream**
-      const responseData = await response.json();
-      const assistantContent = responseData.text;
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Ett serverfel uppstod');
+        }
 
-      if (!assistantContent) {
-        throw new Error("Fick ett tomt eller felformaterat svar från servern.");
-      }
+        if (!response.body) {
+            throw new Error("Fick ett tomt svar från servern.");
+        }
 
-      const assistantMessage: ChatMessage = {
-        role: 'assistant',
-        content: assistantContent,
-      };
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
 
-      // Lägg till det kompletta svaret i chatthistoriken
-      setMessages(prev => [...prev, assistantMessage]);
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
 
-    } catch (error) {
-      console.error("Fel i sendMessage:", error);
-      const errorMsg: ChatMessage = {
-        role: 'assistant',
-        content: `Ett tekniskt fel uppstod. ${error instanceof Error ? error.message : String(error)}`,
-      };
-      // Lägg till felmeddelandet i chatthistoriken
-      setMessages(prev => [...prev, errorMsg]);
-    } finally {
-      setIsLoading(false);
+            const chunkValue = decoder.decode(value);
+            
+            setMessages(prev => {
+                const lastMessage = prev[prev.length - 1];
+                const updatedLastMessage = {
+                    ...lastMessage,
+                    content: lastMessage.content + chunkValue,
+                };
+                return [...prev.slice(0, -1), updatedLastMessage];
+            });
+        }
+        setIsLoading(false);
+
+    } catch (error: any) {
+        if (error.name === 'AbortError') {
+            console.log("Fetch aborted by user.");
+            setMessages(prev => prev.slice(0, -1)); 
+            return; 
+        }
+        console.error("Fel i sendMessage (streaming):", error);
+        const errorContent = `Ett tekniskt fel uppstod. ${error instanceof Error ? error.message : String(error)}`;
+        
+        setMessages(prev => {
+            const lastMessage = prev[prev.length - 1];
+            const updatedLastMessage = { ...lastMessage, content: errorContent };
+            return [...prev.slice(0, -1), updatedLastMessage];
+        });
+        setIsLoading(false);
     }
-  }, [firebaseUser, messages]);
+}, [firebaseUser, messages]);
 
-  const value = { messages, isLoading, firebaseUser, sendMessage };
+  const value = { messages, isLoading, firebaseUser, sendMessage, stop };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 };
