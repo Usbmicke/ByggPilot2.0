@@ -5,6 +5,8 @@ import "./globals.css";
 import { AuthProvider } from "@/app/providers/AuthProvider";
 import { UIProvider } from "@/app/contexts/UIContext";
 import { ChatProvider } from "@/app/contexts/ChatContext";
+import { ModalProvider } from "@/app/context/ModalContext"; // GULDSTANDARD-TILLÄGG
+import ModalRenderer from "@/app/components/layout/ModalRenderer"; // GULDSTANDARD-TILLÄGG
 import CookieBanner from "@/app/components/CookieBanner";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -25,7 +27,10 @@ export default function RootLayout({
         <UIProvider>
           <AuthProvider>
             <ChatProvider>
-              {children}
+              <ModalProvider> {/* GULDSTANDARD-TILLÄGG */}
+                {children}
+                <ModalRenderer /> {/* GULDSTANDARD-TILLÄGG */}
+              </ModalProvider>
             </ChatProvider>
           </AuthProvider>
         </UIProvider>

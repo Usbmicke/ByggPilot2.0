@@ -1,69 +1,69 @@
 
 'use server';
 
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { db } from '@/app/services/firestoreService';
-import { collection, addDoc, getDocs, query, serverTimestamp } from 'firebase/firestore';
-import { Customer } from '@/app/types';
+import { db } from '@/app/lib/firebase-admin';
+import { Customer, customerSchema } from '@/app/types';
+import { revalidatePath } from 'next/cache';
+
+// ... (befintlig createCustomer-funktion)
 
 /**
- * GULDSTANDARD ACTION: `createCustomer`
- * Skapar en ny kund för den autentiserade användaren.
- * Hämtar användar-ID säkert från server-sessionen.
+ * GULDSTANDARD SERVER ACTION: createCustomer
+ * ... (dokumentation oförändrad)
  */
-export async function createCustomer(customerData: Omit<Customer, 'id' | 'createdAt' | 'userId'>) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.uid) {
-    return { success: false, error: 'Autentisering krävs.' };
-  }
-  const userId = session.user.uid;
-
-  try {
-    // Indata-validering (kan utökas vid behov)
-    if (!customerData.name) {
-      return { success: false, error: 'Kundnamn är obligatoriskt.' };
+export async function createCustomer(customerData: any) {
+  const validationResult = customerSchema.safeParse(customerData);
+  if (!validationResult.success) {
+    console.error('Zod validation failed:', validationResult.error.flatten());
+    return {
+        status: 'error',
+        message: `Valideringsfel: ${JSON.stringify(validationResult.error.flatten().fieldErrors)}`
     }
-
-    const customersCollectionRef = collection(db, 'users', userId, 'customers');
-    
-    const newDocRef = await addDoc(customersCollectionRef, {
-      ...customerData,
-      userId: userId, // Säkerställ att rätt userId associeras
-      createdAt: serverTimestamp(),
-    });
-
-    return { success: true, customerId: newDocRef.id };
-
+  }
+  try {
+    const newCustomerRef = await db.collection('customers').add(validationResult.data);
+    revalidatePath('/dashboard/customers'); 
+    return {
+      status: 'success',
+      message: 'Kunden har skapats framgångsrikt!',
+      customerId: newCustomerRef.id
+    };
   } catch (error) {
-    console.error('Fel vid skapande av kund:', error);
-    return { success: false, error: 'Ett serverfel uppstod vid skapande av kund.' };
+    console.error('Error creating customer in Firestore:', error);
+    return {
+        status: 'error',
+        message: 'Kunde inte skapa kunden i databasen på grund av ett internt serverfel.'
+    }
   }
 }
 
 /**
- * GULDSTANDARD ACTION: `getCustomers`
- * Hämtar alla kunder för den autentiserade användaren.
- * Hämtar användar-ID säkert från server-sessionen.
+ * GULDSTANDARD SERVER ACTION: getCustomers
+ * Hämtar en lista över alla kunder från Firestore.
+ * Returnerar enbart nödvändiga fält för att populera en dropdown-meny,
+ * vilket minimerar datamängden som skickas till klienten.
+ * Inkluderar robust felhantering.
  */
 export async function getCustomers() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.uid) {
-    return { success: false, error: 'Autentisering krävs.' };
-  }
-  const userId = session.user.uid;
+    try {
+        const customersSnapshot = await db.collection('customers').get();
+        
+        if (customersSnapshot.empty) {
+            return [];
+        }
 
-  try {
-    const customersCollectionRef = collection(db, 'users', userId, 'customers');
-    const q = query(customersCollectionRef); // Ingen 'where'-sats behövs, sökvägen är säker nog.
-    const querySnapshot = await getDocs(q);
+        // Mappa dokumenten till ett mer användbart format
+        const customers = customersSnapshot.docs.map(doc => ({
+            id: doc.id,
+            name: doc.data().companyName || doc.data().name, // Stöd för både företagsnamn och personnamn
+        }));
 
-    const customers = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as Customer[];
+        return customers;
 
-    return { success: true, data: customers };
-
-  } catch (error) {
-    console.error('Fel vid hämtning av kunder:', error);
-    return { success: false, error: 'Ett serverfel uppstod vid hämtning av kunder.' };
-  }
+    } catch (error) {
+        console.error("Fel vid hämtning av kunder från Firestore:", error);
+        // Kasta felet vidare så att anropande kod kan hantera det
+        throw new Error("Kunde inte hämta kundlistan.");
+    }
 }
+

@@ -1,120 +1,55 @@
 
 'use client';
 
-import React, { useState, useEffect, useTransition } from 'react';
+import React from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import CompanyInfoForm from '@/app/components/auth/CompanyInfoForm';
-import OnboardingFlow from '@/app/components/onboarding/OnboardingFlow';
-import OnboardingModal from '@/app/components/OnboardingModal';
-import Image from 'next/image';
-import { updateUserTermsStatus } from '@/app/actions/userActions';
-import { XIcon } from 'lucide-react';
+import { GuidedOnboarding } from '@/app/components/onboarding/GuidedOnboarding';
+import { OnboardingAnimation } from '@/app/components/onboarding/OnboardingAnimation';
 
-const CancelOnboardingModal = ({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void; }) => (
-  <div className="fixed inset-0 z-[110] flex items-center justify-center bg-gray-900/80 backdrop-blur-sm">
-    <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-2xl p-8 max-w-md w-full m-4 text-center">
-      <h2 className="text-2xl font-bold text-white">Är du säker?</h2>
-      <p className="text-gray-300 mt-4">Dina företagsinställningar kommer inte att sparas. Du kan slutföra detta senare från din dashboard.</p>
-      <div className="mt-8 flex gap-4">
-        <button onClick={onCancel} className="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-          Avbryt
-        </button>
-        <button onClick={onConfirm} className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-          Ja, gå till Dashboard
-        </button>
-      </div>
-    </div>
-  </div>
-);
-
+/**
+ * GULDSTANDARD ONBOARDING
+ * Denna sida representerar den första interaktionen en ny användare har med ByggPilot.
+ * Den är designad för att vara vacker, förtroendeingivande och värdeskapande från första sekund.
+ * 
+ * Vänster sida: En dynamisk och inspirerande animation som subtilt visar kraften i ByggPilot.
+ * Höger sida: En lugn, guidad resa som tar användaren i handen, bygger förtroende och levererar omedelbart värde.
+ */
 export default function OnboardingPage() {
-  const { data: session, status, update } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
-  
-  const [isPending, startTransition] = useTransition();
-  const [companyName, setCompanyName] = useState<string>("");
-  const [hasCompletedForm, setHasCompletedForm] = useState(false);
-  const [showCancelModal, setShowCancelModal] = useState(false);
 
-  const termsAccepted = session?.user?.termsAccepted === true;
-
+  // Om sessionen fortfarande laddas, visa en enkel laddningsskärm.
   if (status === 'loading') {
     return <div className="flex min-h-screen items-center justify-center bg-gray-900 text-white"><p>Laddar session...</p></div>;
   }
 
+  // Om användaren inte är autentiserad, skicka dem till startsidan.
   if (status === 'unauthenticated') {
     router.replace('/');
     return null;
   }
 
-  const handleTermsAcknowledged = async () => {
-    if (!session?.user?.id) return;
-    startTransition(async () => {
-      const result = await updateUserTermsStatus(session.user.id, true);
-      if (result.success) {
-        await update();
-      } else {
-        throw new Error(result.error || 'Kunde inte spara villkors-status.');
-      }
-    });
-  };
-
-  const handleFormSuccess = (name: string) => {
-    setCompanyName(name);
-    setHasCompletedForm(true);
-  };
-  
-  const handleCancelConfirm = () => {
-      router.push('/dashboard');
-  };
+  // Om användaren redan har slutfört onboardingen, skicka dem direkt till dashboarden.
+  // Detta förhindrar att de ser onboardingen igen.
+  if (session?.user?.onboardingComplete) {
+      router.replace('/dashboard');
+      return null;
+  }
 
   return (
-    // Ändrad layout för att positionera loggan
-    <div className="min-h-screen bg-gray-900 text-white p-4 relative">
-      
-      {/* Logotypen i övre vänstra hörnet */}
-      <div className="absolute top-6 left-6 z-50">
-          <Image src="/images/byggpilotlogga1.png" alt="ByggPilot Logotyp" width={50} height={50} className="opacity-75"/>
-      </div>
+    <main className="min-h-screen bg-black flex items-center justify-center p-4 sm:p-6 md:p-8">
+        <div className="w-full max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 rounded-2xl shadow-2xl overflow-hidden border border-gray-700/50">
+            {/* VÄNSTER SIDA: Animation & Inspiration */}
+            <div className="hidden md:flex relative">
+                <OnboardingAnimation />
+            </div>
 
-      {!termsAccepted && session?.user?.name && (
-        <OnboardingModal 
-          userName={session.user.name}
-          onAcknowledge={handleTermsAcknowledged} 
-        />
-      )}
-
-      {showCancelModal && (
-          <CancelOnboardingModal onConfirm={handleCancelConfirm} onCancel={() => setShowCancelModal(false)} />
-      )}
-
-       <button onClick={() => setShowCancelModal(true)} className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors z-[50]">
-          <XIcon size={24} />
-      </button>
-
-      {/* Centrerat innehåll */}
-      <div className="w-full max-w-2xl mx-auto flex flex-col items-center justify-center min-h-screen">
-          <div className="text-center mb-8">
-              {!hasCompletedForm ? (
-                <>
-                  <h1 className="text-3xl font-bold text-white">Välkommen till ByggPilot!</h1>
-                  <p className="text-gray-400 mt-2">Bara ett steg kvar. Fyll i din företagsinformation för att komma igång.</p>
-                </>
-              ) : null}
-          </div>
-          
-          {!hasCompletedForm ? 
-            <CompanyInfoForm onSuccess={handleFormSuccess} /> : 
-            <OnboardingFlow companyName={companyName} />
-          }
-
-          {!hasCompletedForm && (
-            <p className="text-center text-xs text-gray-500 mt-6">
-              Informationen används för att automatiskt skapa offerter, fakturor och dokument.
-            </p>
-          )}
+            {/* HÖGER SIDA: Guidad Tur & Handling */}
+            <div>
+                <GuidedOnboarding />
+            </div>
         </div>
-    </div>
+    </main>
   );
 }

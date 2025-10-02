@@ -10,7 +10,7 @@ import { Project } from '@/app/types/project';
 interface SummaryData {
   ongoingProjects: number;
   completedProjects: number;
-  invoicedValue: number; // TODO: Denna ska beräknas dynamiskt i nästa steg
+  invoicedValue: number;
 }
 
 // Guldstandard-komponent för ett enskilt KPI-kort (oförändrad)
@@ -71,14 +71,13 @@ export default function DashboardSummary() {
           const ongoing = projects.filter(p => p.status === 'active').length;
           const completed = projects.filter(p => p.status === 'completed').length;
           
-          // TODO: Implementera dynamisk hämtning av fakturerat värde.
-          // För nu behåller vi en statisk siffra som placeholder.
-          const tempInvoicedValue = 125350;
+          // GULDSTANDARD: Beräkna totalt fakturerat värde från alla projekt
+          const totalInvoiced = projects.reduce((sum, project) => sum + (project.totalInvoiced || 0), 0);
 
           setSummary({
             ongoingProjects: ongoing,
             completedProjects: completed,
-            invoicedValue: tempInvoicedValue,
+            invoicedValue: totalInvoiced,
           });
         } else {
           console.error('Kunde inte hämta projektdata:', projectResult.error);
@@ -106,7 +105,7 @@ export default function DashboardSummary() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard 
-            title="Totala Intäkter (TODO)" 
+            title="Totala Intäkter" 
             value={`${(summary.invoicedValue / 1000).toFixed(1)}k kr`} 
             change={0} // Ingen förändringsdata tillgänglig
             changeType='none'

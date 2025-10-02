@@ -2,57 +2,46 @@
 'use client';
 
 import React from 'react';
-import { useUI } from '@/app/contexts/UIContext';
+import { useModal } from '@/app/context/ModalContext';
 
-// Importera alla modaler som systemet kan använda
-import CreateProjectModal from '@/app/components/modals/CreateProjectModal';
-import CreateAtaModal from '@/app/components/modals/CreateAtaModal';
-import CompanyVisionModal from '@/app/components/modals/CompanyVisionModal';
-import AddMaterialCostModal from '@/app/components/modals/AddMaterialCostModal';
-import CreateCustomerModal from '@/app/components/modals/CreateCustomerModal';
+// Importera de faktiska modal-komponenterna
 import CreateOfferModal from '@/app/components/modals/CreateOfferModal';
-import EditProjectModal from '@/app/components/modals/EditProjectModal';
-import SetHourlyRateModal from '@/app/components/modals/SetHourlyRateModal';
+import CreateCustomerModal from '@/app/components/modals/CreateCustomerModal';
+import CreateAtaModal from '@/app/components/modals/CreateAtaModal';
 
-// Mappa modal-ID:n till deras respektive komponenter
-const modalRegistry: { [key: string]: React.FC<any> } = {
-  createProject: CreateProjectModal,
-  createAta: CreateAtaModal,
-  companyVision: CompanyVisionModal,
-  addMaterialCost: AddMaterialCostModal,
-  createCustomer: CreateCustomerModal,
-  createOffer: CreateOfferModal,
-  editProject: EditProjectModal,
-  setHourlyRate: SetHourlyRateModal,
-};
-
-const ModalRenderer: React.FC = () => {
-  const { activeModal, closeModal } = useUI();
-
-  if (!activeModal) {
-    return null; // Om ingen modal är aktiv, rendera ingenting
-  }
-
-  const ModalComponent = modalRegistry[activeModal];
-
-  if (!ModalComponent) {
-    console.warn(`ModalRenderer: Ingen komponent registrerad för modalId "${activeModal}"`);
-    return null;
-  }
-
+// En baskomponent för modalens overlay och stängningsfunktion
+const ModalShell: React.FC<{ children: React.ReactNode; onClose: () => void }> = ({ children, onClose }) => {
   return (
-    // Bakgrunds-overlay som stänger modalen vid klick
-    <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4"
-      onClick={closeModal}
-    >
-      {/* Wrapper för att förhindra att klick inuti modalen stänger den */}
-      <div onClick={(e) => e.stopPropagation()}>
-        <ModalComponent />
+    <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex justify-center items-center" onClick={onClose}>
+      <div className="bg-background-secondary rounded-lg shadow-2xl p-8 max-w-2xl w-full" onClick={e => e.stopPropagation()}>
+        {children}
       </div>
     </div>
   );
 };
 
-export default ModalRenderer;
 
+const ModalRenderer = () => {
+  const { modalType, modalProps, hideModal } = useModal();
+
+  if (!modalType) {
+    return null; // Om ingen modal ska visas, rendera ingenting
+  }
+
+  const renderModal = () => {
+    switch (modalType) {
+      case 'createOffer':
+        return <CreateOfferModal {...modalProps} />;
+      case 'createCustomer':
+        return <CreateCustomerModal {...modalProps} />;
+      case 'createAta':
+        return <CreateAtaModal {...modalProps} />;
+      default:
+        return null;
+    }
+  };
+
+  return <ModalShell onClose={hideModal}>{renderModal()}</ModalShell>;
+};
+
+export default ModalRenderer;
