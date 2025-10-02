@@ -1,48 +1,37 @@
 
-import { NextResponse } from 'next/server';
-import { getServerSession } from '@/app/lib/auth';
-import { createFolder, getGoogleAuth } from '@/app/services/driveService';
-// Importerar `db`-instansen direkt istället för den felaktiga `updateUser`
-import { db } from '@/app/services/firestoreService';
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { firestore } from '@/app/lib/firebase-admin';
 
-export async function POST(request: Request) {
+/**
+ * API-endpoint för att uppdatera en användares företagsnamn.
+ * Detta är en del av onboarding-processen.
+ */
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.id) {
+    return NextResponse.json({ message: 'Användaren är inte autentiserad.' }, { status: 401 });
+  }
+
   try {
-    const session = await getServerSession();
-    const userId = session?.user?.id;
-    const accessToken = session?.accessToken;
+    const { companyName } = await req.json();
 
-    if (!userId || !accessToken) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-    
-    const userRef = db.collection('users').doc(userId);
-    const userDoc = await userRef.get();
-    
-    if(userDoc.exists && userDoc.data()?.driveRootFolderId) {
-        return NextResponse.json({ message: 'User setup already complete.' });
+    if (!companyName || typeof companyName !== 'string' || companyName.trim().length < 2) {
+      return NextResponse.json({ message: 'Ogiltigt företagsnamn.' }, { status: 400 });
     }
 
-    const auth = getGoogleAuth(accessToken);
-    const folderName = "ByggPilot - Kundmapp";
-    const folder = await createFolder(auth, folderName);
+    const userRef = firestore.collection('users').doc(session.user.id);
 
-    if (!folder || !folder.id) {
-        throw new Error('Failed to create root folder in Google Drive.');
-    }
-
-    const driveRootFolderId = folder.id;
-
-    // KORRIGERING: Använder `db`-instansen för att uppdatera användaren direkt.
-    await userRef.update({ driveRootFolderId: driveRootFolderId });
-
-    return NextResponse.json({ 
-        message: 'User setup complete. Root folder created.',
-        driveRootFolderId: driveRootFolderId 
+    await userRef.update({
+      companyName: companyName.trim(),
     });
 
+    return NextResponse.json({ success: true, companyName: companyName.trim() }, { status: 200 });
+
   } catch (error) {
-    console.error("Error in user setup API: ", error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return NextResponse.json({ error: 'Failed to complete user setup.', details: errorMessage }, { status: 500 });
+    console.error("Fel vid uppdatering av företagsnamn:", error);
+    return NextResponse.json({ message: 'Internt serverfel.' }, { status: 500 });
   }
 }
