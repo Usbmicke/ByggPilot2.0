@@ -1,128 +1,77 @@
+// Använder Googles officiella SDK direkt för att kringgå problemen med 'ai'-biblioteket.
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { SYSTEM_PROMPT } from '@/app/ai/prompts';
 
-import { GoogleGenerativeAIStream, Message, StreamingTextResponse, streamToResponse } from 'ai';
-import { GoogleGenerativeAI, FunctionDeclarationSchemaType } from '@google/generative-ai';
-import { searchMemory, saveToMemory } from '@/app/services/vectorService';
-// Importera de faktiska server-åtgärderna
-import { createProject, getProjects } from '@/app/actions/projectActions';
-import { getCustomers } from '@/app/actions/customerActions';
+// Definierar CoreMessage lokalt för att helt ta bort beroendet till det trasiga 'ai'-biblioteket.
+interface CoreMessage {
+    role: 'user' | 'model' | 'system' | 'assistant';
+    content: string;
+}
+
+const MODEL_NAME = "gemini-1.5-flash"; // <-- HÄR ÄR ÄNDRINGEN
+const API_KEY = process.env.GEMINI_API_KEY;
 
 export const runtime = 'edge';
 
-// --- 1. Definition av Verktyg --- 
-const tools = {
-  getProjects: {
-    name: "getProjects",
-    description: "Hämtar en lista över alla projekt för den aktuella användaren.",
-    parameters: { 
-      type: FunctionDeclarationSchemaType.OBJECT,
-      properties: {},
-      required: []
-    }
-  },
-  createProject: {
-    name: "createProject",
-    description: "Skapar ett nytt projekt med namn, adress och kund-ID.",
-    parameters: { 
-      type: FunctionDeclarationSchemaType.OBJECT,
-      properties: {
-        name: { type: FunctionDeclarationSchemaType.STRING, description: "Projektets namn" },
-        address: { type: FunctionDeclarationSchemaType.STRING, description: "Projektets adress" },
-        customerId: { type: FunctionDeclarationSchemaType.STRING, description: "ID för kunden som projektet tillhör" },
-        status: { type: FunctionDeclarationSchemaType.STRING, enum: ['active', 'completed', 'paused'], description: "Projektets status" }
-      },
-      required: ['name', 'address', 'customerId', 'status']
-    }
-  },
-  getCustomers: {
-    name: "getCustomers",
-    description: "Hämtar en lista över alla kunder för den aktuella användaren.",
-    parameters: { 
-      type: FunctionDeclarationSchemaType.OBJECT,
-      properties: {},
-      required: []
-    }
-  }
-};
-
-// --- 2. Huvud-API-funktion --- 
 export async function POST(req: Request) {
-  try {
-    const { messages, userId } = await req.json();
-
-    if (!userId) {
-      return new Response(JSON.stringify({ error: "Användar-ID saknas" }), { status: 400 });
+    if (!API_KEY) {
+        return new Response(JSON.stringify({ error: "GEMINI_API_KEY är inte satt i dina miljövariabler." }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+        });
     }
 
-    const latestUserMessage = messages[messages.length - 1]?.content || '';
-    const context = await searchMemory(latestUserMessage, 3);
-    
-    const systemPrompt = `Du är ByggPilot, en AI-assistent för ett byggföretag. Svara alltid på svenska. Använd följande kontext från kunskapsbasen: \n--- CONTEXT ---\n${context.join('\n')}\n--- END CONTEXT ---\nAnvänd de tillgängliga verktygen för att svara på användarens begäran. Om du inte kan uppfylla en begäran med ett verktyg, svara som en hjälpsam assistent.`;
+    try {
+        const { messages }: { messages: CoreMessage[] } = await req.json();
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-1.5-flash', 
-      systemInstruction: systemPrompt,
-      tools: [{ functionDeclarations: Object.values(tools) }]
-    });
+        const genAI = new GoogleGenerativeAI(API_KEY);
+        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
-    const chat = model.startChat({ history: messages.map((msg: Message) => ({ role: msg.role === 'assistant' ? 'model' : msg.role, parts: [{ text: msg.content }] })) });
-    const result = await chat.sendMessageStream(latestUserMessage);
-
-    const stream = new ReadableStream({
-      async pull(controller) {
-        for await (const chunk of result.stream) {
-          if (chunk.functionCalls) {
-            const calls = chunk.functionCalls;
-            const toolResponses = [];
-
-            for (const call of calls) {
-              const { name, args } = call;
-              let responsePayload: any;
-
-              // --- 3. Verktygsexekvering ---
-              try {
-                if (name === 'createProject') {
-                  responsePayload = await createProject(args as any, userId);
-                } else if (name === 'getProjects') {
-                  responsePayload = await getProjects(userId);
-                } else if (name === 'getCustomers') {
-                  responsePayload = await getCustomers(userId);
-                }
-                 else {
-                  responsePayload = { success: false, error: `Verktyget '${name}' hittades inte.` };
-                }
-              } catch (e: any) {
-                responsePayload = { success: false, error: e.message };
-              }
-              
-              toolResponses.push({ 
-                name,
-                response: responsePayload
-              });
-            }
-            
-            // Skicka tillbaka resultatet till modellen
-            const result2 = await chat.sendMessageStream(JSON.stringify({ tool_responses: toolResponses }));
-            for await (const chunk2 of result2.stream) {
-                controller.enqueue(new TextEncoder().encode(chunk2.text));
-            }
-
-          } else if (chunk.text) {
-            // Om det är ett vanligt text-svar
-            controller.enqueue(new TextEncoder().encode(chunk.text));
-          }
+        // Konvertera meddelandehistoriken till det format som Googles SDK förväntar sig.
+        const history = messages
+            .filter(m => m.role === 'user' || m.role === 'model' || m.role === 'assistant')
+            .map(m => ({
+                role: (m.role === 'model' || m.role === 'assistant') ? 'model' : 'user',
+                parts: [{ text: m.content }]
+            }));
+        
+        const lastMessage = history.pop();
+        if (!lastMessage) {
+            return new Response(JSON.stringify({ error: "Inga meddelanden att skicka." }), { status: 400 });
         }
-        controller.close();
-      }
-    });
 
-    return new StreamingTextResponse(stream);
+        const result = await model.generateContentStream({
+            contents: [...history, lastMessage],
+            systemInstruction: {
+                role: "system",
+                parts: [{ text: SYSTEM_PROMPT }]
+            },
+        });
+        
+        // Skapa en ReadableStream för att skicka svaret direkt till klienten.
+        const stream = new ReadableStream({
+            async start(controller) {
+                const encoder = new TextEncoder();
+                for await (const chunk of result.stream) {
+                    const text = chunk.text();
+                    if (text) {
+                       controller.enqueue(encoder.encode(text));
+                    }
+                }
+                controller.close();
+            }
+        });
 
-  } catch (error: any) {
-    console.error('[API_ROUTE_ERROR]', error);
-    return new Response(JSON.stringify({ error: error.message || "An unknown error occurred" }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+        // Returnera strömmen som svar.
+        return new Response(stream, {
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        });
+
+    } catch (error: any) {
+        console.error('[API_ROUTE_ERROR]', error);
+        return new Response(JSON.stringify({ error: error.message || "Ett okänt fel inträffade" }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    }
 }

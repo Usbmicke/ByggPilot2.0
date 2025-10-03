@@ -55,4 +55,3 @@ const ModalRenderer: React.FC = () => {
 };
 
 export default ModalRenderer;
-

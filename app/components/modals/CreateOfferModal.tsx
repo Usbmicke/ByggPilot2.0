@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import Modal from '@/app/components/shared/Modal';
-import { useUI } from '@/app/context/UIContext';
+import { useUI } from '@/app/contexts/UIContext';
 
 // Denna komponent är under utveckling och kommer att innehålla logik 
 // för att skapa en offert, liknande CreateProjectModal.
@@ -43,4 +43,3 @@ const CreateOfferModal = () => {
 };
 
 export default CreateOfferModal;
-

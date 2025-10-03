@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
 import { useChat } from '@/app/contexts/ChatContext';
 import ChatInput from '@/app/components/chat/ChatInput';
-import MessageFeed from '@/app/components/MessageFeed';
+import MessageFeed from '@/app/components/chat/MessageFeed';
 
 export default function ChatWidget() {
     const { messages, isLoading, firebaseUser, sendMessage, stop } = useChat();

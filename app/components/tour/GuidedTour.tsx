@@ -115,7 +115,6 @@ export default function GuidedTour() {
 
   return (
     <div className="fixed inset-0 z-[200]" onClick={handleEndTour}>
-      <div className="fixed inset-0 bg-black/80 animate-fade-in"></div>
       <div 
         className="absolute bg-transparent rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.8)] border-2 border-dashed border-cyan-400 transition-all duration-500 ease-in-out z-10"
         style={spotlightStyle}
