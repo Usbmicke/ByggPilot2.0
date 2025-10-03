@@ -1,33 +1,38 @@
-// Använder Googles officiella SDK direkt för att kringgå problemen med 'ai'-biblioteket.
-import { GoogleGenerativeAI } from "@google/generative-ai";
+// Använder Firebase Admin SDK för att interagera med Vertex AI (Gemini)
+import { getVertexAI } from 'firebase-admin/vertex-ai';
+import { admin } from '@/app/lib/firebase-admin';
 import { SYSTEM_PROMPT } from '@/app/ai/prompts';
 
-// Definierar CoreMessage lokalt för att helt ta bort beroendet till det trasiga 'ai'-biblioteket.
+// Lokal typdefinition för att undvika externa beroenden.
 interface CoreMessage {
-    role: 'user' | 'model' | 'system' | 'assistant';
+    role: 'user' | 'model' | 'assistant';
     content: string;
 }
 
-const MODEL_NAME = "gemini-1.5-flash"; // <-- HÄR ÄR ÄNDRINGEN
-const API_KEY = process.env.GEMINI_API_KEY;
+// Använder en stabil och kapabel modell som är tillgänglig via Vertex AI.
+const MODEL_NAME = "gemini-1.5-flash-001";
 
 export const runtime = 'edge';
 
 export async function POST(req: Request) {
-    if (!API_KEY) {
-        return new Response(JSON.stringify({ error: "GEMINI_API_KEY är inte satt i dina miljövariabler." }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-        });
-    }
-
     try {
+        // Säkerställer att Firebase Admin SDK har initierats korrekt.
+        if (!admin.apps.length) {
+            console.error('Firebase Admin SDK är inte initierad.');
+            return new Response(JSON.stringify({ error: "Server-konfigurationsfel: Firebase Admin SDK är inte tillgänglig." }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+
         const { messages }: { messages: CoreMessage[] } = await req.json();
 
-        const genAI = new GoogleGenerativeAI(API_KEY);
-        const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+        // Hämta Vertex AI-tjänsten via den befintliga Firebase Admin-instansen.
+        // Detta hanterar autentisering automatiskt via servicekontot.
+        const vertexAI = getVertexAI(admin.app());
+        const model = vertexAI.getGenerativeModel({ model: MODEL_NAME });
 
-        // Konvertera meddelandehistoriken till det format som Googles SDK förväntar sig.
+        // Konvertera meddelandehistoriken till det format som Vertex AI SDK förväntar sig.
         const history = messages
             .filter(m => m.role === 'user' || m.role === 'model' || m.role === 'assistant')
             .map(m => ({
@@ -48,28 +53,32 @@ export async function POST(req: Request) {
             },
         });
         
-        // Skapa en ReadableStream för att skicka svaret direkt till klienten.
+        // Skapa en standard ReadableStream för att strömma svaret till klienten.
         const stream = new ReadableStream({
             async start(controller) {
                 const encoder = new TextEncoder();
+                // Hämta streamen från det nya SDK:et
                 for await (const chunk of result.stream) {
-                    const text = chunk.text();
-                    if (text) {
-                       controller.enqueue(encoder.encode(text));
+                    // Kontrollera att det finns text i svaret
+                    if (chunk.candidates?.[0]?.content?.parts?.[0]?.text) {
+                        const text = chunk.candidates[0].content.parts[0].text;
+                        controller.enqueue(encoder.encode(text));
                     }
                 }
                 controller.close();
             }
         });
 
-        // Returnera strömmen som svar.
+        // Returnera strömmen som text/plain, som klienten förväntar sig.
         return new Response(stream, {
             headers: { 'Content-Type': 'text/plain; charset=utf-8' },
         });
 
     } catch (error: any) {
-        console.error('[API_ROUTE_ERROR]', error);
-        return new Response(JSON.stringify({ error: error.message || "Ett okänt fel inträffade" }), {
+        console.error('[FIREBASE_CHAT_API_ERROR]', error);
+        // Ge ett mer informativt felmeddelande vid behov
+        const errorMessage = error.message || "Ett okänt fel inträffade i Firebase chat API.";
+        return new Response(JSON.stringify({ error: errorMessage }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },
         });
