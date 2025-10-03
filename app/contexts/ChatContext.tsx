@@ -2,16 +2,31 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
-import { ChatMessage } from '@/app/types';
-import { useUI } from '@/app/contexts/UIContext';
-import { auth } from '@/app/lib/firebase/client';
-import { User, onAuthStateChanged } from 'firebase/auth';
+import { useSession, SessionContextValue } from 'next-auth/react';
+
+// =================================================================================
+// GULD STANDARD - CHAT CONTEXT (Klient-sida)
+// Version 2.0 - Förbättrad med stabil streaming och prestanda-optimering.
+// =================================================================================
+
+/**
+ * GULD STANDARD-FÖRBÄTTRING:
+ * Varje meddelande får nu ett unikt `id`. Detta är KRITISKT för Reacts prestanda.
+ * När meddelandelistan renderas, kan React använda detta `id` som `key` för att
+ * omedelbart identifiera vilka meddelanden som är nya eller har ändrats,
+ * vilket förhindrar onödiga omritningar av hela listan.
+ */
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
 
 interface ChatContextType {
   messages: ChatMessage[];
   isLoading: boolean;
-  firebaseUser: User | null;
-  sendMessage: (content: string, file?: File) => Promise<void>;
+  session: SessionContextValue;
+  sendMessage: (content: string, fileUris?: string[]) => Promise<void>;
   stop: () => void;
 }
 
@@ -22,20 +37,18 @@ const ONBOARDING_WELCOME_MESSAGE = `**Välkommen till ByggPilot!**\n\nJag är di
 export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
-  const { openModal } = useUI();
+  const session = useSession();
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setFirebaseUser(user);
-      if (user && messages.length === 0) {
-        setMessages([{ role: 'assistant', content: ONBOARDING_WELCOME_MESSAGE }]);
-      } else if (!user) {
-        setMessages([{ role: 'assistant', content: "Vänligen logga in för att använda chatten." }]);
-      }
-    });
-    return () => unsubscribe();
+    // Sätt upp startmeddelandet vid första renderingen.
+    if (messages.length === 0) {
+        setMessages([{
+            id: `assistant-${Date.now()}`,
+            role: 'assistant',
+            content: ONBOARDING_WELCOME_MESSAGE
+        }]);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -46,45 +59,50 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const sendMessage = useCallback(async (content: string, file?: File) => {
-    if (!content.trim() && !file || !firebaseUser) return;
+  const sendMessage = useCallback(async (content: string, fileUris?: string[]) => {
+    if (session.status !== 'authenticated' || (!content.trim() && (!fileUris || fileUris.length === 0))) return;
 
     abortControllerRef.current = new AbortController();
-    const signal = abortControllerRef.current.signal;
 
-    const userMessage: ChatMessage = { role: 'user', content };
-    const newMessages = [...messages, userMessage];
+    const userMessage: ChatMessage = {
+        id: `user-${Date.now()}`,
+        role: 'user',
+        content
+    };
+    
+    const assistantPlaceholder: ChatMessage = {
+        id: `assistant-${Date.now() + 1}`,
+        role: 'assistant',
+        content: ''
+    };
 
-    setMessages([...newMessages, { role: 'assistant', content: '' }]);
+    setMessages(prev => [...prev, userMessage, assistantPlaceholder]);
     setIsLoading(true);
 
+    const historyForApi = messages
+        .filter(msg => msg.content !== ONBOARDING_WELCOME_MESSAGE) // Filtrera bort välkomstmeddelandet
+        .map(msg => ({ role: msg.role === 'assistant' ? 'model' : 'user', parts: [{ text: msg.content }] }));
+
+    const messagesForApi = [...historyForApi, { role: 'user', parts: [{ text: userMessage.content }] }];
+
     try {
-        const idToken = await firebaseUser.getIdToken(true);
-
-        const messagesForApi = newMessages.filter((msg, index) => {
-            return !(index === 0 && msg.role === 'assistant');
-        });
-
         const response = await fetch('/api/chat', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${idToken}`
-            },
-            // Inkludera userId i anropet
-            body: JSON.stringify({ messages: messagesForApi, userId: firebaseUser.uid }),
-            signal: signal, 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: messagesForApi, fileUris }),
+            signal: abortControllerRef.current.signal,
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Ett serverfel uppstod');
+        if (!response.ok || !response.body) {
+            const errorText = await response.text();
+            throw new Error(JSON.parse(errorText).error || 'Ett okänt serverfel uppstod.');
         }
 
-        if (!response.body) {
-            throw new Error("Fick ett tomt svar från servern.");
-        }
-
+        // =========================================================================
+        // GULD STANDARD-FÖRBÄTTRING: Stabil streaming återinförd.
+        // Genom att ge varje meddelande ett unikt ID kan React effektivt hantera
+        // snabba uppdateringar av det sista meddelandet utan att krascha.
+        // =========================================================================
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
 
@@ -92,38 +110,46 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             const { value, done } = await reader.read();
             if (done) break;
 
-            const chunkValue = decoder.decode(value);
+            const chunkValue = decoder.decode(value, { stream: true });
             
             setMessages(prev => {
-                const lastMessage = prev[prev.length - 1];
-                const updatedLastMessage = {
-                    ...lastMessage,
-                    content: lastMessage.content + chunkValue,
+                // Skapa en ny array för att undvika direkt mutering.
+                const newMessages = [...prev];
+                // Hitta sista meddelandet (vår platshållare) och uppdatera dess innehåll.
+                const lastMessageIndex = newMessages.length - 1;
+                newMessages[lastMessageIndex] = {
+                    ...newMessages[lastMessageIndex],
+                    content: newMessages[lastMessageIndex].content + chunkValue,
                 };
-                return [...prev.slice(0, -1), updatedLastMessage];
+                return newMessages;
             });
         }
-        setIsLoading(false);
-
     } catch (error: any) {
         if (error.name === 'AbortError') {
             console.log("Fetch aborted by user.");
-            setMessages(prev => prev.slice(0, -1)); 
-            return; 
+            setMessages(prev => prev.slice(0, -2)); // Ta bort både användarens meddelande och platshållaren.
+            return;
         }
-        console.error("Fel i sendMessage (streaming):", error);
-        const errorContent = `Ett tekniskt fel uppstod. ${error instanceof Error ? error.message : String(error)}`;
+
+        console.error("Fel i sendMessage:", error);
+        const errorContent = `Ett tekniskt fel uppstod: ${error.message}`;
         
         setMessages(prev => {
-            const lastMessage = prev[prev.length - 1];
-            const updatedLastMessage = { ...lastMessage, content: errorContent };
-            return [...prev.slice(0, -1), updatedLastMessage];
+            const withoutPlaceholder = prev.slice(0, -1);
+            const errorAssistantMessage: ChatMessage = {
+                id: `assistant-error-${Date.now()}`,
+                role: 'assistant',
+                content: errorContent
+            };
+            return [...withoutPlaceholder, errorAssistantMessage];
         });
+    } finally {
         setIsLoading(false);
     }
-}, [firebaseUser, messages]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, messages]);
 
-  const value = { messages, isLoading, firebaseUser, sendMessage, stop };
+  const value = { messages, isLoading, session, sendMessage, stop };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 };
