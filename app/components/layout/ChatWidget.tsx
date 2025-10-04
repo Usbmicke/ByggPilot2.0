@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { ChevronDownIcon } from '@heroicons/react/24/outline';
-import { useChat } from '@/app/contexts/ChatContext';
-import ChatInput from '@/app/components/chat/ChatInput';
-import MessageFeed from '@/app/components/chat/MessageFeed';
+import { useChat } from '@/contexts/ChatContext';
+import ChatInput from '@/components/chat/ChatInput';
+import MessageFeed from '@/components/chat/MessageFeed';
 
 export default function ChatWidget() {
-    const { messages, isLoading, firebaseUser, sendMessage, stop } = useChat();
+    const { messages, isLoading, session, sendMessage, stop } = useChat();
     const [isExpanded, setIsExpanded] = useState(false);
 
     useEffect(() => {
@@ -30,10 +30,10 @@ export default function ChatWidget() {
     }, [isExpanded]);
 
     const handleSendMessage = (content: string, file?: File) => {
-        sendMessage(content, file);
+        sendMessage(content);
     };
 
-    const isChatDisabled = !firebaseUser;
+    const isChatDisabled = session.status !== 'authenticated';
 
     return (
         <div id="chat-widget" className={`fixed bottom-0 left-0 md:left-64 right-0 z-40 transition-all duration-300 ease-in-out`}>

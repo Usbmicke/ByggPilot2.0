@@ -14,7 +14,7 @@ import {
 import {
     MicrophoneIcon as MicOutline
 } from '@heroicons/react/24/outline';
-import { useVoiceRecognition } from '@/app/hooks/useVoiceRecognition';
+import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
 
 interface ChatInputProps {
     onSendMessage: (content: string, file?: File) => void;
@@ -29,7 +29,7 @@ interface ChatInputProps {
 // Nya, mer kraftfulla och professionella förslag
 const promptSuggestions = [
     "Starta ett nytt projekt för [Kund] på [Adress]...",
-    "Ge mig en sammanfattning av alla projekt markerade som "pausade".",
+    "Ge mig en sammanfattning av alla projekt markerade som \"pausade\".",
     "Sök i företagsminnet efter våra garantivillkor för badrum.",
     "Skapa en checklista för en säker arbetsplats vid takbyte.",
     "Lär dig: Vår standard för regelavstånd är cc600 för innerväggar."

@@ -3,11 +3,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import Sidebar from '@/app/components/layout/Sidebar';
-import Header from '@/app/components/layout/Header';
+import Sidebar from '@/components/layout/Sidebar';
+import Header from '@/components/layout/Header';
 import { useChat } from '@/app/contexts/ChatContext';
-import ChatWidget from '@/app/components/layout/ChatWidget';
-import ModalRenderer from '@/app/components/layout/ModalRenderer'; // STEG 1: Importera ModalRenderer
+import ChatWidget from '@/components/layout/ChatWidget';
+import ModalRenderer from '@/components/layout/ModalRenderer';
 
 interface MainAppClientBoundaryProps {
   children: React.ReactNode;
@@ -45,7 +45,6 @@ const MainAppClientBoundary = ({ children, isNewUser }: MainAppClientBoundaryPro
 
         <ChatWidget />
 
-        {/* STEG 2: Lägg till ModalRenderer här */}
         <ModalRenderer />
 
       </div>
