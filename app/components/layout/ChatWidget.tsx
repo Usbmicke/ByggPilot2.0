@@ -8,8 +8,7 @@ import ChatInput from '@/app/components/chat/ChatInput';
 import MessageFeed from '@/app/components/chat/MessageFeed';
 
 export default function ChatWidget() {
-    // Hämta den korrekta sessionsdatan från context
-    const { messages, isLoading, session, sendMessage, stop } = useChat();
+    const { messages } = useChat();
     const [isExpanded, setIsExpanded] = useState(false);
 
     useEffect(() => {
@@ -31,14 +30,6 @@ export default function ChatWidget() {
         };
     }, [isExpanded]);
 
-    const handleSendMessage = (content: string, file?: File) => {
-        // Vi behöver inte hantera fileUris här just nu, men behåller för framtiden
-        sendMessage(content);
-    };
-
-    // KORREKT LOGIK: Chatten är avaktiverad om användaren inte är autentiserad.
-    const isChatDisabled = session.status !== 'authenticated';
-
     return (
         <div id="chat-widget" className={`fixed bottom-0 left-0 md:left-64 right-0 z-40 transition-all duration-300 ease-in-out`}>
             <div className={`bg-background-secondary/90 backdrop-blur-lg border-t border-border-primary mx-auto max-w-7xl flex flex-col shadow-2xl-top rounded-t-lg ${isExpanded ? 'h-[calc(100vh-5rem)]' : 'h-auto'}`}>
@@ -54,13 +45,8 @@ export default function ChatWidget() {
 
                 <div className="p-3">
                     <ChatInput 
-                        onSendMessage={handleSendMessage} 
-                        isChatDisabled={isChatDisabled} // Skickar nu korrekt värde
                         onFocus={() => !isExpanded && setIsExpanded(true)}
                         isExpanded={isExpanded}
-                        setIsExpanded={setIsExpanded}
-                        isLoading={isLoading}
-                        stop={stop}
                     />
 
                     <p className="text-xs text-gray-500 text-center mt-2">

@@ -1,8 +1,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { firestoreAdmin } from "@/app/lib/firebase-admin";
+import { authOptions } from "@/api/auth/[...nextauth]/route";
+import { firestoreAdmin } from "@/lib/firebase-admin";
 
 /**
  * API-rutt för att hämta alla nya, föreslagna åtgärder för en användare.

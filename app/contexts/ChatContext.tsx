@@ -6,16 +6,9 @@ import { useSession, SessionContextValue } from 'next-auth/react';
 
 // =================================================================================
 // GULD STANDARD - CHAT CONTEXT (Klient-sida)
-// Version 2.0 - Förbättrad med stabil streaming och prestanda-optimering.
+// Version 3.0 - Infört persistent chatthistorik via localStorage.
 // =================================================================================
 
-/**
- * GULD STANDARD-FÖRBÄTTRING:
- * Varje meddelande får nu ett unikt `id`. Detta är KRITISKT för Reacts prestanda.
- * När meddelandelistan renderas, kan React använda detta `id` som `key` för att
- * omedelbart identifiera vilka meddelanden som är nya eller har ändrats,
- * vilket förhindrar onödiga omritningar av hela listan.
- */
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -32,25 +25,41 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
+const CHAT_HISTORY_STORAGE_KEY = 'byggpilot.chatHistory.v1';
 const ONBOARDING_WELCOME_MESSAGE = `**Välkommen till ByggPilot!**\n\nJag är din digitala kollega. Vad kan jag hjälpa dig med?`;
 
 export const ChatProvider = ({ children }: { children: ReactNode }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // GULD STANDARD-FÖRBÄTTRING: Initiera state från localStorage.
+  // Detta körs bara en gång vid första renderingen för att ladda sparad historik.
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const storedMessages = typeof window !== 'undefined' ? localStorage.getItem(CHAT_HISTORY_STORAGE_KEY) : null;
+      if (storedMessages) {
+        const parsedMessages = JSON.parse(storedMessages);
+        if (Array.isArray(parsedMessages) && parsedMessages.length > 0) {
+          return parsedMessages;
+        }
+      }
+    } catch (error) {
+      console.error("Kunde inte ladda chatthistorik från localStorage", error);
+    }
+    // Om ingen historik finns, returnera standard-välkomstmeddelandet.
+    return [{ id: `assistant-${Date.now()}`, role: 'assistant', content: ONBOARDING_WELCOME_MESSAGE }];
+  });
+
   const [isLoading, setIsLoading] = useState(false);
   const session = useSession();
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // GULD STANDARD-FÖRBÄTTRING: Spara meddelanden till localStorage vid varje ändring.
+  // Detta säkerställer att chatthistoriken alltid är uppdaterad.
   useEffect(() => {
-    // Sätt upp startmeddelandet vid första renderingen.
-    if (messages.length === 0) {
-        setMessages([{
-            id: `assistant-${Date.now()}`,
-            role: 'assistant',
-            content: ONBOARDING_WELCOME_MESSAGE
-        }]);
+    try {
+      localStorage.setItem(CHAT_HISTORY_STORAGE_KEY, JSON.stringify(messages));
+    } catch (error) {
+      console.error("Kunde inte spara chatthistorik till localStorage", error);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [messages]);
 
   const stop = useCallback(() => {
     if (abortControllerRef.current) {
@@ -76,11 +85,13 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         content: ''
     };
 
-    setMessages(prev => [...prev, userMessage, assistantPlaceholder]);
+    // Uppdatera state direkt med det nya meddelandet och platshållaren
+    const newMessages = [...messages, userMessage, assistantPlaceholder];
+    setMessages(newMessages);
     setIsLoading(true);
 
     const historyForApi = messages
-        .filter(msg => msg.content !== ONBOARDING_WELCOME_MESSAGE) // Filtrera bort välkomstmeddelandet
+        .filter(msg => msg.content !== ONBOARDING_WELCOME_MESSAGE)
         .map(msg => ({ role: msg.role === 'assistant' ? 'model' : 'user', parts: [{ text: msg.content }] }));
 
     const messagesForApi = [...historyForApi, { role: 'user', parts: [{ text: userMessage.content }] }];
@@ -97,14 +108,15 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             const errorText = await response.text();
             throw new Error(JSON.parse(errorText).error || 'Ett okänt serverfel uppstod.');
         }
-
-        // =========================================================================
-        // GULD STANDARD-FÖRBÄTTRING: Stabil streaming återinförd.
-        // Genom att ge varje meddelande ett unikt ID kan React effektivt hantera
-        // snabba uppdateringar av det sista meddelandet utan att krascha.
-        // =========================================================================
+        
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
+
+        setMessages(prev => {
+            const newArr = [...prev];
+            newArr[newArr.length - 1] = { ...newArr[newArr.length - 1], content: '' };
+            return newArr;
+        });
 
         while (true) {
             const { value, done } = await reader.read();
@@ -113,9 +125,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
             const chunkValue = decoder.decode(value, { stream: true });
             
             setMessages(prev => {
-                // Skapa en ny array för att undvika direkt mutering.
                 const newMessages = [...prev];
-                // Hitta sista meddelandet (vår platshållare) och uppdatera dess innehåll.
                 const lastMessageIndex = newMessages.length - 1;
                 newMessages[lastMessageIndex] = {
                     ...newMessages[lastMessageIndex],
@@ -127,7 +137,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
         if (error.name === 'AbortError') {
             console.log("Fetch aborted by user.");
-            setMessages(prev => prev.slice(0, -2)); // Ta bort både användarens meddelande och platshållaren.
+            setMessages(prev => prev.slice(0, -2)); 
             return;
         }
 
@@ -146,7 +156,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     } finally {
         setIsLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, messages]);
 
   const value = { messages, isLoading, session, sendMessage, stop };
