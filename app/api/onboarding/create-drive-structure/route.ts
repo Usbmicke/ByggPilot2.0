@@ -1,9 +1,9 @@
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { getGoogleDriveService } from '@/app/lib/google';
-import { firestoreAdmin } from '@/app/lib/firebase-admin';
+import { authOptions } from '@/api/auth/[...nextauth]/route';
+import { getGoogleDriveService } from '@/lib/google';
+import { firestoreAdmin } from '@/lib/firebase-admin';
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);

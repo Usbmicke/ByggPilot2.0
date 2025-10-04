@@ -1,11 +1,10 @@
-
 'use client';
 
 import React, { useState } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
-import { updateCompanyInfo } from '@/app/actions/userActions';
+import { updateCompanyInfo } from '@/actions/userActions';
 
 interface IFormInput {
   companyName: string;
@@ -34,7 +33,7 @@ const Input = ({ label, id, type = 'text', register, error, disabled }) => (
 );
 
 interface CompanyInfoFormProps {
-    onSuccess: () => void;
+    onSuccess: (companyName: string) => void;
 }
 
 const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ onSuccess }) => {
@@ -60,7 +59,7 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ onSuccess }) => {
       await update(); 
 
       // Körs efter att sessionen är synkroniserad, vilket förhindrar omdirigeringsloopen.
-      onSuccess();
+      onSuccess(data.companyName);
 
     } else {
       toast.error(result.error || 'Ett okänt fel uppstod.');
