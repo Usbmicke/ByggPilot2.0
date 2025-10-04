@@ -7,7 +7,8 @@ import ChatInput from '@/components/chat/ChatInput';
 import MessageFeed from '@/components/chat/MessageFeed';
 
 export default function ChatWidget() {
-    const { messages, isLoading, session, sendMessage, stop } = useChat();
+    // STEG 1: Hämta clearChat från context
+    const { messages, isLoading, session, sendMessage, stop, clearChat } = useChat();
     const [isExpanded, setIsExpanded] = useState(false);
 
     useEffect(() => {
@@ -30,7 +31,7 @@ export default function ChatWidget() {
     }, [isExpanded]);
 
     const handleSendMessage = (content: string, file?: File) => {
-        sendMessage(content);
+        sendMessage(content, file);
     };
 
     const isChatDisabled = session.status !== 'authenticated';
@@ -57,6 +58,7 @@ export default function ChatWidget() {
                         setIsExpanded={setIsExpanded}
                         isLoading={isLoading}
                         stop={stop}
+                        clearChat={clearChat} // STEG 2: Skicka ner funktionen till ChatInput
                     />
 
                     <p className="text-xs text-gray-500 text-center mt-2">

@@ -3,10 +3,11 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useSession, SessionContextValue } from 'next-auth/react';
+import { uploadFile } from '@/lib/firebase/storage';
 
 // =================================================================================
 // GULD STANDARD - CHAT CONTEXT (Klient-sida)
-// Version 3.0 - Infört persistent chatthistorik via localStorage.
+// Version 3.2 - Infört "Ny Chatt"-funktionalitet.
 // =================================================================================
 
 export interface ChatMessage {
@@ -19,8 +20,9 @@ interface ChatContextType {
   messages: ChatMessage[];
   isLoading: boolean;
   session: SessionContextValue;
-  sendMessage: (content: string, fileUris?: string[]) => Promise<void>;
+  sendMessage: (content: string, file?: File) => Promise<void>;
   stop: () => void;
+  clearChat: () => void; // STEG 1: Definiera den nya funktionen
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -28,9 +30,14 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 const CHAT_HISTORY_STORAGE_KEY = 'byggpilot.chatHistory.v1';
 const ONBOARDING_WELCOME_MESSAGE = `**Välkommen till ByggPilot!**\n\nJag är din digitala kollega. Vad kan jag hjälpa dig med?`;
 
+// Hjälpfunktion för att skapa ett initialt meddelande
+const createWelcomeMessage = (): ChatMessage => ({
+  id: `assistant-${Date.now()}`,
+  role: 'assistant',
+  content: ONBOARDING_WELCOME_MESSAGE
+});
+
 export const ChatProvider = ({ children }: { children: ReactNode }) => {
-  // GULD STANDARD-FÖRBÄTTRING: Initiera state från localStorage.
-  // Detta körs bara en gång vid första renderingen för att ladda sparad historik.
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     try {
       const storedMessages = typeof window !== 'undefined' ? localStorage.getItem(CHAT_HISTORY_STORAGE_KEY) : null;
@@ -43,19 +50,19 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Kunde inte ladda chatthistorik från localStorage", error);
     }
-    // Om ingen historik finns, returnera standard-välkomstmeddelandet.
-    return [{ id: `assistant-${Date.now()}`, role: 'assistant', content: ONBOARDING_WELCOME_MESSAGE }];
+    return [createWelcomeMessage()];
   });
 
   const [isLoading, setIsLoading] = useState(false);
   const session = useSession();
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // GULD STANDARD-FÖRBÄTTRING: Spara meddelanden till localStorage vid varje ändring.
-  // Detta säkerställer att chatthistoriken alltid är uppdaterad.
   useEffect(() => {
     try {
-      localStorage.setItem(CHAT_HISTORY_STORAGE_KEY, JSON.stringify(messages));
+      // Spara inte om det bara är välkomstmeddelandet
+      if (messages.length > 1 || (messages.length === 1 && messages[0].content !== ONBOARDING_WELCOME_MESSAGE)) {
+        localStorage.setItem(CHAT_HISTORY_STORAGE_KEY, JSON.stringify(messages));
+      }
     } catch (error) {
       console.error("Kunde inte spara chatthistorik till localStorage", error);
     }
@@ -68,15 +75,43 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const sendMessage = useCallback(async (content: string, fileUris?: string[]) => {
-    if (session.status !== 'authenticated' || (!content.trim() && (!fileUris || fileUris.length === 0))) return;
+  // STEG 2: Implementera clearChat-logiken
+  const clearChat = useCallback(() => {
+    localStorage.removeItem(CHAT_HISTORY_STORAGE_KEY);
+    setMessages([createWelcomeMessage()]);
+  }, []);
+
+  const sendMessage = useCallback(async (content: string, file?: File) => {
+    if (session.status !== 'authenticated' || (!content.trim() && !file)) return;
 
     abortControllerRef.current = new AbortController();
+    setIsLoading(true);
+
+    let fileUris: string[] = [];
+    let userMessageContent = content;
+
+    if (file) {
+      try {
+        const downloadURL = await uploadFile(file);
+        fileUris.push(downloadURL);
+        userMessageContent = `${content}\n(Bifogad fil: ${file.name})`;
+      } catch (error) {
+        console.error("Filuppladdning misslyckades:", error);
+        const errorMsg: ChatMessage = {
+          id: `assistant-error-${Date.now()}`,
+          role: 'assistant',
+          content: `Det gick inte att ladda upp filen: ${file.name}. Försök igen.`
+        };
+        setMessages(prev => [...prev, errorMsg]);
+        setIsLoading(false);
+        return;
+      }
+    }
 
     const userMessage: ChatMessage = {
         id: `user-${Date.now()}`,
         role: 'user',
-        content
+        content: userMessageContent
     };
     
     const assistantPlaceholder: ChatMessage = {
@@ -85,10 +120,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         content: ''
     };
 
-    // Uppdatera state direkt med det nya meddelandet och platshållaren
     const newMessages = [...messages, userMessage, assistantPlaceholder];
     setMessages(newMessages);
-    setIsLoading(true);
 
     const historyForApi = messages
         .filter(msg => msg.content !== ONBOARDING_WELCOME_MESSAGE)
@@ -158,7 +191,8 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [session, messages]);
 
-  const value = { messages, isLoading, session, sendMessage, stop };
+  // STEG 3: Exponera clearChat i context-värdet
+  const value = { messages, isLoading, session, sendMessage, stop, clearChat };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 };

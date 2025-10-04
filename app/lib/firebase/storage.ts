@@ -1,6 +1,6 @@
 
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { app } from '@/app/lib/firebase/config'; // Importera den konfigurerade Firebase-appen
+import { app } from '@/lib/firebase/client'; // Importera den konfigurerade Firebase-appen
 
 const storage = getStorage(app);
 

@@ -6,7 +6,9 @@ import {
     PaperAirplaneIcon,
     XCircleIcon,
     ChevronUpIcon,
-    StopCircleIcon
+    StopCircleIcon,
+    TrashIcon,
+    EllipsisVerticalIcon // STEG 1: Importera ikonen för menyn
 } from '@heroicons/react/24/outline';
 import {
     MicrophoneIcon as MicSolid
@@ -24,9 +26,9 @@ interface ChatInputProps {
     setIsExpanded: (isExpanded: boolean) => void;
     isLoading: boolean;
     stop: () => void;
+    clearChat: () => void;
 }
 
-// Nya, mer kraftfulla och professionella förslag
 const promptSuggestions = [
     "Starta ett nytt projekt för [Kund] på [Adress]...",
     "Ge mig en sammanfattning av alla projekt markerade som \"pausade\".",
@@ -35,12 +37,14 @@ const promptSuggestions = [
     "Lär dig: Vår standard för regelavstånd är cc600 för innerväggar."
 ];
 
-const ChatInput = ({ onSendMessage, isChatDisabled, onFocus, isExpanded, setIsExpanded, isLoading, stop }: ChatInputProps) => {
+const ChatInput = ({ onSendMessage, isChatDisabled, onFocus, isExpanded, setIsExpanded, isLoading, stop, clearChat }: ChatInputProps) => {
     const [input, setInput] = useState('');
     const [file, setFile] = useState<File | undefined>();
     const [placeholder, setPlaceholder] = useState(promptSuggestions[0]);
+    const [isMenuOpen, setIsMenuOpen] = useState(false); // STEG 2: State för menyn
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null); // Ref för att kunna stänga menyn
 
     const { isListening, error: voiceError, startListening, stopListening } = useVoiceRecognition((transcript) => {
         setInput(prev => prev + transcript);
@@ -49,8 +53,21 @@ const ChatInput = ({ onSendMessage, isChatDisabled, onFocus, isExpanded, setIsEx
     useEffect(() => {
         const interval = setInterval(() => {
             setPlaceholder(p => promptSuggestions[(promptSuggestions.indexOf(p) + 1) % promptSuggestions.length]);
-        }, 4000); // Längre intervall för mer komplexa förslag
+        }, 4000);
         return () => clearInterval(interval);
+    }, []);
+
+    // STEG 3: Logik för att stänga menyn när man klickar utanför
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setIsMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
     }, []);
 
     const handleAttachmentClick = () => fileInputRef.current?.click();
@@ -118,7 +135,25 @@ const ChatInput = ({ onSendMessage, isChatDisabled, onFocus, isExpanded, setIsEx
                 </div>
             )}
 
-            <form onSubmit={handleSendMessage} className="flex items-end gap-2">
+            {/* STEG 4: Den nya menyn och dess knapp */}
+            <div ref={menuRef} className="absolute bottom-0 left-0 mb-[-0.5rem] self-end">
+                {isMenuOpen && (
+                    <div className="absolute bottom-full mb-2 bg-background-tertiary rounded-md shadow-lg border border-border-primary">
+                        <button 
+                            onClick={() => { clearChat(); setIsMenuOpen(false); }}
+                            className="flex items-center gap-3 px-4 py-2 text-sm text-left w-full hover:bg-border-primary/80"
+                        >
+                            <TrashIcon className="h-5 w-5" />
+                            <span>Rensa chatt</span>
+                        </button>
+                    </div>
+                )}
+                <button type="button" onClick={() => setIsMenuOpen(o => !o)} disabled={isChatDisabled} className="p-2 self-end disabled:opacity-50 text-gray-500 hover:text-white">
+                    <EllipsisVerticalIcon className="h-6 w-6" />
+                </button>
+            </div>
+
+            <form onSubmit={handleSendMessage} className="flex items-end gap-2 pl-12"> {/* Ge plats för nya menyn */}
                 {voiceError && <div className="text-red-500 text-xs mb-2 absolute -top-6">{voiceError}</div>}
                 
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />

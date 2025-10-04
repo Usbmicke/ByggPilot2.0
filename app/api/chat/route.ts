@@ -5,8 +5,7 @@ import { getToken } from 'next-auth/jwt';
 
 // =================================================================================
 // GULD STANDARD - API ROUTE (Server-sida)
-// Version 11.0 - Implementerar Master-Prompt v11.0 för LAM-funktionalitet.
-// Detta är den mest avancerade och detaljerade prompten hittills.
+// Version 12.0 - Åtgärdat "loop-buggen" med en intelligentare prompt.
 // =================================================================================
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -19,7 +18,8 @@ if (!apiKey) {
 const genAI = new GoogleGenerativeAI(apiKey);
 const model = genAI.getGenerativeModel({ model: MODEL_ID });
 
-const MASTER_PROMPT_V11_LAM = `
+// MASTER_PROMPT_V12_LAM: Mer flexibel och intelligent interaktion
+const MASTER_PROMPT_V12_LAM = `
 Övergripande Mål: Du är ByggPilot, ett avancerat Large Action Model (LAM). Ditt syfte är att agera som en proaktiv, digital kollega och strategisk rådgivare för små och medelstora företag i den svenska byggbranschen. Du automatiserar administrativa uppgifter och hanterar arbetsflöden genom att agera som ett intelligent lager ovanpå användarens Google Workspace och externa datakällor.
 
 1. Kärnpersonlighet & Tonfall
@@ -31,7 +31,7 @@ Progressiv Information: Leverera ALLTID information i små, hanterbara delar. AL
 En Fråga i Taget: Varje svar ska vara kort, koncist och ALLTID avslutas med en enda, tydlig och relevant motfråga för att driva konversationen framåt.
 Intelligent Knapp-användning: Använd knappar för att presentera tydliga handlingsalternativ och förenkla interaktionen, men tvinga inte in användaren i flöden. Fritext måste alltid vara ett alternativ.
 Ta Kommandon: Du är byggd för att agera på direkta kommandon.
-Initial Identifiering: Efter din hälsning ("Hej! ByggPilot här, din digitala kollega. Vad kan jag hjälpa dig med idag?"), ställ en klargörande fråga: "För att ge dig de bästa råden, kan du berätta lite om din roll och hur stort ert företag är?"
+Initial Identifiering & Kontextinsamling: Inled konversationen professionellt. Om användarens första fråga är oklar eller för allmän (t.ex. "hej", "läget?"), kan du ställa en följdfråga för att förstå deras roll och företagskontext, exempelvis: "Absolut. För att kunna ge dig så relevanta råd som möjligt, kan du kort berätta lite om din roll och verksamhet?". Men om användaren går rakt på sak (t.ex. "skapa en checklista..."), ska du omedelbart agera på deras kommando utan onödiga frågor.
 
 3. Extrem Byggkunskap (Domänkunskap)
 Din kunskap är baserad på svenska branschstandarder, lagar och riskminimering.
@@ -75,8 +75,7 @@ export async function POST(req: NextRequest) {
             generationConfig: {},
         });
 
-        // Kombinera den nya, kraftfulla systemprompten med användarens meddelande
-        const result = await chat.sendMessageStream(MASTER_PROMPT_V11_LAM + "\n\n--- NY KONVERSATION ---\n\n" + userMessageContent);
+        const result = await chat.sendMessageStream(MASTER_PROMPT_V12_LAM + "\n\n--- NY KONVERSATION ---\n\n" + userMessageContent);
 
         const stream = new ReadableStream({
             async start(controller) {
