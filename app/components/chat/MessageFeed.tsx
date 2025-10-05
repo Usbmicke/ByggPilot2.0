@@ -1,63 +1,54 @@
-
 'use client';
 
-import React, { useRef, useEffect } from 'react';
-import { ChatMessage } from '@/app/types';
-import { BeatLoader } from 'react-spinners'; // Korrekt, robust import
-import ReactMarkdown from 'react-markdown';
-import { PaperClipIcon } from '@heroicons/react/24/solid';
+import { useEffect, useRef } from 'react';
+import { ChatMessage } from '@/contexts/ChatContext';
+import ReactMarkdown from 'react-markdown'; // STEG 1: Importera Markdown-renderaren
 
 interface MessageFeedProps {
-  messages: ChatMessage[];
+    messages: ChatMessage[];
 }
 
-export default function MessageFeed({ messages }: MessageFeedProps) {
-  const endOfMessagesRef = useRef<HTMLDivElement>(null);
+// =================================================================================
+// GULD STANDARD - MessageFeed (Klient-sida)
+// Version 2.0 - Förbättrad design med premiumkänsla.
+// =================================================================================
 
-  useEffect(() => {
-    endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+const MessageFeed = ({ messages }: MessageFeedProps) => {
+    const feedRef = useRef<HTMLDivElement>(null);
 
-  if (!messages || messages.length === 0) {
+    useEffect(() => {
+        if (feedRef.current) {
+            feedRef.current.scrollTop = feedRef.current.scrollHeight;
+        }
+    }, [messages]);
+
+    const getBubbleStyle = (role: 'user' | 'assistant') => {
+        const baseStyle = 'max-w-2xl p-4 rounded-xl shadow-md text-base leading-relaxed'; // Ökad textstorlek och radavstånd
+        
+        if (role === 'user') {
+            return `${baseStyle} bg-accent-blue text-white ml-auto`; // Användarens bubbla
+        } else {
+            // STEG 2: Elegantare, dämpad stil för AI:n
+            return `${baseStyle} bg-background-tertiary border border-border-primary text-gray-200`; 
+        }
+    };
+
     return (
-        <div className="flex-1 flex items-center justify-center">
-            <p className="text-center text-text-secondary">Inga meddelanden än. Starta en konversation!</p>
+        <div ref={feedRef} className="flex-1 overflow-y-auto p-6 space-y-6"> {/* Ökat avstånd i feeden */}
+            {messages.map((msg) => (
+                <div key={msg.id} className="flex flex-col">
+                    <div className={getBubbleStyle(msg.role)}>
+                        {/* STEG 3: Använd ReactMarkdown för att rendera innehållet */}
+                        <ReactMarkdown 
+                            className="prose prose-invert prose-p:my-0 prose-headings:my-2"
+                        >
+                            {msg.content}
+                        </ReactMarkdown>
+                    </div>
+                </div>
+            ))}
         </div>
     );
-  }
+};
 
-  return (
-    <div className="flex-1 overflow-y-auto pr-4 space-y-6">
-        {messages.map((message, index) => (
-            <div key={index} className={`flex items-start gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {message.role === 'assistant' && (
-                    <div className="w-8 h-8 rounded-full bg-accent-blue flex items-center justify-center font-bold text-white flex-shrink-0">
-                        BP
-                    </div>
-                )}
-
-                <div className={`rounded-lg px-4 py-2 max-w-2xl break-words ${message.role === 'user' ? 'bg-accent-blue text-white' : 'bg-background-tertiary'}`}>
-                    {message.role === 'assistant' && message.content === '' ? (
-                        <BeatLoader color="#3B82F6" size={8} /> // Ersatt med en fungerande spinner
-                    ) : (
-                        <div className="prose prose-invert prose-sm max-w-none">
-                            <ReactMarkdown components={{ a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" className="text-accent-blue-light hover:underline"/>}}>
-                                {message.content}
-                            </ReactMarkdown>
-                        </div>
-                    )}
-                    {message.attachment && (
-                        <div className="mt-2 p-2.5 bg-background-primary/50 rounded-lg border border-border-primary">
-                           <div className="flex items-center gap-2 text-sm">
-                                <PaperClipIcon className="h-5 w-5"/>
-                                <span>{message.attachment.name}</span>
-                           </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-        ))}
-        <div ref={endOfMessagesRef} />
-    </div>
-  );
-}
+export default MessageFeed;

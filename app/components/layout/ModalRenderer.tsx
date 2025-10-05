@@ -2,17 +2,17 @@
 'use client';
 
 import React from 'react';
-import { useUI } from '@/app/contexts/UIContext';
+import { useUI } from '@/contexts/UIContext';
 
 // Importera alla modaler som systemet kan använda
-import CreateProjectModal from '@/app/components/modals/CreateProjectModal';
-import CreateAtaModal from '@/app/components/modals/CreateAtaModal';
-import CompanyVisionModal from '@/app/components/modals/CompanyVisionModal';
-import AddMaterialCostModal from '@/app/components/modals/AddMaterialCostModal';
-import CreateCustomerModal from '@/app/components/modals/CreateCustomerModal';
-import CreateOfferModal from '@/app/components/modals/CreateOfferModal';
-import EditProjectModal from '@/app/components/modals/EditProjectModal';
-import SetHourlyRateModal from '@/app/components/modals/SetHourlyRateModal';
+import CreateProjectModal from '@/components/modals/CreateProjectModal';
+import CreateAtaModal from '@/components/modals/CreateAtaModal';
+import CompanyVisionModal from '@/components/modals/CompanyVisionModal';
+import AddMaterialCostModal from '@/components/modals/AddMaterialCostModal';
+import CreateCustomerModal from '@/components/modals/CreateCustomerModal';
+import CreateOfferModal from '@/components/modals/CreateOfferModal';
+import EditProjectModal from '@/components/modals/EditProjectModal';
+import SetHourlyRateModal from '@/components/modals/SetHourlyRateModal';
 
 // Mappa modal-ID:n till deras respektive komponenter
 const modalRegistry: { [key: string]: React.FC<any> } = {

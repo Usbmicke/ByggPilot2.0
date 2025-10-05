@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useUI } from '@/app/contexts/UIContext';
-import { UserProfile } from '@/app/types/user';
+import { useUI } from '@/contexts/UIContext';
+import { UserProfile } from '@/types/user';
 
 const CompanyVisionModal: React.FC = () => {
   const { closeModal, modalPayload } = useUI();

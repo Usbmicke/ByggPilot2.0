@@ -6,8 +6,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
 import { CogIcon, UserCircleIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
-import { User } from '@/app/types'; // Använder vår standardiserade User-typ
-import Popover from '@/app/components/shared/Popover';
+import { User } from '@/types'; // Använder vår standardiserade User-typ
+import Popover from '@/components/shared/Popover';
 
 // Hjälpfunktion för att generera initialer
 const getInitials = (name: string | null | undefined) => {

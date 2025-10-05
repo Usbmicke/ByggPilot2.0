@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
-import { useChat } from '@/app/contexts/ChatContext';
+import { useChat } from '@/contexts/ChatContext';
 import ChatWidget from '@/components/layout/ChatWidget';
 import ModalRenderer from '@/components/layout/ModalRenderer';
 

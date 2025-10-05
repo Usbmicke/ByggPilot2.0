@@ -9,9 +9,9 @@ import { useSession } from 'next-auth/react';
 import { ChevronLeftIcon, PlusIcon } from '@heroicons/react/24/outline';
 
 // Importera centraliserad data och den nya komponenten
-import { primaryNavigation } from '@/app/constants/navigation';
-import SidebarUserProfile from '@/app/components/layout/SidebarUserProfile';
-import Popover from '@/app/components/shared/Popover';
+import { primaryNavigation } from '@/constants/navigation';
+import SidebarUserProfile from '@/components/layout/SidebarUserProfile';
+import Popover from '@/components/shared/Popover';
 
 interface SidebarProps {
   isOpen: boolean;

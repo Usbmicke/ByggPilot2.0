@@ -3,12 +3,12 @@
 
 import React, { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { WelcomeHeader } from '@/app/components/dashboard/WelcomeHeader';
-import DashboardSummary from '@/app/components/dashboard/DashboardSummary';
-import { ProjectList } from '@/app/components/dashboard/ProjectList';
-import { ActionSuggestions } from '@/app/components/dashboard/ActionSuggestions';
-import CreateProjectModal from '@/app/components/modals/CreateProjectModal'; // <-- KORRIGERAD SÖKVÄG
-import GuidedTour from '@/app/components/tour/GuidedTour';
+import { WelcomeHeader } from '@/components/dashboard/WelcomeHeader';
+import DashboardSummary from '@/components/dashboard/DashboardSummary';
+import { ProjectList } from '@/components/dashboard/ProjectList';
+import { ActionSuggestions } from '@/components/dashboard/ActionSuggestions';
+import CreateProjectModal from '@/components/modals/CreateProjectModal'; // <-- KORRIGERAD SÖKVÄG
+import GuidedTour from '@/components/tour/GuidedTour';
 
 // Wrapper för att hantera sökparametrar för turen
 const TourWrapper = () => {

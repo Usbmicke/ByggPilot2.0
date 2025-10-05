@@ -6,10 +6,10 @@ import { useSession } from 'next-auth/react';
 import { Bars3Icon } from '@heroicons/react/24/outline';
 
 // Importera de nya, dekonstruerade komponenterna
-import GlobalSearchBar from '@/app/components/layout/GlobalSearchBar';
-import NotificationBell from '@/app/components/layout/NotificationBell';
-import UserMenu from '@/app/components/layout/UserMenu';
-import Clock from '@/app/components/layout/Clock';
+import GlobalSearchBar from '@/components/layout/GlobalSearchBar';
+import NotificationBell from '@/components/layout/NotificationBell';
+import UserMenu from '@/components/layout/UserMenu';
+import Clock from '@/components/layout/Clock';
 
 interface HeaderProps {
   onMenuClick?: () => void;
