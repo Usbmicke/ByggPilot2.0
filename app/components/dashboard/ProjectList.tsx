@@ -4,12 +4,10 @@
 import React, { useState, useEffect } from 'react';
 import type { Project } from '@/types/project';
 import Link from 'next/link';
-import { FolderPlusIcon } from '@heroicons/react/24/outline'; // Byt till en mer passande ikon
+import { FolderIcon } from '@heroicons/react/24/outline'; // Changed to a more neutral icon
 
-// Props-definitionen utökas för att kunna hantera ett klick-event
-interface ProjectListProps {
-  onNewProject: () => void;
-}
+// The onNewProject prop is no longer needed
+interface ProjectListProps {}
 
 // Helper-funktioner förblir oförändrade
 const getStatusChipClass = (status: Project['status']) => {
@@ -34,7 +32,7 @@ const getProjectCardClass = (status: Project['status']) => {
     }
 };
 
-export function ProjectList({ onNewProject }: ProjectListProps) {
+export function ProjectList({}: ProjectListProps) { // onNewProject prop removed
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,42 +72,36 @@ export function ProjectList({ onNewProject }: ProjectListProps) {
     return <p className="text-center text-red-400">Fel: {error}</p>;
   }
 
-  // Förbättrat "tomt tillstånd" med en tydlig call-to-action
+  // Updated empty state. The call-to-action is now centralized.
   if (projects.length === 0) {
     return (
       <div className="text-center bg-gray-800/50 border-2 border-dashed border-gray-700 p-12 rounded-lg">
-        <FolderPlusIcon className="mx-auto h-12 w-12 text-gray-500" />
+        <FolderIcon className="mx-auto h-12 w-12 text-gray-500" />
         <h3 className="mt-4 text-lg font-medium text-white">Du har inga aktiva projekt.</h3>
-        <p className="mt-1 text-sm text-gray-500 mb-6">Kom igång genom att skapa ditt första projekt.</p>
-        <button
-          onClick={onNewProject} // Anropar funktionen från DashboardPage
-          className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-semibold rounded-md shadow-sm text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-colors"
-        >
-          Skapa ditt första projekt
-        </button>
+        <p className="mt-1 text-sm text-gray-500">Skapa ett nytt projekt via "+ Skapa Nytt"-knappen på din dashboard.</p>
       </div>
     );
   }
 
   return (
     <div>
-      <h2 className="text-xl font-bold text-white mb-4">Dina Projekt</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {projects.map(project => (
-          <Link href={`/projects/${project.id}`} key={project.id} className={getProjectCardClass(project.status)}>
-              <div className="flex justify-between items-start">
-                  <p className="text-sm font-mono text-cyan-400">#{project.projectNumber || '---'}</p>
-                  <span className={`px-2.5 py-0.5 text-xs font-semibold rounded-full ${getStatusChipClass(project.status)}`}>
-                      {project.status}
-                  </span>
-              </div>
-              <div className="mt-3">
-                  <h3 className="text-lg font-bold text-white truncate" title={project.projectName}>{project.projectName}</h3>
-                  <p className="text-gray-400 truncate" title={project.clientName}>{project.clientName || 'Ingen kund angiven'}</p>
-              </div>
-          </Link>
-        ))}
-      </div>
+        <h2 className="text-xl font-bold text-white mb-4">Dina Projekt</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {projects.map(project => (
+            <Link href={`/projects/${project.id}`} key={project.id} className={getProjectCardClass(project.status)}>
+                <div className="flex justify-between items-start">
+                    <p className="text-sm font-mono text-cyan-400">#{project.projectNumber || '---'}</p>
+                    <span className={`px-2.5 py-0.5 text-xs font-semibold rounded-full ${getStatusChipClass(project.status)}`}>
+                        {project.status}
+                    </span>
+                </div>
+                <div className="mt-3">
+                    <h3 className="text-lg font-bold text-white truncate" title={project.projectName}>{project.projectName}</h3>
+                    <p className="text-gray-400 truncate" title={project.clientName}>{project.clientName || 'Ingen kund angiven'}</p>
+                </div>
+            </Link>
+            ))}
+        </div>
     </div>
   );
 }

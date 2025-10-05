@@ -6,32 +6,19 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { ChevronLeftIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { ChevronLeftIcon } from '@heroicons/react/24/outline';
 
-// Importera centraliserad data och den nya komponenten
 import { primaryNavigation } from '@/constants/navigation';
 import SidebarUserProfile from '@/components/layout/SidebarUserProfile';
-import Popover from '@/components/shared/Popover';
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-/**
- * Sidebar-komponenten har refaktorerats för att agera som en ren layout-container.
- * Navigationsdatan importeras från en centraliserad konstantfil och
- * användarprofilen renderas av en dedikerad underkomponent.
- */
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const pathname = usePathname();
   const { data: session } = useSession();
-
-  const wipPopoverContent = (
-    <div className="text-sm text-text-secondary">
-      Denna funktion är under utveckling.
-    </div>
-  );
 
   return (
     <>
@@ -78,15 +65,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </ul>
           </nav>
 
-          {/* CTA-knapp */}
-          <div className="py-4">
-            <Popover content={wipPopoverContent} trigger={
-              <button className="w-full flex items-center justify-center gap-2 bg-accent-blue text-white font-semibold py-3 rounded-lg hover:bg-accent-blue-dark transition-colors duration-200 shadow">
-                  <PlusIcon className="h-5 w-5" />
-                  <span>Skapa Offert</span>
-              </button>
-            } />
-          </div>
+          {/* CTA-knapp borttagen */}
         </div>
 
         {/* Användarprofilsektion */}

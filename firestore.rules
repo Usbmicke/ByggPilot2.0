@@ -1,27 +1,28 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can read and write their own user document.
+    // Default-neka all åtkomst. Specifika regler nedan kommer att åsidosätta detta.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Tillåt endast autentiserade användare att läsa/skriva sina egna användardata.
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
     }
 
-    // Users can manage their own projects.
-    // This includes reading a list of their projects.
+    // Tillåt en användare att läsa/skriva data som tillhör projekt de är ägare till.
+    // Detta är en grundregel som vi kan förfina.
+    match /projects/{projectId}/{document=**} {
+      allow read, write: if request.auth != null && get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
+    }
+    
+    // Specifika regler för att skapa projekt
     match /projects/{projectId} {
-      allow read, create, update, delete: if request.auth != null && request.auth.uid == get(/databases/$(database)/documents/projects/$(projectId)).data.userId || request.resource.data.userId == request.auth.uid;
-    }
-
-    // Users can manage time entries for projects they own.
-    // To do this, we check that the project referenced by the time entry is owned by the user.
-    match /time-entries/{timeEntryId} {
-       allow read, create, update, delete: if request.auth != null && get(/databases/$(database)/documents/projects/$(request.resource.data.projectId)).data.userId == request.auth.uid;
-    }
-
-    // Users can manage material costs for projects they own.
-    match /material-costs/{materialCostId} {
-      allow read, create, update, delete: if request.auth != null && get(/databases/$(database)/documents/projects/$(request.resource.data.projectId)).data.userId == request.auth.uid;
+        allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
     }
   }
 }
