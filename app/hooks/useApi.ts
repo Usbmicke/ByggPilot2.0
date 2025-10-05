@@ -1,6 +1,6 @@
 
 import useSWR from 'swr';
-import { Project, Task, Customer, Event } from '@/app/types';
+import { Project, Task, Customer, Event } from '@/types';
 
 // Definierar API-svarstyper för bättre typsäkerhet
 interface ProjectsApiResponse {

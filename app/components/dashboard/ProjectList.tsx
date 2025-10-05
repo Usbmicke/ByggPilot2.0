@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import type { Project } from '@/app/types/project';
+import type { Project } from '@/types/project';
 import Link from 'next/link';
 import { FolderPlusIcon } from '@heroicons/react/24/outline'; // Byt till en mer passande ikon
 

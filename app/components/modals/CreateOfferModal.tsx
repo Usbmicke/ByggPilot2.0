@@ -2,8 +2,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import Modal from '@/app/components/shared/Modal';
-import { useUI } from '@/app/contexts/UIContext';
+import Modal from '@/components/shared/Modal';
+import { useUI } from '@/contexts/UIContext';
 
 // Denna komponent är under utveckling och kommer att innehålla logik 
 // för att skapa en offert, liknande CreateProjectModal.

@@ -1,7 +1,7 @@
 
 'use server';
 
-import { firestoreAdmin } from '@/app/lib/firebase-admin';
+import { firestoreAdmin } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
 interface ProjectData {

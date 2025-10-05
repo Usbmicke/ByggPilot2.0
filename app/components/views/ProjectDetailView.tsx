@@ -2,7 +2,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { FolderIcon, DocumentIcon, ArrowUturnLeftIcon } from '@heroicons/react/24/outline';
-import AtaList from '@/app/components/ata/AtaList'; // STEG 3: Importera AtaList
+import AtaList from '@/components/ata/AtaList'; // STEG 3: Importera AtaList
 
 interface DriveFile {
   id: string;

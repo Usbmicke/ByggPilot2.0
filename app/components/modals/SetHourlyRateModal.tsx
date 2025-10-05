@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
-import { firestore as db } from '@/app/lib/firebase/client';
+import { firestore as db } from '@/lib/firebase/client';
 
 interface SetHourlyRateModalProps {
   isOpen: boolean;

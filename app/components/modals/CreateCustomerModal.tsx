@@ -2,9 +2,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Modal from '@/app/components/shared/Modal';
-import { useUI } from '@/app/contexts/UIContext';
-import { createCustomer } from '@/app/actions/customerActions';
+import Modal from '@/components/shared/Modal';
+import { useUI } from '@/contexts/UIContext';
+import { createCustomer } from '@/actions/customerActions';
 import { useSession } from 'next-auth/react';
 
 const CreateCustomerModal = () => {

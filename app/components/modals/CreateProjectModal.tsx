@@ -2,12 +2,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Modal from '@/app/components/shared/Modal';
-import { useUI } from '@/app/contexts/UIContext';
-import { createProject } from '@/app/actions/projectActions';
-import { getCustomers } from '@/app/actions/customerActions';
+import Modal from '@/components/shared/Modal';
+import { useUI } from '@/contexts/UIContext';
+import { createProject } from '@/actions/projectActions';
+import { getCustomers } from '@/actions/customerActions';
 import { useSession } from 'next-auth/react';
-import { ProjectStatus } from '@/app/types';
+import { ProjectStatus } from '@/types';
 
 // Förenklad typ för kund-data i modalen
 type Customer = { id: string; name: string; };

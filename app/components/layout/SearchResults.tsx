@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { FolderIcon, UsersIcon } from '@heroicons/react/24/outline';
-import { useProjects, useCustomers } from '@/app/hooks/useApi';
+import { useProjects, useCustomers } from '@/hooks/useApi';
 import Link from 'next/link';
 
 interface SearchResultsProps {
