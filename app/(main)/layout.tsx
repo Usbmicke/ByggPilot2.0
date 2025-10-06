@@ -1,26 +1,23 @@
 
 import React from 'react';
 import { redirect } from 'next/navigation';
-import { authOptions } from '@/api/auth/[...nextauth]/route'; 
+import { authOptions } from '@/lib/auth'; 
 import { getServerSession } from 'next-auth/next';
 import MainAppClientBoundary from './MainAppClientBoundary';
 
-// Denna layout är nu mycket renare. Dess enda ansvar är att hämta den
-// pålitliga sessionen och skicka ner isNewUser-flaggan.
-
 const MainAppLayout = async ({ children }: { children: React.ReactNode }) => {
-  // getServerSession anropar vår [..nextauth] route och därmed den nya, 
-  // vattentäta session-callbacken.
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
+    // Om ingen session finns, skicka tillbaka till startsidan. Detta är korrekt.
     return redirect('/'); 
   }
 
-  // Vi behöver inte längre anropa getUserData här. 
-  // Den korrekta isNewUser-statusen finns redan i session-objektet.
+  // Hämta isNewUser från den pålitliga server-sessionen.
   const isNewUser = session.user.isNewUser ?? false;
 
+  // Renderar klient-delen och skickar med isNewUser-flaggan.
+  // Ingen omdirigering sker här på servern, vilket löser hydration-felet.
   return (
     <MainAppClientBoundary isNewUser={isNewUser}>
       {children}

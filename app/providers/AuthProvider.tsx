@@ -2,75 +2,102 @@
 'use client';
 
 import { SessionProvider, useSession } from 'next-auth/react';
-import React, { useEffect, useState, useTransition } from 'react';
+import React, { useEffect, useState, useContext, createContext, useMemo } from 'react';
+import { onAuthStateChanged, signInWithCustomToken, signOut, User as FirebaseUser } from 'firebase/auth';
 import { auth as firebaseAuth } from '@/lib/firebase/client';
-import { signInWithCustomToken, signOut } from 'firebase/auth';
-import { useRouter, usePathname } from 'next/navigation';
+
+// Definiera en mer robust status-typ
+type SyncStatus = 'loading' | 'synced' | 'error' | 'unauthenticated';
+
+interface FirebaseSyncContextType {
+  syncStatus: SyncStatus;
+  firebaseUser: FirebaseUser | null;
+}
+
+// 1. Skapa en ny, mer informativ kontext
+const FirebaseSyncContext = createContext<FirebaseSyncContextType>({ 
+  syncStatus: 'loading', 
+  firebaseUser: null 
+});
+
+// Exportera en custom hook för enkel åtkomst
+export const useFirebaseSync = () => useContext(FirebaseSyncContext);
 
 const FirebaseSyncManager = ({ children }: { children: React.ReactNode }) => {
-  // ANVÄND UPDATE-FUNKTIONEN FRÅN USESESSION
-  const { data: session, status, update } = useSession();
-  const [isFirebaseAuthenticated, setIsFirebaseAuthenticated] = useState(false);
-  const router = useRouter();
-  const pathname = usePathname();
-  const [isPending, startTransition] = useTransition();
+  const { data: session, status: nextAuthStatus } = useSession();
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('loading');
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
 
   useEffect(() => {
-    if (status === 'loading') return;
+    const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
+        setFirebaseUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
 
+  useEffect(() => {
     const syncAuth = async () => {
-      if (status === 'authenticated' && session) {
-        if (!isFirebaseAuthenticated) {
-          try {
-            const response = await fetch('/api/auth/firebase', { method: 'POST' });
-            const data = await response.json();
+      // Vänta på att NextAuth är klar
+      if (nextAuthStatus === 'loading') {
+        setSyncStatus('loading');
+        return;
+      }
 
-            if (response.ok && data.firebaseToken) {
-              await signInWithCustomToken(firebaseAuth, data.firebaseToken);
-              setIsFirebaseAuthenticated(true);
-              console.log('[AuthProvider] Synkronisering lyckades: NextAuth -> Firebase');
-
-              // **DEN SLUTGILTIGA FIXEN: REVALIDERING AV SESSION**
-              // @ts-ignore
-              if (session.user?.isNewUser) {
-                // Använd startTransition för att undvika abrupta UI-förändringar under uppdateringen
-                startTransition(async () => {
-                  console.log('[AuthProvider] Ny användare upptäckt. Validerar sessionen mot servern...');
-                  const newSession = await update(); // Tvinga fram en uppdatering från servern
-                  
-                  // @ts-ignore
-                  if (newSession?.user?.isNewUser && pathname !== '/onboarding') {
-                    console.log('[AuthProvider] Validering klar. Användaren är fortfarande ny. Omdirigerar till /onboarding.');
-                    router.push('/onboarding');
-                  } else {
-                    console.log('[AuthProvider] Validering klar. Användaren har slutfört onboarding. Ingen omdirigering behövs.');
-                  }
-                });
-              }
-
-            } else {
-              throw new Error(data.error || 'Okänt fel vid hämtning av Firebase-token');
+      // Användare är inloggad i NextAuth
+      if (nextAuthStatus === 'authenticated') {
+        // Om vi redan har en Firebase-användare, är vi synkade.
+        if (firebaseUser && firebaseUser.uid === session.user.id) {
+            if (syncStatus !== 'synced') {
+                setSyncStatus('synced');
+                console.log('[AuthProvider] Status: Synced.');
             }
-          } catch (error) {
-            console.error('[AuthProvider] Fel vid Firebase-inloggning:', error);
-            await signOut(firebaseAuth);
-            setIsFirebaseAuthenticated(false);
+            return;
+        }
+        
+        // Annars, försök att synka
+        setSyncStatus('loading');
+        console.log('[AuthProvider] NextAuth authenticated. Attempting Firebase sync...');
+        try {
+          const response = await fetch('/api/auth/firebase', { method: 'POST' });
+          if (!response.ok) throw new Error(`Token fetch failed with status: ${response.status}`);
+          
+          const data = await response.json();
+          if (data.firebaseToken) {
+            await signInWithCustomToken(firebaseAuth, data.firebaseToken);
+            // onAuthStateChanged kommer nu att uppdatera firebaseUser och trigga en omsynkning
+            console.log('[AuthProvider] Firebase token received. Waiting for auth state change...');
+          } else {
+            throw new Error('Firebase token missing in response');
           }
+        } catch (error) {
+          console.error('[AuthProvider] Firebase sync error:', error);
+          setSyncStatus('error');
         }
-      } else if (status === 'unauthenticated') {
-        if (isFirebaseAuthenticated) {
-          await signOut(firebaseAuth);
-          setIsFirebaseAuthenticated(false);
-          console.log('[AuthProvider] Synkronisering: Utloggad från Firebase.');
+        return;
+      }
+
+      // Användare är utloggad från NextAuth
+      if (nextAuthStatus === 'unauthenticated') {
+        if (firebaseUser) {
+            console.log('[AuthProvider] NextAuth unauthenticated. Signing out from Firebase.');
+            await signOut(firebaseAuth);
         }
+        setSyncStatus('unauthenticated');
       }
     };
 
     syncAuth();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, session, pathname]); // Behåll dependencies som de är
+  // Körs när NextAuth-status eller Firebase-användarobjektet ändras
+  }, [nextAuthStatus, firebaseUser, session, syncStatus]);
 
-  return <>{children}</>;
+  // Använd useMemo för att undvika onödiga omrenderingar av kontext-värdet
+  const contextValue = useMemo(() => ({ syncStatus, firebaseUser }), [syncStatus, firebaseUser]);
+
+  return (
+    <FirebaseSyncContext.Provider value={contextValue}>
+      {children}
+    </FirebaseSyncContext.Provider>
+  );
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {

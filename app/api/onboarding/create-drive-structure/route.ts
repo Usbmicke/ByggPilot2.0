@@ -46,7 +46,7 @@ export async function POST(req: Request) {
         const companyName = userData?.company?.name?.trim() || 'Mitt Företag';
         const rootFolderName = `ByggPilot - ${companyName}`;
 
-        // 3. Skapa rotmappen med det korrekta 'root'-ID:t
+        // 3. Skapa rotmappen
         const rootFolder = await createFolder(drive, rootFolderName, 'root');
         if (!rootFolder || !rootFolder.id || !rootFolder.webViewLink) {
             throw new Error('Kunde inte skapa rotmappen i Google Drive.');
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
         const rootFolderId = rootFolder.id;
         const rootFolderUrl = rootFolder.webViewLink;
 
-        // 4. Skapa undermappar och dokument med den autentiserade drive-klienten
+        // 4. Skapa undermappar och dokument
         const foldersToCreate = {
             templates: '00_Företagsmallar',
             prospects: '01_Kunder & Anbud',
@@ -75,18 +75,14 @@ export async function POST(req: Request) {
         await createAndGetFolder(drive, 'Körjournaler', folderIds.companyEconomy);
         await createAndGetFolder(drive, 'Leverantörsfakturor (Ej projektspecifika)', folderIds.companyEconomy);
 
-        const templateNames = [
-            'Offertmall',
-            'Avtalsmall_Hantverkarformuläret17',
-            'Fakturaunderlag_mall'
-        ];
-        
+        const templateNames = ['Offertmall', 'Avtalsmall_Hantverkarformuläret17', 'Fakturaunderlag_mall'];
         for (const name of templateNames) {
             await createGoogleDoc(drive, name, folderIds.templates);
         }
 
-        // 5. Uppdatera Firestore med de nya ID:na och status
+        // 5. DEN KRITISKA UPPDATERINGEN: Uppdatera Firestore och sätt isNewUser till false!
         await userDocRef.update({
+            isNewUser: false, // <-- DENNA RAD ÄR DEN VIKTIGASTE I HELA FLÖDET
             'googleDrive.rootFolderId': folderIds.root,
             'googleDrive.rootFolderName': rootFolderName,
             'googleDrive.rootFolderUrl': rootFolderUrl,
@@ -101,7 +97,7 @@ export async function POST(req: Request) {
             }
         });
 
-        console.log(`[API-SUCCESS] Guldstandard Drive-struktur skapad för användare ${userId}.`);
+        console.log(`[API-SUCCESS] Drive-struktur skapad och användare ${userId} är inte längre ny.`);
         
         return NextResponse.json({ success: true, folderUrl: rootFolderUrl });
 

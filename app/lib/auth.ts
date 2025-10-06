@@ -4,22 +4,31 @@ import GoogleProvider from 'next-auth/providers/google';
 import { admin, firestoreAdmin } from '@/lib/firebase-admin';
 import { JWT } from 'next-auth/jwt';
 
-// HJÄLPFUNKTION: För att uppdatera tokens i Firestore
-async function updateAccountTokens(userId: string, account: Account) {
+// HJÄLPFUNKTION: Uppdaterar tokens i Firestore
+async function updateUserTokens(userId: string, account: Account) {
   try {
-    const accountData: any = {
-      provider: account.provider,
-      providerAccountId: account.providerAccountId,
-      access_token: account.access_token,
-      expires_at: account.expires_at,
-    };
-    // Spara refresh_token endast om den finns (Google skickar den bara första gången)
-    if (account.refresh_token) {
-      accountData.refresh_token = account.refresh_token;
+    const userRef = firestoreAdmin.collection('users').doc(userId);
+    const updateData: { [key: string]: any } = {};
+
+    // Spara bara nya tokens om de faktiskt finns i kontot
+    if (account.access_token) {
+      updateData.googleAccessToken = account.access_token;
+    }
+    if (account.expires_at) {
+      updateData.googleAccessTokenExpires = account.expires_at;
     }
 
-    await firestoreAdmin.collection('users').doc(userId).collection('accounts').doc(account.provider).set(accountData, { merge: true });
-    console.log(`[Auth Success] Tokens för användare ${userId} uppdaterade för provider ${account.provider}.`);
+    // Spara refresh_token ENDAST om den finns (Google skickar den bara första gången)
+    if (account.refresh_token) {
+      updateData.googleRefreshToken = account.refresh_token;
+      console.log(`[Auth Success] Mottog och sparar ny googleRefreshToken för användare ${userId}.`);
+    }
+
+    // Om det finns något att uppdatera, kör uppdateringen
+    if (Object.keys(updateData).length > 0) {
+        await userRef.update(updateData);
+        console.log(`[Auth Success] Tokens för användare ${userId} uppdaterade direkt på användardokumentet.`);
+    }
 
   } catch (error) {
     console.error(`[Auth Critical] Kunde inte spara tokens för användare ${userId}:`, error);
@@ -33,7 +42,7 @@ export const authOptions: AuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
       authorization: {
         params: {
-          prompt: 'consent',
+          // prompt: 'consent', // BORTTAGEN: Detta var orsaken till den oändliga loopen
           access_type: 'offline',
           response_type: 'code',
           scope: 'openid email profile https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/gmail.modify',
@@ -43,24 +52,7 @@ export const authOptions: AuthOptions = {
   ],
 
   callbacks: {
-    async jwt({ token, user, account }: { token: JWT; user?: any; account?: Account | null }): Promise<JWT> {
-        if (account && user) {
-            const usersRef = firestoreAdmin.collection('users');
-            const querySnapshot = await usersRef.where('email', '==', user.email).limit(1).get();
-            
-            if (!querySnapshot.empty) {
-                const userId = querySnapshot.docs[0].id;
-                token.sub = userId;
-                token.uid = userId;
-                await updateAccountTokens(userId, account);
-            } else {
-                console.warn(`[Auth Warning] Användare ${user.email} hittades inte i JWT-callbacken trots lyckad inloggning.`);
-            }
-            return token;
-        }
-        return token;
-    },
-
+    // signIn anropas vid inloggningsförsök
     async signIn({ profile, account }) {
         if (!profile?.email || !account) {
           console.error("[Auth Error] Profil eller konto saknas vid signIn.");
@@ -69,10 +61,10 @@ export const authOptions: AuthOptions = {
   
         try {
           const usersRef = firestoreAdmin.collection('users');
-          const querySnapshot = await usersRef.where('email', '==', profile.email).get();
+          const userQuery = await usersRef.where('email', '==', profile.email).limit(1).get();
   
           let userId;
-          if (querySnapshot.empty) {
+          if (userQuery.empty) {
             console.log(`[Auth Success] Ny användare: ${profile.email}. Skapar dokument.`);
             const newUserRef = await usersRef.add({
               name: profile.name ?? profile.email,
@@ -84,10 +76,11 @@ export const authOptions: AuthOptions = {
             });
             userId = newUserRef.id;
           } else {
-            userId = querySnapshot.docs[0].id;
+            userId = userQuery.docs[0].id;
           }
 
-          await updateAccountTokens(userId, account);
+          // Spara tokens vid inloggning
+          await updateUserTokens(userId, account);
 
           return true;
         } catch (error) {
@@ -96,10 +89,27 @@ export const authOptions: AuthOptions = {
         }
     },
 
+    // jwt anropas för att skapa/uppdatera JWT. account finns bara vid FÖRSTA inloggningen.
+    async jwt({ token, user, account }: { token: JWT; user?: any; account?: Account | null }): Promise<JWT> {
+        if (account && user) {
+            const usersRef = firestoreAdmin.collection('users');
+            const querySnapshot = await usersRef.where('email', '==', user.email).limit(1).get();
+            
+            if (!querySnapshot.empty) {
+                const userId = querySnapshot.docs[0].id;
+                token.sub = userId;
+                // Eftersom 'account' bara finns vid första inloggningen, är detta anrop säkert
+                // och kommer inte att köras i en loop.
+                await updateUserTokens(userId, account);
+            }
+        }
+        return token;
+    },
+
+    // session anropas när en klientsession efterfrågas
     async session({ session, token }) {
         if (session.user && token.sub) {
             session.user.id = token.sub;
-            
             try {
                 const userDoc = await firestoreAdmin.collection('users').doc(token.sub).get();
                 if (userDoc.exists) {
@@ -107,13 +117,12 @@ export const authOptions: AuthOptions = {
                     session.user.isNewUser = userData?.isNewUser ?? false;
                     session.user.termsAccepted = userData?.termsAccepted ?? false;
                 } else {
-                    console.warn(`[Auth Warning] Användardokument ${token.sub} saknas.`);
                     session.user.isNewUser = true;
                     session.user.termsAccepted = false;
                 }
             } catch (error) {
                 console.error("[Auth Critical] Fel vid hämtning av användardata i session: ", error);
-                session.user.isNewUser = false; 
+                session.user.isNewUser = true; 
                 session.user.termsAccepted = false;
             }
         }

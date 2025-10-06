@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
@@ -19,50 +19,49 @@ interface OnboardingFlowProps {
 export default function OnboardingFlow({ companyName }: OnboardingFlowProps) {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
   const [error, setError] = useState<string | null>(null);
-  const [folderUrl, setFolderUrl] = useState<string | null>(null); // Ny state för mappens URL
+  const [folderUrl, setFolderUrl] = useState<string | null>(null);
   const { data: session } = useSession();
   const router = useRouter();
 
   const handleCreateStructure = async () => {
     setCurrentStep('creating');
+    setError(null); // Återställ eventuella tidigare fel
+
     try {
       const response = await fetch('/api/onboarding/create-drive-structure', {
         method: 'POST',
       });
 
+      // Försök att parsa JSON-svaret oavsett om anropet lyckades eller ej
+      const result = await response.json();
+
       if (!response.ok) {
-        throw new Error('Något gick fel på servern.');
+        // Om servern svarar med ett fel, använd felmeddelandet från serverns JSON
+        const errorMessage = result.error || `Ett okänt serverfel inträffade (status: ${response.status}).`;
+        throw new Error(errorMessage);
       }
 
-      const result = await response.json();
       if(result.success && result.folderUrl) {
-        setFolderUrl(result.folderUrl); // Spara URL:en
+        setFolderUrl(result.folderUrl); 
         setCurrentStep('success');
       } else {
-        throw new Error(result.error || 'Kunde inte hämta mappens URL från servern.');
+        // Om anropet var "ok" men datan saknas
+        throw new Error(result.error || 'Kunde inte hämta mappens URL från servern trots ett lyckat svar.');
       }
-    } catch (err) {
-      setError(err.message);
+    } catch (err: any) {
+      console.error("[Onboarding Error]", err);
+      // Sätt det extraherade eller genererade felmeddelandet
+      setError(err.message || "Ett oväntat fel inträffade. Kontrollera din internetanslutning.");
+      setCurrentStep('welcome'); // Gå tillbaka till välkomststeget för att visa felet
     }
   };
   
   const handleComplete = () => {
-      // Omdirigera till dashboarden, men med en parameter som indikerar att touren ska starta
       router.push('/dashboard?tour=true');
   };
   
   const renderStep = () => {
-    if (error) {
-      return (
-        <div className="text-center text-red-400 bg-gray-800 p-8 rounded-lg border border-red-500/50">
-          <h3 className="font-bold text-lg text-white">Kunde inte skapa mappstrukturen</h3>
-          <p className="mt-2">{error}</p>
-          <p className="mt-4 text-sm text-gray-300">Om problemet kvarstår, kontakta supporten via chatten på din dashboard.</p>
-          <button onClick={() => router.push('/dashboard')} className="mt-6 bg-cyan-600 text-white font-bold py-2 px-4 rounded-lg">Gå till Dashboard</button>
-        </div>
-      );
-    }
-    
+    // Flyttade felhanteringen in i 'welcome' steget för en bättre användarupplevelse
     switch (currentStep) {
       case 'welcome':
         return <Step_Welcome 
@@ -70,6 +69,7 @@ export default function OnboardingFlow({ companyName }: OnboardingFlowProps) {
                   onProceed={handleCreateStructure} 
                   onSkip={() => router.push('/dashboard')} 
                   onShowSecurity={() => setCurrentStep('security')} 
+                  error={error} // Skicka med felmeddelandet till komponenten
                 />;
       case 'security':
         return <Step_SecurityInfo onProceed={handleCreateStructure} onGoBack={() => setCurrentStep('welcome')} />;
@@ -78,8 +78,8 @@ export default function OnboardingFlow({ companyName }: OnboardingFlowProps) {
       case 'success':
         return <Step_Success 
                   onComplete={handleComplete} 
-                  companyName={companyName} // Skicka med namnet
-                  folderUrl={folderUrl}       // Skicka med URL:en
+                  companyName={companyName} 
+                  folderUrl={folderUrl}      
                 />;
       default:
         return null;
