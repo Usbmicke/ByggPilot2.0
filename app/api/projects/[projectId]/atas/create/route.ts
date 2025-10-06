@@ -1,6 +1,7 @@
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getServerSession } from "next-auth/next"
+import { authOptions } from '@/lib/auth';
 import { z } from 'zod';
 import { firestoreAdmin } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -12,7 +13,7 @@ const createAtaSchema = z.object({
 });
 
 export async function POST(request: Request, { params }: { params: { projectId: string } }) {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) {
@@ -37,16 +38,14 @@ export async function POST(request: Request, { params }: { params: { projectId: 
             }
             const projectData = projectDoc.data();
 
-            // Hämta ID för "2_Ekonomi"
             const ekonomiFolderId = projectData?.googleDrive?.subFolderIds?.ekonomi;
             if (!ekonomiFolderId) {
                 throw new Error('Mappen \"2_Ekonomi\" kunde inte hittas för detta projekt. Kör \"Verifiera & Reparera\".');
             }
 
-            let ataParentFolderId = projectData?.googleDrive?.subFolderIds?.ata; // ÄTA-specifik mapp
+            let ataParentFolderId = projectData?.googleDrive?.subFolderIds?.ata;
             const updates: { [key: string]: any } = {};
 
-            // Om ÄTA-mappen inte finns, skapa den och förbered uppdatering av projektet
             if (!ataParentFolderId) {
                 const ataFolder = await createFolder(userId, 'ÄTA', ekonomiFolderId);
                 if (!ataFolder || !ataFolder.id) {
@@ -62,7 +61,6 @@ export async function POST(request: Request, { params }: { params: { projectId: 
             const ataTitle = body.title || `ÄTA-underlag ${nextAtaNumber}`;
             const documentName = `ÄTA ${String(nextAtaNumber).padStart(2, '0')} - ${ataTitle}`;
 
-            // Skapa ett Google-dokument, inte en mapp
             const ataDoc = await createGoogleDoc(userId, documentName, ataParentFolderId);
             if (!ataDoc || !ataDoc.id) {
                 throw new Error('Misslyckades med att skapa ÄTA-dokumentet i Google Drive.');
@@ -75,7 +73,7 @@ export async function POST(request: Request, { params }: { params: { projectId: 
                 title: ataTitle,
                 notes: body.notes || '',
                 status: 'DRAFT',
-                googleDriveDocId: ataDoc.id, // Spara dokument-ID, inte mapp-ID
+                googleDriveDocId: ataDoc.id,
                 createdAt: FieldValue.serverTimestamp(),
                 updatedAt: FieldValue.serverTimestamp(),
             };

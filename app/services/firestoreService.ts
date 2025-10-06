@@ -10,6 +10,22 @@ const projectsCollection = db.collection('projects');
 // PROJEKT-FUNKTIONER
 // ===============================================
 
+export const getHighestProjectNumberFromFirestore = async (userId: string): Promise<number> => {
+    const snapshot = await projectsCollection
+        .where('ownerId', '==', userId)
+        .orderBy('projectNumber', 'desc')
+        .limit(1)
+        .get();
+
+    if (snapshot.empty) {
+        // Om inga projekt finns, starta från 1000 så att första blir 1001
+        return 1000;
+    }
+
+    const highestProject = snapshot.docs[0].data() as Project;
+    return highestProject.projectNumber || 1000;
+};
+
 export const listProjectsForUserFromFirestore = async (userId: string): Promise<Project[]> => {
     const snapshot = await projectsCollection
         .where('ownerId', '==', userId)

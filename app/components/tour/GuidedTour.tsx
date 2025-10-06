@@ -32,7 +32,7 @@ const tourSteps: TourStep[] = [
         position: 'right'
       },
       {
-        element: '#tour-step-4-chat',
+        element: '#chat-widget',
         title: 'Alltid till din tjänst',
         content: 'Och här är jag! Fråga mig om vad som helst – skapa en offert, sammanfatta ett projekt, eller kolla en kunds historik. Jag finns här för att hjälpa dig.',
         position: 'top'

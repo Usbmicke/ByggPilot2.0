@@ -1,6 +1,7 @@
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getServerSession } from "next-auth/next"
+import { authOptions } from '@/lib/auth';
 import { firestoreAdmin } from '@/lib/firebase-admin';
 import { getGoogleDriveService } from '@/lib/google';
 import { createFolder } from '@/services/driveService';
@@ -23,7 +24,6 @@ async function verifyAndFix(drive: any, parentFolderId: string, expectedFolderId
 
         if (folderId) {
             try {
-                // Försök hämta mappen för att se om den existerar
                 await drive.files.get({ fileId: folderId, fields: 'id' });
             } catch (error) {
                 fixes.push(`Mappen \"${folderName}\" (ID: ${folderId}) saknades och skapades på nytt.`);
@@ -31,7 +31,6 @@ async function verifyAndFix(drive: any, parentFolderId: string, expectedFolderId
                 updates[`googleDrive.subFolderIds.${key}`] = newFolder.id;
             }
         } else {
-            // Mapp-ID saknas helt i Firestore, så vi måste skapa den
             fixes.push(`Mapp-ID för \"${folderName}\" saknades i databasen och mappen har nu skapats.`);
             const newFolder = await createFolder(drive.auth, folderName, parentFolderId);
             updates[`googleDrive.subFolderIds.${key}`] = newFolder.id;
@@ -41,7 +40,7 @@ async function verifyAndFix(drive: any, parentFolderId: string, expectedFolderId
 }
 
 export async function POST(request: Request) {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) {
@@ -72,7 +71,6 @@ export async function POST(request: Request) {
 
                 if (fixes.length > 0) {
                     totalFixes = totalFixes.concat(fixes.map(f => `Projekt ${projectData.projectNumber || projectId}: ${f}`));
-                    // Uppdatera Firestore-dokumentet med de nya mapp-ID:na
                     await userProjectsRef.doc(projectId).update(updates);
                 }
             }

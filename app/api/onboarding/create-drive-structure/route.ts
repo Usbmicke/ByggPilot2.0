@@ -1,20 +1,22 @@
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from '@/lib/auth';
 import { firestoreAdmin } from '@/lib/firebase-admin';
-import { createFolder, createGoogleDoc } from '@/services/driveService';
+import { getAuthenticatedClient, createFolder, createGoogleDoc } from '@/services/driveService';
+import { google } from 'googleapis';
 
-// Hjälpfunktion för att skapa en mapp och returnera dess ID
-async function createAndGetFolderId(userId: string, name: string, parentId: string): Promise<string> {
-    const folder = await createFolder(userId, name, parentId);
-    if (!folder || !folder.id) {
+// Hjälpfunktion för att hantera mappskapande och undvika kodupprepning
+async function createAndGetFolder(drive: any, name: string, parentId: string): Promise<{ id: string; url: string }> {
+    const folder = await createFolder(drive, name, parentId);
+    if (!folder || !folder.id || !folder.webViewLink) {
         throw new Error(`Kunde inte skapa mappen: ${name}`);
     }
-    return folder.id;
+    return { id: folder.id, url: folder.webViewLink };
 }
 
 export async function POST(req: Request) {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) {
@@ -22,6 +24,7 @@ export async function POST(req: Request) {
     }
 
     try {
+        // 1. Hämta användarens refreshToken från Firestore
         const userDocRef = firestoreAdmin.collection('users').doc(userId);
         const userDocSnap = await userDocRef.get();
 
@@ -30,22 +33,28 @@ export async function POST(req: Request) {
         }
 
         const userData = userDocSnap.data();
-        // Använd befintlig logik för att hämta företagsnamn, med en fallback
+        const refreshToken = userData?.googleRefreshToken;
+
+        if (!refreshToken) {
+            return NextResponse.json({ success: false, error: 'Missing Google refresh token for user.' }, { status: 400 });
+        }
+
+        // 2. Skapa en autentiserad Google Drive-klient
+        const auth = getAuthenticatedClient(refreshToken);
+        const drive = google.drive({ version: 'v3', auth });
+
         const companyName = userData?.company?.name?.trim() || 'Mitt Företag';
         const rootFolderName = `ByggPilot - ${companyName}`;
 
-        // Skapa rotmappen
-        const rootFolder = await createFolder(userId, rootFolderName);
-        const rootFolderId = rootFolder?.id;
-        const rootFolderUrl = rootFolder?.webViewLink;
-
-        if (!rootFolderId || !rootFolderUrl) {
+        // 3. Skapa rotmappen med det korrekta 'root'-ID:t
+        const rootFolder = await createFolder(drive, rootFolderName, 'root');
+        if (!rootFolder || !rootFolder.id || !rootFolder.webViewLink) {
             throw new Error('Kunde inte skapa rotmappen i Google Drive.');
         }
+        const rootFolderId = rootFolder.id;
+        const rootFolderUrl = rootFolder.webViewLink;
 
-        // --- GULDSTANDARD MAPPSTRUKTUR ---
-
-        // Skapa huvudmapparna
+        // 4. Skapa undermappar och dokument med den autentiserade drive-klienten
         const foldersToCreate = {
             templates: '00_Företagsmallar',
             prospects: '01_Kunder & Anbud',
@@ -56,18 +65,16 @@ export async function POST(req: Request) {
 
         const folderIds = {
             root: rootFolderId,
-            templates: await createAndGetFolderId(userId, foldersToCreate.templates, rootFolderId),
-            prospects: await createAndGetFolderId(userId, foldersToCreate.prospects, rootFolderId),
-            active: await createAndGetFolderId(userId, foldersToCreate.active, rootFolderId),
-            archived: await createAndGetFolderId(userId, foldersToCreate.archived, rootFolderId),
-            companyEconomy: await createAndGetFolderId(userId, foldersToCreate.companyEconomy, rootFolderId),
+            templates: (await createAndGetFolder(drive, foldersToCreate.templates, rootFolderId)).id,
+            prospects: (await createAndGetFolder(drive, foldersToCreate.prospects, rootFolderId)).id,
+            active: (await createAndGetFolder(drive, foldersToCreate.active, rootFolderId)).id,
+            archived: (await createAndGetFolder(drive, foldersToCreate.archived, rootFolderId)).id,
+            companyEconomy: (await createAndGetFolder(drive, foldersToCreate.companyEconomy, rootFolderId)).id,
         };
 
-        // Skapa undermappar för Företagsekonomi
-        await createAndGetFolderId(userId, 'Körjournaler', folderIds.companyEconomy);
-        await createAndGetFolderId(userId, 'Leverantörsfakturor (Ej projektspecifika)', folderIds.companyEconomy);
-        
-        // Skapa standardmallar i "Företagsmallar"
+        await createAndGetFolder(drive, 'Körjournaler', folderIds.companyEconomy);
+        await createAndGetFolder(drive, 'Leverantörsfakturor (Ej projektspecifika)', folderIds.companyEconomy);
+
         const templateNames = [
             'Offertmall',
             'Avtalsmall_Hantverkarformuläret17',
@@ -75,12 +82,10 @@ export async function POST(req: Request) {
         ];
         
         for (const name of templateNames) {
-            await createGoogleDoc(userId, name, folderIds.templates);
+            await createGoogleDoc(drive, name, folderIds.templates);
         }
 
-        // --- SLUT PÅ GULDSTANDARD ---
-
-        // Uppdatera Firestore med den nya, detaljerade mappstrukturen
+        // 5. Uppdatera Firestore med de nya ID:na och status
         await userDocRef.update({
             'googleDrive.rootFolderId': folderIds.root,
             'googleDrive.rootFolderName': rootFolderName,

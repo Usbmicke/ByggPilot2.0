@@ -1,12 +1,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getServerSession } from "next-auth/next"
+import { authOptions } from '@/lib/auth';
 import { firestoreAdmin } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { uploadFileToDrive, getOrCreateSubFolder } from '@/services/driveService';
 
 export async function POST(req: NextRequest) {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) {
@@ -17,7 +18,6 @@ export async function POST(req: NextRequest) {
         const formData = await req.formData();
         const file = formData.get('file') as File | null;
         const projectId = formData.get('projectId') as string | null;
-        // Nytt, obligatoriskt fält som specificerar destinationen
         const destination = formData.get('destination') as string | null; 
 
         if (!file || !projectId || !destination) {
@@ -36,10 +36,9 @@ export async function POST(req: NextRequest) {
              return NextResponse.json({ message: 'Projektets mappstruktur är ofullständig.' }, { status: 500 });
         }
 
-        // --- GULDSTANDARD DESTINATIONSLOGIK ---
         const destinationParts = destination.split('/');
-        const mainDestination = destinationParts[0]; // t.ex. 'media', 'ekonomi', 'kma'
-        const subFolderName = destinationParts.length > 1 ? destinationParts[1] : null; // t.ex. 'foton_platsoversikt', 'kvitton'
+        const mainDestination = destinationParts[0];
+        const subFolderName = destinationParts.length > 1 ? destinationParts[1] : null;
 
         const mainFolderId = projectData.googleDrive.subFolderIds[mainDestination];
         if (!mainFolderId) {
@@ -48,11 +47,9 @@ export async function POST(req: NextRequest) {
         
         let targetFolderId = mainFolderId;
 
-        // Om en specifik undermapp är angiven, hämta eller skapa den
         if (subFolderName) {
             targetFolderId = await getOrCreateSubFolder(userId, mainFolderId, subFolderName);
         }
-        // --- SLUT PÅ DESTINATIONSLOGIK ---
 
         const fileBuffer = Buffer.from(await file.arrayBuffer());
         const driveFile = await uploadFileToDrive(userId, file.name, file.type, targetFolderId, fileBuffer);
@@ -66,12 +63,11 @@ export async function POST(req: NextRequest) {
             name: file.name,
             mimeType: file.type,
             size: file.size,
-            destination: destination, // Spara den logiska sökvägen
+            destination: destination,
             uploadedAt: FieldValue.serverTimestamp(),
             driveWebViewLink: driveFile.webViewLink, 
         };
 
-        // Logga filen i en subcollection
         await projectRef.collection('files').add(fileMetadata);
 
         return NextResponse.json({ message: 'Filen har laddats upp!', file: fileMetadata }, { status: 201 });

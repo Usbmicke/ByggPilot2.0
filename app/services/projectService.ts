@@ -1,11 +1,29 @@
 
 import { 
     getProjectFromFirestore, 
-    listProjectsForUserFromFirestore, // Nu finns denna!
+    listProjectsForUserFromFirestore, 
     updateProjectInFirestore,
     createProjectInFirestore,
+    getHighestProjectNumberFromFirestore, // Importera den nya databasfunktionen
 } from './firestoreService';
 import { Project, RiskAnalysis } from '@/app/types/index';
+
+/**
+ * **NY FUNKTION**
+ * Hämtar det högsta befintliga projektnumret för en användare och returnerar nästa nummer i serien.
+ * @param userId Användarens ID.
+ * @returns Nästa tillgängliga projektnummer (t.ex. 1001).
+ */
+export const getNextProjectNumber = async (userId: string): Promise<number> => {
+    try {
+        const highestNumber = await getHighestProjectNumberFromFirestore(userId);
+        return highestNumber + 1;
+    } catch (error) {
+        console.error("Error fetching next project number, defaulting to 1001:", error);
+        // Om ett fel uppstår (t.ex. inga projekt finns), starta från 1001.
+        return 1001;
+    }
+};
 
 /**
  * Hämtar ett enskilt, AKTIVT projekt, men endast om det tillhör den angivna användaren.
@@ -16,8 +34,6 @@ import { Project, RiskAnalysis } from '@/app/types/index';
 export const getProject = async (projectId: string, userId: string): Promise<Project | null> => {
     const project = await getProjectFromFirestore(projectId);
 
-    // Säkerhetskontroll: Returnera bara projektet om det matchar användarens ID.
-    // getProjectFromFirestore hanterar redan arkiverade projekt.
     if (!project || project.ownerId !== userId) { 
         return null; 
     }
@@ -52,13 +68,9 @@ export const updateProject = async (projectId: string, updates: Partial<Project>
  * Specifik uppdatering för att spara en riskanalys.
  */
 export const updateProjectWithRiskAnalysis = async (projectId: string, analysis: RiskAnalysis, documentUrl: string | null): Promise<void> => {
-    // Liten justering: documentUrl kan vara null om inget dokument skapades.
     const updates: Partial<Project> = {
         riskAnalysisJson: JSON.stringify(analysis)
     };
     
-    // Tidigare fanns ett beroende av en URL här. Vi gör det mer robust.
-    // Beroende på appens logik kan vi vilja hantera detta annorlunda i framtiden.
-
     await updateProjectInFirestore(projectId, updates);
 };
