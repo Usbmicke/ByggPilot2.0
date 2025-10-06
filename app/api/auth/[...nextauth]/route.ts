@@ -1,7 +1,7 @@
 
 import NextAuth, { AuthOptions, Account } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
-import { admin, firestoreAdmin } from '@/app/lib/firebase-admin';
+import { admin, firestoreAdmin } from '@/lib/firebase-admin';
 import { JWT } from 'next-auth/jwt';
 
 // HJÄLPFUNKTION: För att uppdatera tokens i Firestore

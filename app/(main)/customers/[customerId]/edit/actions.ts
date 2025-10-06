@@ -1,10 +1,10 @@
 'use server';
 
-import { getServerSession } from '@/app/lib/auth';
-import { updateCustomer, archiveCustomer } from '@/app/services/customerService';
+import { getServerSession } from '@/lib/auth';
+import { updateCustomer, archiveCustomer } from '@/services/customerService';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { Customer } from '@/app/types';
+import { Customer } from '@/types';
 
 export async function updateCustomerAction(customerId: string, formData: FormData) {
   const session = await getServerSession();

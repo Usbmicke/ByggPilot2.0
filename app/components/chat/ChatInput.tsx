@@ -16,7 +16,7 @@ import {
 import {
     MicrophoneIcon as MicOutline
 } from '@heroicons/react/24/outline';
-import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
+import { useVoiceRecognition } from '@/app/hooks/useVoiceRecognition';
 
 interface ChatInputProps {
     onSendMessage: (content: string, file?: File) => void;

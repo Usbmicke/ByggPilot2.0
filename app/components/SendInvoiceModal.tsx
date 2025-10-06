@@ -82,7 +82,8 @@ export default function SendInvoiceModal({ isOpen, onClose, invoice, project, on
                             <input type="text" id="subject" value={subject} onChange={e => setSubject(e.target.value)} required className="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white" />
                         </div>
                         <div>
-                            <label htmlFor="message" className="block text-sm font-medium text-gray-300">Meddelande</n                            </label>
+                            <label htmlFor="message" className="block text-sm font-medium text-gray-300">Meddelande
+                            </label>
                             <textarea id="message" value={message} onChange={e => setMessage(e.target.value)} required rows={8} className="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white"></textarea>
                         </div>
                         {error && <p className="text-red-400 text-sm">{`Fel: ${error}`}</p>}

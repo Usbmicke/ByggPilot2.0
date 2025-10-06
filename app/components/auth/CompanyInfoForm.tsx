@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
-import { updateCompanyInfo } from '@/actions/userActions';
+import { updateCompanyInfo } from '@/app/actions/userActions';
 
 interface IFormInput {
   companyName: string;

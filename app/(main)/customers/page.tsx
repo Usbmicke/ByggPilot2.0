@@ -1,9 +1,9 @@
 
 import Link from 'next/link';
 import { getServerSession } from 'next-auth/next';
-import { listCustomers } from '@/app/services/customerService';
-import { Customer } from '@/app/types';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'; 
+import { listCustomers } from '@/services/customerService';
+import { Customer } from '@/types';
+import { authOptions } from '@/api/auth/[...nextauth]/route'; 
 
 export default async function CustomerListPage() {
   const session = await getServerSession(authOptions);

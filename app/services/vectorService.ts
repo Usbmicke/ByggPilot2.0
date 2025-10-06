@@ -15,7 +15,7 @@ const embeddingModel = genAI.getGenerativeModel({ model: 'text-embedding-004' })
 // Function to get or create the Pinecone index
 async function getOrCreatePineconeIndex() {
   const existingIndexes = await pinecone.listIndexes();
-  if (!existingIndexes.includes(indexName)) {
+  if (!existingIndexes.some(index => index.name === indexName)) {
     await pinecone.createIndex({
       name: indexName,
       dimension: 768, // Dimension for text-embedding-004

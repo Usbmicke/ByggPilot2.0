@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Project, ProjectStatus } from '@/app/types/project';
+import { Project, ProjectStatus } from '@/types/project';
 import { DocumentTextIcon, UserIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
 

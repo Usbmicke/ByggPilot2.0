@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { firestore as db } from '@/app/lib/firebase/client';
 import { Calculation, CalculationItem, CalculationCategory } from '@/app/types/calculation';
-import CalculationSection from './CalculationSection';
+import CalculationSection from '@/app/components/dashboard/CalculationSection';
 
 enum SaveStatus { IDLE = 'Alla ändringar sparade', SAVING = 'Sparar...', ERROR = 'Fel vid sparande' };
 enum PdfStatus { IDLE, GENERATING, DONE, ERROR };

@@ -6,7 +6,7 @@ import { Readable } from 'stream';
 // AUTHENTICATION
 // =======================================================================
 
-const getAuthenticatedClient = (refreshToken: string) => {
+export const getAuthenticatedClient = (refreshToken: string) => {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     throw new Error('Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET environment variables.');
   }

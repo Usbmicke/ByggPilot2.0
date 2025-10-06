@@ -2,8 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { updateProject } from '@/app/services/projectService'
-import { ProjectStatus } from '@/app/types'
+import { updateProject } from '@/services/projectService'
+import { ProjectStatus } from '@/types'
 
 /**
  * Server Action för att uppdatera ett projekt.

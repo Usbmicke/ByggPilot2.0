@@ -1,6 +1,6 @@
 
-import { db } from '@/app/lib/firebase/admin';
-import { Ata } from '@/app/types/ata'; // Återanvända vår typdefinition
+import { firestoreAdmin as db } from '@/app/lib/firebase-admin';
+import { Ata } from '@/app/types'; // Återanvända vår typdefinition
 import { Timestamp } from 'firebase-admin/firestore';
 
 /**

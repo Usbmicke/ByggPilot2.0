@@ -5,7 +5,7 @@ import {
     updateProjectInFirestore,
     createProjectInFirestore,
 } from './firestoreService';
-import { Project, RiskAnalysis } from '@/app/types';
+import { Project, RiskAnalysis } from '@/app/types/index';
 
 /**
  * Hämtar ett enskilt, AKTIVT projekt, men endast om det tillhör den angivna användaren.

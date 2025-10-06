@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CalculationItem, CalculationCategory } from '@/app/types/calculation';
+import { CalculationItem, CalculationCategory } from '@/types/calculation';
 import { v4 as uuidv4 } from 'uuid';
 
 interface CalculationSectionProps {

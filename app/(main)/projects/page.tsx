@@ -1,9 +1,9 @@
 
 import React from 'react';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { getProjects } from '@/app/services/projectService';
-import ProjectsView from '@/app/components/views/ProjectsView';
+import { authOptions } from '@/api/auth/[...nextauth]/route';
+import { getProjects } from '@/services/projectService';
+import ProjectsView from '@/components/views/ProjectsView';
 
 const ProjectsPage = async () => {
   // Korrekt, standardiserad metod för att hämta sessionen i en Server Component.

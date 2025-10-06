@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Modal from '@/components/shared/Modal';
-import { Customer } from '@/app/types/customer';
+import { Customer } from '@/types/customer';
 import CalculationEngine from '@/components/dashboard/CalculationEngine';
 import { useSession } from 'next-auth/react';
 

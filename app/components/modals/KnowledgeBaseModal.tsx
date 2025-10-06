@@ -49,7 +49,7 @@ const TipCard = ({ icon, title, children, className }) => (
 );
 
 
-const ProTipsModal = ({ isOpen, onClose }) => {
+const KnowledgeBaseModal = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
 
     return (
@@ -131,4 +131,4 @@ const ProTipsModal = ({ isOpen, onClose }) => {
     );
 };
 
-export default ProTipsModal;
+export default KnowledgeBaseModal;

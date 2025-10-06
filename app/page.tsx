@@ -5,8 +5,8 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
-import ProTipsModal from '@/components/ProTipsModal';
-import GoogleIcon from '@/components/icons/GoogleIcon';
+import ProTipsModal from '@/app/components/ProTipsModal';
+import GoogleIcon from '@/app/components/icons/GoogleIcon';
 
 // --- IKONER & TEKNISKA KOMPONENTER ---
 const IconStressClock = (props) => (

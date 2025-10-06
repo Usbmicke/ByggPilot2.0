@@ -1,8 +1,8 @@
-import { getServerSession } from '@/app/lib/auth';
-import { getProject } from '@/app/services/projectService';
+import { getServerSession } from '@/lib/auth';
+import { getProject } from '@/services/projectService';
 import { notFound } from 'next/navigation';
 import { updateProjectAction, archiveProjectAction } from './actions';
-import { ProjectStatus } from '@/app/types';
+import { ProjectStatus } from '@/types';
 
 interface EditProjectPageProps {
   params: {

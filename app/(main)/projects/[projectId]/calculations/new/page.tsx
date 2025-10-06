@@ -1,7 +1,7 @@
 
-import CalculationEngine from '@/app/components/dashboard/CalculationEngine';
-import { getProject } from '@/app/services/projectService';
-import { auth } from '@/app/lib/auth';
+import CalculationEngine from '@/components/dashboard/CalculationEngine';
+import { getProject } from '@/services/projectService';
+import { auth } from '@/lib/auth';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 

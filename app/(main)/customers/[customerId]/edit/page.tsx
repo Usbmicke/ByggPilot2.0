@@ -1,5 +1,5 @@
-import { getServerSession } from '@/app/lib/auth';
-import { getCustomer } from '@/app/services/customerService';
+import { getServerSession } from '@/lib/auth';
+import { getCustomer } from '@/services/customerService';
 import { notFound } from 'next/navigation';
 import { updateCustomerAction, archiveCustomerAction } from './actions'; // Byt namn på action
 

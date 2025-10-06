@@ -1,10 +1,10 @@
 
-import { auth } from '@/app/lib/auth';
+import { auth } from '@/lib/auth';
 import { notFound } from 'next/navigation';
-import { getProject } from '@/app/services/projectService';
-import { getAta } from '@/app/services/ataService'; // Ny service-funktion som behöver skapas
-import ProjectHeader from '@/app/components/ProjectHeader';
-import AtaDetailView from '@/app/components/views/AtaDetailView'; // Ny vy-komponent som behöver skapas
+import { getProject } from '@/services/projectService';
+import { getAta } from '@/services/ataService'; // Ny service-funktion som behöver skapas
+import ProjectHeader from '@/components/ProjectHeader';
+import AtaDetailView from '@/components/views/AtaDetailView'; // Ny vy-komponent som behöver skapas
 
 interface AtaDetailPageProps {
     params: { 

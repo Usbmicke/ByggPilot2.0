@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import ProjectDetailClient from '@/app/components/views/ProjectDetailClient';
+import ProjectDetailClient from '@/components/views/ProjectDetailClient';
 
 // Denna komponent fungerar som en "wrapper" eller "entry point" för en specifik projektsida.
 // Dess enda uppgift är att fånga upp `projectId` från URL:en och skicka den vidare
