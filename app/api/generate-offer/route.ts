@@ -1,116 +1,117 @@
 
 import { NextResponse } from 'next/server';
-import { doc, getDoc } from 'firebase/firestore';
-import { firestore as db } from '@/app/lib/firebase/server';
-import { createOfferPdf } from '@/app/lib/google/driveService';
-import { OFFERTMALL_HTML } from '@/app/lib/google/offertmall';
-import { Calculation, CalculationItem, CalculationCategory } from '@/app/types/calculation';
-import { Project } from '@/app/types/project';
-import Handlebars from 'handlebars';
+import { doc, getDoc, collection } from 'firebase/firestore';
+import { firestoreAdmin as db } from '@/lib/firebase-admin'; // KORRIGERAD SÖKVÄG
+import { renderToStaticMarkup } from 'react-dom/server';
+import { InvoicePdfTemplate } from '@/components/pdf/InvoicePdfTemplate';
+import { uploadPdfToDrive } from '@/services/driveService';
+import { getGoogleDriveTokens } from '@/services/userService';
+import { Project } from '@/types/project';
+import { Customer } from '@/types/customer';
+import { Calculation } from '@/types/calculation';
+import { Company } from '@/types/company';
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 
-// Hjälpfunktion för att formatera nummer som valuta
-const formatCurrency = (amount: number) => new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+const formatCurrency = (amount: number) => new Intl.NumberFormat('sv-SE', { style: 'currency', currency: 'SEK' }).format(amount);
 
 export async function POST(request: Request) {
-    const { projectId } = await request.json();
+    const { projectId, userId } = await request.json();
 
-    if (!projectId) {
-        return new NextResponse('Projekt-ID saknas', { status: 400 });
+    if (!projectId || !userId) {
+        return new NextResponse(JSON.stringify({ error: 'Projekt-ID och Användar-ID saknas' }), { status: 400 });
     }
 
     try {
-        // 1. Hämta data
-        const projectDocRef = doc(db, 'projects', projectId);
-        const calcDocRef = doc(db, 'projects', projectId, 'calculations', 'main');
-        const [projectDoc, calculationDoc] = await Promise.all([ getDoc(projectDocRef), getDoc(calcDocRef) ]);
+        // Steg 1: Hämta all nödvändig data från Firestore
+        const userDocRef = doc(db, 'users', userId);
+        const projectDocRef = doc(db, `users/${userId}/projects`, projectId);
+        const calcDocRef = doc(db, `users/${userId}/projects/${projectId}/calculations`, 'main');
+        
+        const [userDoc, projectDoc, calculationDoc] = await Promise.all([
+            getDoc(userDocRef),
+            getDoc(projectDoc),
+            getDoc(calcDocRef)
+        ]);
 
-        if (!projectDoc.exists() || !calculationDoc.exists()) {
-            return new NextResponse('Projekt- eller kalkyldata kunde inte hittas', { status: 404 });
+        if (!userDoc.exists() || !projectDoc.exists() || !calculationDoc.exists()) {
+            let missing = [];
+            if (!userDoc.exists()) missing.push('användare');
+            if (!projectDoc.exists()) missing.push('projekt');
+            if (!calculationDoc.exists()) missing.push('kalkyl');
+            return new NextResponse(JSON.stringify({ error: `Nödvändig data kunde inte hittas: ${missing.join(', ')}` }), { status: 404 });
         }
 
+        const companyData = userDoc.data() as Company;
         const project = projectDoc.data() as Project;
         const calculation = calculationDoc.data() as Calculation;
+        
+        const customerDocRef = doc(db, `users/${userId}/customers`, project.customerId);
+        const customerDoc = await getDoc(customerDocRef);
+        if(!customerDoc.exists()) {
+             return new NextResponse(JSON.stringify({ error: 'Kunddata kunde inte hittas' }), { status: 404 });
+        }
+        const customer = customerDoc.data() as Customer;
 
-        // 2. Förbered data för mallen
-        const today = new Date();
-        const validUntil = new Date();
-        validUntil.setDate(today.getDate() + 30);
+        const googleDriveFolderId = project.googleDriveFolderId;
+        if (!googleDriveFolderId) {
+            return new NextResponse(JSON.stringify({ error: 'Projektet saknar en Google Drive-mapp. Kan inte spara PDF.' }), { status: 400 });
+        }
 
+        // Steg 2: Gör beräkningar och förbered data för PDF-mallen
         const totalSelfCost = calculation.items.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
         const profitAmount = totalSelfCost * (calculation.profitMarginPercentage / 100);
         const totalExclVat = totalSelfCost + profitAmount;
         const vatAmount = totalExclVat * 0.25;
         const totalInclVat = totalExclVat + vatAmount;
 
-        const sections: { title: CalculationCategory, items: any[], subTotal: string }[] = ['Material', 'Arbete', 'Underentreprenör', 'Övrigt'].map(category => {
-            const items = calculation.items
-                .filter(item => item.category === category)
-                .map(item => ({
-                    ...item,
-                    unitPrice: formatCurrency(item.unitPrice),
-                    total: formatCurrency(item.quantity * item.unitPrice)
-                }));
-            const subTotal = items.reduce((acc, item) => acc + (item.quantity * parseFloat(item.unitPrice.replace(/\s/g, '').replace(',', '.'))), 0);
-            return {
-                title: category as CalculationCategory,
-                items: items,
-                subTotal: formatCurrency(subTotal)
-            };
-        }).filter(section => section.items.length > 0); // Inkludera bara sektioner med innehåll
-
         const templateData = {
-            // Företagsinfo (bör hämtas från inställningar framöver)
-            dittForetagsnamn: process.env.COMPANY_NAME || 'Företagsnamn saknas',
-            dinAdress: process.env.COMPANY_ADDRESS || 'Adress saknas',
-            dinEpost: process.env.COMPANY_EMAIL || 'E-post saknas',
-            dittTelefonnummer: process.env.COMPANY_PHONE || 'Telefon saknas',
-            dittOrgNr: process.env.COMPANY_ORG_NR || 'Org.nr saknas',
-            dittNamn: process.env.USER_NAME || 'Ditt Namn',
-
-            // Offertinfo
-            offertdatum: today.toLocaleDateString('sv-SE'),
-            giltigTillDatum: validUntil.toLocaleDateString('sv-SE'),
-            offertnummer: `${today.getFullYear()}-${project.projectNumber}`,
-
-            // Kund- & Projektinfo
-            kundnamn: project.customer.name,
-            kundAdress: project.customer.address,
-            kundEpost: project.customer.email,
-            projektnummer: project.projectNumber,
-            
-            // Kalkyl-data
-            sections,
+            project, 
+            customer,
+            calculation,
+            company: companyData,
             totalSelfCost: formatCurrency(totalSelfCost),
-            profitMarginPercentage: calculation.profitMarginPercentage,
             profitAmount: formatCurrency(profitAmount),
             totalExclVat: formatCurrency(totalExclVat),
             vatAmount: formatCurrency(vatAmount),
             totalInclVat: formatCurrency(totalInclVat),
+            offertdatum: new Date().toLocaleDateString('sv-SE'),
+            giltigTillDatum: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('sv-SE'),
         };
+        
+        // Steg 3: Generera HTML från React-komponent
+        const htmlContent = renderToStaticMarkup(<InvoicePdfTemplate {...templateData} />);
 
-        // 3. Fyll i mallen
-        Handlebars.registerHelper('each', function(context, options) {
-            let ret = "";
-            for(let i=0, j=context.length; i<j; i++) {
-                ret = ret + options.fn(context[i]);
-            }
-            return ret;
+        // Steg 4: Generera PDF från HTML
+        const browser = await puppeteer.launch({
+            args: chromium.args,
+            defaultViewport: chromium.defaultViewport,
+            executablePath: await chromium.executablePath(),
+            headless: chromium.headless, 
         });
-        const template = Handlebars.compile(OFFERTMALL_HTML);
-        const finalHtml = template(templateData);
+        const page = await browser.newPage();
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+        const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
+        await browser.close();
+        
+        // Steg 5: Ladda upp PDF till Google Drive
+        const tokens = await getGoogleDriveTokens(userId);
+        if (!tokens) {
+            return new NextResponse(JSON.stringify({ error: 'Kunde inte hämta Google-autentisering.' }), { status: 401 });
+        }
 
-        // 4. Skapa PDF
-        const offerTitle = `Offert ${project.projectNumber}`;
-        const pdfUrl = await createOfferPdf(projectId, project.customer.name, offerTitle, finalHtml);
+        const pdfFileName = `Offert ${project.projectNumber} - ${customer.name}.pdf`;
+        const file = await uploadPdfToDrive(tokens, pdfBuffer, pdfFileName, googleDriveFolderId);
+        const pdfUrl = file.webViewLink; // Länk för att se filen i webbläsare
 
-        console.log(`[API] PDF skapad. URL: ${pdfUrl}`);
+        console.log(`[API] PDF skapad och uppladdad. URL: ${pdfUrl}`);
 
-        // 5. Returnera URL
-        return NextResponse.json({ pdfUrl });
+        // Steg 6: Returnera URL till den uppladdade filen
+        return new NextResponse(JSON.stringify({ pdfUrl: pdfUrl }), { status: 200 });
 
     } catch (error) {
         console.error("[API] Fel vid PDF-generering:", error);
         const errorMessage = error instanceof Error ? error.message : String(error);
-        return new NextResponse(JSON.stringify({ error: 'Internt serverfel', details: errorMessage }), { status: 500 });
+        return new NextResponse(JSON.stringify({ error: 'Internt serverfel vid PDF-generering', details: errorMessage }), { status: 500 });
     }
 }

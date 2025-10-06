@@ -4,40 +4,34 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '@/components/shared/Modal';
 import { useUI } from '@/contexts/UIContext';
-import { createProject } from '@/actions/projectActions';
+import { createActiveProject } from '@/actions/projectActions'; // Uppdaterad import
 import { getCustomers } from '@/actions/customerActions';
 import { useSession } from 'next-auth/react';
-import { ProjectStatus } from '@/types';
 
-// Förenklad typ för kund-data i modalen
+
 type Customer = { id: string; name: string; };
 
 const CreateProjectModal = () => {
   const { isModalOpen, closeModal, getModalPayload } = useUI();
   const { data: session } = useSession();
 
-  // Formulärdata
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   
-  // State för att hantera kunder i dropdown
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCustomerLoading, setIsCustomerLoading] = useState(false);
 
-  // Hämta kunder och sätt initialvärden från payload när modalen öppnas
   useEffect(() => {
     const modalId = 'createProject';
     if (isModalOpen(modalId) && session?.user?.id) {
-      // Hämta payload INUTI useEffect för att undvika render-cykler
       const payload = getModalPayload(modalId);
       if (payload) {
         setName(payload.projectName || '');
         setSelectedCustomerId(payload.customerId || '');
       }
 
-      // Hämta kundlista
       setIsCustomerLoading(true);
       getCustomers(session.user.id)
         .then(res => {
@@ -50,7 +44,6 @@ const CreateProjectModal = () => {
   }, [isModalOpen, session?.user?.id, getModalPayload]);
 
   const handleClose = () => {
-    // Återställ allt state
     setName('');
     setAddress('');
     setSelectedCustomerId('');
@@ -72,21 +65,19 @@ const CreateProjectModal = () => {
     }
 
     setIsLoading(true);
-    const result = await createProject({ 
+    // Anropa den nya Guldstandard-funktionen
+    const result = await createActiveProject({ 
         name, 
         address, 
         customerId: selectedCustomerId,
-        customerName: customer.name, // Korrekt denormaliserad data
-        status: ProjectStatus.NotStarted, // Använd Enum för status
+        customerName: customer.name,
     }, session.user.id);
     setIsLoading(false);
 
     if (result.success) {
-      alert(`Projekt "${name}" skapades!`);
+      alert(`Projekt "${name}" skapades och mappstrukturen har byggts i Google Drive!`);
       handleClose();
-      // Forcera en omladdning för att visa det nya projektet. 
-      // En bättre lösning är att använda SWR:s `mutate`.
-      window.location.reload(); 
+      window.location.reload();
     } else {
       alert(`Fel: ${result.error}`);
     }
@@ -113,7 +104,6 @@ const CreateProjectModal = () => {
                 id="project-address"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                required
                 className="mt-1 block w-full rounded-md border-border-primary bg-background-primary shadow-sm p-2.5"
             />
         </div>
@@ -130,11 +120,10 @@ const CreateProjectModal = () => {
                 <option value="" disabled>{isCustomerLoading ? 'Laddar kunder...' : 'Välj en befintlig kund'}</option>
                 {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-             {/* TODO: Lägg till knapp för att skapa ny kund direkt härifrån */}
         </div>
         <div className="mt-6 flex justify-end gap-3">
             <button type="button" onClick={handleClose} className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">Avbryt</button>
-            <button type="submit" disabled={isLoading || isCustomerLoading} className="rounded-md border border-transparent bg-accent-blue px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-accent-blue-hover disabled:bg-gray-400">{isLoading ? 'Sparar...' : 'Spara Projekt'}</button>
+            <button type="submit" disabled={isLoading || isCustomerLoading} className="rounded-md border border-transparent bg-accent-blue px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-accent-blue-hover disabled:bg-gray-400">{isLoading ? 'Skapar Projekt...' : 'Spara Projekt'}</button>
         </div>
       </form>
     </Modal>

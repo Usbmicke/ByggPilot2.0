@@ -2,158 +2,114 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Modal from '@/components/shared/Modal';
-import { Customer } from '@/types/customer';
-import CalculationEngine from '@/components/dashboard/CalculationEngine';
+import { useUI } from '@/contexts/UIContext';
+import { createProspectProject } from '@/actions/projectActions';
+import { getCustomers } from '@/actions/customerActions';
 import { useSession } from 'next-auth/react';
 
-interface CreateOfferModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-}
+type Customer = { id: string; name: string; };
 
-const CreateOfferModal: React.FC<CreateOfferModalProps> = ({ isOpen, onClose }) => {
-    const { data: session } = useSession();
-    const [customers, setCustomers] = useState<Customer[]>([]);
-    const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [step, setStep] = useState('select_customer'); // 'select_customer' | 'calculation'
-    const [newOfferProjectId, setNewOfferProjectId] = useState<string | null>(null);
+const CreateOfferModal = () => {
+  const { isModalOpen, closeModal } = useUI();
+  const { data: session } = useSession();
+  const router = useRouter();
 
-    useEffect(() => {
-        if (isOpen && step === 'select_customer') {
-            // Reset state when modal is reopened
-            resetState();
-            const fetchCustomers = async () => {
-                setIsLoading(true);
-                try {
-                    const response = await fetch('/api/customers/list');
-                    if (!response.ok) throw new Error('Kunde inte hämta kunder.');
-                    const data = await response.json();
-                    setCustomers(data.customers || []);
-                } catch (err) {
-                    setError(err instanceof Error ? err.message : 'Ett okänt fel uppstod');
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-            fetchCustomers();
-        }
-    }, [isOpen, step]);
+  const [name, setName] = useState('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCustomerLoading, setIsCustomerLoading] = useState(false);
 
-    const resetState = () => {
-        setSelectedCustomerId('');
-        setNewOfferProjectId(null);
-        setError(null);
-        setStep('select_customer');
-    };
+  useEffect(() => {
+    if (isModalOpen('createOffer') && session?.user?.id) {
+      setIsCustomerLoading(true);
+      getCustomers(session.user.id)
+        .then(res => {
+          if (res.success && res.data) {
+            setCustomers(res.data as Customer[]);
+          }
+        })
+        .finally(() => setIsCustomerLoading(false));
+    }
+  }, [isModalOpen, session?.user?.id]);
 
-    const handleContinue = async () => {
-        if (!selectedCustomerId) {
-            setError('Du måste välja en kund.');
-            return;
-        }
-        if (!session?.user?.id) {
-            setError('Kunde inte verifiera användare. Logga in igen.');
-            return;
-        }
+  const handleClose = () => {
+    setName('');
+    setSelectedCustomerId('');
+    setCustomers([]);
+    closeModal('createOffer');
+  };
 
-        const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
-        if (!selectedCustomer) {
-             setError('Den valda kunden hittades inte.');
-            return;
-        }
-
-        setIsLoading(true);
-        setError(null);
-
-        try {
-            const response = await fetch('/api/projects/create-offer', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ customer: selectedCustomer, userId: session.user.id }),
-            });
-
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.details || 'Kunde inte skapa offert-projektet.');
-            }
-
-            const { projectId } = await response.json();
-            setNewOfferProjectId(projectId);
-            setStep('calculation');
-
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Ett okänt fel uppstod vid skapande av offert.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    
-    const handleClose = () => {
-      resetState();
-      onClose();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!session?.user?.id || !selectedCustomerId || !name) {
+        alert("Du måste vara inloggad, ange ett projektnamn och välja en kund.");
+        return;
     }
 
-    const renderContent = () => {
-        switch (step) {
-            case 'select_customer':
-                return (
-                    <div className="p-6">
-                        <h3 className="text-lg font-medium text-white mb-4">Välj kund för offerten</h3>
-                        {error && <p className="text-red-400 bg-red-900/50 p-3 rounded-md mb-4">{error}</p>}
-                        <select 
-                            value={selectedCustomerId}
-                            onChange={(e) => setSelectedCustomerId(e.target.value)}
-                            className="w-full bg-gray-700 text-white p-2 rounded-md mb-4 focus:ring-cyan-500 focus:border-cyan-500"
-                        >
-                            <option value="" disabled>Välj en befintlig kund...</option>
-                            {customers.map(customer => (
-                                <option key={customer.id} value={customer.id}>
-                                    {customer.name}
-                                </option>
-                            ))}
-                        </select>
-                        
-                        {/* TODO: Implement New Customer Form */}
-                        <p className="text-center text-sm text-gray-400 my-4">...eller</p>
-                        <button 
-                            onClick={() => alert('Funktion för att skapa ny kund är under utveckling.')}
-                            className="w-full text-center py-2 px-4 border border-gray-600 rounded-md text-gray-300 hover:bg-gray-700 transition-colors"
-                        >
-                            Skapa Ny Kund
-                        </button>
-
-                        <div className="mt-6 pt-4 border-t border-gray-700">
-                             <button 
-                                onClick={handleContinue}
-                                disabled={isLoading || !selectedCustomerId}
-                                className="w-full bg-cyan-600 text-white font-bold py-2 px-4 rounded-md transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed hover:bg-cyan-700"
-                            >
-                                {isLoading ? 'Skapar...' : 'Fortsätt till kalkyl'}
-                            </button>
-                        </div>
-                    </div>
-                );
-
-            case 'calculation':
-                return newOfferProjectId ? (
-                    <div className="p-2 sm:p-4 md:p-6">
-                      <CalculationEngine projectId={newOfferProjectId} />
-                    </div>
-                ) : null;
-            
-            default:
-                return null;
-        }
+    const customer = customers.find(c => c.id === selectedCustomerId);
+    if (!customer) {
+        alert("Fel: Kunden kunde inte hittas.");
+        return;
     }
 
-    return (
-        <Modal isOpen={isOpen} onClose={handleClose} title={step === 'select_customer' ? 'Skapa ny offert' : 'Kalkylunderlag'} wide={step === 'calculation'}>
-           {renderContent()}
-        </Modal>
-    );
+    setIsLoading(true);
+    const result = await createProspectProject({ 
+        name,
+        customerId: selectedCustomerId,
+        customerName: customer.name,
+    }, session.user.id);
+
+    if (result.success && result.project) {
+      alert(`Offertunderlag för "${name}" har skapats! Du skickas nu vidare till kalkylvyn.`);
+      handleClose();
+      // Omdirigera till kalkylsidan för det nya anbudsprojektet
+      router.push(`/projects/${result.project.id}/calculations/new`);
+    } else {
+      alert(`Fel: ${result.error}`);
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Modal isOpen={isModalOpen('createOffer')} onClose={handleClose} title="Skapa Ny Offert">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+            <label htmlFor="offer-project-name" className="block text-sm font-medium text-text-secondary">Projektnamn (för anbudet)</label>
+            <input 
+                type="text"
+                id="offer-project-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                placeholder='Ex: Fönsterbyte villa'
+                className="mt-1 block w-full rounded-md border-border-primary bg-background-primary shadow-sm p-2.5"
+            />
+        </div>
+         <div>
+            <label htmlFor="offer-customer-select" className="block text-sm font-medium text-text-secondary">Välj Kund</label>
+            <select
+                id="offer-customer-select"
+                value={selectedCustomerId}
+                onChange={e => setSelectedCustomerId(e.target.value)}
+                required
+                disabled={isCustomerLoading}
+                className="mt-1 block w-full rounded-md border-border-primary bg-background-primary shadow-sm p-2.5"
+            >
+                <option value="" disabled>{isCustomerLoading ? 'Laddar kunder...' : 'Välj en befintlig kund'}</option>
+                {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+             {/* TODO: Lägga till knapp för att skapa ny kund direkt härifrån */}
+        </div>
+        <div className="mt-6 flex justify-end gap-3">
+            <button type="button" onClick={handleClose} className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">Avbryt</button>
+            <button type="submit" disabled={isLoading || isCustomerLoading || !name || !selectedCustomerId} className="rounded-md border border-transparent bg-accent-blue px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-accent-blue-hover disabled:bg-gray-400">{isLoading ? 'Skapar...' : 'Fortsätt till Kalkyl'}</button>
+        </div>
+      </form>
+    </Modal>
+  );
 };
 
 export default CreateOfferModal;

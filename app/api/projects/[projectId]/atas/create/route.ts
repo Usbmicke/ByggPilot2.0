@@ -1,12 +1,12 @@
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/lib/auth';
+import { auth } from '@/lib/auth';
 import { z } from 'zod';
-import { firestoreAdmin } from '@/app/lib/firebase-admin';
-import { Timestamp } from 'firebase-admin/firestore';
+import { firestoreAdmin } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
+import { createFolder, createGoogleDoc } from '@/services/driveService';
 
 const createAtaSchema = z.object({
-    projectId: z.string().nonempty("Projekt-ID måste anges"),
     title: z.string().optional(),
     notes: z.string().optional(),
 });
@@ -20,55 +20,82 @@ export async function POST(request: Request, { params }: { params: { projectId: 
     }
 
     const projectId = params.projectId;
+    if (!projectId) {
+        return NextResponse.json({ error: 'Projekt-ID saknas' }, { status: 400 });
+    }
 
     try {
         const json = await request.json();
-        // Injicera projectId från URL:en i objektet som ska valideras
-        const body = createAtaSchema.parse({ ...json, projectId });
+        const body = createAtaSchema.parse(json);
 
-        // Säkerhetskontroll: Verifiera att projektet tillhör den inloggade användaren
-        const projectRef = firestoreAdmin.collection('projects').doc(body.projectId);
-        const projectDoc = await projectRef.get();
+        const projectRef = firestoreAdmin.collection('users').doc(userId).collection('projects').doc(projectId);
 
-        if (!projectDoc.exists) {
-            return NextResponse.json({ error: 'Projektet hittades inte.' }, { status: 404 });
-        }
+        const newAta = await firestoreAdmin.runTransaction(async (transaction) => {
+            const projectDoc = await transaction.get(projectRef);
+            if (!projectDoc.exists) {
+                throw new Error('Projektet hittades inte.');
+            }
+            const projectData = projectDoc.data();
 
-        const projectData = projectDoc.data();
-        if (projectData?.userId !== userId) {
-            return NextResponse.json({ error: 'Användaren har inte behörighet till detta projekt.' }, { status: 403 });
-        }
+            // Hämta ID för "2_Ekonomi"
+            const ekonomiFolderId = projectData?.googleDrive?.subFolderIds?.ekonomi;
+            if (!ekonomiFolderId) {
+                throw new Error('Mappen \"2_Ekonomi\" kunde inte hittas för detta projekt. Kör \"Verifiera & Reparera\".');
+            }
+
+            let ataParentFolderId = projectData?.googleDrive?.subFolderIds?.ata; // ÄTA-specifik mapp
+            const updates: { [key: string]: any } = {};
+
+            // Om ÄTA-mappen inte finns, skapa den och förbered uppdatering av projektet
+            if (!ataParentFolderId) {
+                const ataFolder = await createFolder(userId, 'ÄTA', ekonomiFolderId);
+                if (!ataFolder || !ataFolder.id) {
+                    throw new Error('Kunde inte skapa mappen \"ÄTA\" i projektets ekonomimapp.');
+                }
+                ataParentFolderId = ataFolder.id;
+                updates['googleDrive.subFolderIds.ata'] = ataParentFolderId;
+            }
+
+            const nextAtaNumber = (projectData?.ataCounter || 0) + 1;
+            updates['ataCounter'] = nextAtaNumber;
+            
+            const ataTitle = body.title || `ÄTA-underlag ${nextAtaNumber}`;
+            const documentName = `ÄTA ${String(nextAtaNumber).padStart(2, '0')} - ${ataTitle}`;
+
+            // Skapa ett Google-dokument, inte en mapp
+            const ataDoc = await createGoogleDoc(userId, documentName, ataParentFolderId);
+            if (!ataDoc || !ataDoc.id) {
+                throw new Error('Misslyckades med att skapa ÄTA-dokumentet i Google Drive.');
+            }
+            
+            const newAtaRef = projectRef.collection('atas').doc();
+            const newAtaData = {
+                id: newAtaRef.id,
+                ataNumber: nextAtaNumber,
+                title: ataTitle,
+                notes: body.notes || '',
+                status: 'DRAFT',
+                googleDriveDocId: ataDoc.id, // Spara dokument-ID, inte mapp-ID
+                createdAt: FieldValue.serverTimestamp(),
+                updatedAt: FieldValue.serverTimestamp(),
+            };
+
+            transaction.set(newAtaRef, newAtaData);
+            transaction.update(projectRef, updates);
+
+            return newAtaData;
+        });
         
-        // Skapa den nya ÄTA:n i en sub-kollektion under projektet
-        const newAtaRef = projectRef.collection('atas').doc();
+        console.log(`[Guldstandard] Nytt ÄTA-dokument skapat. Projekt: ${projectId}, ÄTA-ID: ${newAta.id}, Drive-dokument: ${newAta.googleDriveDocId}`);
 
-        const newAtaData = {
-            title: body.title || 'Namnlös ÄTA',
-            notes: body.notes || '',
-            status: 'DRAFT',
-            createdAt: Timestamp.now(),
-            updatedAt: Timestamp.now(),
-        };
-
-        await newAtaRef.set(newAtaData);
-
-        const createdAta = {
-            id: newAtaRef.id,
-            ...newAtaData
-        };
-        
-        console.log('--- Nytt ÄTA-utkast sparat i Firestore ---');
-        console.log('Projekt ID:', body.projectId);
-        console.log('ÄTA ID:', newAtaRef.id);
-        console.log('------------------------------------------');
-
-        return NextResponse.json(createdAta, { status: 201 }); // 201 Created
+        return NextResponse.json(newAta, { status: 201 });
 
     } catch (error) {
         if (error instanceof z.ZodError) {
             return NextResponse.json({ error: 'Invalid input data', details: error.errors }, { status: 400 });
         }
-        console.error('Error creating ATA draft:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        console.error('Fel vid skapande av ÄTA:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Internal Server Error';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }

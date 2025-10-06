@@ -1,9 +1,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/app/lib/auth';
-import { getProject } from '@/app/services/projectService';
-import { createFileInDrive } from '@/app/services/driveService';
-import { addFileToProject } from '@/app/services/firestoreService';
+import { auth } from '@/lib/auth';
+import { firestoreAdmin } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
+import { uploadFileToDrive, getOrCreateSubFolder } from '@/services/driveService';
 
 export async function POST(req: NextRequest) {
     const session = await auth();
@@ -17,44 +17,63 @@ export async function POST(req: NextRequest) {
         const formData = await req.formData();
         const file = formData.get('file') as File | null;
         const projectId = formData.get('projectId') as string | null;
+        // Nytt, obligatoriskt fält som specificerar destinationen
+        const destination = formData.get('destination') as string | null; 
 
-        if (!file || !projectId) {
-            return NextResponse.json({ message: 'Fil och projekt-ID krävs' }, { status: 400 });
+        if (!file || !projectId || !destination) {
+            return NextResponse.json({ message: 'Fil, projekt-ID och destination krävs' }, { status: 400 });
         }
 
-        // 1. Verifiera att användaren äger projektet
-        const project = await getProject(projectId, userId);
-        if (!project) {
-            return NextResponse.json({ message: 'Åtkomst nekad till projektet' }, { status: 403 });
+        const projectRef = firestoreAdmin.collection('users').doc(userId).collection('projects').doc(projectId);
+        const projectDoc = await projectRef.get();
+
+        if (!projectDoc.exists) {
+            return NextResponse.json({ message: 'Åtkomst nekad eller så finns inte projektet' }, { status: 403 });
         }
 
-        // 2. Ladda upp filen till Google Drive
-        const driveFolderId = project.driveFolderId;
-        if (!driveFolderId) {
-             return NextResponse.json({ message: 'Projektets molnmapp kunde inte hittas.' }, { status: 500 });
+        const projectData = projectDoc.data();
+        if (!projectData?.googleDrive?.subFolderIds) {
+             return NextResponse.json({ message: 'Projektets mappstruktur är ofullständig.' }, { status: 500 });
         }
+
+        // --- GULDSTANDARD DESTINATIONSLOGIK ---
+        const destinationParts = destination.split('/');
+        const mainDestination = destinationParts[0]; // t.ex. 'media', 'ekonomi', 'kma'
+        const subFolderName = destinationParts.length > 1 ? destinationParts[1] : null; // t.ex. 'foton_platsoversikt', 'kvitton'
+
+        const mainFolderId = projectData.googleDrive.subFolderIds[mainDestination];
+        if (!mainFolderId) {
+             return NextResponse.json({ message: `Ogiltig huvud-destination: ${mainDestination}` }, { status: 400 });
+        }
+        
+        let targetFolderId = mainFolderId;
+
+        // Om en specifik undermapp är angiven, hämta eller skapa den
+        if (subFolderName) {
+            targetFolderId = await getOrCreateSubFolder(userId, mainFolderId, subFolderName);
+        }
+        // --- SLUT PÅ DESTINATIONSLOGIK ---
 
         const fileBuffer = Buffer.from(await file.arrayBuffer());
-        const driveFile = await createFileInDrive(file.name, file.type, driveFolderId, fileBuffer);
+        const driveFile = await uploadFileToDrive(userId, file.name, file.type, targetFolderId, fileBuffer);
 
         if (!driveFile || !driveFile.id) {
             throw new Error('Misslyckades med att ladda upp filen till Google Drive');
         }
 
-        // 3. Skapa en filreferens i Firestore
         const fileMetadata = {
-            id: driveFile.id, // Google Drive file ID
+            driveId: driveFile.id,
             name: file.name,
             mimeType: file.type,
             size: file.size,
-            uploadedAt: new Date().toISOString(),
-            driveWebViewLink: driveFile.webViewLink,
-            driveIconLink: driveFile.iconLink,
+            destination: destination, // Spara den logiska sökvägen
+            uploadedAt: FieldValue.serverTimestamp(),
+            driveWebViewLink: driveFile.webViewLink, 
         };
 
-        await addFileToProject(projectId, fileMetadata);
+        // Logga filen i en subcollection
+        await projectRef.collection('files').add(fileMetadata);
 
-        // 4. Returnera ett framgångsrikt svar
         return NextResponse.json({ message: 'Filen har laddats upp!', file: fileMetadata }, { status: 201 });
 
     } catch (error) {

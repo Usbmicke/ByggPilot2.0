@@ -1,8 +1,8 @@
-
 'use client';
 
 import React from 'react';
 import { useUI } from '@/contexts/UIContext';
+import Modal from '@/components/shared/Modal'; // Importera den generiska Modal-komponenten
 
 // Importera alla modaler som systemet kan använda
 import CreateProjectModal from '@/components/modals/CreateProjectModal';
@@ -14,43 +14,34 @@ import CreateOfferModal from '@/components/modals/CreateOfferModal';
 import EditProjectModal from '@/components/modals/EditProjectModal';
 import SetHourlyRateModal from '@/components/modals/SetHourlyRateModal';
 
-// Mappa modal-ID:n till deras respektive komponenter
-const modalRegistry: { [key: string]: React.FC<any> } = {
-  createProject: CreateProjectModal,
-  createAta: CreateAtaModal,
-  companyVision: CompanyVisionModal,
-  addMaterialCost: AddMaterialCostModal,
-  createCustomer: CreateCustomerModal,
-  createOffer: CreateOfferModal,
-  editProject: EditProjectModal,
-  setHourlyRate: SetHourlyRateModal,
+// Mappa modal-ID:n till deras respektive komponenter och titlar
+const modalRegistry: { [key: string]: { component: React.FC<any>, title: string } } = {
+  createProject: { component: CreateProjectModal, title: 'Skapa Nytt Projekt' },
+  createAta: { component: CreateAtaModal, title: 'Skapa ÄTA' },
+  companyVision: { component: CompanyVisionModal, title: 'Företagsvision' },
+  addMaterialCost: { component: AddMaterialCostModal, title: 'Lägg till Materialkostnad' },
+  createCustomer: { component: CreateCustomerModal, title: 'Skapa Ny Kund' },
+  createOffer: { component: CreateOfferModal, title: 'Skapa Offert' },
+  editProject: { component: EditProjectModal, title: 'Redigera Projekt' },
+  setHourlyRate: { component: SetHourlyRateModal, title: 'Ange Timpris' },
 };
 
 const ModalRenderer: React.FC = () => {
-  const { activeModal, closeModal } = useUI();
+  const { activeModal, closeModal, modalProps } = useUI();
 
-  if (!activeModal) {
-    return null; // Om ingen modal är aktiv, rendera ingenting
-  }
+  const isOpen = !!activeModal;
+  const modalInfo = activeModal ? modalRegistry[activeModal] : null;
 
-  const ModalComponent = modalRegistry[activeModal];
-
-  if (!ModalComponent) {
-    console.warn(`ModalRenderer: Ingen komponent registrerad för modalId "${activeModal}"`);
+  if (!isOpen || !modalInfo) {
     return null;
   }
 
+  const ModalComponent = modalInfo.component;
+
   return (
-    // Bakgrunds-overlay som stänger modalen vid klick
-    <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4"
-      onClick={closeModal}
-    >
-      {/* Wrapper för att förhindra att klick inuti modalen stänger den */}
-      <div onClick={(e) => e.stopPropagation()}>
-        <ModalComponent />
-      </div>
-    </div>
+    <Modal isOpen={isOpen} onClose={closeModal} title={modalInfo.title}>
+      <ModalComponent {...modalProps} onClose={closeModal} />
+    </Modal>
   );
 };
 
