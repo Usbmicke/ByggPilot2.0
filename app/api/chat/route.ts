@@ -1,7 +1,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from "next-auth/next";
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { getToken } from 'next-auth/jwt';
+import { authOptions } from "@/lib/auth"; // <-- KORRIGERAD: Importerar centrala authOptions
 import { firestoreAdmin } from '@/lib/firebase-admin';
 import { promoteProspectToActiveProject } from '@/actions/promoteProjectActions';
 import { saveMessagesToHistory, getMessageHistory } from '@/services/chatHistoryService';
@@ -45,22 +46,24 @@ Detta är en sammanfattning av relevant data från användarens konto. Använd d
 
 export async function POST(req: NextRequest) {
     try {
-        const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-        if (!token || !token.sub) {
+        // KORRIGERAD AUTH: Använder nu getServerSession med de centrala authOptions, precis som resten av API:et.
+        const session = await getServerSession(authOptions);
+        if (!session || !session.user || !session.user.id) {
             return new NextResponse(JSON.stringify({ error: 'Authentication required' }), { status: 401 });
         }
-        const userId = token.sub;
+        const userId = session.user.id;
 
         const { messages: rawMessages } = await req.json();
+        if (!rawMessages || rawMessages.length === 0) {
+            return new NextResponse(JSON.stringify({ error: 'Messages are required' }), { status: 400 });
+        }
         const userMessage = rawMessages[rawMessages.length - 1];
 
-        // Hämta långtidsminnet (chatt-historiken)
         const history = await getMessageHistory(userId, 30);
-
-        // Hämta arbetsminnet (dynamisk kontext)
         const dynamicContext = await getContext(userId);
-
-        const ACTION_PROMPT = `... [Din action prompt här, oförändrad] ...`; // Inkludera din befintliga action-prompt
+        
+        // TODO: Action prompt behöver implementeras korrekt.
+        const ACTION_PROMPT = ``; 
 
         const finalPrompt = `${MASTER_PROMPT}\n\n${dynamicContext}\n\n${ACTION_PROMPT}\n\n--- KONVERSATION ---\nuser: ${userMessage.parts[0].text}`;
 
@@ -70,17 +73,16 @@ export async function POST(req: NextRequest) {
 
         let finalMessageText = modelResponse.parts[0].text;
 
-        // ... [Din befintliga action-hanteringslogik här] ...
         try {
           const potentialAction = JSON.parse(modelResponse.parts[0].text.trim());
           if (potentialAction.action === 'promoteProject') {
-             // ... logik för att anropa promote ...
-             // finalMessageText = "... bekräftelse ...";
+             // Denna logik är ofullständig och behöver ses över
              modelResponse.parts[0].text = finalMessageText; 
           }
-        } catch (e) {}
+        } catch (e) {
+          // Ignorerar parsningsfel, meddelandet är inte en action.
+        }
 
-        // SPARA TILL LÅNGTIDSMINNET
         await saveMessagesToHistory(userId, [userMessage, modelResponse]);
 
         return NextResponse.json({ role: 'model', parts: [{ text: finalMessageText }] });

@@ -1,7 +1,8 @@
 
 'use server';
 
-import { firestoreAdmin, admin } from '@/app/lib/firebase-admin';
+// KORRIGERAD IMPORT: Sökvägen är nu korrekt och pekar på /lib/firebase-admin.
+import { firestoreAdmin, admin } from '@/lib/firebase-admin';
 
 // Det inkommande datainterfacet från formuläret
 interface CompanyFormData {
@@ -26,7 +27,6 @@ export async function updateCompanyInfo(formData: CompanyFormData, userId: strin
   try {
     const userDocRef = firestoreAdmin.collection('users').doc(userId);
     
-    // **KORRIGERINGEN:** Omvandla den platta formulärdatan till en nästlad struktur.
     const saveData = {
       company: {
         name: formData.companyName,
@@ -36,12 +36,11 @@ export async function updateCompanyInfo(formData: CompanyFormData, userId: strin
         city: formData.city,
         phone: formData.phone,
       },
-      isNewUser: false, // Markera att användaren har slutfört detta steg
+      isNewUser: false, 
       companyInfoCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    // Använd .set() med { merge: true } för att säkert uppdatera eller skapa dokumentet.
     await userDocRef.set(saveData, { merge: true });
 
     console.log(`[ACTION SUCCESS] Företagsinformation sparad korrekt för användare ${userId}.`);
@@ -68,7 +67,7 @@ export async function getUserData(userId: string) {
     const userDocRef = firestoreAdmin.collection('users').doc(userId);
     const docSnap = await userDocRef.get();
 
-    if (docSnap.exists) { // Korrigerad från .exists() till .exists
+    if (docSnap.exists) {
       return docSnap.data() as { isNewUser?: boolean; [key: string]: any; };
     } else {
       console.warn(`Ingen användare med ID ${userId} hittades i databasen.`);

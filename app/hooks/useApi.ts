@@ -19,10 +19,11 @@ interface EventsApiResponse {
   events: Event[];
 }
 
-// Korrigerad fetcher-funktion
-// Den skickar nu med autentiserings-cookies (credentials) för alla API-anrop.
+// ÅTERSTÄLLD: Fetcher-funktionen är nu tillbaka i sitt ursprungliga skick.
+// Autentisering hanteras korrekt på serversidan via NextAuth-sessionen,
+// inte genom att manuellt skicka med credentials från klienten.
 const fetcher = <T,>(url: string): Promise<T> => 
-  fetch(url, { credentials: 'include' }).then(res => {
+  fetch(url).then(res => {
     if (!res.ok) {
       throw new Error(`Ett fel uppstod vid datahämtning från ${url}: ${res.statusText}`);
     }

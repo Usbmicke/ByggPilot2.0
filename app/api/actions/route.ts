@@ -1,7 +1,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/api/auth/[...nextauth]/route";
+// KORRIGERAD IMPORT: Pekar nu mot den enda sanningskällan för authOptions.
+import { authOptions } from "@/lib/auth";
 import { firestoreAdmin } from "@/lib/firebase-admin";
 
 /**
