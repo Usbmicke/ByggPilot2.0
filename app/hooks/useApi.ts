@@ -19,12 +19,11 @@ interface EventsApiResponse {
   events: Event[];
 }
 
-// En generisk fetcher-funktion som kan användas av SWR. 
-// Den är nu korrekt typad för att hantera JSON-svar.
+// Korrigerad fetcher-funktion
+// Den skickar nu med autentiserings-cookies (credentials) för alla API-anrop.
 const fetcher = <T,>(url: string): Promise<T> => 
-  fetch(url).then(res => {
+  fetch(url, { credentials: 'include' }).then(res => {
     if (!res.ok) {
-      // Förbättrad felhantering för att ge mer kontext
       throw new Error(`Ett fel uppstod vid datahämtning från ${url}: ${res.statusText}`);
     }
     return res.json();

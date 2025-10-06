@@ -1,21 +1,19 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
 import { CogIcon, UserCircleIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
-import { User } from '@/types'; // Använder vår standardiserade User-typ
+import { User } from '@/types';
 import Popover from '@/components/shared/Popover';
 
-// Hjälpfunktion för att generera initialer
 const getInitials = (name: string | null | undefined) => {
   if (!name) return '??';
   return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
 };
 
-// Popover-innehåll för funktioner under utveckling
 const wipPopoverContent = (
   <div className="text-sm text-text-secondary">
     Denna funktion är under utveckling.
@@ -27,13 +25,25 @@ interface UserMenuProps {
 }
 
 const UserMenu: React.FC<UserMenuProps> = ({ user }) => {
+  const [isClient, setIsClient] = useState(false);
+
+  // Denna effekt körs bara på klienten, efter den initiala renderingen.
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const handleLogout = () => {
     signOut({ callbackUrl: '/' });
   };
 
+  // Rendera ingenting på servern för att undvika hydration-fel.
+  // Komponenten dyker upp på klienten när isClient blir true.
+  if (!isClient) {
+    return null;
+  }
+
   return (
     <div className="relative group">
-      {/* Avatar / Profilbild */}
       <div className="h-10 w-10 rounded-full bg-accent-blue flex items-center justify-center text-white font-bold text-sm border-2 border-border-primary cursor-pointer overflow-hidden">
         {user.image ? (
           <Image 
@@ -48,7 +58,6 @@ const UserMenu: React.FC<UserMenuProps> = ({ user }) => {
         )}
       </div>
       
-      {/* Dropdown-meny */}
       <div className="absolute right-0 w-56 bg-background-secondary border border-border-primary rounded-md shadow-lg z-50 hidden group-hover:block transition-all duration-300 origin-top-right animate-in fade-in-0 zoom-in-95 pt-2">
         <div className="px-4 py-3 border-b border-border-primary">
           <p className="text-sm font-semibold text-text-primary truncate">{user.name || "Användare"}</p>
