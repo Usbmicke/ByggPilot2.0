@@ -5,8 +5,8 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useSession, signIn } from 'next-auth/react';
-import ProTipsModal from '@/app/components/ProTipsModal';
-import GoogleIcon from '@/app/components/icons/GoogleIcon';
+import KnowledgeBaseModal from '@/components/modals/KnowledgeBaseModal';
+import GoogleIcon from '@/components/icons/GoogleIcon';
 
 // --- IKONER & TEKNISKA KOMPONENTER ---
 const IconStressClock = (props) => (
@@ -67,7 +67,7 @@ const AnimatedBackground = () => {
 
 // --- HUVUDLAYOUT ---
 export default function LandingPage() {
-  const [isProTipsModalOpen, setIsProTipsModalOpen] = useState(false);
+  const [isKnowledgeBaseModalOpen, setKnowledgeBaseModalOpen] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -180,7 +180,7 @@ export default function LandingPage() {
           <section className="py-16 md:py-24">
               <div className="container mx-auto px-6">
                   <button 
-                      onClick={() => setIsProTipsModalOpen(true)}
+                      onClick={() => setKnowledgeBaseModalOpen(true)}
                       className="group max-w-4xl mx-auto bg-gray-900/50 border border-gray-700/50 rounded-xl p-8 md:p-12 grid md:grid-cols-12 gap-8 items-center w-full text-left hover:border-yellow-500/50 hover:shadow-lg hover:shadow-yellow-500/10 transition-all duration-300"
                   >
                       <div className="md:col-span-2 flex justify-center"><div className="bg-yellow-400/10 p-4 rounded-full border border-yellow-400/30 group-hover:scale-110 transition-transform duration-300"><IconLightbulb className="w-12 h-12 text-yellow-400"/></div></div>
@@ -213,7 +213,7 @@ export default function LandingPage() {
         </footer>
       </div>
 
-      <ProTipsModal isOpen={isProTipsModalOpen} onClose={() => setIsProTipsModalOpen(false)} />
+      <KnowledgeBaseModal isOpen={isKnowledgeBaseModalOpen} onClose={() => setKnowledgeBaseModalOpen(false)} />
     </div>
   );
 }

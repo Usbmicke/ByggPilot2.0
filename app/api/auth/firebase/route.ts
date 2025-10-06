@@ -1,9 +1,9 @@
 
 import { getServerSession } from "next-auth/next"
 import { NextResponse } from "next/server";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/api/auth/[...nextauth]/route";
 // KORREKT IMPORT: Importera hela 'admin'-objektet
-import { admin } from "@/app/lib/firebase-admin";
+import { admin } from "@/lib/firebase-admin";
 
 export async function POST(request: Request) {
     const session = await getServerSession(authOptions);

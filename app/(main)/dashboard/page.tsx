@@ -8,7 +8,7 @@ import DashboardSummary from '@/components/dashboard/DashboardSummary';
 import { ProjectList } from '@/components/dashboard/ProjectList';
 import { ActionSuggestions } from '@/components/dashboard/ActionSuggestions';
 import GuidedTour from '@/components/tour/GuidedTour';
-import CreateNewButton from '@/components/dashboard/CreateNewButton'; // <-- IMPORTED
+import CreateNewButton from '@/components/dashboard/CreateNewButton';
 
 // Wrapper to handle search params for the tour
 const TourWrapper = () => {
