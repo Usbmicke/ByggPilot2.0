@@ -3,11 +3,11 @@
 import React, { useState, useEffect, useTransition } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import CompanyInfoForm from '@/app/components/auth/CompanyInfoForm';
-import OnboardingFlow from '@/app/components/onboarding/OnboardingFlow';
-import OnboardingModal from '@/app/components/OnboardingModal';
+import CompanyInfoForm from '@/components/auth/CompanyInfoForm';
+import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
+import OnboardingModal from '@/components/OnboardingModal';
 import Image from 'next/image';
-import { updateUserTermsStatus } from '@/app/actions/userActions';
+import { updateUserTermsStatus } from '@/actions/userActions';
 import { XIcon } from 'lucide-react';
 
 const CancelOnboardingModal = ({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void; }) => (

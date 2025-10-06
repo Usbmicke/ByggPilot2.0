@@ -1,53 +1,78 @@
-ByggPilot: Konstitution & Masterplan för AI-Agent (v3.0)
-Detta dokument är den enda, absoluta och slutgiltiga källan till sanning för ByggPilot-projektet. Det ersätter alla tidigare versioner (ai_context.md, ai_guidlines.md, MASTER_GUIDELINES.md). All utveckling, utan undantag, utgår härifrån.
+ByggPilot: Konstitution & Masterplan för AI-Agent (v4.0)
+Detta dokument är din Konstitution och din Karta. Det är den enda, absoluta och slutgiltiga källan till sanning för ByggPilot-projektet. Det ersätter alla tidigare versioner. All utveckling, utan undantag, utgår härifrån och följer reglerna nedan.
 
-Sektion 1: Vision & Kärnfilosofi ("ByggPilot-Tänket")
-ByggPilot är inte ett verktyg; det är en proaktiv digital kollega för hantverkare i Sverige. Målet är att eliminera "pappersmonstret" och ge hantverkaren full kontroll över sin tid och lönsamhet. All kod och varje funktion måste genomsyras av denna filosofi.
+Sektion 1: AI-Agentens Konstitution (Icke-förhandlingsbara Arbetsregler)
+Dessa lagar är absoluta och får aldrig brytas. De är utformade för att säkerställa projektets stabilitet, förhindra dubbelarbete och eliminera de krascher som tidigare plågat projektet.
 
-Grundare: Michael Ekengren Fogelström.
+Artikel 1: Noll-Tolerans mot Antaganden.
+
+Verifiera Alltid Före Handling: Innan du skapar, modifierar eller raderar en fil, måste du alltid först använda list_files eller read_file för att verifiera filsystemets nuvarande tillstånd. Agera aldrig på antaganden.
+
+Analysera Alltid Kontext: Innan du skriver kod, läs alla relevanta filer för att bygga en komplett mental karta av arkitekturen. Du måste förstå en fils syfte, dess beroenden och dess relation till andra delar av kodbasen.
+
+Artikel 2: Planera Före Handling.
+
+Presentera Planen Först: Efter din analys måste du presentera en tydlig, steg-för-steg-plan för mig. Planen ska inkludera exakt vilka filer som påverkas och varför.
+
+Invänta Exekveringstillstånd: Du får absolut inte påbörja någon kodning förrän jag har godkänt din plan med "Kör" eller "Godkänd". Inga fler gissningar eller chansningar.
+
+Artikel 3: Kirurgisk Precision.
+
+En Sak i Taget: Fokusera på att lösa en enda, väldefinierad uppgift eller bugg i taget. Blanda inte ihop flera olika problem.
+
+Minimala Ändringar: Gör endast de absolut nödvändiga ändringarna för att lösa den aktuella uppgiften. Ändra aldrig i globala konfigurationsfiler (som tsconfig.json) om det inte är den uttalade huvuduppgiften.
+
+Artikel 4: Omedelbar Verifiering.
+
+Kompilera efter Varje Ändring: Efter varje enskild fil du har modifierat, kör npm run dev i terminalen för att omedelbart verifiera att inga nya kompileringsfel har uppstått.
+
+Rapportera Resultat: Meddela mig resultatet: "Filen X är korrigerad. Kompileringen lyckades utan nya fel." eller "VARNING: Korrigeringen av fil X skapade ett nytt fel: [felmeddelande]". Ingen massändring av filer är tillåten.
+
+Artikel 5: Terminalen är Lag.
+
+Om ett TypeError, ModuleNotFound eller annat serverfel uppstår, är informationen i terminalen den absoluta sanningen. Ignorera aldrig ett felmeddelande. Analysera stackspårningen noggrant för att identifiera den exakta filen, raden och orsaken till felet.
+
+Artikel 6: Eliminera Redundans.
+
+Om du upptäcker dubblerad logik eller komponenter, skapa inte en ny. Flagga detta och föreslå en plan för att konsolidera koden till en enda sanningskälla.
+
+Sektion 2: Projektets Kärna (Vision & Filosofi)
+Vision: ByggPilot är inte ett verktyg; det är en proaktiv digital kollega för hantverkare i Sverige. Målet är att eliminera "pappersmonstret" och ge hantverkaren full kontroll.
+
 Kärnvärde: Byggd av en hantverkare, för hantverkare. Empati och förståelse för användarens vardag är allt.
 
-Kärnprinciper:
-Proaktivitet är Standard: ByggPilot frågar inte "Vill du ha hjälp?". Den agerar.
+Kärnprincip: Proaktivitet är Standard.
 
 Fel: "Ska vi göra en riskanalys?"
 
-Rätt: "Jag har skapat ett utkast för riskanalysen baserat på platsen. Jag hittade 3 punkter vi bör titta på för att säkra kvaliteten och undvika merkostnader."
+Rätt: "Jag har skapat ett utkast för riskanalysen baserat på projektinformationen. Jag hittade 3 punkter vi bör titta på för att säkra kvaliteten och undvika merkostnader."
 
-Agera med Omdöme: ByggPilot förbereder och automatiserar internt (skapar utkast, analyserar data, hittar information). Den agerar aldrig externt (skickar mail, kontaktar kund) utan användarens explicita godkännande.
+Sektion 3: Teknisk Arkitektur (Projektets Ritning)
+Detta är kartan över projektet. Följ den strikt för att undvika kaos. (OBS! VI BYGGER FORTFARANDE OM BYGGPILOT SÅ FILERNA KAN ÄNDRAS, VÄNLIGEN UPPDATERA HÄR INNE NÄR VI GÖR ÄNDRINGAR)
 
-Fokus på Värde: Varje funktion, varje knapp, varje textrad måste svara på frågan: "Hur hjälper detta hantverkaren att spara tid, minska stress eller öka lönsamheten?" Om svaret är oklart är funktionen fel.
+3.1. Teknikstack:
 
-Sektion 2: AI-Agentens Lagar (Icke-förhandlingsbara Arbetsregler)
-Dessa regler är absoluta och får aldrig brytas. De är utformade för att säkerställa projektets stabilitet, förhindra dubbelarbete och eliminera de krascher och regressioner som tidigare plågat projektet.
+Framework: Next.js (App Router)
 
-Verifiera Alltid Före Handling: Innan någon fil skapas, modifieras eller raderas, måste du alltid först använda list_files eller read_file för att verifiera filsystemets nuvarande tillstånd och befintliga innehåll. Du får aldrig agera på antaganden om en fils existens eller innehåll.
+Styling: Tailwind CSS
 
-Analysera Alltid Kontext Före Agerande: Innan du skriver någon kod måste du systematiskt läsa alla relevanta filer för att bygga en komplett mental karta av arkitekturen. Du måste förstå en fils syfte, beroenden och relation till andra delar av kodbasen. Du får aldrig agera på ofullständig information.
+Backend: Next.js API Routes & Google Cloud Functions (Serverless)
 
-Presentera Plan, Invänta Godkännande: Efter analys måste du presentera en tydlig, steg-för-steg-plan. Du får absolut inte påbörja någon kodning förrän du har fått ett explicit OK.
+Databas & Autentisering: Firebase (Firestore & Firebase Authentication)
 
-Anta ALDRIG att en Funktion Existerar: Du får ALDRIG skriva kod som anropar en importerad funktion utan att först ha verifierat att funktionen faktiskt exporteras från målfilen. Läs filen och kontrollera dess export-satser.
+Hosting: Netlify
 
-Terminalen och Felmeddelanden är Lag: Om ett TypeError, ModuleNotFound eller annat serverfel uppstår, är informationen i terminalen den absoluta sanningen. Ignorera ALDRIG ett felmeddelande. Analysera stackspårningen noggrant för att identifiera den exakta filen, raden och orsaken till felet.
+Säkerhet: Google Cloud Secret Manager
 
-Eliminera Redundans: Om du upptäcker dubblerad logik, flagga detta och föreslå en plan för att konsolidera koden till en enda sanningskälla.
+3.2. Filstruktur (Enda Källan till Sanning):
 
-Sektion 3: Teknisk Arkitektur & "Enda Källan till Sanning"
-För att undvika kaos och upprätthålla en ren kodbas följer vi denna struktur och dessa regler strikt.
-
-3.1 Filstruktur
 /app/api/: All backend-logik och API-endpoints.
-
-/app/actions/: Server Actions för datamutationer (rekommenderad metod).
 
 /app/components/: Alla återanvändbara React-komponenter.
 
-/app/contexts/: Globala providers för state management (t.ex. ChatContext.tsx, UIContext.tsx).
+/app/contexts/: Globala providers för state management.
 
-/app/hooks/: Återanvändbara React-hooks.
-
-/app/lib/: Kärnbibliotek och konfigurationer (t.ex. Firebase-anslutningar).
+/app/lib/: Kärnbibliotek och konfigurationer (Firebase-anslutningar, etc.).
 
 /app/services/: Funktioner för att interagera med externa tjänster.
 
@@ -55,85 +80,43 @@ För att undvika kaos och upprätthålla en ren kodbas följer vi denna struktur
 
 /ai_context.md: Detta dokument.
 
-3.2 Autentiseringssystemet: En Enda Källa till Sanning
-ABSOLUT REGEL: All logik och konfiguration för autentisering finns och hanteras EXKLUSIVT i filen app/api/auth/[...nextauth]/route.ts. Denna fil har varit källan till kritiska buggar tidigare. Dess korrekta funktion är avgörande.
+3.3. Kritiska Filer & "Enda Källan till Sanning":
 
-Dataflöde vid Inloggning:
+Autentisering: All logik för autentisering finns exklusivt i app/api/auth/[...nextauth]/route.ts. Rör aldrig denna fil utan en specifik order.
 
-Användaren signerar in via Google på klienten.
+Sökvägar: Alla sökvägs-alias (@/) definieras exklusivt i tsconfig.json.
 
-NextAuth signIn-callback i route.ts aktiveras.
+3.4. Kända Systematiska Fel & Fallgropar (LÄS DETTA NOGA):
 
-Koden söker efter användarens e-post i Firestore-collectionen users.
+Import-buggen (@/app/): Det mest återkommande felet i detta projekt är felaktiga importer. tsconfig.json definierar @/ som en genväg till mappen app/. Därför är en import som import... from '@/app/lib/...' ALLTID FEL. Den korrekta syntaxen är import... from '@/lib/...'. Var extremt noggrann med detta.
 
-Om användaren inte finns: En ny användare skapas direkt i callbacken.
+Hantering av Hemligheter: API-nycklar och andra hemligheter får ALDRIG hårdkodas. Använd .env.local endast för lokal utveckling. I produktion hanteras alla hemligheter via Google Cloud Secret Manager. Skapa aldrig en ny .env-fil utan att fråga.
 
-Om användaren finns: Inget nytt skapas.
+Sektion 4: Guldstandard-Visionen (Målbeskrivningen)
+Detta är den produkt vi bygger. All kod du skriver ska bidra till att förverkliga denna vision.
 
-jwt-callbacken hämtar det interna Firestore-dokument-ID:t från users-collectionen och sparar det i JWT-token (token.sub).
+4.1. Dashboarden (The Action Center):
 
-session-callbacken tar ID:t från token och lägger till det i klientens session (session.user.id).
+Kommandocentral: Sökrutan ska vara en kommandocentral (Cmd/Ctrl+K) för både sök och snabba handlingar ("Nytt projekt", "Starta tid").
 
-Sektion 4: ByggPilot-Expertis & Funktionella Krav (Guldstandard)
-Ditt mål är att implementera visionen om ett Large Action Model (LAM) som agerar som en erfaren, proaktiv och kompetent "digital kollega". Chatten är chefen för hela sidan.
+Proaktiva Aviseringar: Aviseringsklockan ska visa intelligenta notiser (vädervarningar, kundinsikter, slutförda uppgifter).
 
-4.1 KMA, Riskanalys och Regelverk
-Proaktiv Riskanalys: ByggPilot ska automatiskt kunna initiera en riskanalys. Strukturen ska alltid följa kärnkategorierna:
+Dynamiska KPI-kort: Korten för projekt och intäkter ska visa en jämförelsesiffra mot föregående period (t.ex. ▲ 15% vs. förra kvartalet).
 
-K - Kvalitet: Risker med Tid, Kostnad, och Teknisk Kvalitet.
+Snabb-logg Widget: En widget på dashboarden för att direkt kunna starta/stoppa tidtagning och checka in/ut från personalliggaren för ett valt projekt.
 
-M - Miljö: Risker med Avfall & Material, Påverkan på Omgivning, och Farliga Ämnen.
+4.2. Chatten (The Co-Pilot):
 
-A - Arbetsmiljö: Risker med Fysiska Olyckor, Ergonomi, och Psykosocial Stress.
+Beteende: Chatthistoriken ska vara persistent. Den intelligenta hälsningsfrasen visas bara en gång per session. All felhantering ska vara robust och användarvänlig.
 
-Dynamisk Varning: ByggPilot ska kunna analysera uppladdade bilder mot AMA-krav och AFS och flagga för avvikelser (t.ex. felaktigt avstånd mellan eluttag och dusch).
+Visuell Design: Meddelanden ska ha mer "luft". Checklistor och dokumentlänkar ska renderas som egna, snyggt inramade komponenter inuti chattflödet, med funktioner som en kopiera-ikon.
 
-4.2 Geodata och Markförhållanden
-Automatisk Riskminimering: Vid nytt projekt ska ByggPilot automatiskt hämta information om jordart, grundvatten och radonrisk från SGU:s API:er och proaktivt varna för risker.
+4.3. Intelligenta Flöden (Den Flytande +-knappen):
 
-Prediktiv Vädervarning: Systemet ska kunna skanna planerade arbetsmoment (t.ex. "Gjuta platta") och varna om det finns en konflikt med väderprognosen.
+"Skapa nytt" knapp till höger om sökfältet öppnar en modal med fyra val: Nytt Projekt, Skapa Offert, Ny Kund, Skapa ÄTA.
 
-4.3 Effektivisering och Administration ("Jobb-till-Kassa")
-Hela Flödet: Koden måste stödja hela "Jobb-till-Kassa"-flödet, från förfrågan till fakturaunderlag.
+"Nytt Projekt"-flöde: Ska aktivera Projekt-Co-Piloten som automatiskt analyserar projektet, skapar en dynamisk checklista och genererar ett utkast till Arbetsmiljöplan (AMP) om det krävs enligt AFS 2023:3.
 
-Automatiserad Kommunikation: ByggPilot ska proaktivt kunna generera professionella e-postutkast till kunder vid t.ex. resurskonflikter eller för betalningspåminnelser.
+"Skapa Offert"-flöde: Ska initiera den konversationella offertmotorn och, efter slutförd offert, proaktivt erbjuda att skapa ett juridiskt avtalsförslag baserat på Hantverkarformuläret 17.
 
-4.4 Konversationsdesign (LAM-principer för Chatten)
-Progressiv Information: Leverera aldrig en "vägg av text". Informationen ska portioneras ut i korta, hanterbara delar och alltid avslutas med en enda, tydlig och relevant motfråga.
-
-Intelligent Knapp-användning: Använd knappar proaktivt för att förenkla användarens val och föreslå nästa handling (t.ex. ``, [Visa utkast]).
-
-Ta Kommandon: AI:n måste vara byggd för att ta emot och agera på direkta kommandon.
-
-Sektion 5: Strategisk Roadmap (Master-Checklista)
-Detta är den aktuella statusen för projektet. Fokusera på de punkter som är markerade eller.
-
-Status: , , , 
-
-Fas 0.5: Återställning & Kvalitetssäkring (PÅGÅR)
-Återställa UI:
-
-`` Ta bort duplicerade knappar på kund- & projektsidor.
-
-`` Åtgärda felaktig styling ("vit ruta") på kundsidan.
-
-`` Återställ bredden på sökfältet i headern.
-
-Återställa Kärnfunktionalitet:
-
-`` Återställ den fullständiga chatt-komponenten (MessageInput.tsx) med alla funktioner (ljud, bild, förslag).
-
-`` Återställ aviseringsknappens funktion i headern.
-
-Åtgärda Brutna Länkar (404-fel):
-
-`` Skapa platshållarsidor för Tidrapportering och Dokument.
-
-Fas 1: Kärnprocesser & Intelligens (Pausad p.g.a. Regression)
-Finalisera Chatt-Intelligens: ``
-
-Utökad Onboarding: ``
-
-Förädling av ÄTA-processen: ``
-
-Smarta Offertmotorn: ``
+"Skapa ÄTA"-flöde: Ska generera ett formellt underlag och kritiskt avslutas med att proaktivt föreslå att skicka det till kunden för godkännande för att undvika tvister.

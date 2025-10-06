@@ -10,24 +10,18 @@ import GlobalSearchBar from '@/components/layout/GlobalSearchBar';
 import NotificationBell from '@/components/layout/NotificationBell';
 import UserMenu from '@/components/layout/UserMenu';
 import Clock from '@/components/layout/Clock';
+import CreateNewButton from '@/components/dashboard/CreateNewButton'; // Importera knappen
 
 interface HeaderProps {
   onMenuClick?: () => void;
 }
 
-/**
- * Header-komponenten fungerar nu som en ren layout-container.
- * Dess enda ansvar är att arrangera de specialiserade komponenterna 
- * som utgör headerns funktionalitet.
- * All komplex logik och tillståndshantering har flyttats till sina
- * respektive underkomponenter.
- */
 const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { data: session } = useSession();
 
   return (
     <header className="fixed top-0 left-0 md:left-64 right-0 bg-background-secondary border-b border-border-primary p-4 z-20">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         
         {/* Vänstra Sektionen: Hamburgermeny och Sökfält */}
         <div className="flex items-center gap-4 flex-1">
@@ -41,6 +35,11 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           <div className="hidden md:block w-full max-w-lg">
             <GlobalSearchBar />
           </div>
+        </div>
+
+        {/* Mellersta Sektionen: "Skapa nytt"-knappen */}
+        <div className="flex-shrink-0">
+            <CreateNewButton />
         </div>
 
         {/* Högra Sektionen: Klocka, Notiser och Användarmeny */}

@@ -1,6 +1,6 @@
 
 import { google } from 'googleapis';
-import { firestoreAdmin } from '@/app/lib/firebase-admin';
+import { firestoreAdmin } from '@/lib/firebase-admin';
 
 /**
  * Skapar och returnerar en autentiserad Google OAuth2-klient för en specifik användare.

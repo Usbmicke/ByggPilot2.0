@@ -8,7 +8,6 @@ import DashboardSummary from '@/components/dashboard/DashboardSummary';
 import { ProjectList } from '@/components/dashboard/ProjectList';
 import { ActionSuggestions } from '@/components/dashboard/ActionSuggestions';
 import GuidedTour from '@/components/tour/GuidedTour';
-import CreateNewButton from '@/components/dashboard/CreateNewButton';
 
 // Wrapper to handle search params for the tour
 const TourWrapper = () => {
@@ -22,9 +21,6 @@ export default function DashboardPage() {
     return (
         <Suspense fallback={<div>Laddar översikt...</div>}>
             <TourWrapper />
-
-            {/* The new centralized button is added here */}
-            <CreateNewButton />
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="animate-fade-in space-y-8 py-8">

@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Bot, Settings, Info } from 'lucide-react';
-import { useChat } from '@/app/contexts/ChatContext';
-import { useUI } from '@/app/contexts/UIContext'; // STEG 4: Importera useUI
+import { useChat } from '@/contexts/ChatContext';
+import { useUI } from '@/contexts/UIContext';
 
 interface OnboardingChatProps {
   onComplete: () => void;
