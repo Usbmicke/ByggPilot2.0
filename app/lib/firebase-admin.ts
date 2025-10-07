@@ -19,13 +19,16 @@ if (!admin.apps.length) {
     } catch (error) {
       console.error('Kritiskt fel: Kunde inte initiera Firebase Admin SDK med servicekonto.', error);
       // I en produktionsmiljö vill vi att detta ska misslyckas högljutt om servicekontot är felaktigt.
+      throw error; // Se till att appen kraschar om initieringen misslyckas
     }
   } else {
     // Om ingen service account finns (typiskt för lokal utveckling),
-    // och emulatorn inte används, logga en tydlig varning.
-    // Appen kommer troligen inte fungera fullt ut, men vi undviker kraschen.
-    console.warn('VARNING: FIREBASE_SERVICE_ACCOUNT_JSON är inte satt. Firebase Admin SDK är inte initierad.');
-    console.warn('För lokal utveckling, se till att denna miljövariabel är korrekt konfigurerad i .env.local');
+    // och emulatorn inte används, logga ett tydligt fel och avsluta processen.
+    console.error('FATALT FEL: FIREBASE_SERVICE_ACCOUNT_JSON är inte satt. Firebase Admin SDK kan inte initieras.');
+    console.error('För lokal utveckling, se till att denna miljövariabel är korrekt konfigurerad i .env.local');
+    // Avsluta processen för att förhindra att applikationen körs i ett trasigt tillstånd.
+    // I en serverless miljö kommer detta att orsaka en kallstart, men det förhindrar oförutsägbara fel.
+    process.exit(1);
   }
 }
 

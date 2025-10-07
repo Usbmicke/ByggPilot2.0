@@ -2,10 +2,10 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/app/providers/AuthProvider";
-import { UIProvider } from "@/app/contexts/UIContext";
-import { ChatProvider } from "@/app/contexts/ChatContext";
-import CookieBanner from "@/app/components/CookieBanner";
+import { AuthProvider } from "@/providers/AuthProvider";
+import { UIProvider } from "@/contexts/UIContext";
+import { ChatProvider } from "@/contexts/ChatContext";
+import CookieBanner from "@/components/CookieBanner";
 
 const inter = Inter({ subsets: ["latin"] });
 

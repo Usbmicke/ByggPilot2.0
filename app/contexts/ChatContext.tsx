@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useSession, SessionContextValue } from 'next-auth/react';
-import { uploadFile } from '@/app/lib/firebase/storage';
+import { uploadFile } from '@/lib/firebase/storage';
 
 // =================================================================================
 // GULD STANDARD - CHAT CONTEXT (Klient-sida)
@@ -94,7 +94,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       try {
         const downloadURL = await uploadFile(file);
         fileUris.push(downloadURL);
-        userMessageContent = `${content}\n(Bifogad fil: ${file.name})`;
+        userMessageContent = `${content}\n(Bifogad fil: ${file.name})`
       } catch (error) {
         console.error("Filuppladdning misslyckades:", error);
         const errorMsg: ChatMessage = {
