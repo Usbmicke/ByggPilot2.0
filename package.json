@@ -10,13 +10,13 @@
   },
   "dependencies": {
     "@ai-sdk/google": "latest",
+    "@ai-sdk/react": "latest",
     "@google-cloud/vertexai": "^1.1.0",
     "@google/generative-ai": "^0.24.1",
     "@headlessui/react": "^2.2.8",
     "@heroicons/react": "^2.2.0",
     "@pinecone-database/pinecone": "^6.1.2",
     "@radix-ui/react-popover": "^1.1.15",
-    "ai": "latest",
     "chart.js": "^4.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -40,12 +40,14 @@
     "react-spinners": "^0.17.0",
     "remark-gfm": "^4.0.1",
     "swr": "^2.3.6",
-    "tailwind-merge": "^3.3.1"
+    "tailwind-merge": "^3.3.1",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@types/uuid": "^9.0.8",
     "autoprefixer": "^10.4.19",
     "eslint": "^8",
     "eslint-config-next": "14.2.3",
