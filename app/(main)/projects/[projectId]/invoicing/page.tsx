@@ -1,8 +1,8 @@
 
-import { getProject } from '@/app/services/projectService';
-import { auth } from '@/app/lib/auth';
+import { getProject } from '@/services/projectService';
+import { auth } from '@/lib/auth';
 import { notFound } from 'next/navigation';
-import InvoicingView from '@/app/components/views/InvoicingView';
+import InvoicingView from '@/components/views/InvoicingView';
 
 interface ProjectInvoicingPageProps {
   params: {

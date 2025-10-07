@@ -3,9 +3,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { ExclamationTriangleIcon, MagnifyingGlassIcon, UserPlusIcon } from '@heroicons/react/24/outline';
-import { Customer } from '@/app/types';
-import CustomersView from '@/app/components/views/CustomersView';
-import NewCustomerModal from '@/app/components/NewCustomerModal'; // Importera modalen
+import { Customer } from '@/types';
+import CustomersView from '@/components/views/CustomersView';
+import NewCustomerModal from '@/components/NewCustomerModal'; // Importera modalen
 
 const useCustomers = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);

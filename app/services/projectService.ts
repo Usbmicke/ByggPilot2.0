@@ -6,7 +6,7 @@ import {
     createProjectInFirestore,
     getHighestProjectNumberFromFirestore, // Importera den nya databasfunktionen
 } from './firestoreService';
-import { Project, RiskAnalysis } from '@/app/types/index';
+import { Project, RiskAnalysis } from '@/types';
 
 /**
  * **NY FUNKTION**

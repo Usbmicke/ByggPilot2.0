@@ -1,9 +1,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-// KORRIGERAD IMPORT: Pekar nu mot den enda sanningskällan för authOptions.
-import { authOptions } from "@/lib/auth";
-import { firestoreAdmin } from "@/lib/firebase-admin";
+// KORRIGERAD IMPORT: Pekar nu mot den bevisat korrekta sökvägen.
+import { authOptions } from "@/app/lib/auth";
+import { firestoreAdmin } from "@/app/lib/firebase-admin";
 
 /**
  * API-rutt för att hämta alla nya, föreslagna åtgärder för en användare.

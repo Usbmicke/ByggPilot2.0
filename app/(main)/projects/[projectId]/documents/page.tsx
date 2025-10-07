@@ -1,9 +1,9 @@
 
 import React from 'react';
-import { auth } from '@/app/lib/auth';
-import { getProject } from '@/app/services/projectService';
-import { getFilesForProject } from '@/app/services/firestoreService';
-import ProjectDocumentsView from '@/app/components/views/ProjectDocumentsView';
+import { auth } from '@/lib/auth';
+import { getProject } from '@/services/projectService';
+import { getFilesForProject } from '@/services/firestoreService';
+import ProjectDocumentsView from '@/components/views/ProjectDocumentsView';
 import { notFound } from 'next/navigation';
 
 interface PageProps {

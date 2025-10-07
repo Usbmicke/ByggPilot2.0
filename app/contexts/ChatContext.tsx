@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useSession, SessionContextValue } from 'next-auth/react';
-import { uploadFile } from '@/lib/firebase/storage';
+import { uploadFile } from '@/app/lib/firebase/storage';
 
 // =================================================================================
 // GULD STANDARD - CHAT CONTEXT (Klient-sida)

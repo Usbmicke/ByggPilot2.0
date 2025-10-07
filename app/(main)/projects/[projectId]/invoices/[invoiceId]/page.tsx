@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowDownTrayIcon, EnvelopeIcon } from '@heroicons/react/24/solid';
-import { Invoice, Project, RotDeduction } from '@/app/types';
-import SendInvoiceModal from '@/app/components/SendInvoiceModal';
+import { Invoice, Project, RotDeduction } from '@/types';
+import SendInvoiceModal from '@/components/SendInvoiceModal';
 
 // --- Klientkomponenter flyttade hit för tydlighet ---
 
@@ -130,9 +130,9 @@ function InvoiceDetailPageClient({ initialInvoice, project }: { initialInvoice: 
 }
 
 // ---- Server-komponent (Wrapper) ----
-import { auth } from '@/app/lib/auth';
-import { getProject } from '@/app/services/projectService';
-import { getInvoiceFromFirestore } from '@/app/services/firestoreService';
+import { auth } from '@/lib/auth';
+import { getProject } from '@/services/projectService';
+import { getInvoiceFromFirestore } from '@/services/firestoreService';
 
 export default async function InvoiceDetailPage({ params }: { params: { projectId: string; invoiceId: string; }}) {
     const session = await auth();

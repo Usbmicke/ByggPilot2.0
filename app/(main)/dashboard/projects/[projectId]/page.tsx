@@ -3,13 +3,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { firestore as db } from '@/app/lib/firebase/client';
-import { Project } from '@/app/types/project';
-import TimeReportList from '@/app/components/dashboard/TimeReportList';
-import ProjectEconomyDashboard from '@/app/components/dashboard/ProjectEconomyDashboard';
-import SetHourlyRateModal from '@/app/components/modals/SetHourlyRateModal';
-import MaterialCostList from '@/app/components/dashboard/MaterialCostList';
-import EditProjectModal from '@/app/components/modals/EditProjectModal'; // IMPORTERA
+import { firestore as db } from '@/lib/firebase/client';
+import { Project } from '@/types/project';
+import TimeReportList from '@/components/dashboard/TimeReportList';
+import ProjectEconomyDashboard from '@/components/dashboard/ProjectEconomyDashboard';
+import SetHourlyRateModal from '@/components/modals/SetHourlyRateModal';
+import MaterialCostList from '@/components/dashboard/MaterialCostList';
+import EditProjectModal from '@/components/modals/EditProjectModal'; // IMPORTERA
 import { Cog6ToothIcon } from '@heroicons/react/24/outline'; // Ikon
 
 interface ProjectPageParams {

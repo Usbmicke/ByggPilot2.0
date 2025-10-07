@@ -2,9 +2,9 @@
 // Fil: app/api/materials/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { handler } from "@/app/api/auth/[...nextauth]/route";
-import { firestoreAdmin } from "@/app/lib/firebase-admin";
-import { MaterialCost } from "@/app/types/material";
+import { handler } from "@/api/auth/[...nextauth]/route";
+import { firestoreAdmin } from "@/lib/firebase-admin";
+import { MaterialCost } from "@/types/material";
 
 export async function GET(request: Request) {
   const session = await getServerSession(handler);

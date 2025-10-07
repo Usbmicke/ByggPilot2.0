@@ -4,11 +4,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { getProject } from '@/app/services/projectService';
-import { Project } from '@/app/types';
+import { getProject } from '@/services/projectService';
+import { Project } from '@/types';
 
-import MessageFeed from '@/app/components/MessageFeed';
-import MessageInput from '@/app/components/MessageInput';
+import MessageFeed from '@/components/MessageFeed';
+import MessageInput from '@/components/MessageInput';
 
 interface ProjectCommunicationPageProps {
     params: {

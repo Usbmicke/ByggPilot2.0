@@ -1,7 +1,7 @@
 
 import { firestoreAdmin } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import { Project, Document, Message, Invoice, InvoiceLine } from '@/types/index';
+import { Project, Document, Message, Invoice, InvoiceLine } from '@/types';
 
 const db = firestoreAdmin;
 const projectsCollection = db.collection('projects');

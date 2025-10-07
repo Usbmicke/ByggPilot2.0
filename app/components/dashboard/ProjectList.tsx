@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import type { Project } from '@/app/types/project';
+import type { Project } from '@/types/project';
 import Link from 'next/link';
 import { FolderIcon } from '@heroicons/react/24/outline'; // Changed to a more neutral icon
 

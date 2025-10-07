@@ -1,6 +1,6 @@
 
 import React from 'react';
-import TimeTrackingView from '@/app/components/views/TimeTrackingView';
+import TimeTrackingView from '@/components/views/TimeTrackingView';
 
 const TimeTrackingPage = () => {
   return (

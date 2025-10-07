@@ -1,8 +1,8 @@
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-// KORRIGERAD IMPORT: Pekar nu mot den enda sanningskällan för authOptions.
-import { authOptions } from '@/lib/auth';
+// KORRIGERAD IMPORT: Pekar nu mot den bevisat korrekta sökvägen.
+import { authOptions } from '@/app/lib/auth';
 import { db } from '@/services/firestoreService';
 
 export async function GET(request: Request) {

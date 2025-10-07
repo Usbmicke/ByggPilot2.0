@@ -1,6 +1,6 @@
 
-import { firestoreAdmin } from '@/app/lib/firebase-admin';
-import { Customer } from '@/app/types/index';
+import { firestoreAdmin } from '@/lib/firebase-admin';
+import { Customer } from '@/types/index';
 import { FieldValue } from 'firebase-admin/firestore';
 
 const db = firestoreAdmin;

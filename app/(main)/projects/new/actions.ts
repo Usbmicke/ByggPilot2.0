@@ -1,11 +1,11 @@
 'use server';
 
-import { getServerSession } from '@/app/lib/auth';
-import { createProject } from '@/app/services/projectService';
-import { getCustomer } from '@/app/services/customerService';
+import { getServerSession } from '@/lib/auth';
+import { createProject } from '@/services/projectService';
+import { getCustomer } from '@/services/customerService';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { ProjectStatus } from '@/app/types';
+import { ProjectStatus } from '@/types';
 
 export async function createProjectAction(formData: FormData) {
   const session = await getServerSession();
