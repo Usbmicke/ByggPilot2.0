@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
@@ -5,15 +6,24 @@ import { useSession, SessionContextValue } from 'next-auth/react';
 import { uploadFile } from '@/lib/firebase/storage';
 
 // =================================================================================
-// GULDSTANDARD V.4.0 - SLUTGILTIG SYNkronisering
-// Återställer klient-sida-formatering för att matcha Server API v11.0.
-// Detta är den korrekta, stabila arkitekturen.
+// GULDSTANDARD V.5.0 - ORCHESTRATOR-INTEGRATION
+// Denna version introducerar ett anrop till /api/orchestrator för att hämta
+// dynamisk, databas-driven kontext *innan* det primära chattanropet görs.
 // =================================================================================
 
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+}
+
+// Definierar en ny datastruktur för att skicka till chat API:et
+interface ChatApiPayload {
+  messages: { role: 'user' | 'model'; parts: { text: string }[] }[];
+  data?: { // Extra data som AI:n kan behöva
+    context: string;
+    source: string;
+  };
 }
 
 interface ChatContextType {
@@ -84,105 +94,82 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     abortControllerRef.current = new AbortController();
     setIsLoading(true);
 
-    let fileUris: string[] = [];
-    let userMessageContent = content;
-
-    if (file) {
-      try {
-        const downloadURL = await uploadFile(file);
-        fileUris.push(downloadURL);
-        userMessageContent = `${content}\n(Bifogad fil: ${file.name}`;
-      } catch (error) {
-        console.error("Filuppladdning misslyckades:", error);
-        const errorMsg: ChatMessage = {
-          id: `assistant-error-${Date.now()}`,
-          role: 'assistant',
-          content: `Det gick inte att ladda upp filen: ${file.name}. Försök igen.`
-        };
-        setMessages(prev => [...prev, errorMsg]);
-        setIsLoading(false);
-        return;
-      }
-    }
-
+    // Lägg till användarens meddelande i UI direkt för omedelbar respons
     const userMessage: ChatMessage = {
         id: `user-${Date.now()}`,
         role: 'user',
-        content: userMessageContent
+        content: content
     };
-
-    // Lägg till användarens meddelande i UI direkt
-    const newMessagesWithUser = [...messages, userMessage];
-    setMessages(newMessagesWithUser);
-
-    // =============================================================================
-    // SLUTGILTIG KORRIGERING: Återställ klient-sida-formateringen.
-    // Klienten SKA formatera datan till det Google-specifika `Content`-formatet.
-    // Servern (v11.0) är nu byggd för att ta emot exakt detta format.
-    // =============================================================================
-    const historyForApi = messages
-        .filter(msg => msg.content !== ONBOARDING_WELCOME_MESSAGE)
-        .map(msg => ({ 
-            role: msg.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: msg.content }]
-        }));
-
-    const messagesForApi = [...historyForApi, { role: 'user', parts: [{ text: userMessage.content }] }];
-
-    // Lägg till assistentens platshållare i UI EFTER att API-payloaden har skapats
-    setMessages(prev => [...prev, { id: `assistant-${Date.now() + 1}`, role: 'assistant', content: '' }]);
+    setMessages(prev => [...prev, userMessage]);
 
     try {
-        const response = await fetch('/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: messagesForApi, fileUris }),
-            signal: abortControllerRef.current.signal,
-        });
+      // ================== ORCHESTRATOR ANROP ==================
+      const orchestratorResponse = await fetch('/api/orchestrator', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: content }),
+      });
+      const orchestratorData = await orchestratorResponse.json();
+      // =======================================================
+      
+      const historyForApi = messages
+          .filter(msg => msg.content !== ONBOARDING_WELCOME_MESSAGE)
+          .map(msg => ({ 
+              role: msg.role === 'assistant' ? 'model' : 'user',
+              parts: [{ text: msg.content }]
+          }));
 
-        if (!response.ok || !response.body) {
-            const errorText = await response.text();
-            let errorDetails = 'Okänt serverfel';
-            try { errorDetails = JSON.parse(errorText).details || errorText; } catch (e) { errorDetails = errorText; }
-            throw new Error(errorDetails);
-        }
-        
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
+      const messagesForApi = [...historyForApi, { role: 'user', parts: [{ text: userMessage.content }] }];
 
-        // Nollställ innehållet i platshållaren
-        setMessages(prev => {
-            const newArr = [...prev];
-            newArr[newArr.length - 1] = { ...newArr[newArr.length - 1], content: '' };
-            return newArr;
-        });
+      const payload: ChatApiPayload = {
+        messages: messagesForApi,
+        data: orchestratorData, // Skicka med den dynamiska kontexten
+      };
 
-        // Streama svaret
-        while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            const chunkValue = decoder.decode(value, { stream: true });
-            setMessages(prev => {
-                const newArr = [...prev];
-                const lastIdx = newArr.length - 1;
-                newArr[lastIdx].content += chunkValue;
-                return newArr;
-            });
-        }
+      // Lägg till assistentens platshållare i UI
+      setMessages(prev => [...prev, { id: `assistant-${Date.now() + 1}`, role: 'assistant', content: '' }]);
+
+      const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal: abortControllerRef.current.signal,
+      });
+
+      if (!response.ok || !response.body) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Okänt serverfel');
+      }
+      
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullResponse = '';
+
+      while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          const chunkValue = decoder.decode(value, { stream: true });
+          fullResponse += chunkValue;
+          setMessages(prev => {
+              const newArr = [...prev];
+              newArr[newArr.length - 1].content = fullResponse;
+              return newArr;
+          });
+      }
     } catch (error: any) {
         if (error.name === 'AbortError') {
             console.log("Fetch avbröts av användaren.");
-            setMessages(prev => prev.slice(0, -1)); // Ta bara bort platshållaren
             return;
         }
 
         console.error("Fel i sendMessage:", error);
         const errorContent = `Ett tekniskt fel uppstod: ${error.message}`;
-        
         setMessages(prev => {
-            const withoutPlaceholder = prev.slice(0, -1);
-            const errorMsg: ChatMessage = { id: `assistant-error-${Date.now()}`, role: 'assistant', content: errorContent };
-            return [...withoutPlaceholder, errorMsg];
+            const newArr = [...prev];
+            if (newArr.length > 0 && newArr[newArr.length - 1].role === 'assistant' && newArr[newArr.length - 1].content === '') {
+                 newArr.pop();
+            }
+            return [...newArr, { id: `assistant-error-${Date.now()}`, role: 'assistant', content: errorContent }];
         });
     } finally {
         setIsLoading(false);

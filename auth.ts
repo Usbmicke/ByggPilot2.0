@@ -1,123 +1,61 @@
 
-import NextAuth from 'next-auth';
-import GoogleProvider from 'next-auth/providers/google';
-import { admin, firestoreAdmin } from '@/lib/firebase-admin';
-import type { Account } from 'next-auth';
-import { JWT } from 'next-auth/jwt';
+import NextAuth from "next-auth";
+import Google from "next-auth/providers/google";
+import { createOrUpdateUser } from "@/services/userService"; // Importera funktionen från userService
 
-// HJÄLPFUNKTION: Uppdaterar tokens i Firestore
-async function updateUserTokens(userId: string, account: Account) {
-  try {
-    const userRef = firestoreAdmin.collection('users').doc(userId);
-    const updateData: { [key: string]: any } = {};
+// =================================================================================
+// GULDSTANDARD: auth.ts
+// Denna fil är den centrala konfigurationen för NextAuth.js.
+// Den definierar autentiserings-providers (Google) och hanterar callbacks,
+// som t.ex. att skapa eller uppdatera en användare i databasen efter lyckad inloggning.
+// =================================================================================
 
-    if (account.access_token) {
-      updateData.googleAccessToken = account.access_token;
-    }
-    if (account.expires_at) {
-      updateData.googleAccessTokenExpires = account.expires_at;
-    }
-    if (account.refresh_token) {
-      updateData.googleRefreshToken = account.refresh_token;
-      console.log(`[Auth Success] Mottog och sparar ny googleRefreshToken för användare ${userId}.`);
-    }
-
-    if (Object.keys(updateData).length > 0) {
-      await userRef.update(updateData);
-      console.log(`[Auth Success] Tokens för användare ${userId} uppdaterade direkt på användardokumentet.`);
-    }
-  } catch (error) {
-    console.error(`[Auth Critical] Kunde inte spara tokens för användare ${userId}:`, error);
-  }
-}
-
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-      authorization: {
-        params: {
-          access_type: 'offline',
-          response_type: 'code',
-          scope: 'openid email profile https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/gmail.modify',
-        },
-      },
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     }),
   ],
-
   callbacks: {
-    async signIn({ profile, account }) {
-      if (!profile?.email || !account) {
-        console.error("[Auth Error] Profil eller konto saknas vid signIn.");
-        return '/auth/error?error=SignInError';
+    async signIn({ user, account, profile }) {
+      if (!user.email || !user.name || !account?.provider) {
+        // Om nödvändig information saknas, avbryt inloggningen.
+        return false;
       }
-
       try {
-        const usersRef = firestoreAdmin.collection('users');
-        const userQuery = await usersRef.where('email', '==', profile.email).limit(1).get();
-
-        let userId;
-        if (userQuery.empty) {
-          console.log(`[Auth Success] Ny användare: ${profile.email}. Skapar dokument.`);
-          const newUserRef = await usersRef.add({
-            name: profile.name ?? profile.email,
-            email: profile.email,
-            image: profile.picture ?? null,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            isNewUser: true,
-            termsAccepted: false,
-          });
-          userId = newUserRef.id;
-        } else {
-          userId = userQuery.docs[0].id;
-        }
-
-        await updateUserTokens(userId, account);
-
-        return true;
+        // När en användare loggar in via en provider (t.ex. Google),
+        // anropa userService för att skapa eller uppdatera användaren i Firestore.
+        await createOrUpdateUser({
+          provider: account.provider,
+          providerAccountId: user.id, // Använd user.id som är unikt för providern
+          email: user.email,
+          name: user.name,
+          imageUrl: user.image,
+        });
+        return true; // Tillåt inloggning
       } catch (error) {
-        console.error("[Auth Critical] Databasfel vid signIn: ", error);
-        return '/auth/error?error=DatabaseError';
+        console.error("Fel vid createOrUpdateUser i signIn callback:", error);
+        return false; // Stoppa inloggningen vid databasfel
       }
     },
-
-    async jwt({ token, user, account }: { token: JWT; user?: any; account?: Account | null }): Promise<JWT> {
-      if (account && user) {
-        const usersRef = firestoreAdmin.collection('users');
-        const querySnapshot = await usersRef.where('email', '==', user.email).limit(1).get();
-
-        if (!querySnapshot.empty) {
-          const userId = querySnapshot.docs[0].id;
-          token.sub = userId;
-          await updateUserTokens(userId, account);
-        }
+    async jwt({ token, user }) {
+      // Efter inloggning, lägg till användarens unika ID (sub) i JWT-token.
+      if (user) {
+        token.id = user.id;
       }
       return token;
     },
-
     async session({ session, token }) {
+      // Gör användar-ID:t tillgängligt i session-objektet som används på klientsidan och i API-routes.
       if (session.user && token.sub) {
         session.user.id = token.sub;
-        try {
-          const userDoc = await firestoreAdmin.collection('users').doc(token.sub).get();
-          if (userDoc.exists) {
-            const userData = userDoc.data();
-            session.user.isNewUser = userData?.isNewUser ?? false;
-            session.user.termsAccepted = userData?.termsAccepted ?? false;
-          }
-        } catch (error) {
-          console.error("[Auth Critical] Fel vid hämtning av användardata i session: ", error);
-          session.user.isNewUser = true;
-          session.user.termsAccepted = false;
-        }
       }
       return session;
     },
   },
-
-  session: {
-    strategy: 'jwt',
-  },
-  secret: process.env.NEXTAUTH_SECRET,
+  // Valfritt: Om du behöver anpassade sidor för inloggning, fel etc.
+  // pages: {
+  //   signIn: '/auth/signin',
+  // },
 });
