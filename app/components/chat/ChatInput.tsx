@@ -7,8 +7,8 @@ import {
     XCircleIcon,
     ChevronUpIcon,
     StopCircleIcon,
-    TrashIcon,
-    EllipsisVerticalIcon // STEG 1: Importera ikonen för menyn
+    EllipsisVerticalIcon,
+    TrashIcon
 } from '@heroicons/react/24/outline';
 import {
     MicrophoneIcon as MicSolid
@@ -17,16 +17,12 @@ import {
     MicrophoneIcon as MicOutline
 } from '@heroicons/react/24/outline';
 import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
+import { useChatContext } from '@/contexts/ChatContext';
 
 interface ChatInputProps {
-    onSendMessage: (content: string, file?: File) => void;
-    isChatDisabled: boolean;
     onFocus: () => void;
     isExpanded: boolean;
     setIsExpanded: (isExpanded: boolean) => void;
-    isLoading: boolean;
-    stop: () => void;
-    clearChat: () => void;
 }
 
 const promptSuggestions = [
@@ -37,17 +33,26 @@ const promptSuggestions = [
     "Lär dig: Vår standard för regelavstånd är cc600 för innerväggar."
 ];
 
-const ChatInput = ({ onSendMessage, isChatDisabled, onFocus, isExpanded, setIsExpanded, isLoading, stop, clearChat }: ChatInputProps) => {
-    const [input, setInput] = useState('');
+const ChatInput = ({ onFocus, isExpanded, setIsExpanded }: ChatInputProps) => {
+    const {
+        input,
+        handleInputChange,
+        sendMessage,
+        isLoading,
+        stop,
+        messages,
+        setMessages
+    } = useChatContext();
+
     const [file, setFile] = useState<File | undefined>();
     const [placeholder, setPlaceholder] = useState(promptSuggestions[0]);
-    const [isMenuOpen, setIsMenuOpen] = useState(false); // STEG 2: State för menyn
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const menuRef = useRef<HTMLDivElement>(null); // Ref för att kunna stänga menyn
+    const menuRef = useRef<HTMLDivElement>(null);
 
     const { isListening, error: voiceError, startListening, stopListening } = useVoiceRecognition((transcript) => {
-        setInput(prev => prev + transcript);
+        handleInputChange({ target: { value: input + transcript } } as React.ChangeEvent<HTMLInputElement>);
     });
 
     useEffect(() => {
@@ -57,7 +62,6 @@ const ChatInput = ({ onSendMessage, isChatDisabled, onFocus, isExpanded, setIsEx
         return () => clearInterval(interval);
     }, []);
 
-    // STEG 3: Logik för att stänga menyn när man klickar utanför
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -75,7 +79,7 @@ const ChatInput = ({ onSendMessage, isChatDisabled, onFocus, isExpanded, setIsEx
         if (isListening) {
             stopListening();
         } else {
-            setInput('');
+            handleInputChange({ target: { value: '' } } as React.ChangeEvent<HTMLInputElement>);
             startListening();
         }
     };
@@ -94,32 +98,24 @@ const ChatInput = ({ onSendMessage, isChatDisabled, onFocus, isExpanded, setIsEx
             fileInputRef.current.value = '';
         }
     };
-
-    const handleSendMessage = async (e?: FormEvent<HTMLFormElement>) => {
-        if (e) e.preventDefault();
-        if (isListening) stopListening();
-        
-        const content = input.trim();
-        if (!content && !file) return;
-        
-        onSendMessage(content, file);
-        setInput('');
-        removeFile();
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSendMessage();
-        }
-    };
     
+    const clearChat = () => {
+        setMessages([]);
+    }
+
+    const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+        sendMessage(e);
+        removeFile();
+    }
+
     useEffect(() => {
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
             textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
         }
     }, [input]);
+
+    const isChatDisabled = isLoading;
 
     return (
         <div className="relative">
@@ -135,7 +131,6 @@ const ChatInput = ({ onSendMessage, isChatDisabled, onFocus, isExpanded, setIsEx
                 </div>
             )}
 
-            {/* STEG 4: Den nya menyn och dess knapp */}
             <div ref={menuRef} className="absolute bottom-0 left-0 mb-[-0.5rem] self-end">
                 {isMenuOpen && (
                     <div className="absolute bottom-full mb-2 bg-background-tertiary rounded-md shadow-lg border border-border-primary">
@@ -153,7 +148,7 @@ const ChatInput = ({ onSendMessage, isChatDisabled, onFocus, isExpanded, setIsEx
                 </button>
             </div>
 
-            <form onSubmit={handleSendMessage} className="flex items-end gap-2 pl-12"> {/* Ge plats för nya menyn */}
+            <form onSubmit={handleSubmit} className="flex items-end gap-2 pl-12"> 
                 {voiceError && <div className="text-red-500 text-xs mb-2 absolute -top-6">{voiceError}</div>}
                 
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
@@ -176,11 +171,10 @@ const ChatInput = ({ onSendMessage, isChatDisabled, onFocus, isExpanded, setIsEx
                 <textarea
                     ref={textareaRef}
                     rows={1}
-                    value={input}
-                    onChange={e => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
+                    value={input} 
+                    onChange={handleInputChange} 
                     onFocus={onFocus}
-                    placeholder={isChatDisabled ? "Logga in..." : (isListening ? "Lyssnar..." : placeholder)}
+                    placeholder={isChatDisabled ? "Laddar..." : (isListening ? "Lyssnar..." : placeholder)}
                     className="flex-1 bg-border-primary/70 rounded-lg px-4 py-2.5 resize-none max-h-48"
                     disabled={isChatDisabled}
                 />
@@ -190,7 +184,7 @@ const ChatInput = ({ onSendMessage, isChatDisabled, onFocus, isExpanded, setIsEx
                         <StopCircleIcon className="h-6 w-6" />
                     </button>
                 ) : (
-                    <button type="submit" disabled={(!input.trim() && !file) || isChatDisabled} className="p-2 bg-accent-blue text-white rounded-full self-end disabled:bg-border-primary">
+                    <button type="submit" disabled={!(input || '').trim() || isChatDisabled} className="p-2 bg-accent-blue text-white rounded-full self-end disabled:bg-border-primary">
                         <PaperAirplaneIcon className="h-6 w-6" />
                     </button>
                 )}

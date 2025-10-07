@@ -120,3 +120,5 @@ Visuell Design: Meddelanden ska ha mer "luft". Checklistor och dokumentlänkar s
 "Skapa Offert"-flöde: Ska initiera den konversationella offertmotorn och, efter slutförd offert, proaktivt erbjuda att skapa ett juridiskt avtalsförslag baserat på Hantverkarformuläret 17.
 
 "Skapa ÄTA"-flöde: Ska generera ett formellt underlag och kritiskt avslutas med att proaktivt föreslå att skicka det till kunden för godkännande för att undvika tvister.
+
+Läs "Projekt_filer.md" för att förstå fil arkikekturen på byggpilot.
