@@ -7,7 +7,7 @@ import { uploadFile } from '@/lib/firebase/storage';
 
 // =================================================================================
 // GULD STANDARD - CHAT CONTEXT (Klient-sida)
-// Version 3.2 - Infört "Ny Chatt"-funktionalitet.
+// Version 3.3 - Korrigerat dubbel historik-bugg.
 // =================================================================================
 
 export interface ChatMessage {
@@ -22,7 +22,7 @@ interface ChatContextType {
   session: SessionContextValue;
   sendMessage: (content: string, file?: File) => Promise<void>;
   stop: () => void;
-  clearChat: () => void; // STEG 1: Definiera den nya funktionen
+  clearChat: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -30,7 +30,6 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 const CHAT_HISTORY_STORAGE_KEY = 'byggpilot.chatHistory.v1';
 const ONBOARDING_WELCOME_MESSAGE = `**Välkommen till ByggPilot!**\n\nJag är din digitala kollega. Vad kan jag hjälpa dig med?`;
 
-// Hjälpfunktion för att skapa ett initialt meddelande
 const createWelcomeMessage = (): ChatMessage => ({
   id: `assistant-${Date.now()}`,
   role: 'assistant',
@@ -59,7 +58,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     try {
-      // Spara inte om det bara är välkomstmeddelandet
       if (messages.length > 1 || (messages.length === 1 && messages[0].content !== ONBOARDING_WELCOME_MESSAGE)) {
         localStorage.setItem(CHAT_HISTORY_STORAGE_KEY, JSON.stringify(messages));
       }
@@ -75,7 +73,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // STEG 2: Implementera clearChat-logiken
   const clearChat = useCallback(() => {
     localStorage.removeItem(CHAT_HISTORY_STORAGE_KEY);
     setMessages([createWelcomeMessage()]);
@@ -120,26 +117,22 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         content: ''
     };
 
-    const newMessages = [...messages, userMessage, assistantPlaceholder];
-    setMessages(newMessages);
+    setMessages(prev => [...prev, userMessage, assistantPlaceholder]);
 
-    const historyForApi = messages
-        .filter(msg => msg.content !== ONBOARDING_WELCOME_MESSAGE)
-        .map(msg => ({ role: msg.role === 'assistant' ? 'model' : 'user', parts: [{ text: msg.content }] }));
-
-    const messagesForApi = [...historyForApi, { role: 'user', parts: [{ text: userMessage.content }] }];
+    // KORRIGERING: Skickar nu BARA det nya meddelandet. Servern hanterar historiken.
+    const messageForApi = { role: 'user', parts: [{ text: userMessage.content }] };
 
     try {
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: messagesForApi, fileUris }),
+            body: JSON.stringify({ messages: [messageForApi], fileUris }), // Skickar bara det nya meddelandet i en array
             signal: abortControllerRef.current.signal,
         });
 
         if (!response.ok || !response.body) {
-            const errorText = await response.text();
-            throw new Error(JSON.parse(errorText).error || 'Ett okänt serverfel uppstod.');
+            const errorData = await response.json().catch(() => ({ error: 'Okänt serverfel' }));
+            throw new Error(errorData.error || 'Ett okänt serverfel uppstod.');
         }
         
         const reader = response.body.getReader();
@@ -191,7 +184,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [session, messages]);
 
-  // STEG 3: Exponera clearChat i context-värdet
   const value = { messages, isLoading, session, sendMessage, stop, clearChat };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

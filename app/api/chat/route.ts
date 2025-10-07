@@ -2,13 +2,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { authOptions } from "@/lib/auth"; // <-- KORRIGERAD: Importerar centrala authOptions
+import { authOptions } from "@/lib/auth";
 import { firestoreAdmin } from '@/lib/firebase-admin';
 import { promoteProspectToActiveProject } from '@/actions/promoteProjectActions';
 import { saveMessagesToHistory, getMessageHistory } from '@/services/chatHistoryService';
 
 const apiKey = process.env.GEMINI_API_KEY;
-const MODEL_ID = process.env.GEMINI_MODEL_ID || 'gemini-1.5-flash-latest';
+// Val av en stabil "workhorse" modell baserat på dokumentation.
+const MODEL_ID = process.env.GEMINI_MODEL_ID || 'gemini-2.0-flash-001';
 
 if (!apiKey) {
   throw new Error('GEMINI_API_KEY är inte satt i dina miljövariabler.');
@@ -46,7 +47,6 @@ Detta är en sammanfattning av relevant data från användarens konto. Använd d
 
 export async function POST(req: NextRequest) {
     try {
-        // KORRIGERAD AUTH: Använder nu getServerSession med de centrala authOptions, precis som resten av API:et.
         const session = await getServerSession(authOptions);
         if (!session || !session.user || !session.user.id) {
             return new NextResponse(JSON.stringify({ error: 'Authentication required' }), { status: 401 });
@@ -62,30 +62,24 @@ export async function POST(req: NextRequest) {
         const history = await getMessageHistory(userId, 30);
         const dynamicContext = await getContext(userId);
         
-        // TODO: Action prompt behöver implementeras korrekt.
         const ACTION_PROMPT = ``; 
 
-        const finalPrompt = `${MASTER_PROMPT}\n\n${dynamicContext}\n\n${ACTION_PROMPT}\n\n--- KONVERSATION ---\nuser: ${userMessage.parts[0].text}`;
+        const updatedHistory = [...history, userMessage];
 
-        const chat = model.startChat({ history });
-        const result = await chat.sendMessage(finalPrompt);
-        const modelResponse = { role: 'model', parts: [{ text: result.response.text() }] };
+        const fullHistory = updatedHistory
+            .filter(h => h.parts && h.parts.length > 0 && h.parts[0].text)
+            .map(h => `${h.role}: ${h.parts[0].text}`)
+            .join('\n');
 
-        let finalMessageText = modelResponse.parts[0].text;
+        const finalPrompt = `${MASTER_PROMPT}\n\n${dynamicContext}\n\n${ACTION_PROMPT}\n\n--- KONVERSATION ---\n${fullHistory}`;
 
-        try {
-          const potentialAction = JSON.parse(modelResponse.parts[0].text.trim());
-          if (potentialAction.action === 'promoteProject') {
-             // Denna logik är ofullständig och behöver ses över
-             modelResponse.parts[0].text = finalMessageText; 
-          }
-        } catch (e) {
-          // Ignorerar parsningsfel, meddelandet är inte en action.
-        }
+        const result = await model.generateContent(finalPrompt);
+        const responseText = result.response.text();
+        const modelResponse = { role: 'model', parts: [{ text: responseText }] };
 
         await saveMessagesToHistory(userId, [userMessage, modelResponse]);
 
-        return NextResponse.json({ role: 'model', parts: [{ text: finalMessageText }] });
+        return NextResponse.json({ role: 'model', parts: [{ text: responseText }] });
 
     } catch (error) {
         console.error('[Chat API Error]', error);

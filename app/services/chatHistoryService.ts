@@ -2,20 +2,14 @@
 'use server';
 
 import { firestoreAdmin } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
-// Definierar den förväntade strukturen för ett meddelande
 interface ChatMessage {
     role: 'user' | 'model';
     parts: { text: string }[];
-    timestamp: FieldValue;
+    timestamp: Timestamp;
 }
 
-/**
- * Sparar ett enskilt meddelande eller ett par av meddelanden (användare + modell) till en konversation.
- * @param userId Användarens unika ID.
- * @param messages En array av meddelande-objekt som ska sparas.
- */
 export async function saveMessagesToHistory(userId: string, messages: Omit<ChatMessage, 'timestamp'>[]) {
     if (!userId) throw new Error('Användar-ID är obligatoriskt för att spara historik.');
 
@@ -23,7 +17,7 @@ export async function saveMessagesToHistory(userId: string, messages: Omit<ChatM
     const batch = firestoreAdmin.batch();
 
     messages.forEach(message => {
-        const docRef = chatHistoryRef.doc(); // Skapa ett nytt dokument för varje meddelande
+        const docRef = chatHistoryRef.doc();
         batch.set(docRef, { 
             ...message,
             timestamp: FieldValue.serverTimestamp() 
@@ -40,12 +34,6 @@ export async function saveMessagesToHistory(userId: string, messages: Omit<ChatM
     }
 }
 
-/**
- * Hämtar de N senaste meddelandena från en användares konversationshistorik.
- * @param userId Användarens unika ID.
- * @param limit Antalet meddelanden att hämta.
- * @returns En array med de senaste meddelandena.
- */
 export async function getMessageHistory(userId: string, limit: number = 50): Promise<ChatMessage[]> {
     if (!userId) throw new Error('Användar-ID är obligatoriskt för att hämta historik.');
 
@@ -60,12 +48,19 @@ export async function getMessageHistory(userId: string, limit: number = 50): Pro
             return [];
         }
 
-        // Dokumenten hämtas i fallande ordning, så vi vänder på dem för att få korrekt kronologisk ordning
-        const messages = snapshot.docs.map(doc => doc.data() as ChatMessage).reverse();
+        const messages = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                ...data,
+                // Konvertera Firestore Timestamp till ett serialiserbart format
+                timestamp: data.timestamp.toDate(), 
+            } as ChatMessage;
+        }).reverse();
+
         return messages;
 
     } catch (error) {
         console.error('[ChatHistory] Fel vid hämtning av meddelanden:', error);
-        return []; // Returnera en tom array vid fel för att undvika att appen kraschar
+        return [];
     }
 }

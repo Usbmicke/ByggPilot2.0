@@ -1,7 +1,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/api/auth/[...nextauth]/route";
+// KORRIGERAD IMPORT: Pekar nu mot den bevisat korrekta sökvägen.
+import { authOptions } from "@/lib/auth";
 import { firestoreAdmin } from "@/lib/firebase-admin";
 
 /**
@@ -10,6 +11,7 @@ import { firestoreAdmin } from "@/lib/firebase-admin";
 export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session || !session.user || !session.user.id) {
+        // Använder 401 för obehörig, vilket är mer semantiskt korrekt.
         return NextResponse.json({ message: "Åtkomst nekad" }, { status: 401 });
     }
     const userId = session.user.id;
@@ -18,15 +20,14 @@ export async function GET(request: NextRequest) {
         const db = firestoreAdmin;
         const actionsSnapshot = await db.collection('users').doc(userId)
                                        .collection('actions')
-                                       .where('status', '==', 'new') // Hämta bara nya åtgärder
-                                       .orderBy('createdAt', 'desc') // De nyaste först
+                                       .where('status', '==', 'new')
+                                       .orderBy('createdAt', 'desc')
                                        .get();
 
         if (actionsSnapshot.empty) {
-            return NextResponse.json([]); // Returnera en tom lista om inga åtgärder finns
+            return NextResponse.json([]);
         }
 
-        // Mappa dokumenten till en mer lätthanterlig array av objekt
         const actions = actionsSnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
@@ -57,7 +58,6 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ message: "Action ID och ny status krävs." }, { status: 400 });
         }
 
-        // Validera att den nya statusen är en av de tillåtna
         const allowedStatus = ['ignored', 'archived', 'done'];
         if (!allowedStatus.includes(newStatus)) {
             return NextResponse.json({ message: "Ogiltig status." }, { status: 400 });
@@ -66,7 +66,6 @@ export async function POST(request: NextRequest) {
         const db = firestoreAdmin;
         const actionRef = db.collection('users').doc(userId).collection('actions').doc(actionId);
 
-        // Kontrollera att åtgärden faktiskt finns innan vi försöker uppdatera den
         const doc = await actionRef.get();
         if (!doc.exists) {
             return NextResponse.json({ message: "Åtgärden hittades inte." }, { status: 404 });
