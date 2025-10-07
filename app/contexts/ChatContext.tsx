@@ -1,104 +1,205 @@
-
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useSession } from 'next-auth/react';
-import { Message, useChat } from '@ai-sdk/react';
-import { v4 as uuidv4 } from 'uuid';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
+import { useSession, SessionContextValue } from 'next-auth/react';
+import { uploadFile } from '@/lib/firebase/storage';
 
 // =================================================================================
-// GULDSTANDARD - CHAT CONTEXT
-// Version 13.0 - Stabil, med Välkomstmeddelande & Korrekt Felhantering
+// GULD STANDARD - CHAT CONTEXT (Klient-sida)
+// Version 3.2 - Infört "Ny Chatt"-funktionalitet.
 // =================================================================================
 
-type ChatContextType = {
-  messages: Message[];
-  input: string;
-  handleInputChange: (e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLTextAreaElement>) => void;
-  sendMessage: (e: React.FormEvent<HTMLFormElement>) => void; // Förenklad signatur
-  reload: () => void;
-  stop: () => void;
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+interface ChatContextType {
+  messages: ChatMessage[];
   isLoading: boolean;
-  error: Error | undefined;
-  setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
-};
+  session: SessionContextValue;
+  sendMessage: (content: string, file?: File) => Promise<void>;
+  stop: () => void;
+  clearChat: () => void; // STEG 1: Definiera den nya funktionen
+}
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-export const ChatProvider = ({ children }: { children: ReactNode }) => {
-  const { data: session, status } = useSession();
-  const [isReady, setIsReady] = useState(false);
+const CHAT_HISTORY_STORAGE_KEY = 'byggpilot.chatHistory.v1';
+const ONBOARDING_WELCOME_MESSAGE = `**Välkommen till ByggPilot!**\n\nJag är din digitala kollega. Vad kan jag hjälpa dig med?`;
 
-  const { 
-    messages, 
-    setMessages, 
-    input, 
-    handleInputChange, 
-    handleSubmit, // Detta är den rena funktionen från useChat
-    reload, 
-    stop, 
-    isLoading, 
-    error 
-  } = useChat({
-    api: '/api/chat',
-    // STEG 1: Återinför ett initialt välkomstmeddelande.
-    initialMessages: [
-        {
-            id: uuidv4(),
-            role: 'assistant',
-            content: 'Hej! Jag är ByggPilot, din AI-assistent. Hur kan jag hjälpa dig att planera och effektivisera ditt arbete idag?'
+// Hjälpfunktion för att skapa ett initialt meddelande
+const createWelcomeMessage = (): ChatMessage => ({
+  id: `assistant-${Date.now()}`,
+  role: 'assistant',
+  content: ONBOARDING_WELCOME_MESSAGE
+});
+
+export const ChatProvider = ({ children }: { children: ReactNode }) => {
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const storedMessages = typeof window !== 'undefined' ? localStorage.getItem(CHAT_HISTORY_STORAGE_KEY) : null;
+      if (storedMessages) {
+        const parsedMessages = JSON.parse(storedMessages);
+        if (Array.isArray(parsedMessages) && parsedMessages.length > 0) {
+          return parsedMessages;
         }
-    ],
-    // STEG 2: Implementera robust felhantering på det korrekta sättet.
-    onError: (err) => {
-        console.error('[useChat OnError]', err);
-        const errorId = uuidv4();
-        const errorMessage: Message = {
-            id: errorId,
-            role: 'assistant',
-            content: `**Systemfel:** Jag kunde inte slutföra din begäran. Servern svarade med ett fel. Försök igen, eller kontakta support om problemet kvarstår. \n\n*Fel: ${err.message}*`,
-            createdAt: new Date(),
-        };
-        setMessages(prevMessages => [...prevMessages, errorMessage]);
-    },
-    onFinish: () => {
-      console.log('[ChatProvider] Stream avslutad.');
+      }
+    } catch (error) {
+      console.error("Kunde inte ladda chatthistorik från localStorage", error);
     }
+    return [createWelcomeMessage()];
   });
 
+  const [isLoading, setIsLoading] = useState(false);
+  const session = useSession();
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   useEffect(() => {
-    if (status === 'authenticated' || status === 'unauthenticated') {
-        setIsReady(true);
+    try {
+      // Spara inte om det bara är välkomstmeddelandet
+      if (messages.length > 1 || (messages.length === 1 && messages[0].content !== ONBOARDING_WELCOME_MESSAGE)) {
+        localStorage.setItem(CHAT_HISTORY_STORAGE_KEY, JSON.stringify(messages));
+      }
+    } catch (error) {
+      console.error("Kunde inte spara chatthistorik till localStorage", error);
     }
-  }, [status]);
+  }, [messages]);
 
+  const stop = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setIsLoading(false);
+    }
+  }, []);
 
-  const contextValue: ChatContextType = {
-    messages,
-    input,
-    handleInputChange,
-    // STEG 3: Exportera den rena, oförändrade handleSubmit-funktionen.
-    sendMessage: handleSubmit, 
-    reload,
-    stop,
-    isLoading,
-    error,
-    setMessages,
-  };
+  // STEG 2: Implementera clearChat-logiken
+  const clearChat = useCallback(() => {
+    localStorage.removeItem(CHAT_HISTORY_STORAGE_KEY);
+    setMessages([createWelcomeMessage()]);
+  }, []);
 
-  // Säkerställ att contexten inte renderar sitt innehåll förrän sessionstatus är känd,
-  // för att undvika race conditions.
-  if (!isReady) {
-    return null; 
-  }
+  const sendMessage = useCallback(async (content: string, file?: File) => {
+    if (session.status !== 'authenticated' || (!content.trim() && !file)) return;
 
-  return <ChatContext.Provider value={contextValue}>{children}</ChatContext.Provider>;
+    abortControllerRef.current = new AbortController();
+    setIsLoading(true);
+
+    let fileUris: string[] = [];
+    let userMessageContent = content;
+
+    if (file) {
+      try {
+        const downloadURL = await uploadFile(file);
+        fileUris.push(downloadURL);
+        userMessageContent = `${content}\n(Bifogad fil: ${file.name}`;
+      } catch (error) {
+        console.error("Filuppladdning misslyckades:", error);
+        const errorMsg: ChatMessage = {
+          id: `assistant-error-${Date.now()}`,
+          role: 'assistant',
+          content: `Det gick inte att ladda upp filen: ${file.name}. Försök igen.`
+        };
+        setMessages(prev => [...prev, errorMsg]);
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    const userMessage: ChatMessage = {
+        id: `user-${Date.now()}`,
+        role: 'user',
+        content: userMessageContent
+    };
+    
+    const assistantPlaceholder: ChatMessage = {
+        id: `assistant-${Date.now() + 1}`,
+        role: 'assistant',
+        content: ''
+    };
+
+    const newMessages = [...messages, userMessage, assistantPlaceholder];
+    setMessages(newMessages);
+
+    const historyForApi = messages
+        .filter(msg => msg.content !== ONBOARDING_WELCOME_MESSAGE)
+        .map(msg => ({ role: msg.role === 'assistant' ? 'model' : 'user', parts: [{ text: msg.content }] }));
+
+    const messagesForApi = [...historyForApi, { role: 'user', parts: [{ text: userMessage.content }] }];
+
+    try {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: messagesForApi, fileUris }),
+            signal: abortControllerRef.current.signal,
+        });
+
+        if (!response.ok || !response.body) {
+            const errorText = await response.text();
+            throw new Error(JSON.parse(errorText).error || 'Ett okänt serverfel uppstod.');
+        }
+        
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        setMessages(prev => {
+            const newArr = [...prev];
+            newArr[newArr.length - 1] = { ...newArr[newArr.length - 1], content: '' };
+            return newArr;
+        });
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            const chunkValue = decoder.decode(value, { stream: true });
+            
+            setMessages(prev => {
+                const newMessages = [...prev];
+                const lastMessageIndex = newMessages.length - 1;
+                newMessages[lastMessageIndex] = {
+                    ...newMessages[lastMessageIndex],
+                    content: newMessages[lastMessageIndex].content + chunkValue,
+                };
+                return newMessages;
+            });
+        }
+    } catch (error: any) {
+        if (error.name === 'AbortError') {
+            console.log("Fetch aborted by user.");
+            setMessages(prev => prev.slice(0, -2)); 
+            return;
+        }
+
+        console.error("Fel i sendMessage:", error);
+        const errorContent = `Ett tekniskt fel uppstod: ${error.message}`;
+        
+        setMessages(prev => {
+            const withoutPlaceholder = prev.slice(0, -1);
+            const errorAssistantMessage: ChatMessage = {
+                id: `assistant-error-${Date.now()}`,
+                role: 'assistant',
+                content: errorContent
+            };
+            return [...withoutPlaceholder, errorAssistantMessage];
+        });
+    } finally {
+        setIsLoading(false);
+    }
+  }, [session, messages]);
+
+  // STEG 3: Exponera clearChat i context-värdet
+  const value = { messages, isLoading, session, sendMessage, stop, clearChat };
+
+  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 };
 
-export const useChatContext = () => {
+export const useChat = () => {
   const context = useContext(ChatContext);
   if (context === undefined) {
-    throw new Error('useChatContext must be used within a ChatProvider');
+    throw new Error('useChat måste användas inom en ChatProvider');
   }
   return context;
 };
