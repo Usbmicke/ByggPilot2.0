@@ -5,8 +5,9 @@ import { useSession, SessionContextValue } from 'next-auth/react';
 import { uploadFile } from '@/lib/firebase/storage';
 
 // =================================================================================
-// GULD STANDARD - CHAT CONTEXT (Klient-sida)
-// Version 3.2 - Infört "Ny Chatt"-funktionalitet.
+// GULDSTANDARD V.4.0 - SLUTGILTIG SYNkronisering
+// Återställer klient-sida-formatering för att matcha Server API v11.0.
+// Detta är den korrekta, stabila arkitekturen.
 // =================================================================================
 
 export interface ChatMessage {
@@ -21,7 +22,7 @@ interface ChatContextType {
   session: SessionContextValue;
   sendMessage: (content: string, file?: File) => Promise<void>;
   stop: () => void;
-  clearChat: () => void; // STEG 1: Definiera den nya funktionen
+  clearChat: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -29,7 +30,6 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 const CHAT_HISTORY_STORAGE_KEY = 'byggpilot.chatHistory.v1';
 const ONBOARDING_WELCOME_MESSAGE = `**Välkommen till ByggPilot!**\n\nJag är din digitala kollega. Vad kan jag hjälpa dig med?`;
 
-// Hjälpfunktion för att skapa ett initialt meddelande
 const createWelcomeMessage = (): ChatMessage => ({
   id: `assistant-${Date.now()}`,
   role: 'assistant',
@@ -58,7 +58,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     try {
-      // Spara inte om det bara är välkomstmeddelandet
       if (messages.length > 1 || (messages.length === 1 && messages[0].content !== ONBOARDING_WELCOME_MESSAGE)) {
         localStorage.setItem(CHAT_HISTORY_STORAGE_KEY, JSON.stringify(messages));
       }
@@ -74,7 +73,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // STEG 2: Implementera clearChat-logiken
   const clearChat = useCallback(() => {
     localStorage.removeItem(CHAT_HISTORY_STORAGE_KEY);
     setMessages([createWelcomeMessage()]);
@@ -112,21 +110,27 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         role: 'user',
         content: userMessageContent
     };
-    
-    const assistantPlaceholder: ChatMessage = {
-        id: `assistant-${Date.now() + 1}`,
-        role: 'assistant',
-        content: ''
-    };
 
-    const newMessages = [...messages, userMessage, assistantPlaceholder];
-    setMessages(newMessages);
+    // Lägg till användarens meddelande i UI direkt
+    const newMessagesWithUser = [...messages, userMessage];
+    setMessages(newMessagesWithUser);
 
+    // =============================================================================
+    // SLUTGILTIG KORRIGERING: Återställ klient-sida-formateringen.
+    // Klienten SKA formatera datan till det Google-specifika `Content`-formatet.
+    // Servern (v11.0) är nu byggd för att ta emot exakt detta format.
+    // =============================================================================
     const historyForApi = messages
         .filter(msg => msg.content !== ONBOARDING_WELCOME_MESSAGE)
-        .map(msg => ({ role: msg.role === 'assistant' ? 'model' : 'user', parts: [{ text: msg.content }] }));
+        .map(msg => ({ 
+            role: msg.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: msg.content }]
+        }));
 
     const messagesForApi = [...historyForApi, { role: 'user', parts: [{ text: userMessage.content }] }];
+
+    // Lägg till assistentens platshållare i UI EFTER att API-payloaden har skapats
+    setMessages(prev => [...prev, { id: `assistant-${Date.now() + 1}`, role: 'assistant', content: '' }]);
 
     try {
         const response = await fetch('/api/chat', {
@@ -138,38 +142,37 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
         if (!response.ok || !response.body) {
             const errorText = await response.text();
-            throw new Error(JSON.parse(errorText).error || 'Ett okänt serverfel uppstod.');
+            let errorDetails = 'Okänt serverfel';
+            try { errorDetails = JSON.parse(errorText).details || errorText; } catch (e) { errorDetails = errorText; }
+            throw new Error(errorDetails);
         }
         
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
 
+        // Nollställ innehållet i platshållaren
         setMessages(prev => {
             const newArr = [...prev];
             newArr[newArr.length - 1] = { ...newArr[newArr.length - 1], content: '' };
             return newArr;
         });
 
+        // Streama svaret
         while (true) {
             const { value, done } = await reader.read();
             if (done) break;
-
             const chunkValue = decoder.decode(value, { stream: true });
-            
             setMessages(prev => {
-                const newMessages = [...prev];
-                const lastMessageIndex = newMessages.length - 1;
-                newMessages[lastMessageIndex] = {
-                    ...newMessages[lastMessageIndex],
-                    content: newMessages[lastMessageIndex].content + chunkValue,
-                };
-                return newMessages;
+                const newArr = [...prev];
+                const lastIdx = newArr.length - 1;
+                newArr[lastIdx].content += chunkValue;
+                return newArr;
             });
         }
     } catch (error: any) {
         if (error.name === 'AbortError') {
-            console.log("Fetch aborted by user.");
-            setMessages(prev => prev.slice(0, -2)); 
+            console.log("Fetch avbröts av användaren.");
+            setMessages(prev => prev.slice(0, -1)); // Ta bara bort platshållaren
             return;
         }
 
@@ -178,19 +181,14 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
         
         setMessages(prev => {
             const withoutPlaceholder = prev.slice(0, -1);
-            const errorAssistantMessage: ChatMessage = {
-                id: `assistant-error-${Date.now()}`,
-                role: 'assistant',
-                content: errorContent
-            };
-            return [...withoutPlaceholder, errorAssistantMessage];
+            const errorMsg: ChatMessage = { id: `assistant-error-${Date.now()}`, role: 'assistant', content: errorContent };
+            return [...withoutPlaceholder, errorMsg];
         });
     } finally {
         setIsLoading(false);
     }
   }, [session, messages]);
 
-  // STEG 3: Exponera clearChat i context-värdet
   const value = { messages, isLoading, session, sendMessage, stop, clearChat };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

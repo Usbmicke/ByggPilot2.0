@@ -10,15 +10,19 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // ÅTERSTÄLLD: Den klassiska blå färgpaletten för ByggPilot
-        'background-primary': '#0F172A', // Mörkblå "Natt-himmel" för huvudbakgrunden
-        'background-secondary': '#1E293B', // Något ljusare "Skymningsblå" för sidomeny och kort
-        'text-primary': '#F1F5F9',       // Klar vit med en gnutta blått
-        'text-secondary': '#94A3B8',      // Dämpad blå-grå för sekundär text
-        'border-primary': '#334155',       // En tydlig blå-grå kantlinje
-        'accent-blue': '#3B82F6',        // Behåller den starka och klara accent-blå för knappar
+        // Ny monokrom palett baserad på Zinc
+        'background-primary': '#18181b', // Tailwind Zinc 900
+        'component-background': '#27272a', // Tailwind Zinc 800
+        'border': '#3f3f46', // Tailwind Zinc 700
+        
+        // Ny, sofistikerad accentfärg
+        'accent': '#5E615D', // Dämpad grå-grön
 
-        // Statusfärger (behålls som de är)
+        // Typografi
+        'text-primary': '#f4f4f5', // Tailwind Zinc 100
+        'text-secondary': '#a1a1aa', // Tailwind Zinc 400
+
+        // Statusfärger (behålls som de är för funktionell igenkänning)
         'status-gold': '#FFD700',
         'status-red': '#DC2626',
       },

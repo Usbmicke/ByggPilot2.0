@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  body {
+    @apply bg-background-primary text-text-primary;
+  }
+}
+
 /* ============================================= */
 /* Återanvändbar klass för att dölja scrollbars */
 /* ============================================= */

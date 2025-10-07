@@ -11,6 +11,7 @@
   "dependencies": {
     "@ai-sdk/google": "latest",
     "@ai-sdk/react": "latest",
+    "ai": "latest",
     "@google-cloud/vertexai": "^1.1.0",
     "@google/generative-ai": "^0.24.1",
     "@headlessui/react": "^2.2.8",

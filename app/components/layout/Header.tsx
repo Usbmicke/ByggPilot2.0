@@ -20,7 +20,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { data: session } = useSession();
 
   return (
-    <header className="fixed top-0 left-0 md:left-64 right-0 bg-background-secondary border-b border-border-primary p-4 z-20">
+    <header className="fixed top-0 left-0 md:left-64 right-0 bg-component-background border-b border-border p-4 z-20">
       <div className="flex items-center justify-between gap-4">
         
         {/* Vänstra Sektionen: Hamburgermeny och Sökfält */}

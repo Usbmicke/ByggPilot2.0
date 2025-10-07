@@ -24,18 +24,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     <>
       {/* Overlay för mobilvy */}
       <div 
-        className={`fixed inset-0 bg-black/60 z-30 md:hidden transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 bg-black/70 z-30 md:hidden transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={onClose}
         aria-hidden="true"
       />
 
       {/* Sidofälts-container */}
-      <aside className={`fixed top-0 left-0 w-64 h-full bg-background-secondary z-40 transform transition-transform duration-300 ease-in-out \
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 md:flex md:flex-col md:border-r md:border-border-primary`}>
+      <aside className={`fixed top-0 left-0 w-64 h-full bg-component-background z-40 transform transition-transform duration-300 ease-in-out \
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 md:flex md:flex-col md:border-r md:border-border`}>
         
         {/* Header för sidofältet */}
-        <div className="flex items-center justify-between p-4 border-b border-border-primary h-[65px]">
+        <div className="flex items-center justify-between p-4 border-b border-border h-[65px]">
           <Link href="/dashboard" className="flex items-center gap-2">
+            {/* Byt till en ljusare logotyp om det behövs för kontrasten */}
             <Image src="/images/byggpilotlogga1.png" alt="ByggPilot Logotyp" width={32} height={32} />
             <span className="font-bold text-xl text-text-primary">ByggPilot</span>
           </Link>
@@ -45,31 +46,33 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         </div>
         
         {/* Navigationssektion */}
-        <div className="flex flex-col flex-1 p-4">
+        <div className="flex flex-col flex-1 p-2">
           <nav className="flex-1">
-            <ul>
+            <ul className="space-y-1">
               {primaryNavigation.map((item) => {
                 const isActive = pathname.startsWith(item.href);
                 return (
                   <li key={item.name} id={item.id}>
-                    <Link href={item.href} className={`flex items-center gap-3 px-4 py-2.5 my-1 rounded-lg transition-colors duration-200 \
+                    <Link href={item.href} 
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-200 relative group \
                         ${isActive 
-                          ? 'bg-accent-blue text-white shadow-sm' 
-                          : 'text-text-secondary hover:bg-background-tertiary hover:text-text-primary'}`}>
-                        <item.icon className="h-5 w-5" />
-                        <span className="font-medium text-sm">{item.name}</span>
+                          ? 'bg-accent/20 text-text-primary' 
+                          : 'text-text-secondary hover:bg-accent/15 hover:text-text-primary'}`}>
+                      {/* Vänsterställd kantlinje för aktivt val */}
+                      {isActive && <div className="absolute left-0 top-0 h-full w-1 bg-accent rounded-r-full"></div>}
+                      
+                      <item.icon className={`h-5 w-5 ${isActive ? 'text-accent' : ''}`} />
+                      <span className="font-medium text-sm">{item.name}</span>
                     </Link>
                   </li>
                 );
               })}
             </ul>
           </nav>
-
-          {/* CTA-knapp borttagen */}
         </div>
 
         {/* Användarprofilsektion */}
-        <div className="p-4 border-t border-border-primary">
+        <div className="p-4 border-t border-border">
           {session?.user && <SidebarUserProfile user={session.user} />}
         </div>
       </aside>

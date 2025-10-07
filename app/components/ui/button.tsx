@@ -3,22 +3,33 @@ import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 
-import { cn } from "@/app/lib/utils"
+import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background-primary disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        // Primär knapp: Solid med accentfärg
+        default: "bg-accent text-white hover:bg-accent/90",
+        
+        // Destruktiv knapp: Behåller röd färg för varningar
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+          "bg-status-red text-white hover:bg-status-red/90",
+          
+        // Outline (Ghost) knapp: Kantlinje i accentfärg
         outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+          "border border-accent bg-transparent text-accent hover:bg-accent/15",
+          
+        // Sekundär knapp: Subtil, mindre framträdande
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+          "bg-component-background text-text-secondary hover:bg-border",
+          
+        // Ghost-knapp: För ikoner och minimal interaktion
+        ghost: "hover:bg-accent/15 text-text-secondary hover:text-text-primary",
+        
+        // Länk-knapp: Ser ut som en textlänk
+        link: "text-accent underline-offset-4 hover:underline",
       },
       size: {
         default: "h-10 px-4 py-2",
