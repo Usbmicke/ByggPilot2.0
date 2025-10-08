@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 // Detta löser "Module not found: Can't resolve '@/lib/auth'"-felet.
 // =================================================================================
 import { authOptions } from "@/api/auth/[...nextauth]/route";
-import { admin } from "@/lib/firebase-admin";
+import { admin } from "@/lib/admin";
 
 export async function POST(request: Request) {
     const session = await getServerSession(authOptions);

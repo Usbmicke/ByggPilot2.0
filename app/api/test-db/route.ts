@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { firestoreAdmin } from '@/lib/firebase-admin';
+import { firestoreAdmin } from '@/lib/admin';
 
 // =================================================================================
 // DIAGNOSTISK ROUTE: /api/test-db

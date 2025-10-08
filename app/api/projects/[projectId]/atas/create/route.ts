@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next"
 import { authOptions } from '@/lib/auth';
 import { z } from 'zod';
-import { firestoreAdmin } from '@/lib/firebase-admin';
+import { firestoreAdmin } from '@/lib/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { createFolder, createGoogleDoc } from '@/services/driveService';
 

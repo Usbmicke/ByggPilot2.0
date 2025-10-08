@@ -3,9 +3,8 @@ import React from 'react';
 import { redirect } from 'next/navigation';
 // =================================================================================
 // KORRIGERING: Importera authOptions från den enda, sanna källan.
-// Detta löser "Module not found: Can't resolve '@/lib/auth'"-felet.
 // =================================================================================
-import { authOptions } from '@/api/auth/[...nextauth]/route'; 
+import { authOptions } from '@/lib/auth'; 
 import { getServerSession } from 'next-auth/next';
 import MainAppClientBoundary from './MainAppClientBoundary';
 

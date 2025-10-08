@@ -1,5 +1,5 @@
 
-import { firestoreAdmin } from '@/lib/firebase-admin';
+import { firestoreAdmin } from '@/lib/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { Project, Document, Message, Invoice, InvoiceLine } from '@/types';
 

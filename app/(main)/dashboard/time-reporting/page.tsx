@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { IconPlus } from '@/app/constants';
-import NewTimeEntryModal from '@/app/components/NewTimeEntryModal';
+import NewTimeEntryModal from '@/components/NewTimeEntryModal';
 import { TimeEntry, Project } from '@/app/types';
 
 const TimeEntryRow: React.FC<{ entry: TimeEntry }> = ({ entry }) => (

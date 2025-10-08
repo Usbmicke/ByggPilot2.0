@@ -7,8 +7,8 @@ import Link from 'next/link';
 import { getProject } from '@/services/projectService';
 import { Project } from '@/types';
 
-import MessageFeed from '@/components/MessageFeed';
-import MessageInput from '@/components/MessageInput';
+import MessageFeed from '@/components/chat/MessageFeed';
+import ChatInput from '@/components/chat/ChatInput';
 
 interface ProjectCommunicationPageProps {
     params: {
@@ -71,7 +71,7 @@ export default function ProjectCommunicationPage({ params }: ProjectCommunicatio
                     <MessageFeed projectId={projectId} key={key} />
                 </div>
                 <div className="p-4 bg-gray-900/60 border-t border-gray-700">
-                    <MessageInput projectId={projectId} onMessageSent={handleMessageSent} />
+                    <ChatInput projectId={projectId} onMessageSent={handleMessageSent} />
                 </div>
             </div>
         </div>

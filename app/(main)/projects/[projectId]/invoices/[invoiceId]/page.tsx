@@ -130,12 +130,13 @@ function InvoiceDetailPageClient({ initialInvoice, project }: { initialInvoice: 
 }
 
 // ---- Server-komponent (Wrapper) ----
-import { auth } from '@/lib/auth';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { getProject } from '@/services/projectService';
 import { getInvoiceFromFirestore } from '@/services/firestoreService';
 
 export default async function InvoiceDetailPage({ params }: { params: { projectId: string; invoiceId: string; }}) {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
     if (!userId) { notFound(); }
 

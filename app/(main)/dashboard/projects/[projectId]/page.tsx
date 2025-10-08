@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { firestore as db } from '@/lib/firebase/client';
+import { firestore as db } from '@/lib/client';
 import { Project } from '@/types/project';
 import TimeReportList from '@/components/dashboard/TimeReportList';
 import ProjectEconomyDashboard from '@/components/dashboard/ProjectEconomyDashboard';

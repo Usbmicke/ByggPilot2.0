@@ -1,7 +1,7 @@
 
 'use server';
 
-import { firestoreAdmin } from '@/lib/firebase-admin';
+import { firestoreAdmin } from '@/lib/admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 // =================================================================================

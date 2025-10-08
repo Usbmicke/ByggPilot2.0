@@ -3,7 +3,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
 import { handler } from "@/api/auth/[...nextauth]/route";
-import { firestoreAdmin } from "@/lib/firebase-admin";
+import { firestoreAdmin } from "@/lib/admin";
 import { MaterialCost } from "@/types/material";
 
 export async function GET(request: Request) {

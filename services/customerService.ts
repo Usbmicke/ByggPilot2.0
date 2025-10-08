@@ -1,5 +1,5 @@
 
-import { firestoreAdmin } from '@/lib/firebase-admin';
+import { firestoreAdmin } from '@/lib/admin';
 import { Customer } from '@/types/index';
 import { FieldValue } from 'firebase-admin/firestore';
 
