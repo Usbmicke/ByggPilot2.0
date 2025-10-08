@@ -3,6 +3,7 @@
 
 import { firestoreAdmin } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
+import { revalidatePath } from 'next/cache';
 
 interface CustomerData {
   name: string;
@@ -12,7 +13,7 @@ interface CustomerData {
   orgNumber?: string;
 }
 
-// Funktion för att skapa en ny kund under en specifik användare
+// Funktion för att skapa en ny kund
 export async function createCustomer(data: CustomerData, userId: string) {
   if (!userId) {
     return { success: false, error: 'Användar-ID är obligatoriskt.' };
@@ -22,16 +23,22 @@ export async function createCustomer(data: CustomerData, userId: string) {
 
   try {
     const newCustomerRef = userCustomersRef.doc();
-    
-    await newCustomerRef.set({
+    const newCustomerData = {
       ...data,
       id: newCustomerRef.id, // Spara dokument-ID i fältet
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
-    });
+    };
     
+    await newCustomerRef.set(newCustomerData);
+    
+    // Revalidera sökvägen till kundlistan. Detta uppdaterar datan för alla användare.
+    revalidatePath('/dashboard/customers');
+
     console.log(`Ny kund skapad med ID: ${newCustomerRef.id} för användare ${userId}`);
-    return { success: true, customerId: newCustomerRef.id };
+    
+    // Returnera det fullständiga kundobjektet (utan server-timestamps)
+    return { success: true, customer: { ...newCustomerData, id: newCustomerRef.id } };
 
   } catch (error) {
     console.error("Fel vid skapande av kund:", error);
@@ -42,7 +49,8 @@ export async function createCustomer(data: CustomerData, userId: string) {
 // Funktion för att hämta alla kunder för en specifik användare
 export async function getCustomers(userId: string) {
   if (!userId) {
-    return { success: false, error: 'Användar-ID är obligatoriskt.' };
+    console.log("getCustomers anropades utan userId");
+    return { customers: [], error: 'Användar-ID är obligatoriskt.' };
   }
 
   try {
@@ -51,11 +59,20 @@ export async function getCustomers(userId: string) {
       .orderBy('name', 'asc')
       .get();
 
-    const customers = customersSnapshot.docs.map(doc => doc.data());
-    return { success: true, data: customers };
+    const customers = customersSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            name: data.name || 'Namn saknas',
+            email: data.email || ''
+            // Lägg till andra fält vid behov
+        };
+    });
+    
+    return { customers };
 
   } catch (error) {
     console.error("Fel vid hämtning av kunder:", error);
-    return { success: false, error: 'Kunde inte hämta kunder från servern.' };
+    return { customers: [], error: 'Kunde inte hämta kunder från servern.' };
   }
 }

@@ -6,6 +6,8 @@ import Modal from '@/components/shared/Modal';
 import { useUI } from '@/contexts/UIContext';
 import { createCustomer } from '@/actions/customerActions';
 import { useSession } from 'next-auth/react';
+import toast from 'react-hot-toast';
+import { revalidatePath } from 'next/cache'; // Importerad, men används på serversidan
 
 const CreateCustomerModal = () => {
   const { isModalOpen, closeModal, getModalPayload } = useUI();
@@ -33,20 +35,23 @@ const CreateCustomerModal = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!session?.user?.id) {
-        alert("Du måste vara inloggad för att skapa en kund.");
+        toast.error("Du måste vara inloggad för att skapa en kund.");
         return;
     }
     setIsLoading(true);
+    
+    // Anropar Server Action. Revalidering sker inuti denna action.
     const result = await createCustomer({ name, email, phone }, session.user.id);
+    
     setIsLoading(false);
 
-    if (result.success) {
-      // TODO: Visa ett success-meddelande (toast)
-      alert(`Kund "${name}" skapades!`);
+    if (result.success && result.customer) {
+      toast.success(`Kund "${result.customer.name}" skapades!`);
       handleClose();
-      // TODO: Invalidera cachen för kundlistan så den uppdateras
+      // Notera: Ingen manuell revalidering behövs här på klienten.
+      // Server Action `createCustomer` ska anropa `revalidatePath('/dashboard/customers')`
     } else {
-      alert(`Fel: ${result.error}`);
+      toast.error(`Fel: ${result.error}`);
     }
   };
 

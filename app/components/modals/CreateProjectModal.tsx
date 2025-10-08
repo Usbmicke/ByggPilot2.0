@@ -4,10 +4,10 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '@/components/shared/Modal';
 import { useUI } from '@/contexts/UIContext';
-import { createActiveProject } from '@/actions/projectActions'; // Uppdaterad import
+import { createActiveProject } from '@/actions/projectActions';
 import { getCustomers } from '@/actions/customerActions';
 import { useSession } from 'next-auth/react';
-
+import toast from 'react-hot-toast';
 
 type Customer = { id: string; name: string; };
 
@@ -35,8 +35,9 @@ const CreateProjectModal = () => {
       setIsCustomerLoading(true);
       getCustomers(session.user.id)
         .then(res => {
-          if (res.success && res.data) {
-            setCustomers(res.data as Customer[]);
+          // Använder den nya returstrukturen från getCustomers
+          if (res.customers) {
+            setCustomers(res.customers as Customer[]);
           }
         })
         .finally(() => setIsCustomerLoading(false));
@@ -54,18 +55,17 @@ const CreateProjectModal = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!session?.user?.id || !selectedCustomerId) {
-        alert("Du måste vara inloggad och välja en kund.");
+        toast.error("Du måste vara inloggad och välja en kund.");
         return;
     }
 
     const customer = customers.find(c => c.id === selectedCustomerId);
     if (!customer) {
-        alert("Fel: Kunden kunde inte hittas.");
+        toast.error("Fel: Kunden kunde inte hittas.");
         return;
     }
 
     setIsLoading(true);
-    // Anropa den nya Guldstandard-funktionen
     const result = await createActiveProject({ 
         name, 
         address, 
@@ -74,12 +74,12 @@ const CreateProjectModal = () => {
     }, session.user.id);
     setIsLoading(false);
 
-    if (result.success) {
-      alert(`Projekt "${name}" skapades och mappstrukturen har byggts i Google Drive!`);
+    if (result.success && result.project) {
+      toast.success(`Projekt "${result.project.name}" skapades!`);
       handleClose();
-      window.location.reload();
+      // Revalidering sker i Server Action, ingen reload behövs.
     } else {
-      alert(`Fel: ${result.error}`);
+      toast.error(`Fel: ${result.error}`);
     }
   };
 
