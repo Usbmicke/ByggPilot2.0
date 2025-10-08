@@ -1,7 +1,10 @@
+
 'use client';
 
 import React, { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { XMarkIcon, MicrophoneIcon, CameraIcon } from '@heroicons/react/24/outline';
+import { createAta } from '@/actions/ataActions'; // Importera Guldstandard-funktionen
 
 interface CreateAtaModalProps {
     isOpen: boolean;
@@ -12,55 +15,42 @@ interface CreateAtaModalProps {
 }
 
 export default function CreateAtaModal({ isOpen, onClose, projectId, onAtaCreated }: CreateAtaModalProps) {
+    const { data: session } = useSession();
     const [title, setTitle] = useState('');
     const [notes, setNotes] = useState('');
-    const [isRecording, setIsRecording] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const handleSaveDraft = async () => {
-        setIsSubmitting(true);
-        setError(null);
-        
-        if (!title && !notes) {
-            setError('Du måste ange en titel eller en anteckning.');
-            setIsSubmitting(false);
+        if (!session?.user?.id) {
+            setError("Du måste vara inloggad för att skapa en ÄTA.");
             return;
         }
 
-        try {
-            const response = await fetch(`/api/projects/${projectId}/atas/create`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    projectId,
-                    title, 
-                    notes 
-                }),
-            });
+        setIsSubmitting(true);
+        setError(null);
+        
+        // Anropa Server Action istället för fetch
+        const result = await createAta({
+            projectId,
+            title,
+            notes,
+        }, session.user.id);
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'ÄTA-utkastet kunde inte sparas');
-            }
-            
-            const newAta = await response.json();
-            
+        if (result.success && result.ata) {
             // Anropa callback för att uppdatera UI:t i realtid
-            onAtaCreated(newAta);
+            onAtaCreated(result.ata);
             handleClose();
-
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setIsSubmitting(false);
+        } else {
+            setError(result.error || 'Ett okänt fel uppstod.');
         }
+
+        setIsSubmitting(false);
     };
     
     const handleClose = () => {
         setTitle('');
         setNotes('');
-        setIsRecording(false);
         setError(null);
         setIsSubmitting(false);
         onClose();
@@ -135,7 +125,7 @@ export default function CreateAtaModal({ isOpen, onClose, projectId, onAtaCreate
                     <button
                         type="button"
                         onClick={handleSaveDraft}
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || (!title && !notes)}
                         className="px-6 py-2 rounded-lg bg-cyan-600 text-white font-semibold hover:bg-cyan-500 disabled:bg-gray-600/50 disabled:cursor-not-allowed transition-colors"
                     >
                         {isSubmitting ? 'Sparar utkast...' : 'Spara utkast'}

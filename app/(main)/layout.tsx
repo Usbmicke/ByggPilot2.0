@@ -1,7 +1,11 @@
 
 import React from 'react';
 import { redirect } from 'next/navigation';
-import { authOptions } from '@/lib/auth'; 
+// =================================================================================
+// KORRIGERING: Importera authOptions från den enda, sanna källan.
+// Detta löser "Module not found: Can't resolve '@/lib/auth'"-felet.
+// =================================================================================
+import { authOptions } from '@/api/auth/[...nextauth]/route'; 
 import { getServerSession } from 'next-auth/next';
 import MainAppClientBoundary from './MainAppClientBoundary';
 
@@ -9,15 +13,13 @@ const MainAppLayout = async ({ children }: { children: React.ReactNode }) => {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id) {
-    // Om ingen session finns, skicka tillbaka till startsidan. Detta är korrekt.
     return redirect('/'); 
   }
 
-  // Hämta isNewUser från den pålitliga server-sessionen.
-  const isNewUser = session.user.isNewUser ?? false;
+  // isNewUser hanteras nu helt och hållet på klientsidan i MainAppClientBoundary
+  // baserat på information från useSession-hooken.
+  const isNewUser = session.user.isNewUser ?? false; // Skickas med som prop
 
-  // Renderar klient-delen och skickar med isNewUser-flaggan.
-  // Ingen omdirigering sker här på servern, vilket löser hydration-felet.
   return (
     <MainAppClientBoundary isNewUser={isNewUser}>
       {children}

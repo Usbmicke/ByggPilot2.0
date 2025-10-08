@@ -6,7 +6,51 @@ import { FieldValue } from 'firebase-admin/firestore';
 const db = firestoreAdmin;
 const customersCollection = db.collection('customers');
 
-// --- CRUD Funktioner ---
+// =================================================================================
+// NYCKELFUNKTION: findOrCreateUserByProvider
+// Denna funktion är den kritiska länken mellan NextAuth-inloggning och din databas.
+// Den säkerställer att varje användare som loggar in via en provider (Google)
+// antingen hittas eller skapas i din 'customers'-collection.
+// =================================================================================
+export async function findOrCreateUserByProvider(userData: {
+    provider: string;
+    providerAccountId: string;
+    email: string;
+    name: string;
+    imageUrl?: string | null;
+}): Promise<Customer> {
+    // 1. Hitta användaren baserat på provider och providerAccountId
+    const querySnapshot = await customersCollection
+        .where('provider', '==', userData.provider)
+        .where('providerAccountId', '==', userData.providerAccountId)
+        .limit(1)
+        .get();
+
+    if (!querySnapshot.empty) {
+        // 2a. Användaren finns, returnera den. (Möjlighet att uppdatera info här om det behövs)
+        const userDoc = querySnapshot.docs[0];
+        // Optional: Uppdatera namn och bild om de har ändrats hos providern
+        await userDoc.ref.update({
+            name: userData.name,
+            imageUrl: userData.imageUrl,
+        });
+        return { id: userDoc.id, ...userDoc.data() } as Customer;
+    } else {
+        // 2b. Användaren finns inte, skapa en ny.
+        const newCustomerData = {
+            ...userData,
+            createdAt: FieldValue.serverTimestamp(),
+            archivedAt: null,
+            // Sätt eventuella andra standardvärden för nya kunder här
+        };
+        const docRef = await customersCollection.add(newCustomerData);
+        const newUserDoc = await docRef.get();
+        return { id: newUserDoc.id, ...newUserDoc.data() } as Customer;
+    }
+}
+
+
+// --- Befintliga CRUD Funktioner ---
 
 export async function listCustomers(userId: string): Promise<Customer[]> {
     const snapshot = await customersCollection

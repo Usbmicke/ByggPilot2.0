@@ -1,7 +1,11 @@
 
 import { getServerSession } from "next-auth/next"
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
+// =================================================================================
+// KORRIGERING: Importera authOptions från den enda, sanna källan.
+// Detta löser "Module not found: Can't resolve '@/lib/auth'"-felet.
+// =================================================================================
+import { authOptions } from "@/api/auth/[...nextauth]/route";
 import { admin } from "@/lib/firebase-admin";
 
 export async function POST(request: Request) {
@@ -18,9 +22,8 @@ export async function POST(request: Request) {
         const customToken = await admin.auth().createCustomToken(uid);
         console.log(`[Firebase Token API] Successfully created custom token for UID: ${uid}`)
         return NextResponse.json({ firebaseToken: customToken });
-
     } catch (error) {
-        console.error(`[Firebase Token API] Error creating custom token for UID ${uid}:`, error);
-        return NextResponse.json({ error: "Internal server error while creating Firebase token." }, { status: 500 });
+        console.error(`[Firebase Token API] Error creating custom token for UID: ${uid}`, error);
+        return NextResponse.json({ error: "Failed to create Firebase token" }, { status: 500 });
     }
 }
