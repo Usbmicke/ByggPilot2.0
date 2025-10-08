@@ -9,7 +9,7 @@
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
-    "moduleResolution": "bundler", // Changed from "node" to "bundler" for modern tooling
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
@@ -19,13 +19,9 @@
         "name": "next"
       }
     ],
-    // ==================================================================
-    // KORRIGERINGEN: baseUrl är roten, och @/* pekar nu in i app/.
-    // Detta matchar den faktiska filstrukturen i projektet.
-    // ==================================================================
     "baseUrl": ".",
     "paths": {
-      "@/*": ["app/*"]
+      "@/*": ["./*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

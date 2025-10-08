@@ -18,7 +18,7 @@ interface TourContextType {
   stopTour: () => void;
 }
 
-const TourContext = createContext<TourContextType | undefined>(undefined);
+export const TourContext = createContext<TourContextType | undefined>(undefined);
 
 export const TourProvider = ({ children }: { children: ReactNode }) => {
   const [isTourActive, setIsTourActive] = useState(false);
@@ -57,15 +57,6 @@ export const TourProvider = ({ children }: { children: ReactNode }) => {
   return (
     <TourContext.Provider value={value}>
       {children}
-      {/* Här kommer vi senare att rendera själva tour-komponenten */}
     </TourContext.Provider>
   );
-};
-
-export const useTour = () => {
-  const context = useContext(TourContext);
-  if (context === undefined) {
-    throw new Error('useTour must be used within a TourProvider');
-  }
-  return context;
 };
