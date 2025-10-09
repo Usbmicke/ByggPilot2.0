@@ -5,12 +5,11 @@ import { JWT } from "next-auth/jwt";
 import GoogleProvider from "next-auth/providers/google";
 import { FirestoreAdapter } from "@auth/firebase-adapter";
 import { adminDb, adminAuth } from "@/lib/admin";
-import { doc, updateDoc } from "firebase/firestore";
 
 // =================================================================================
 // GULDSTANDARD - NEXT-AUTH KONFIGURATION
-// Version 8.0 - Konsoliderad och robust.
-// All auth-logik finns nu i denna fil för att undvika path-resolution-fel.
+// Version 8.3 - Korrigerat alla Google-scopes för full funktionalitet
+// Inkluderar nu gmail.readonly för att kunna läsa e-post.
 // =================================================================================
 
 
@@ -28,7 +27,7 @@ export const authOptions: NextAuthOptions = {
                 params: {
                     access_type: "offline",
                     prompt: "consent",
-                    scope: "openid email profile https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks"
+                    scope: "openid email profile https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks"
                 }
             },
         }),
@@ -68,7 +67,7 @@ export const authOptions: NextAuthOptions = {
                     token.accessTokenExpires = Date.now() + newTokens.expires_in * 1000;
                     token.refreshToken = newTokens.refresh_token ?? token.refreshToken; 
                     
-                    await updateDoc(doc(adminDb, "users", token.uid), {
+                    await adminDb.collection("users").doc(token.uid as string).update({
                         refreshToken: token.refreshToken,
                     });
 

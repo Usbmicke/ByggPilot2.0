@@ -1,10 +1,10 @@
 
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getProjects } from "@/actions/projectActions";
 import ProjectList from "./ProjectList"; // Klientkomponent som vi skapar härnäst
-import { Header } from '@/components/dashboard/Header';
-import { CreateNewMenu } from '@/components/dashboard/CreateNewMenu';
+import Header from '@/components/layout/Header';
+import CreateNewMenu from '@/components/dashboard/CreateNewButton';
 
 // Server Component för att hämta projektdata
 export default async function ProjectsPage() {

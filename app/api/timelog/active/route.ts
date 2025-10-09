@@ -1,14 +1,16 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from '@clerk/nextjs/server';
-import { firestore } from '@/app/lib/firebase/firestore';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { firestoreAdmin as firestore } from '@/lib/admin';
 
 // GET: Hämta den för närvarande aktiva timern för en användare
 export async function GET(req: NextRequest) {
-  const { userId } = getAuth(req);
-  if (!userId) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  const userId = session.user.id;
 
   try {
     const runningTimerQuery = await firestore.collection('timelogs')

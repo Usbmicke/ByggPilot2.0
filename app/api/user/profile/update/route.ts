@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { admin, db } from '@/app/lib/firebase/admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { admin, db } from '@/lib/admin';
+import { FieldValue } from '@google-cloud/firestore';
 
 // Hjälpfunktion för att validera Firebase ID-token
 async function validateFirebaseIdToken(request: NextRequest): Promise<string | null> {

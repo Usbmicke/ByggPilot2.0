@@ -2,15 +2,12 @@
 import * as admin from 'firebase-admin';
 
 // =================================================================================
-// GULDSTANDARD: firebase-admin.ts (KORRIGERAD VERSION)
-// Denna version är nu anpassad för att matcha din befintliga .env.local-fil.
+// GULDSTANDARD: lib/admin.ts (KORRIGERAD VERSION 2.0)
+// Exporterar nu adminDb och adminAuth för att matcha resten av applikationen.
 // =================================================================================
-
-let firestoreAdmin: admin.firestore.Firestore;
 
 // Kontrollera om Firebase Admin redan har initierats för att undvika dubbel-initiering.
 if (!admin.apps.length) {
-  // Läs in hela service account-objektet från den enskilda miljövariabeln.
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
   if (!serviceAccountJson) {
@@ -18,10 +15,8 @@ if (!admin.apps.length) {
   }
 
   try {
-    // Parsa JSON-strängen till ett JavaScript-objekt.
     const serviceAccount = JSON.parse(serviceAccountJson);
 
-    // Initiera Firebase Admin SDK med det parsade service-kontot.
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
       databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`
@@ -31,12 +26,11 @@ if (!admin.apps.length) {
 
   } catch (error) {
     console.error("Fel vid parsning av FIREBASE_SERVICE_ACCOUNT_JSON:", error);
-    // Kasta om felet för att förhindra att applikationen startar med en felaktig konfiguration.
     throw new Error('Kunde inte initiera Firebase Admin SDK. Kontrollera formatet på FIREBASE_SERVICE_ACCOUNT_JSON.');
   }
 }
 
-// Exportera den initialiserade firestore-instansen.
-firestoreAdmin = admin.firestore();
+const adminDb = admin.firestore();
+const adminAuth = admin.auth();
 
-export { admin as firebaseAdmin, firestoreAdmin };
+export { admin, adminDb, adminAuth };

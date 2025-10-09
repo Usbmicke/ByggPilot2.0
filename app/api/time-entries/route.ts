@@ -3,7 +3,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
 import { handler } from "@/app/api/auth/[...nextauth]/route";
-import { firestoreAdmin } from "@/app/lib/firebase-admin";
+import { firestoreAdmin } from "@/lib/admin";
 import { TimeEntry } from "@/app/types/time";
 
 export async function GET(request: Request) {

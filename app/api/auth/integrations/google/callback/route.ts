@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { firestoreAdmin } from "@/lib/admin";
+import { adminDb } from "@/lib/admin";
 import { encrypt } from "@/lib/encryption";
 import { google } from 'googleapis';
 
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
         const encryptedAccessToken = encrypt(tokens.access_token);
         const encryptedRefreshToken = encrypt(tokens.refresh_token);
 
-        const db = firestoreAdmin;
+        const db = adminDb;
         const batch = db.batch();
 
         const integrationRef = db.collection('users').doc(userId).collection('integrations').doc('google');

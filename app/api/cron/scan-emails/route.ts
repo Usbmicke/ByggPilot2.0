@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { firestoreAdmin } from '@/lib/admin';
+import { adminDb } from '@/lib/admin';
 import { decrypt } from '@/lib/encryption';
 import { google } from 'googleapis';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -78,7 +78,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ message: `Serverkonfigurationsfel: ${error.message}` }, { status: 500 });
     }
 
-    const db = firestoreAdmin;
+    const db = adminDb;
     const usersSnapshot = await db.collection('users').where('hasGoogleIntegration', '==', true).get();
 
     if (usersSnapshot.empty) {

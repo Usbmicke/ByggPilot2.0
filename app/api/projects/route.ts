@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { firestoreAdmin } from "@/lib/admin";
+import { adminDb } from "@/lib/admin";
 import { ProjectStatus } from '@/app/types';
 
 // --- Hämta projekt (Befintlig funktion) ---
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ message: "Åtkomst nekad." }, { status: 401 });
     }
     try {
-        const projectsRef = firestoreAdmin.collection('projects');
+        const projectsRef = adminDb.collection('projects');
         const query = projectsRef
             .where('userId', '==', session.user.id)
             .orderBy('createdAt', 'desc');
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
             createdAt: new Date(),
         };
 
-        const projectRef = await firestoreAdmin.collection('projects').add(newProjectData);
+        const projectRef = await adminDb.collection('projects').add(newProjectData);
 
         const newProject = {
             id: projectRef.id,

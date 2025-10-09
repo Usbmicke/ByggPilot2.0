@@ -1,9 +1,9 @@
 
-import { firestoreAdmin } from '@/lib/admin';
+import { adminDb } from '@/lib/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { Project, Document, Message, Invoice, InvoiceLine } from '@/types';
 
-const db = firestoreAdmin;
+const db = adminDb;
 const projectsCollection = db.collection('projects');
 
 // ===============================================
@@ -143,7 +143,3 @@ export const addMessageToProject = async (projectId: string, messageData: Omit<M
     await updateProjectInFirestore(projectId, {}); 
     return { id: docRef.id, ...messageData };
 };
-
-
-// Exportera den primära databas-instansen
-export { db };

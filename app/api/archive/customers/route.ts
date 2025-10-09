@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { firestoreAdmin } from "@/lib/admin";
+import { adminDb } from "@/lib/admin";
 
 // GET-funktion för att hämta arkiverade kunder
 export async function GET(request: NextRequest) {
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        const customersRef = firestoreAdmin.collection('customers');
+        const customersRef = adminDb.collection('customers');
         const query = customersRef
             .where('userId', '==', session.user.id)
             .where('archived', '==', true) // Vi hämtar bara de som är markerade som arkiverade

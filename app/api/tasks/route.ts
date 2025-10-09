@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { firestoreAdmin as db } from '@/lib/admin';
+import { adminDb as db } from '@/lib/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
 // Hämta uppgifter för ett projekt

@@ -3,13 +3,13 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"; 
-import { firestoreAdmin } from "@/lib/admin";
+import { adminDb } from "@/lib/admin";
 import { Project, ProjectStatus } from "@/types";
 
 // TimeEntry och MaterialCost är inte definierade i app/types, så relaterad logik pausas temporärt.
 
 async function getProjectSubCollectionSum(projectId: string, collectionName: string, sumField: string): Promise<number> {
-    const snapshot = await firestoreAdmin.collection(`projects/${projectId}/${collectionName}`).get();
+    const snapshot = await adminDb.collection(`projects/${projectId}/${collectionName}`).get();
     if (snapshot.empty) {
         return 0;
     }
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
 
   try {
     const userId = session.user.id;
-    const projectsRef = firestoreAdmin.collection('projects').where('userId', '==', userId);
+    const projectsRef = adminDb.collection('projects').where('userId', '==', userId);
     const projectsSnapshot = await projectsRef.get();
     
     if (projectsSnapshot.empty) {

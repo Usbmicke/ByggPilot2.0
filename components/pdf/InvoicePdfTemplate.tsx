@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
-import { Invoice } from '@/app/types';
+import { Invoice } from '@/types';
 
 // TODO: Hämta från inställningar
 const companyInfo = { name: 'Byggbolaget AB', address: 'Industrigatan 5', zip: '123 45', city: 'STORSTAD', phone: '08-123 456 78', email: 'kontakt@byggbolaget.se', orgnr: '556677-8899', bankgiro: '123-4567' };

@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Project } from '@/app/types/project';
-import { IconPlayerPlay, IconPlayerStop } from '@/app/constants';
+import { IconPlayerPlay, IconPlayerStop } from '@tabler/icons-react';
 
 const formatDuration = (ms: number) => {
   if (ms < 0) ms = 0;

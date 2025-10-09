@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { firestoreAdmin } from "@/lib/admin";
+import { adminDb } from "@/lib/admin";
 
 /**
  * API-rutt för att koppla från en Google-integration.
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     try {
         console.log(`[Disconnect] Påbörjar frånkoppling av Google för användare: ${userId}`);
         
-        const db = firestoreAdmin;
+        const db = adminDb;
         const batch = db.batch();
 
         // 2. Definiera sökvägen till integrationsdokumentet och radera det

@@ -4,7 +4,8 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createStreamableValue, streamUI, generateText } from 'ai';
 import { getContext } from '@/services/aiService'; // Vi behåller denna för framtida bruk
 import { getSystemPrompt } from '@/ai/prompts';
-import { authOptions as auth } from '@/app/api/auth/[...nextauth]/route';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
 
 // =================================================================================
@@ -40,7 +41,7 @@ async function createOfferPdf(args: { title: string; customerName: string; lineI
 
 export const POST = async (req: NextRequest) => {
   try {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     const { messages: clientMessages, data }: { messages: ClientMessage[], data: any } = await req.json();
 
     const formattedMessages = clientMessages.map(msg => ({

@@ -1,7 +1,7 @@
 
 'use server';
 
-import { firestoreAdmin, admin } from '@/lib/admin'; // Korrigerad import
+import { adminDb, admin } from '@/lib/admin'; // Korrigerad import
 
 // Det inkommande datainterfacet från formuläret
 interface CompanyFormData {
@@ -24,7 +24,7 @@ export async function updateCompanyInfo(formData: CompanyFormData, userId: strin
   }
 
   try {
-    const userDocRef = firestoreAdmin.collection('users').doc(userId);
+    const userDocRef = adminDb.collection('users').doc(userId);
     
     // **KORRIGERINGEN:** Omvandla den platta formulärdatan till en nästlad struktur.
     const saveData = {
@@ -65,7 +65,7 @@ export async function getUserData(userId: string) {
   }
 
   try {
-    const userDocRef = firestoreAdmin.collection('users').doc(userId);
+    const userDocRef = adminDb.collection('users').doc(userId);
     const docSnap = await userDocRef.get();
 
     if (docSnap.exists) { // Korrigerad från .exists() till .exists
@@ -92,7 +92,7 @@ export async function updateUserTermsStatus(userId: string, accepted: boolean) {
   }
 
   try {
-    const userDocRef = firestoreAdmin.collection('users').doc(userId);
+    const userDocRef = adminDb.collection('users').doc(userId);
     await userDocRef.set({
       termsAccepted: accepted,
       termsAcceptedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -115,7 +115,7 @@ export async function completeOnboarding(userId: string) {
   }
 
   try {
-    const userDocRef = firestoreAdmin.collection('users').doc(userId);
+    const userDocRef = adminDb.collection('users').doc(userId);
     await userDocRef.update({
       onboardingCompleted: true,
       isNewUser: false, // Sista bekräftelsen på att användaren inte längre är ny

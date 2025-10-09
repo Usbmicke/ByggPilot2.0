@@ -1,7 +1,7 @@
 
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { firestoreAdmin } from "@/app/lib/firebase-admin";
+import { firestoreAdmin } from "@/lib/admin";
 import { NextResponse } from 'next/server';
 
 /**

@@ -1,7 +1,7 @@
 
 'use server';
 
-import { firestoreAdmin } from '@/lib/admin'; // Korrigerad import
+import { adminDb } from '@/lib/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { createFolder } from '@/services/driveService';
 import { getNextProjectNumber } from '@/services/projectService';
@@ -29,7 +29,7 @@ export async function createActiveProject(data: ProjectData, userId: string) {
     return { success: false, error: 'Användar-ID och Kund-ID är obligatoriska.' };
   }
 
-  const userDocRef = firestoreAdmin.collection('users').doc(userId);
+  const userDocRef = adminDb.collection('users').doc(userId);
 
   try {
     const userDoc = await userDocRef.get();
@@ -81,7 +81,7 @@ export async function createProspectProject(data: ProjectData, userId: string) {
         return { success: false, error: 'Användar-ID och Kund-ID är obligatoriska.' };
     }
 
-    const userDocRef = firestoreAdmin.collection('users').doc(userId);
+    const userDocRef = adminDb.collection('users').doc(userId);
 
     try {
         const userDoc = await userDocRef.get();
@@ -124,7 +124,7 @@ export async function getProjects(userId: string) {
   }
 
   try {
-    const projectsSnapshot = await firestoreAdmin
+    const projectsSnapshot = await adminDb
       .collection('users').doc(userId).collection('projects')
       .orderBy('createdAt', 'desc')
       .get();

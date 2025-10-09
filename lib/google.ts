@@ -1,6 +1,6 @@
 
 import { google } from 'googleapis';
-import { firestoreAdmin } from '@/lib/admin';
+import { adminDb } from '@/lib/admin';
 
 /**
  * Skapar och returnerar en autentiserad Google OAuth2-klient för en specifik användare.
@@ -13,7 +13,7 @@ import { firestoreAdmin } from '@/lib/admin';
 export async function getGoogleAuthClient(userId: string) {
   try {
     // 1. Hämta användarens sparade tokens från Firestore
-    const accountDoc = await firestoreAdmin
+    const accountDoc = await adminDb
       .collection('users')
       .doc(userId)
       .collection('accounts')
@@ -56,7 +56,7 @@ export async function getGoogleAuthClient(userId: string) {
         if (tokens.access_token) {
             console.log(`[Auth Client] Ny access token genererad för användare ${userId}.`);
             // Uppdatera den nya access token i databasen för framtida bruk
-            firestoreAdmin
+            adminDb
                 .collection('users')
                 .doc(userId)
                 .collection('accounts')

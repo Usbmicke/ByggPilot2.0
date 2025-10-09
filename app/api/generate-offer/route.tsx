@@ -1,7 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { doc, getDoc } from 'firebase/firestore';
-import { firestoreAdmin as db } from '@/lib/admin';
+import { adminDb as db } from '@/lib/admin';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { InvoicePdfTemplate } from '@/components/pdf/InvoicePdfTemplate';
 import { getGoogleAuthClient } from '@/lib/google';
@@ -51,21 +50,21 @@ export async function POST(request: Request) {
     }
 
     try {
-        const userDocRef = doc(db, 'users', userId);
-        const projectDocRef = doc(db, `users/${userId}/projects`, projectId);
-        const calcDocRef = doc(db, `users/${userId}/projects/${projectId}/calculations`, 'main');
+        const userDocRef = db.doc(`users/${userId}`);
+        const projectDocRef = db.doc(`users/${userId}/projects/${projectId}`);
+        const calcDocRef = db.doc(`users/${userId}/projects/${projectId}/calculations/main`);
         
         const [userDoc, projectDoc, calculationDoc] = await Promise.all([
-            getDoc(userDocRef),
-            getDoc(projectDoc),
-            getDoc(calcDocRef)
+            userDocRef.get(),
+            projectDocRef.get(),
+            calcDocRef.get()
         ]);
 
-        if (!userDoc.exists() || !projectDoc.exists() || !calculationDoc.exists()) {
+        if (!userDoc.exists || !projectDoc.exists || !calculationDoc.exists) {
             let missing = [];
-            if (!userDoc.exists()) missing.push('användare');
-            if (!projectDoc.exists()) missing.push('projekt');
-            if (!calculationDoc.exists()) missing.push('kalkyl');
+            if (!userDoc.exists) missing.push('användare');
+            if (!projectDoc.exists) missing.push('projekt');
+            if (!calculationDoc.exists) missing.push('kalkyl');
             return new NextResponse(JSON.stringify({ error: `Nödvändig data kunde inte hittas: ${missing.join(', ')}` }), { status: 404 });
         }
 
@@ -73,9 +72,9 @@ export async function POST(request: Request) {
         const project = projectDoc.data() as Project;
         const calculation = calculationDoc.data() as Calculation;
         
-        const customerDocRef = doc(db, `users/${userId}/customers`, project.customerId);
-        const customerDoc = await getDoc(customerDocRef);
-        if(!customerDoc.exists()) {
+        const customerDocRef = db.doc(`users/${userId}/customers/${project.customerId}`);
+        const customerDoc = await customerDocRef.get();
+        if(!customerDoc.exists) {
              return new NextResponse(JSON.stringify({ error: 'Kunddata kunde inte hittas' }), { status: 404 });
         }
         const customer = customerDoc.data() as Customer;

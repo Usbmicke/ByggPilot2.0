@@ -1,7 +1,7 @@
 
 'use server';
 
-import { firestoreAdmin } from '@/lib/admin'; // Korrigerad import
+import { adminDb } from '@/lib/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { revalidatePath } from 'next/cache';
 
@@ -19,7 +19,7 @@ export async function createCustomer(data: CustomerData, userId: string) {
     return { success: false, error: 'Användar-ID är obligatoriskt.' };
   }
 
-  const userCustomersRef = firestoreAdmin.collection('users').doc(userId).collection('customers');
+  const userCustomersRef = adminDb.collection('users').doc(userId).collection('customers');
 
   try {
     const newCustomerRef = userCustomersRef.doc();
@@ -54,7 +54,7 @@ export async function getCustomers(userId: string) {
   }
 
   try {
-    const customersSnapshot = await firestoreAdmin
+    const customersSnapshot = await adminDb
       .collection('users').doc(userId).collection('customers')
       .orderBy('name', 'asc')
       .get();

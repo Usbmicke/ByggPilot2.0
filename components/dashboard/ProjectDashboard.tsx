@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { firestore as db } from '@/lib/client';
+import { firestore as db } from '@/lib/firebase';
 import { useFirebaseSync } from '@/providers/AuthProvider';
 import { Project } from '@/app/types/project';
 import ProjectCard from './ProjectCard';

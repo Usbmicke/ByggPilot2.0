@@ -1,7 +1,7 @@
 
 'use server';
 
-import { firestoreAdmin } from '@/lib/admin'; // Korrigerad import
+import { adminDb } from '@/lib/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
 interface AtaData {
@@ -10,7 +10,6 @@ interface AtaData {
   projectId: string;
 }
 
-// Guldstandard-funktion för att skapa ett nytt ÄTA-utkast
 export async function createAta(data: AtaData, userId: string) {
   const { projectId, title, notes } = data;
 
@@ -22,10 +21,9 @@ export async function createAta(data: AtaData, userId: string) {
       return { success: false, error: 'En titel eller anteckning krävs för att skapa ett ÄTA-underlag.' };
   }
 
-  const projectRef = firestoreAdmin.collection('users').doc(userId).collection('projects').doc(projectId);
+  const projectRef = adminDb.collection('users').doc(userId).collection('projects').doc(projectId);
 
   try {
-    // Verifiera att projektet existerar
     const projectDoc = await projectRef.get();
     if (!projectDoc.exists) {
         return { success: false, error: 'Det angivna projektet kunde inte hittas.' };
@@ -38,10 +36,9 @@ export async function createAta(data: AtaData, userId: string) {
       projectId,
       title: title || 'Namnlöst ÄTA',
       notes: notes || '',
-      status: 'Utkast', // Startar alltid som ett utkast
+      status: 'Utkast',
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
-      // Ytterligare fält som 'items' kan läggas till senare
     };
 
     await newAtaRef.set(newAta);

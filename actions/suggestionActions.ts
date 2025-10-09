@@ -1,7 +1,7 @@
 
 'use server';
 
-import { firestoreAdmin } from '@/lib/admin'; // Korrigerad import
+import { adminDb } from '@/lib/admin';
 import { revalidatePath } from 'next/cache';
 
 /**
@@ -13,7 +13,7 @@ export async function getSuggestedActions(userId: string) {
   }
 
   try {
-    const actionsSnapshot = await firestoreAdmin
+    const actionsSnapshot = await adminDb
       .collection('users').doc(userId).collection('actions')
       .where('status', '==', 'new')
       .orderBy('createdAt', 'desc')
@@ -45,7 +45,7 @@ export async function updateActionStatus(userId: string, actionId: string, newSt
   }
 
   try {
-    const actionRef = firestoreAdmin.collection('users').doc(userId).collection('actions').doc(actionId);
+    const actionRef = adminDb.collection('users').doc(userId).collection('actions').doc(actionId);
 
     const doc = await actionRef.get();
     if (!doc.exists) {

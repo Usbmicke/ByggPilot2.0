@@ -2,13 +2,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next"
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { firestoreAdmin } from '@/lib/admin';
+import { adminDb } from '@/lib/admin'; // KORRIGERAD
 import { FieldValue } from 'firebase-admin/firestore';
-import { uploadFileToDrive, getOrCreateSubFolder } from '@/services/driveService';
+import { uploadFileToDrive, getOrCreateSubFolder } from '@/services/driveService'; // KORRIGERAD
 
 export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
+    const userId = session?.user?.id; // KORRIGERAD
 
     if (!userId) {
         return NextResponse.json({ message: 'Autentisering krävs' }, { status: 401 });
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ message: 'Fil, projekt-ID och destination krävs' }, { status: 400 });
         }
 
-        const projectRef = firestoreAdmin.collection('users').doc(userId).collection('projects').doc(projectId);
+        const projectRef = adminDb.collection('users').doc(userId).collection('projects').doc(projectId);
         const projectDoc = await projectRef.get();
 
         if (!projectDoc.exists) {

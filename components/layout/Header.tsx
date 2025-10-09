@@ -10,7 +10,7 @@ import GlobalSearchBar from '@/components/layout/GlobalSearchBar';
 import NotificationBell from '@/components/layout/NotificationBell';
 import UserMenu from '@/components/layout/UserMenu';
 import Clock from '@/components/layout/Clock';
-import CreateNewButton from '@/components/dashboard/CreateNewButton'; // Importera knappen
+import CreateNewButton from '@/components/layout/CreateNewButton'; // Importera knappen
 
 interface HeaderProps {
   onMenuClick?: () => void;

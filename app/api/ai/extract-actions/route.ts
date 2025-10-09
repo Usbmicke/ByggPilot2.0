@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { firestoreAdmin } from '@/lib/admin';
+import { adminDb } from '@/lib/admin';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Spara den extraherade åtgärden i Firestore
-        const db = firestoreAdmin;
+        const db = adminDb;
         const actionRef = db.collection('users').doc(email.userId).collection('actions').doc();
         
         await actionRef.set({

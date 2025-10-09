@@ -2,7 +2,7 @@
 import React from 'react';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { getProjects } from '@/services/projectService';
+import { getProjects } from '@/actions/projectActions';
 import ProjectsView from '@/components/views/ProjectsView';
 
 const ProjectsPage = async () => {
@@ -18,7 +18,12 @@ const ProjectsPage = async () => {
     return <ProjectsView projects={[]} />;
   }
 
-  const projects = await getProjects(userId);
+  const { projects, error } = await getProjects(userId);
+
+  if (error) {
+    console.error("Error fetching projects: ", error);
+    return <ProjectsView projects={[]} />;
+  }
 
   return (
       <ProjectsView projects={projects} />

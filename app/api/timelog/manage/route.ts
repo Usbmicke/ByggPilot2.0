@@ -1,8 +1,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from '@clerk/nextjs/server';
-import { firestore } from '@/app/lib/firebase/firestore';
-import { Timestamp } from 'firebase-admin/firestore';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { firestoreAdmin as firestore } from '@/lib/admin';
+import { Timestamp } from '@google-cloud/firestore';
 
 // Interface för en tidslogg
 interface TimeLog {
@@ -15,10 +16,11 @@ interface TimeLog {
 
 // POST: Starta en ny timer
 export async function POST(req: NextRequest) {
-  const { userId } = getAuth(req);
-  if (!userId) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  const userId = session.user.id;
 
   const { projectId } = await req.json();
   if (!projectId) {
@@ -62,10 +64,11 @@ export async function POST(req: NextRequest) {
 
 // PUT: Stoppa en pågående timer
 export async function PUT(req: NextRequest) {
-    const { userId } = getAuth(req);
-    if (!userId) {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const userId = session.user.id;
 
     try {
         const runningTimerQuery = await firestore.collection('timelogs')

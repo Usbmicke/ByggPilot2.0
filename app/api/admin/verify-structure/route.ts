@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next"
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { firestoreAdmin } from '@/lib/admin';
+import { adminDb } from '@/lib/admin';
 import { getGoogleDriveService } from '@/lib/google';
 import { createFolder } from '@/services/driveService';
 
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
         }
 
         let totalFixes: string[] = [];
-        const userProjectsRef = firestoreAdmin.collection('users').doc(userId).collection('projects');
+        const userProjectsRef = adminDb.collection('users').doc(userId).collection('projects');
         const projectsSnapshot = await userProjectsRef.where('status', '==', 'Pågående').get();
 
         for (const doc of projectsSnapshot.docs) {
