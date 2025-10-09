@@ -2,8 +2,8 @@
 // Fil: app/api/dashboard/summary/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth"; 
-import { firestoreAdmin } from "@/lib/firebase-admin";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"; 
+import { firestoreAdmin } from "@/lib/admin";
 import { Project, ProjectStatus } from "@/types";
 
 // TimeEntry och MaterialCost är inte definierade i app/types, så relaterad logik pausas temporärt.

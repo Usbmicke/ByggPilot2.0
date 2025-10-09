@@ -3,17 +3,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { firestore as db } from '@/app/lib/firebase/client';
-import { useAuth } from '@/app/context/AuthContext';
-import { useTour } from '@/hooks/useTour';
+import { firestore as db } from '@/lib/client';
+import { useFirebaseSync } from '@/providers/AuthProvider';
 import { Project } from '@/app/types/project';
 import ProjectCard from './ProjectCard';
-import CreateProjectModal from './CreateProjectModal';
+import CreateProjectModal from '@/components/modals/CreateProjectModal';
 import NewTimeEntryModal from '../NewTimeEntryModal';
 
 export default function ProjectDashboard() {
-    const { user } = useAuth();
-    const { startTour } = useTour();
+    const { firebaseUser: user } = useFirebaseSync();
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreateModalOpen, setCreateModalOpen] = useState(false);
@@ -29,15 +27,15 @@ export default function ProjectDashboard() {
                 setIsLoading(false);
 
                 // Start tour for new users with no projects
-                if (projectsData.length === 0 && user.metadata.creationTime === user.metadata.lastSignInTime) {
-                    const tourSteps = [
-                        {
-                            target: '#create-new-project-button',
-                            content: 'Välkommen till ByggPilot! För att komma igång, skapa ditt första projekt här.',
-                        },
-                    ];
-                    startTour(tourSteps);
-                }
+                // if (projectsData.length === 0 && user.metadata.creationTime === user.metadata.lastSignInTime) {
+                //     const tourSteps = [
+                //         {
+                //             target: '#create-new-project-button',
+                //             content: 'Välkommen till ByggPilot! För att komma igång, skapa ditt första projekt här.',
+                //         },
+                //     ];
+                //     startTour(tourSteps);
+                // }
             }, (error) => {
                 console.error("Fel vid hämtning av projekt:", error);
                 setIsLoading(false);
@@ -45,7 +43,7 @@ export default function ProjectDashboard() {
 
             return () => unsubscribe();
         }
-    }, [user, startTour]);
+    }, [user]);
 
     const handleOpenTimeEntryModal = (projectId: string) => {
         setSelectedProjectId(projectId);

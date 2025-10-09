@@ -2,7 +2,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { FolderIcon, DocumentIcon, ArrowUturnLeftIcon } from '@heroicons/react/24/outline';
-import AtaList from '@/components/ata/AtaList'; // STEG 3: Importera AtaList
+import AtaView from '@/components/views/AtaView'; // Korrigerad import
 
 interface DriveFile {
   id: string;
@@ -100,8 +100,8 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projectId, projec
             ))}
         </div>
 
-        {/* STEG 3: Rendera AtaList-komponenten */}
-        <AtaList projectId={projectId} />
+        {/* Korrigerad komponent */}
+        <AtaView projectId={projectId} />
 
     </div>
   );

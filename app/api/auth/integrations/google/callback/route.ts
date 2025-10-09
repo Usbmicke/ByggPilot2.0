@@ -2,8 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { firestoreAdmin } from "@/app/lib/firebase-admin";
-import { encrypt } from "@/app/lib/encryption";
+import { firestoreAdmin } from "@/lib/admin";
+import { encrypt } from "@/lib/encryption";
 import { google } from 'googleapis';
 
 const getOAuth2Client = () => {

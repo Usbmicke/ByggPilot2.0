@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link'; // STEG 1: Importera Link
 import { Project } from '@/app/types/project';
-import { PlusIcon, PencilIcon, CheckCircleIcon, ChevronRightIcon } from '@/heroicons/react/24/outline';
-import CreateAtaModal from '@/app/components/modals/CreateAtaModal';
+import { PlusIcon, PencilIcon, CheckCircleIcon, ChevronRightIcon } from '@heroicons/react/24/outline'; // Korrigerad import
+import CreateAtaModal from '@/components/modals/CreateAtaModal'; // Korrigerad import
 
 type Ata = {
     id: string;

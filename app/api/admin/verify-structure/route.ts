@@ -1,8 +1,8 @@
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next"
-import { authOptions } from '@/lib/auth';
-import { firestoreAdmin } from '@/lib/firebase-admin';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { firestoreAdmin } from '@/lib/admin';
 import { getGoogleDriveService } from '@/lib/google';
 import { createFolder } from '@/services/driveService';
 

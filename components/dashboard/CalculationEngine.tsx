@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { firestore as db } from '@/lib/firebase/client';
+import { firestore } from '@/lib/firebase';
 import { Calculation, CalculationItem, CalculationCategory } from '@/types/calculation';
 import CalculationSection from './CalculationSection';
 
@@ -26,7 +26,7 @@ export default function CalculationEngine({ projectId }: CalculationEngineProps)
 
     useEffect(() => {
         if (!projectId) return;
-        const calcDocRef = doc(db, 'projects', projectId, 'calculations', 'main');
+        const calcDocRef = doc(firestore, 'projects', projectId, 'calculations', 'main');
         const unsubscribe = onSnapshot(calcDocRef, (doc) => {
             if (doc.exists()) {
                 const data = doc.data() as Calculation;
@@ -53,7 +53,7 @@ export default function CalculationEngine({ projectId }: CalculationEngineProps)
     const saveCalculation = useCallback(async (calcToSave: Calculation) => {
         if (!projectId) return;
         setSaveStatus(SaveStatus.SAVING);
-        const calcDocRef = doc(db, 'projects', projectId, 'calculations', 'main');
+        const calcDocRef = doc(firestore, 'projects', projectId, 'calculations', 'main');
         try {
             await setDoc(calcDocRef, calcToSave, { merge: true });
             setSaveStatus(SaveStatus.IDLE);

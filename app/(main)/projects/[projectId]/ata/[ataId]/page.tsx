@@ -1,9 +1,10 @@
 
-import { auth } from '@/lib/auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getServerSession } from 'next-auth/next';
 import { notFound } from 'next/navigation';
 import { getProject } from '@/services/projectService';
 import { getAta } from '@/services/ataService'; // Ny service-funktion som behöver skapas
-import ProjectHeader from '@/components/ProjectHeader';
+import ProjectDashboard from '@/components/dashboard/ProjectDashboard'; // Korrigerad import
 import AtaDetailView from '@/components/views/AtaDetailView'; // Ny vy-komponent som behöver skapas
 
 interface AtaDetailPageProps {
@@ -15,7 +16,7 @@ interface AtaDetailPageProps {
 
 // Detta är en Server Component som ansvarar för att hämta data
 export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) { notFound(); }
@@ -34,7 +35,7 @@ export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
     return (
         <div className="h-full flex flex-col">
             {/* Återanvänd samma header för en konsekvent känsla */}
-            <ProjectHeader project={project} />
+            <ProjectDashboard project={project} />
             <div className="flex-grow overflow-y-auto bg-gray-900">
                {/* Här renderas den nya klientkomponenten med all data den behöver */}
                <AtaDetailView project={project} initialAta={ata} />

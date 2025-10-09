@@ -1,6 +1,7 @@
 
 import { getProject } from '@/services/projectService';
-import { auth } from '@/lib/auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getServerSession } from 'next-auth/next';
 import { notFound } from 'next/navigation';
 import InvoicingView from '@/components/views/InvoicingView';
 
@@ -15,7 +16,7 @@ interface ProjectInvoicingPageProps {
  */
 export default async function ProjectInvoicingPage({ params }: ProjectInvoicingPageProps) {
   const { projectId } = params;
-  const session = await auth();
+  const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
 
   if (!userId) {

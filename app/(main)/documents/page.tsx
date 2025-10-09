@@ -1,5 +1,5 @@
 
-import DocumentsView from '@/app/components/views/DocumentsView';
+import DocumentsView from '@/components/views/DocumentsView';
 import React from 'react';
 
 const DocumentsPage = () => {

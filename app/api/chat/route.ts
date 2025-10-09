@@ -1,10 +1,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { createStreamableValue, streamUI, generateText } from 'ai/rsc';
+import { createStreamableValue, streamUI, generateText } from 'ai';
 import { getContext } from '@/services/aiService'; // Vi behåller denna för framtida bruk
 import { getSystemPrompt } from '@/ai/prompts';
-import { auth } from '@/auth';
+import { authOptions as auth } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
 
 // =================================================================================

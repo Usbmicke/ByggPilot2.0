@@ -1,13 +1,14 @@
 'use server';
 
-import { getServerSession } from '@/lib/auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getServerSession } from 'next-auth/next';
 import { updateCustomer, archiveCustomer } from '@/services/customerService';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { Customer } from '@/types';
 
 export async function updateCustomerAction(customerId: string, formData: FormData) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
 
   if (!userId) {
@@ -46,7 +47,7 @@ export async function updateCustomerAction(customerId: string, formData: FormDat
 
 
 export async function archiveCustomerAction(customerId: string) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
 
   if (!userId) {

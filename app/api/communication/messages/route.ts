@@ -1,8 +1,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/app/lib/auth';
-import { getProject } from '@/app/services/projectService';
-import { addMessageToProject, getMessagesForProject } from '@/app/services/firestoreService'; // Funktioner att skapa
+import { authOptions as auth } from '@/app/api/auth/[...nextauth]/route';
+import { getProject } from '@/services/projectService';
+import { addMessageToProject, getMessagesForProject } from '@/services/firestoreService'; // Funktioner att skapa
 
 /**
  * API-rutt för att hämta befintliga meddelanden.

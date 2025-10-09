@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
-import { firestore as db } from '@/lib/firebase/client';
+import { firestore } from '@/lib/firebase'; // Korrigerad import
 
 interface SetHourlyRateModalProps {
   isOpen: boolean;
@@ -29,7 +29,7 @@ export default function SetHourlyRateModal({ isOpen, onClose, projectId }: SetHo
     }
 
     try {
-      const projectRef = doc(db, 'projects', projectId);
+      const projectRef = doc(firestore, 'projects', projectId); // Använder 'firestore'
       await updateDoc(projectRef, { hourlyRate: rate });
       onClose();
     } catch (err) {

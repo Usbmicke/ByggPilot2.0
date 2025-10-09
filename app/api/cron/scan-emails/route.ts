@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
-import { firestoreAdmin } from '@/app/lib/firebase-admin';
-import { decrypt } from '@/app/lib/encryption';
+import { firestoreAdmin } from '@/lib/admin';
+import { decrypt } from '@/lib/encryption';
 import { google } from 'googleapis';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 

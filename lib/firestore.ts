@@ -1,7 +1,7 @@
 'use client';
 
 import { doc, updateDoc } from 'firebase/firestore';
-import { firestore } from './client';
+import { firestore } from './firebase'; // Korrigerad import
 
 /**
  * Uppdaterar onboarding-statusen för en specifik användare i Firestore.

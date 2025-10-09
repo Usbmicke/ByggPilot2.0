@@ -1,7 +1,7 @@
 
 'use server';
 
-import { firestoreAdmin, admin } from '@/lib/firebase-admin';
+import { firestoreAdmin, admin } from '@/lib/admin'; // Korrigerad import
 
 // Det inkommande datainterfacet från formuläret
 interface CompanyFormData {

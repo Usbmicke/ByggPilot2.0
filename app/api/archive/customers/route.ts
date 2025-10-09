@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { firestoreAdmin } from "@/app/lib/firebase-admin";
+import { firestoreAdmin } from "@/lib/admin";
 
 // GET-funktion för att hämta arkiverade kunder
 export async function GET(request: NextRequest) {

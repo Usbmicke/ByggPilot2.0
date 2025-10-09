@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { TimeEntry } from '@/app/types/time';
 import { MaterialCost } from '@/app/types/material';
 import { Project } from '@/app/types/project';
-import AddMaterialCostModal from '@/app/components/modals/AddMaterialCostModal';
+import AddMaterialCostModal from '@/components/modals/AddMaterialCostModal'; // Korrigerad sökväg
 
 interface ProjectEconomyDashboardProps {
   project: Project;

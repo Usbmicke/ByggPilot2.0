@@ -1,9 +1,10 @@
 
 import React from 'react';
-import { auth } from '@/lib/auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getServerSession } from 'next-auth/next';
 import { getProject } from '@/services/projectService';
 import { getFilesForProject } from '@/services/firestoreService';
-import ProjectDocumentsView from '@/components/views/ProjectDocumentsView';
+import DocumentsView from '@/components/views/DocumentsView';
 import { notFound } from 'next/navigation';
 
 interface PageProps {
@@ -14,7 +15,7 @@ interface PageProps {
 
 const ProjectDocumentsPage = async ({ params }: PageProps) => {
   const { projectId } = params;
-  const session = await auth();
+  const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
 
   if (!userId) {
@@ -28,7 +29,7 @@ const ProjectDocumentsPage = async ({ params }: PageProps) => {
 
   const files = await getFilesForProject(projectId);
 
-  return <ProjectDocumentsView project={project} initialFiles={files} />;
+  return <DocumentsView project={project} initialFiles={files} />;
 };
 
 export default ProjectDocumentsPage;

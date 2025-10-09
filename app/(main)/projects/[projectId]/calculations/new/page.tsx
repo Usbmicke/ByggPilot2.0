@@ -1,7 +1,8 @@
 
 import CalculationEngine from '@/components/dashboard/CalculationEngine';
 import { getProject } from '@/services/projectService';
-import { auth } from '@/lib/auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getServerSession } from 'next-auth/next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
@@ -16,7 +17,7 @@ interface NewCalculationPageProps {
  */
 export default async function NewCalculationPage({ params }: NewCalculationPageProps) {
     const { projectId } = params;
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) {

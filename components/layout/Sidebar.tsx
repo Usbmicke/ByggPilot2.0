@@ -8,7 +8,7 @@ import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { ChevronLeftIcon } from '@heroicons/react/24/outline';
 
-import { primaryNavigation } from '@/constants/navigation';
+import { primaryNavigation } from '@/app/constants/navigation'; // Korrigerad sökväg
 import SidebarUserProfile from '@/components/layout/SidebarUserProfile';
 
 interface SidebarProps {

@@ -1,4 +1,5 @@
-import { getServerSession } from '@/lib/auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getServerSession } from 'next-auth/next';
 import { getProject } from '@/services/projectService';
 import { notFound } from 'next/navigation';
 import { updateProjectAction, archiveProjectAction } from './actions';
@@ -12,7 +13,7 @@ interface EditProjectPageProps {
 
 export default async function EditProjectPage({ params }: EditProjectPageProps) {
   const { projectId } = params;
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
 
   if (!userId) {

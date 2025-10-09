@@ -1,6 +1,6 @@
 
 import React from 'react';
-import GoogleConnectButton from '@/app/components/GoogleConnectButton';
+import GoogleConnectButton from '@/components/GoogleConnectButton';
 
 // Dummy-data för att representera användarens integrationsstatus
 // I en riktig applikation skulle detta hämtas från databasen.

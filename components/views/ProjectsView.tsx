@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 import { Project } from '@/app/types';
-import NewProjectModal from '@/app/components/NewProjectModal';
+import NewProjectModal from '@/components/NewProjectModal'; // Korrigerad import
 
 // --- Sub-komponent för en projektrad --- 
 const ProjectRow = ({ project }: { project: Project }) => {

@@ -1,4 +1,6 @@
-import { getServerSession } from '@/lib/auth';
+
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getServerSession } from 'next-auth/next';
 import { getCustomer } from '@/services/customerService';
 import { notFound } from 'next/navigation';
 import { updateCustomerAction, archiveCustomerAction } from './actions'; // Byt namn på action
@@ -11,7 +13,7 @@ interface EditCustomerPageProps {
 
 export default async function EditCustomerPage({ params }: EditCustomerPageProps) {
   const { customerId } = params;
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
 
   if (!userId) {

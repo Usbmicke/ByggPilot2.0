@@ -1,7 +1,7 @@
 
 'use server';
 
-import { firestoreAdmin } from '@/lib/firebase-admin';
+import { firestoreAdmin } from '@/lib/admin'; // Korrigerad import
 import { FieldValue } from 'firebase-admin/firestore';
 import { createFolder } from '@/services/driveService';
 import { getNextProjectNumber } from '@/services/projectService';

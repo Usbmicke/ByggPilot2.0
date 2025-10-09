@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Project, Invoice } from '@/app/types';
 import { PlusIcon, HomeModernIcon } from '@heroicons/react/24/solid';
-import InvoiceModal from '@/app/components/InvoiceModal';
+import InvoiceModal from '@/components/InvoiceModal'; // Korrigerad import
 import Link from 'next/link';
 
 interface InvoicingViewProps {

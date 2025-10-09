@@ -1,10 +1,10 @@
 
 import React from 'react';
-import TimeTrackingView from '@/components/views/TimeTrackingView';
+import TimeLogger from '@/components/dashboard/TimeLogger';
 
 const TimeTrackingPage = () => {
   return (
-    <TimeTrackingView />
+    <TimeLogger />
   );
 };
 
