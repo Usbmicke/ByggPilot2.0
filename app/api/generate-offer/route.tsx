@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { doc, getDoc, collection } from 'firebase/firestore';
-import { firestoreAdmin as db } from '@/lib/firebase-admin'; // KORRIGERAD SÖKVÄG
+import { firestoreAdmin as db } from '@/lib/admin'; 
 import { renderToStaticMarkup } from 'react-dom/server';
 import { InvoicePdfTemplate } from '@/components/pdf/InvoicePdfTemplate';
 import { uploadPdfToDrive } from '@/services/driveService';

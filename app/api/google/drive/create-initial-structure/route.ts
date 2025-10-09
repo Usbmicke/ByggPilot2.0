@@ -1,10 +1,10 @@
 
 import { NextResponse } from 'next/server';
-import { getAuthenticatedClient } from '@/app/lib/google/auth';
+import { getAuthenticatedClient } from '@/lib/google-auth';
 import { google } from 'googleapis';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { firestore } from '@/app/lib/firebase/server';
+import { firestoreAdmin as firestore } from '@/lib/admin';
 
 // =======================================================================
 //  POST-metod: Skapar mappstruktur i Google Drive

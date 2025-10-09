@@ -2,13 +2,13 @@
 // Fil: app/api/materials/create/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { handler } from "@/app/api/auth/[...nextauth]/route";
-import { firestoreAdmin } from "@/app/lib/firebase-admin";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { firestoreAdmin } from "@/lib/admin";
 import { MaterialCost } from "@/app/types/material";
 import { Timestamp } from 'firebase-admin/firestore';
 
 export async function POST(request: Request) {
-  const session = await getServerSession(handler);
+  const session = await getServerSession(authOptions);
   if (!session || !session.user || !session.user.id) {
     return new NextResponse(JSON.stringify({ message: 'Användaren är inte auktoriserad.' }), { status: 401 });
   }

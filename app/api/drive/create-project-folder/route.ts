@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
-import { createInitialProjectStructure } from '@/app/services/driveService';
-import { auth as adminAuth, db } from '@/app/lib/firebase/admin';
+import { createInitialProjectStructure } from '@/services/driveService';
+import { authAdmin as adminAuth, firestoreAdmin as db } from '@/lib/admin';
 
 /**
  * Skyddad API-slutpunkt för att skapa den initiala mappstrukturen 
