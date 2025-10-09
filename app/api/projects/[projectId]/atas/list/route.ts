@@ -1,10 +1,11 @@
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/lib/auth';
-import { firestoreAdmin } from '@/app/lib/firebase-admin';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { firestoreAdmin } from '@/lib/admin';
 
 export async function GET(request: Request, { params }: { params: { projectId: string } }) {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) {

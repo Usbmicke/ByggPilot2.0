@@ -1,15 +1,16 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/app/lib/auth';
-import { listInvoicesForProjectFromFirestore, createInvoiceInFirestore } from '@/app/services/firestoreService';
-import { getProject } from '@/app/services/projectService';
-import { Invoice } from '@/app/types';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { listInvoicesForProjectFromFirestore, createInvoiceInFirestore } from '@/services/firestoreService';
+import { getProject } from '@/services/projectService';
+import { Invoice } from '@/types/invoice';
 
 /**
  * API-rutt för att hämta alla fakturor för ett projekt.
  */
 export async function GET(req: NextRequest, { params }: { params: { projectId: string } }) {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
     const { projectId } = params;
 
@@ -37,7 +38,7 @@ export async function GET(req: NextRequest, { params }: { params: { projectId: s
  * API-rutt för att skapa ett nytt fakturaunderlag för ett projekt.
  */
 export async function POST(req: NextRequest, { params }: { params: { projectId: string } }) {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
     const { projectId } = params;
 

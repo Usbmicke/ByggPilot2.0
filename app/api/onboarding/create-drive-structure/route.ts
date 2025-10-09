@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'; // Korrigerad sökväg
-import { firestoreAdmin } from '@/lib/firebase-admin';
+import { firestoreAdmin } from '@/lib/admin';
 import { getAuthenticatedClient, createFolder, createGoogleDoc } from '@/services/driveService';
 import { google } from 'googleapis';
 

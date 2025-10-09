@@ -2,9 +2,9 @@
 import { NextResponse } from 'next/server';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/services/firestoreService';
-import { Project } from '@/types';
+import { Project } from '@/types/project';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/api/auth/[...nextauth]/route";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function GET(request: Request, { params }: { params: { projectId: string } }) {
   try {
@@ -22,22 +22,20 @@ export async function GET(request: Request, { params }: { params: { projectId: s
     const docRef = doc(db, "projects", projectId);
     const docSnap = await getDoc(docRef);
 
-    // KORRIGERING: Ändrat från ownerId till det korrekta fältet 'userId'
     if (!docSnap.exists() || docSnap.data().userId !== session.user.id) {
         return new NextResponse(JSON.stringify({ message: 'Project not found or access denied' }), { status: 404 });
     }
 
     const data = docSnap.data();
     
-    // Bygger hela projektobjektet
     const project: Project = {
       id: docSnap.id,
       name: data.name,
       customerId: data.customerId,
       customerName: data.customerName,
       status: data.status,
-      userId: data.userId, // KORRIGERING: Ändrat från ownerId till userId
-      driveFolderId: data.driveFolderId ?? null,
+      userId: data.userId, 
+      googleDriveFolderId: data.googleDriveFolderId ?? null,
       address: data.address ?? null,
       lat: data.lat ?? undefined,
       lon: data.lon ?? undefined,

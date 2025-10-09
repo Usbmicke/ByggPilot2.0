@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { generateText } from 'ai';
 import { listProjectsForUser } from '@/services/projectService';
@@ -29,7 +30,7 @@ const orchestratorSystemPrompt = `
 
 export const POST = async (req: NextRequest) => {
   try {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Autentisering krävs.' }, { status: 401 });
     }

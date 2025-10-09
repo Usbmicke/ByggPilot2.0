@@ -1,16 +1,17 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/app/lib/auth';
-import { getInvoiceFromFirestore } from '@/app/services/firestoreService';
-import { getProject } from '@/app/services/projectService';
-import { InvoicePdfTemplate } from '@/app/components/pdf/InvoicePdfTemplate';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getInvoiceFromFirestore } from '@/services/firestoreService';
+import { getProject } from '@/services/projectService';
+import { InvoicePdfTemplate } from '@/components/pdf/InvoicePdfTemplate';
 import { renderToStream } from '@react-pdf/renderer';
 
 /**
  * API-rutt för att generera en PDF-version av en specifik faktura.
  */
 export async function GET(req: NextRequest, { params }: { params: { projectId: string; invoiceId: string } }) {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
     const { projectId, invoiceId } = params;
 

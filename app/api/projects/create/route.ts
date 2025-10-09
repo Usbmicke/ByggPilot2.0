@@ -1,12 +1,12 @@
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { handler } from "@/app/api/auth/[...nextauth]/route"; // Felaktig import, bör vara authOptions
-import { firestoreAdmin } from "@/app/lib/firebase-admin";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { firestoreAdmin } from "@/lib/admin";
 import { Timestamp } from 'firebase-admin/firestore';
-import { Project } from "@/app/types/project";
-import { createInitialProjectStructure } from "@/app/services/driveService";
-import { updateProjectInFirestore } from "@/app/services/firestoreService";
+import { Project } from "@/types/project";
+import { createInitialProjectStructure } from "@/services/driveService";
+import { updateProjectInFirestore } from "@/services/firestoreService";
 
 // HJÄLPFUNKTION för att städa upp
 async function cleanupIncompleteProject(projectId: string) {
@@ -22,7 +22,7 @@ async function cleanupIncompleteProject(projectId: string) {
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(handler); // Använder felaktigt 'handler', ska vara 'authOptions'
+  const session = await getServerSession(authOptions);
   if (!session || !session.user || !session.user.id) {
     return new NextResponse(JSON.stringify({ message: 'Användaren är inte auktoriserad.' }), { status: 401 });
   }

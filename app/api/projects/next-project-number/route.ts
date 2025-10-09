@@ -1,7 +1,8 @@
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/lib/auth';
-import { getProjectsForUser } from '@/app/services/projectService'; // Antagande att denna funktion finns
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getProjectsForUser } from '@/services/projectService'; // Antagande att denna funktion finns
 
 // Hjälpfunktion för att generera ett slumpmässigt startnummer
 const generateInitialProjectNumber = () => {
@@ -11,7 +12,7 @@ const generateInitialProjectNumber = () => {
 };
 
 export async function GET() {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
 
     if (!userId) {

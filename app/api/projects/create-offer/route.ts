@@ -1,10 +1,9 @@
 
 import { NextResponse } from 'next/server';
-import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { firestore as db } from '@/lib/firebase/server';
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp, collection } from 'firebase/firestore';
+import { firestoreAdmin as db } from '@/lib/admin';
 import { getNextProjectNumber } from '@/services/projectService';
-import { createFolder } from '@/lib/google'; // IMPORTERA GOOGLE-FUNKTIONEN
-import { getGoogleDriveTokens } from '@/services/userService';
+import { createFolder } from '@/services/driveService'; // KORRIGERAD IMPORT
 
 export async function POST(request: Request) {
     const { customer, userId } = await request.json();
@@ -25,12 +24,6 @@ export async function POST(request: Request) {
 
         if (!driveParentFolderId) {
              return new NextResponse(JSON.stringify({ error: 'Google Drive-integrationen är inte slutförd. Ingen rotmapp angiven.' }), { status: 400 });
-        }
-
-        // Hämta Google-tokens för anrop
-        const tokens = await getGoogleDriveTokens(userId);
-        if (!tokens) {
-            return new NextResponse(JSON.stringify({ error: 'Kunde inte hämta Google Drive-autentisering.' }), { status: 401 });
         }
 
         // Steg 2: Skapa projektet i Firestore
@@ -58,7 +51,8 @@ export async function POST(request: Request) {
         await setDoc(projectDocRef, initialProjectData);
 
         // Steg 3: Skapa mappen i Google Drive
-        const folder = await createFolder(tokens, folderName, driveParentFolderId);
+        // Anropar nu createFolder med userId direkt
+        const folder = await createFolder(userId, folderName, driveParentFolderId);
         const googleDriveFolderId = folder.id;
 
         if (!googleDriveFolderId) {

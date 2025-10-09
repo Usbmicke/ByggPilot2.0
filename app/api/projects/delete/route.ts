@@ -2,8 +2,8 @@
 // Fil: app/api/projects/delete/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { handler } from "@/app/api/auth/[...nextauth]/route";
-import { firestoreAdmin } from "@/app/lib/firebase-admin";
+import { authOptions as handler } from "@/app/api/auth/[...nextauth]/route";
+import { firestoreAdmin } from "@/lib/admin";
 
 // Helper-funktion för att ta bort dokument i en collection baserat på projectId
 async function deleteCollection(collectionName: string, projectId: string, batch: FirebaseFirestore.WriteBatch) {

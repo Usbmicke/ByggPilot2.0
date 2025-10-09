@@ -1,15 +1,16 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/app/lib/auth';
-import { getProject } from '@/app/services/projectService';
-import { archiveProjectInFirestore } from '@/app/services/firestoreService';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getProject } from '@/services/projectService';
+import { archiveProjectInFirestore } from '@/services/firestoreService';
 
 /**
  * API-rutt för att arkivera ett projekt.
  * Använder HTTP POST-metoden för att indikera en tillståndsändring.
  */
 export async function POST(req: NextRequest, { params }: { params: { projectId: string } }) {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
     const { projectId } = params;
 

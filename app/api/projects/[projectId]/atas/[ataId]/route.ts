@@ -1,7 +1,8 @@
 
 import { NextResponse } from 'next/server';
-import { auth } from '@/app/lib/auth';
-import { db } from '@/app/lib/firebase/admin';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { firestoreAdmin as db } from '@/lib/admin';
 
 // Definiera en typ för den förväntade inkommande datan i PUT-requesten
 interface UpdateAtaPayload {
@@ -17,7 +18,7 @@ interface UpdateAtaPayload {
  */
 export async function PUT(request: Request, { params }: { params: { projectId: string, ataId: string } }) {
     try {
-        const session = await auth();
+        const session = await getServerSession(authOptions);
         const userId = session?.user?.id;
 
         if (!userId) {

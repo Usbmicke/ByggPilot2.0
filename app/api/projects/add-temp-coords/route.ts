@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { doc, updateDoc, getDocs, collection, query, limit } from 'firebase/firestore';
-import { db } from '@/app/services/firestoreService';
+import { db } from '@/services/firestoreService';
 
 /**
  * TEMPORARY API ROUTE

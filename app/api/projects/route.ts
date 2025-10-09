@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { firestoreAdmin } from "@/app/lib/firebase-admin";
+import { firestoreAdmin } from "@/lib/admin";
 import { ProjectStatus } from '@/app/types';
 
 // --- Hämta projekt (Befintlig funktion) ---

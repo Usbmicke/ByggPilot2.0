@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { getAuthenticatedClient } from '@/lib/google-auth';
+import { getAuthenticatedClient } from '@/services/driveService';
 import { google } from 'googleapis';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';

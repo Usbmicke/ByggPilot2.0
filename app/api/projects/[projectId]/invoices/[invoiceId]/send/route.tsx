@@ -1,13 +1,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/app/lib/auth';
-import { getInvoiceFromFirestore, updateInvoiceStatusInFirestore } from '@/app/services/firestoreService';
-import { getProject } from '@/app/services/projectService';
-import { InvoicePdfTemplate } from '@/app/components/pdf/InvoicePdfTemplate';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getInvoiceFromFirestore, updateInvoiceStatusInFirestore } from '@/services/firestoreService';
+import { getProject } from '@/services/projectService';
+import { InvoicePdfTemplate } from '@/components/pdf/InvoicePdfTemplate';
 import { renderToBuffer } from '@react-pdf/renderer';
 
 // TODO: Importera och konfigurera en e-posttjänst som t.ex. Resend eller Nodemailer
-// import { resend } from '@/app/lib/email';
+// import { resend } from '@/lib/email';
 
 interface SendEmailRequestBody {
     to: string;
@@ -19,7 +20,7 @@ interface SendEmailRequestBody {
  * API-rutt för att skicka en faktura som PDF via e-post.
  */
 export async function POST(req: NextRequest, { params }: { params: { projectId: string; invoiceId: string } }) {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
     const { projectId, invoiceId } = params;
 
