@@ -4,7 +4,7 @@
 import { SessionProvider, useSession } from 'next-auth/react';
 import React, { useEffect, useState, useContext, createContext, useMemo } from 'react';
 import { onAuthStateChanged, signInWithCustomToken, signOut, User as FirebaseUser } from 'firebase/auth';
-import { auth as firebaseAuth } from '@/lib/client';
+import { auth as firebaseAuth } from '@/lib/firebase';
 
 // Definiera en mer robust status-typ
 type SyncStatus = 'loading' | 'synced' | 'error' | 'unauthenticated';

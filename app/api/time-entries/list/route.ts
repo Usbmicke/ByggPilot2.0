@@ -1,13 +1,13 @@
 
 import { NextResponse, NextRequest } from 'next/server';
-import { collection, query, where, getDocs, doc, getDoc, orderBy } from 'firebase/firestore';
-import { db } from '@/app/services/firestoreService';
-import { getServerSession } from '@/app/lib/auth';
+import { firestoreAdmin } from '@/lib/admin';
+import { getServerSession } from "next-auth/next";
+import { handler } from "@/app/api/auth/[...nextauth]/route";
 import { TimeEntry } from '@/app/types';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(handler);
     if (!session?.user?.id) {
       return new NextResponse(JSON.stringify({ message: 'Authentication required' }), { status: 401 });
     }
@@ -20,23 +20,21 @@ export async function GET(request: NextRequest) {
     }
 
     // **SÄKERHETSÅTGÄRD: Verifiera att användaren äger projektet**
-    const projectRef = doc(db, "projects", projectId);
-    const projectSnap = await getDoc(projectRef);
+    const projectRef = firestoreAdmin.collection("projects").doc(projectId);
+    const projectSnap = await projectRef.get();
 
-    if (!projectSnap.exists() || projectSnap.data().userId !== session.user.id) {
+    if (!projectSnap.exists || projectSnap.data()?.userId !== session.user.id) {
         // Om projektet inte existerar, eller om ägaren inte matchar, neka åtkomst.
         // Vi returnerar 404 för att inte läcka information om att projektet existerar.
         return new NextResponse(JSON.stringify({ message: 'Project not found or access denied' }), { status: 404 });
     }
 
     // Nu är det säkert att hämta tidrapporterna
-    const q = query(
-      collection(db, 'timeEntries'), // Korrekt collection name är 'timeEntries'
-      where('projectId', '==', projectId),
-      orderBy('date', 'desc') // Sorterar på 'date' istället för 'startTime' som inte finns i datamodellen
-    );
+    const q = firestoreAdmin.collection('timeEntries')
+      .where('projectId', '==', projectId)
+      .orderBy('date', 'desc');
 
-    const querySnapshot = await getDocs(q);
+    const querySnapshot = await q.get();
     const timeEntries: TimeEntry[] = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
