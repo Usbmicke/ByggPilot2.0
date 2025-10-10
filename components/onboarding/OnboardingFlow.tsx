@@ -10,6 +10,13 @@ import Step_SecurityInfo from './Step_SecurityInfo';
 import Step_CreateStructure from './Step_CreateStructure';
 import Step_Success from './Step_Success';
 
+// =================================================================================
+// GULDSTANDARD: ONBOARDING-FLÖDE V3.0 - SLUTGILTIG VERSION
+// Återställer det riktiga API-anropet och tar bort den simulerade funktionen.
+// Detta anropar den nyskapade backend-logiken för att skapa mappstrukturen i Google Drive.
+// Hanterar även felmeddelanden från servern och visar dem för användaren.
+// =================================================================================
+
 export type OnboardingStep = 'welcome' | 'security' | 'creating' | 'success';
 
 interface OnboardingFlowProps {
@@ -27,12 +34,32 @@ export default function OnboardingFlow({ companyName }: OnboardingFlowProps) {
     setCurrentStep('creating');
     setError(null);
 
-    // KORRIGERING: Simulerar ett lyckat anrop för att skapa mappstruktur.
-    // Den tidigare API-vägen var trasig. Detta kringgår problemet och tillåter flödet att slutföras.
-    setTimeout(() => {
-      setFolderUrl('#'); // Använder en platshållar-URL eftersom den riktiga funktionen togs bort.
+    try {
+      const response = await fetch('/api/onboarding', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ companyName }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Om servern svarar med ett fel, fånga upp det.
+        throw new Error(data.error || 'Ett okänt serverfel uppstod.');
+      }
+      
+      // Använd den riktiga URL:en från servern
+      setFolderUrl(data.folderUrl);
       setCurrentStep('success');
-    }, 1500); // En kort fördröjning för att simulera att något händer.
+
+    } catch (err: any) {
+      console.error("Fel vid anrop till /api/onboarding:", err);
+      // Sätt ett felmeddelande och gå tillbaka till första steget för att visa det.
+      setError(err.message);
+      setCurrentStep('welcome');
+    }
   };
   
   const handleComplete = () => {
@@ -40,7 +67,6 @@ export default function OnboardingFlow({ companyName }: OnboardingFlowProps) {
   };
   
   const renderStep = () => {
-    // Flyttade felhanteringen in i 'welcome' steget för en bättre användarupplevelse
     switch (currentStep) {
       case 'welcome':
         return <Step_Welcome 
@@ -48,7 +74,7 @@ export default function OnboardingFlow({ companyName }: OnboardingFlowProps) {
                   onProceed={handleCreateStructure} 
                   onSkip={() => router.push('/dashboard')} 
                   onShowSecurity={() => setCurrentStep('security')} 
-                  error={error} // Skicka med felmeddelandet till komponenten
+                  error={error} // Skicka med felet för att visa det i UI
                 />;
       case 'security':
         return <Step_SecurityInfo onProceed={handleCreateStructure} onGoBack={() => setCurrentStep('welcome')} />;

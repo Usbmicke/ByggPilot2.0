@@ -1,61 +1,43 @@
 
+import { adminDb } from "@/lib/admin";
 import { google } from 'googleapis';
-import { JWT } from 'google-auth-library';
 
-const SERVICE_ACCOUNT_KEY = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+// =================================================================================
+// GULDSTANDARD - GOOGLE SERVER-KLIENT V2.0 (ROBUST & DIREKT)
+// REVIDERING: Denna funktion är nu ombyggd för att hämta tokens direkt från
+// användarens eget dokument i Firestore. Detta eliminerar beroendet av den
+// opålitliga 'accounts'-samlingen och säkerställer en pålitlig och direkt
+// anslutning till Google API:er.
+// =================================================================================
 
-if (!SERVICE_ACCOUNT_KEY) {
-    throw new Error('GOOGLE_SERVICE_ACCOUNT_KEY is not set in environment variables');
-}
-
-// Parse the key, ensuring that the private_key field is correctly formatted
-const serviceAccount = JSON.parse(Buffer.from(SERVICE_ACCOUNT_KEY, 'base64').toString('utf8'));
-
-const SCOPES = [
-    'https://www.googleapis.com/auth/drive.file',
-    'https://www.googleapis.com/auth/documents',
-];
-
-/**
- * A singleton instance of the Google Auth JWT client.
- * This prevents re-creating the client on every API call.
- */
-let jwtClient: JWT;
-
-function getJwtClient() {
-    if (!jwtClient) {
-        jwtClient = new google.auth.JWT(
-            serviceAccount.client_email,
-            undefined,
-            serviceAccount.private_key.replace(/\\n/g, '\n'), // Replace escaped newlines
-            SCOPES
-        );
+export async function getGoogleAuthClient(userId: string) {
+    if (!userId) {
+        throw new Error("Användar-ID saknas för att skapa Google Auth-klient.");
     }
-    return jwtClient;
-}
 
-/**
- * A singleton instance of the Google Drive API client.
- */
-let driveClient: ReturnType<typeof google.drive> | undefined;
+    // Hämta användardokumentet direkt från Firestore
+    const userDocRef = adminDb.collection('users').doc(userId);
+    const userDoc = await userDocRef.get();
 
-export function getDriveClient() {
-    if (!driveClient) {
-        const auth = getJwtClient();
-        driveClient = google.drive({ version: 'v3', auth });
+    if (!userDoc.exists) {
+        throw new Error(`Kunde inte hitta användardokument för ${userId}`);
     }
-    return driveClient;
-}
 
-/**
- * A singleton instance of the Google Docs API client.
- */
-let docsClient: ReturnType<typeof google.docs> | undefined;
+    const userData = userDoc.data();
+    const refreshToken = userData?.refreshToken;
 
-export function getDocsClient() {
-    if (!docsClient) {
-        const auth = getJwtClient();
-        docsClient = google.docs({ version: 'v1', auth });
+    // Verifiera att refreshToken finns, annars kan vi inte fortsätta
+    if (!refreshToken) {
+        throw new Error(`Inget refreshToken hittades för användare ${userId}. Användaren kan behöva återautentisera.`);
     }
-    return docsClient;
+
+    // Skapa en OAuth2-klient med de hämtade uppgifterna
+    const auth = new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET
+    );
+
+    auth.setCredentials({ refresh_token: refreshToken });
+
+    return auth;
 }

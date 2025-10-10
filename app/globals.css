@@ -2,23 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    @apply bg-background-primary text-text-primary;
-  }
-}
+@layer components {
+    .input-field {
+        @apply w-full bg-gray-700 text-white placeholder-gray-400 px-4 py-3 border border-gray-600 rounded-md shadow-sm transition duration-200 ease-in-out;
+        @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+    }
 
-/* ============================================= */
-/* Återanvändbar klass för att dölja scrollbars */
-/* ============================================= */
+    .btn-primary {
+      @apply bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-md;
+      @apply hover:bg-blue-700 transition duration-200 ease-in-out;
+      /* ================================================================================= */
+      /* GULDSTANDARD - UX FIX V1.0                                                      */
+      /* KORRIGERING: Byt ut "not-allowed"-ikonen mot en "wait"-ikon när knappar är     */
+      /* inaktiverade. Detta ger korrekt visuell feedback under laddning.            */
+      /* ================================================================================= */
+      @apply disabled:bg-gray-500 disabled:cursor-wait;
+    }
 
-/* För Webkit-baserade webbläsare (Chrome, Safari, Edge) */
-.custom-scrollbar-hide::-webkit-scrollbar {
-    display: none;
-}
-
-/* För Firefox och andra */
-.custom-scrollbar-hide {
-    -ms-overflow-style: none;  /* Internet Explorer 10+ */
-    scrollbar-width: none;     /* Firefox */
+    .error-text {
+        @apply text-red-400 text-sm mt-1;
+    }
 }
