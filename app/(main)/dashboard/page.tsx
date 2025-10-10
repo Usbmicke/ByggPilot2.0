@@ -1,26 +1,35 @@
 
 'use client';
 
-import React, { Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import React, { Suspense, useEffect, useState } from 'react';
 import { WelcomeHeader } from '@/components/dashboard/WelcomeHeader';
 import DashboardSummary from '@/components/dashboard/DashboardSummary';
 import { ProjectList } from '@/components/dashboard/ProjectList';
 import { ActionSuggestions } from '@/components/dashboard/ActionSuggestions';
 import GuidedTour from '@/components/tour/GuidedTour';
-
-// Wrapper to handle search params for the tour
-const TourWrapper = () => {
-    const searchParams = useSearchParams();
-    const startTour = searchParams.get('tour') === 'true';
-    return startTour ? <GuidedTour /> : null;
-};
+import { getUserStatus, markTourAsCompleted } from '@/app/actions/userActions'; // Antagna server actions
 
 export default function DashboardPage() {
+    const [showTour, setShowTour] = useState(false);
+
+    useEffect(() => {
+        const checkTourStatus = async () => {
+            const status = await getUserStatus();
+            if (status.onboardingComplete && !status.tourCompleted) {
+                setShowTour(true);
+            }
+        };
+        checkTourStatus();
+    }, []);
+
+    const handleTourComplete = async () => {
+        setShowTour(false);
+        await markTourAsCompleted();
+    };
 
     return (
         <Suspense fallback={<div>Laddar översikt...</div>}>
-            <TourWrapper />
+            {showTour && <GuidedTour onComplete={handleTourComplete} />}
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="animate-fade-in space-y-8 py-8">

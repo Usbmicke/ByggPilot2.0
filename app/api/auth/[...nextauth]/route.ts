@@ -5,11 +5,9 @@ import { FirestoreAdapter } from "@auth/firebase-adapter";
 import { adminAuth, adminDb } from "@/lib/admin";
 
 // =================================================================================
-// GULDSTANDARD - NEXTAUTH OPTIONS V5.0 (ROBUST TOKEN-HANTERING)
-// REVIDERING: Implementerar en extremt robust mekanism som säkerställer att
-// refresh_token och access_token sparas direkt på användarens dokument i
-// Firestore vid första inloggning. Detta eliminerar beroendet av en opålitlig
-// 'accounts'-samling.
+// GULDSTANDARD - NEXTAUTH OPTIONS V7.0 (DIAGNOSTISK LOGGNING)
+// REVIDERING: Lägger till extremt detaljerad loggning i 'signIn'-callbacken för att
+// slutgiltigt diagnostisera varför e-post-synkroniseringen till Firebase Auth misslyckas.
 // =================================================================================
 
 export const authOptions: NextAuthOptions = {
@@ -22,7 +20,7 @@ export const authOptions: NextAuthOptions = {
                     prompt: "consent",
                     access_type: "offline",
                     response_type: "code",
-                    scope: "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/calendar",
+                    scope: "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/tasks",
                 },
             },
         }),
@@ -33,22 +31,16 @@ export const authOptions: NextAuthOptions = {
     },
     callbacks: {
         async jwt({ token, user, account }) {
-            // Denna callback är kritisk. Den körs vid inloggning.
             if (account && user) {
-                // === ROBUST TOKEN-SPARNING ===
-                // Spara nödvändiga tokens direkt på användardokumentet för framtida bruk.
                 try {
                     await adminDb.collection("users").doc(user.id).update({
-                        accessToken: account.access_token,
                         refreshToken: account.refresh_token,
+                        accessToken: account.access_token,
                         accessTokenExpires: account.expires_at ? Date.now() + account.expires_at * 1000 : null,
                     });
-                    console.log(`[Auth Callback: jwt] Sparade tokens för användare ${user.id} i Firestore.`);
                 } catch (error) {
                     console.error("[Auth Callback: jwt] Fel vid sparande av tokens till Firestore:", error);
                 }
-                // === SLUT PÅ TOKEN-SPARNING ===
-
                 token.accessToken = account.access_token;
                 token.id = user.id;
             }
@@ -60,19 +52,40 @@ export const authOptions: NextAuthOptions = {
             }
             return session;
         },
-        async signIn({ user }) {
-            // Synkronisera e-post till Firebase Auth på ett säkert sätt.
+        async signIn({ user, account, profile }) {
+            console.log("[Auth SignIn]: Callback startad.");
             if (user.id && user.email) {
+                console.log(`[Auth SignIn]: Användare ${user.id} med e-post ${user.email} identifierad.`);
                 try {
+                    console.log(`[Auth SignIn]: Försöker hämta authUser för UID: ${user.id}...`);
                     const authUser = await adminAuth.getUser(user.id);
+                    console.log(`[Auth SignIn]: authUser hämtad. E-post i Firebase Auth: '${authUser.email}'. E-post från Google: '${user.email}'.`);
+
                     if (authUser.email !== user.email) {
+                        console.log(`[Auth SignIn]: E-post skiljer sig. Försöker uppdatera...`);
                         await adminAuth.updateUser(user.id, {
                             email: user.email,
+                            displayName: user.name, // Lägger till displayName också för fullständighet
                         });
+                        console.log(`[Auth SignIn]: Firebase Auth-användare ${user.id} har uppdaterats med e-post ${user.email}.`);
+                    } else {
+                        console.log("[Auth SignIn]: E-post är redan synkroniserad. Ingen uppdatering behövs.");
                     }
-                } catch (error) {
-                    // Ignorera fel för att inte blockera inloggning.
+                } catch (error: any) {
+                    if (error.code === 'auth/user-not-found') {
+                        console.log(`[Auth SignIn]: Användaren ${user.id} hittades inte i Firebase Auth. Försöker skapa användare...`);
+                        await adminAuth.createUser({
+                            uid: user.id,
+                            email: user.email,
+                            displayName: user.name,
+                        });
+                        console.log(`[Auth SignIn]: Ny Firebase Auth-användare ${user.id} skapad med e-post ${user.email}.`);
+                    } else {
+                        console.error("[Auth SignIn]: Ett oväntat fel inträffade vid hantering av Auth-användare:", error);
+                    }
                 }
+            } else {
+                console.log("[Auth SignIn]: Antingen user.id eller user.email saknas. Avbryter synkronisering.", { userId: user.id, email: user.email });
             }
             return true;
         },

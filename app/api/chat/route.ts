@@ -1,96 +1,83 @@
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { createStreamableValue, streamUI, generateText } from 'ai';
-import { getContext } from '@/services/aiService'; // Vi behåller denna för framtida bruk
-import { getSystemPrompt } from '@/ai/prompts';
-import { getServerSession } from "next-auth/next";
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { streamUI, generateText } from 'ai/rsc';
 import { z } from 'zod';
+import { getSystemPrompt } from '@/ai/prompts';
+import { Suspense } from 'react';
+import { Spinner } from '@/components/Spinner'; // Antagen spinner-komponent
 
 // =================================================================================
-// GULDSTANDARD V.6.1 - KORRIGERING AV API-NYCKEL
-// Korrigerar anropet för att använda GEMINI_API_KEY istället för den implicita
-// GOOGLE_GENERATIVE_AI_API_KEY. Detta löser felet "API key is missing".
+// GULDSTANDARD: CHAT/ORCHESTRATOR v2.0
+// BESKRIVNING: Denna fil är nu den enda kontaktpunkten för chatt.
+// Den kombinerar AI-konversation, kontextmedvetenhet och verktygsanvändning
+// med hjälp av streamUI för att dynamiskt rendera svar och verktyg på klienten.
+// Den gamla, separata orkestreraren och chatt-api:et är helt ersatta.
 // =================================================================================
 
-interface ClientMessage {
-  role: 'user' | 'model';
-  parts: [{ text: string }];
-}
-
-// KORRIGERING: Explicit API-nyckelhantering
+// Explicit API-nyckelhantering
 if (!process.env.GEMINI_API_KEY) {
-  throw new Error("FATAL ERROR: GEMINI_API_KEY environment variable is not set.");
+    throw new Error("FATAL ERROR: GEMINI_API_KEY environment variable is not set.");
 }
 const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 const model = google('gemini-1.5-flash-latest');
 
-// ... (resten av filen är oförändrad) ...
+// === VERKTYGSFUNKTIONER ===
+// I en riktig applikation bör dessa ligga i separata service-filer.
 
-// Simulerad funktion för att skapa en offert. I en riktig app skulle denna
-// anropa en annan intern API-endpoint (t.ex. /api/projects/create-offer)
-async function createOfferPdf(args: { title: string; customerName: string; lineItems: { description: string; quantity: number; price: number }[] }) {
-  console.log("ANROPAR VERKTYG: createOfferPdf med argument:", args);
-  // I en riktig app:
-  // const response = await fetch('/api/projects/create-offer', { method: 'POST', body: JSON.stringify(args) });
-  // const { pdfUrl } = await response.json();
-  // return { success: true, pdfUrl };
-
-  // Simulerat svar för demonstration
-  await new Promise(resolve => setTimeout(resolve, 2000)); // Simulera nätverkslatens
-  const pdfUrl = `/pdfs/offert-${args.customerName.toLowerCase().replace(/ /g, '-')}-${Date.now()}.pdf`;
-  console.log(`SIMULERAT RESULTAT: PDF skapad på ${pdfUrl}`);
-  return { success: true, pdfUrl, message: `PDF-offert har skapats för ${args.customerName}.` };
+async function createOfferPdfTool(args: { title: string; customerName: string; lineItems: { description: string; quantity: number; price: number }[] }) {
+    'use server';
+    console.log("ANROPAR VERKTYG: createOfferPdf med argument:", args);
+    // SIMULERING: I verkligheten anropas ett API för att generera en PDF
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    const pdfUrl = `/pdfs/offert-${Date.now()}.pdf`;
+    console.log(`SIMULERAT RESULTAT: PDF skapad på ${pdfUrl}`);
+    return { success: true, pdfUrl, message: `PDF-offert har skapats för ${args.customerName}.` };
 }
 
-export const POST = async (req: NextRequest) => {
-  try {
+// === Kärn-API Endpoint ===
+export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
-    const { messages: clientMessages, data }: { messages: ClientMessage[], data: any } = await req.json();
+    if (!session?.user?.name) {
+        return new Response('Autentisering krävs', { status: 401 });
+    }
 
-    const formattedMessages = clientMessages.map(msg => ({
-      role: msg.role === 'model' ? 'assistant' : 'user',
-      content: msg.parts[0].text,
-    }));
+    const { messages } = await req.json();
 
-    const systemPrompt = getSystemPrompt(session?.user?.name, data?.context || '');
+    // Här kan vi i framtiden hämta dynamisk kontext från databasen
+    const context = ""; // Tills vidare tom
+    const systemPrompt = getSystemPrompt(session.user.name, context);
 
-    const result = await generateText({
-      model: model,
-      system: systemPrompt,
-      messages: formattedMessages,
-      tools: {
-        createOfferPdf: {
-          description: 'Används för att skapa en offert i PDF-format. Du måste fråga användaren om all nödvändig information först, som kundnamn, titel och rad-element (beskrivning, antal, pris), innan du anropar verktyget.',
-          parameters: z.object({
-            customerName: z.string().describe('Kundens fullständiga namn.'),
-            title: z.string().describe('En tydlig titel för offerten, t.ex. \'Byte av 2 fönster\'.'),
-            lineItems: z.array(z.object({
-              description: z.string().describe('Beskrivning av arbetet eller materialet.'),
-              quantity: z.number().describe('Antal, t.ex. 2.'),
-              price: z.number().describe('Pris per enhet.'),
-            })).describe('En lista med alla rader i offerten.'),
-          }),
-          execute: async (args) => createOfferPdf(args),
+    const result = await streamUI({
+        model: model,
+        system: systemPrompt,
+        messages: messages,
+        text: ({ content }) => <div className="text-white">{content}</div>,
+        tools: {
+            createOfferPdf: {
+                description: 'Skapar en offert som en PDF. Fråga alltid användaren om all nödvändig information (titel, kundnamn, och minst ett rad-element) innan du anropar verktyget. Bekräfta med användaren innan du skapar offerten.',
+                parameters: z.object({
+                    customerName: z.string().describe('Kundens fullständiga namn.'),
+                    title: z.string().describe('En tydlig titel för offerten.'),
+                    lineItems: z.array(z.object({
+                        description: z.string().describe('Beskrivning av arbetet eller materialet.'),
+                        quantity: z.number().describe('Antal.'),
+                        price: z.number().describe('Pris per enhet.'),
+                    })).describe('En lista med alla rader i offerten.'),
+                }),
+                generate: async function* (args) {
+                    yield <div className="text-center text-gray-400"><Spinner /> Skapar offert...</div>;
+                    const { success, pdfUrl, message } = await createOfferPdfTool(args);
+                    if (success) {
+                        return <div className="text-green-400 p-4 bg-gray-700 rounded-lg">Offert skapad! <a href={pdfUrl} target="_blank" className="underline">Ladda ner PDF</a></div>;
+                    } else {
+                        return <div className="text-red-400">Kunde inte skapa offert.</div>;
+                    }
+                }
+            },
         },
-      },
-    });
-    
-    // Konvertera resultatet, som nu kan innehålla både text och verktygsanrop,
-    // till ett strömmande svar som klienten kan rendera.
-    return new Response(result.response, {
-        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
     });
 
-  } catch (error) {
-    console.error(`[Chat API Error - Guldstandard v6.0]`, error);
-    return NextResponse.json(
-      {
-        error: `Ett internt fel uppstod i chat-API:et.`,
-        details: error instanceof Error ? error.message : String(error),
-      },
-      { status: 500 }
-    );
-  }
-};
+    return result.value;
+}

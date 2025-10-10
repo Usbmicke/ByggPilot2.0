@@ -1,78 +1,87 @@
 
-# ByggPilot: Konstitution & Masterplan för AI-Agent (v5.0)
+# ByggPilot Guldstandard: Bindande Operativ Manual
 
-Detta dokument är din Konstitution och din Karta. Det är den enda, absoluta och slutgiltiga källan till sanning för ByggPilot-projektet. All utveckling, utan undantag, utgår härifrån och följer Guldstandard-processen.
+**Version 2.0**
 
----
+## Inledning & Syfte
 
-## Sektion 1: Guldstandard - Processen för All Utveckling
-
-Allt arbete följer denna checklista. Du initierar processen genom att specificera funktionen och starta med "Fas 0".
-
-### Fas 0: Planering & Definition (Analysera)
-- **Syfte:** Vad är det exakta problemet funktionen ska lösa? Vilket värde skapar den för användaren?
-- **Användarflöde:** Rita upp hela flödet från A till Ö (Användare klickar X -> Modal Y öppnas -> API-anrop Z görs -> Användare omdirigeras till Q).
-- **Datamodell:** Vilken data behövs? Hur ska den struktureras i Firestore? Vilka fält är obligatoriska?
-
-### Fas 1: Teknisk Grund (Backend & Konfiguration)
-- **API Endpoints / Server Actions:** Vilka server-funktioner behövs? (t.ex. `POST /api/offers/create`, `action: createOffer`).
-- **Databas-interaktion:** Används den korrekta, centraliserade databasinstansen (`adminDb` för server-kod)? Är alla databasregler (Firestore Rules) uppdaterade?
-- **Autentisering & Säkerhet:** Är varje server-funktion skyddad (kontrollerar session och `userId`)? Valideras all inkommande data?
-- **Beroenden:** Behöver `package.json` uppdateras med nya bibliotek?
-- **Miljövariabler:** Krävs nya API-nycklar eller hemligheter i `.env.local`?
-
-### Fas 2: Klient-sidans Implementering (Frontend)
-- **Datakälla:** Hur ska klienten hämta data? (Hook som `useSWR`? Server-komponent? `useCurrentUser`?).
-- **UI-Komponenter:** Vilka nya React-komponenter behöver skapas? (Modaler, formulär, knappar).
-- **State-hantering:** Hur hanteras tillstånd? (Lokal `useState`? Global `Context`?).
-- **Användarflöde & Routing:** Implementeras det planerade flödet korrekt med Next.js router? Är alla sökvägar korrekta?
-
-### Fas 3: Test & Validering (Kvalitetssäkring)
-- **"Happy Path"-simulering:** Gå igenom det förväntade flödet som en vanlig användare.
-- **Edge Cases:** Vad händer vid felaktig data? Avbrutna flöden?
-- **Felhantering:** Visas tydliga, användarvänliga felmeddelanden? Kraschar appen?
-- **Responsivitet:** Fungerar funktionen perfekt på både dator och mobil?
+Detta dokument är den enda källan till sanning för utvecklingen av ByggPilot. Det existerar som ett direkt resultat av ett katastrofalt systematiskt misslyckande där grundläggande principer ignorerades, vilket ledde till ett försämrat och icke-fungerande system. Syftet med denna manual är att säkerställa att dessa misstag **aldrig** upprepas. Alla handlingar måste följa dessa direktiv utan undantag.
 
 ---
 
-## Sektion 2: ByggPilots Vision & Målbeskrivning
+## Del 1: Fundamentala Direktiver & Felförebyggande Principer
 
-- **Vision:** ByggPilot är inte ett verktyg; det är en **proaktiv digital kollega** för hantverkare i Sverige. Målet är att eliminera "pappersmonstret" och bygga en "världsklass"-applikation.
-- **Kärnvärde:** Byggd av en hantverkare, för hantverkare. Empati är allt.
-- **Kärnprincip (ByggPilot-Tänket):** Proaktivitet är Standard. Agera, föreslå, och leverera värde innan användaren ens frågar.
+Dessa principer har företräde framför all annan logik. Att bryta mot dem är ett omedelbart misslyckande.
 
----
+### **1. STEG 0: ANTAG ALDRIG. VERIFIERA ALLTID.**
+   - **Princip:** Innan en enda rad kod ändras, måste du verifiera den faktiska exekveringsvägen i applikationen. Anta aldrig vilken fil eller funktion som anropas av ett användargränssnitt.
+   - **Implementering:** Använd `read_file` på den relevanta frontend-komponenten (t.ex., `app/onboarding/page.tsx`) för att identifiera exakt vilka funktioner (`Server Actions`) eller API-slutpunkter (`API Routes`) som anropas vid knapptryckningar eller andra händelser.
+   - **Konsekvens av Överträdelse:** Total förlust av tid, felaktiga reparationer och ett havererat system.
 
-## Sektion 3: Teknisk Arkitektur & Kritiska Regler
+### **2. VÄLJ MODERNT & ROBUST, MEN GARANTERA FUNKTION.**
+   - **Princip:** Mellan en äldre metod (t.ex. API Routes) och en modernare (t.ex. Server Actions), ska den modernare alltid väljas.
+   - **Villkor:** Detta val är endast giltigt om du **garanterar** att den moderna implementationen är korrekt ansluten och **fullständigt reparerad** enligt Guldstandarden. Om den är felaktigt ansluten, ska den anslutas korrekt. Om den är trasig, ska den lagas. Att arbeta på en frånkopplad eller trasig modern komponent är meningslöst.
 
-#### 3.1. Teknikstack:
-- **Framework:** Next.js (App Router)
-- **Styling:** Tailwind CSS
-- **Backend:** Next.js API Routes & Server Actions
-- **Databas & Autentisering:** Google Firebase (Firestore & Firebase Authentication)
-- **Hosting:** Firebase Hosting
-
-#### 3.2. Filstruktur (Enligt `tsconfig.json`):
-- **`@/app`**: Applikationens rot. Innehåller sidor och layouter.
-- **`@/components`**: Återanvändbara React-komponenter.
-- **`@/lib`**: Kärnbibliotek (Firebase-klient, auth-konfiguration, etc.).
-- **`@/actions`**: Server Actions för datamodifiering.
-- **`@/hooks`**: Återanvändbara client-side hooks.
-- **`@/types`**: Centraliserade TypeScript-definitioner.
-
-#### 3.3. Kritiska Regler (Icke-förhandlingsbara):
-
-1.  **Terminalen är Lag:** All felhantering utgår från felmeddelanden i terminalen. Stack-spårningen är den absoluta sanningen.
-2.  **Kirurgisk Precision:** Lös en sak i taget. Gör minimala, nödvändiga ändringar.
-3.  **Verifiera Före Handling:** Anta aldrig. Läs relevant kod (`read_file`) för att förstå kontexten innan du skriver ny kod.
-4.  **IMPORT-BUGGEN:** `tsconfig.json` definierar `@/` som alias för rot-mappen (där `app` ligger). En import som `import ... from '@/app/...'` är **ALLTID FEL**. Korrekt syntax är `import ... from '@/...'` (för filer direkt under `app`) eller `import ... from '@/components/...'`.
+### **3. INGA TYSTA MISSLYCKANDEN.**
+   - **Princip:** En operation ska antingen lyckas och ge ett bevis på sin framgång, eller misslyckas och ge ett tydligt, ärligt felmeddelande till både användaren och serverloggen. Att "se ut som att det fungerar" är den värsta sortens fel.
+   - **Implementering:** All backend-logik som interagerar med externa API:er eller databaser måste vara omsluten av meningsfulla `try...catch`-block.
+     - `try`: Utför operationen. Logga framgångssteg.
+     - `catch`: Logga det **detaljerade** felet på servern. Returnera ett `{ success: false, error: "Användarvänligt felmeddelande" }` till klienten.
 
 ---
 
-## Sektion 4: Nuläge & Omedelbara Mål (2024-05-21)
+## Del 2: Teknisk Guldstandard för Backend-Interaktioner
 
-- **Senaste Åtgärd:** En fundamental återställning av onboarding-flödet har genomförts. En trasig och fejkad API-koppling har ersatts med en fullt fungerande backend-funktion (`/api/onboarding/route.ts`) som korrekt skapar mappstruktur i Google Drive. Frontend-koden (`OnboardingFlow.tsx`) har uppdaterats för att anropa denna nya funktion.
+### **A. Autentisering & API-Anrop (`app/api/auth/[...nextauth]/route.ts`, `lib/google-server.ts`)**
 
-- **Status:** Projektet är nu i ett stabilt, byggbart skick (`npm run build` fungerar). Onboarding är den första funktionen som implementerats enligt den nya Guldstandarden.
+1.  **Fullständigt Scope är Lag:** Systemet **ska** alltid begära den fullständiga uppsättningen av fem behörigheter. Inga undantag.
+    - `https://www.googleapis.com/auth/userinfo.profile`
+    - `https://www.googleapis.com/auth/userinfo.email`
+    - `https://www.googleapis.com/auth/drive`
+    - `https://www.googleapis.com/auth/calendar`
+    - `https://www.googleapis.com/auth/tasks`
 
-- **Omedelbart Mål:** Att slutföra **Fas 3: Test & Validering** för det kompletta onboarding-flödet. Målet är att verifiera att en ny användare kan logga in, godkänna villkor, fylla i företagsnamn, få en mapp skapad i sin Google Drive, och landa på dashboarden utan ett enda fel.
+2.  **`refreshToken` är Heligt:**
+    - **Lagring:** Vid första inloggning (`jwt` callback), ska `refreshToken`, `accessToken` och dess `expires_at` omedelbart och **direkt** sparas på `users`-dokumentet i Firestore. Detta är den enda tillåtna metoden. Den separata `accounts`-samlingen ska ignoreras för detta syfte.
+    - **Hämtning:** Alla funktioner som behöver göra autentiserade Google-anrop **ska** använda hjälpfunktionen `lib/google-server.ts`. Denna funktion är den enda som är auktoriserad att läsa `refreshToken` från `users`-dokumentet och skapa en autentiserad klient.
+
+3.  **Synkroniserad Auth-Användare:**
+    - **Princip:** Användarlistan i Firebase Authentication får inte innehålla "-".
+    - **Implementering:** `signIn`-callbacken **ska** användas för att omedelbart uppdatera den nyskapade Firebase Auth-användaren med korrekt e-post från Google-profilen.
+
+### **B. Backend-Logik (Server Actions, API Routes)**
+
+1.  **Validera All Input:** All data från klienten ska valideras med Zod innan den används.
+2.  **Villkorlig Databasuppdatering:** Kritiska flaggor (som `onboardingComplete`) får **endast** uppdateras efter ett bevisat, lyckat slutförande av den associerade operationen (t.ex. ett API-anrop till Google Drive som returnerat `success`).
+3.  **Detaljerad Server-loggning:** Komplexa operationer (som att skapa en mappstruktur) **ska** innehålla detaljerad, steg-för-steg-loggning på servern för att möjliggöra transparent felsökning. Exempel: "Försöker hämta klient...", "Klient hämtad.", "Försöker skapa rotmapp...", "Rotmapp skapad med ID...".
+
+---
+
+## Del 3: Guldstandardens Tillämpning per Funktion
+
+Dessa regler är inte teoretiska. De ska tillämpas enligt följande:
+
+### **Onboarding**
+- **Status:** **KRITISKT FEL.** Måste omedelbart repareras enligt hela denna manual.
+- **Flöde:** `onboarding/page.tsx` anropar `createDriveStructure` i `app/actions/onboardingActions.ts`. Denna action **ska** följa alla regler i Del 1 & 2. Den ska anropa `lib/google-server.ts` för att få en klient, använda den för att skapa mappar i Drive, och **endast** därefter uppdatera `onboardingComplete: true` i Firestore. Felhanteringen ska vara 100% transparent.
+
+### **Projekthantering (Skapa Projekt, ÄTA, etc.)**
+- **Regel:** När ett projekt eller ÄTA skapas som kräver ett dokument i Drive:
+  1. Använd `lib/google-server.ts` för att få en autentiserad Drive-klient.
+  2. Använd klienten för att skapa/kopiera ett dokument från en mall.
+  3. Spara ID/länk till det nya dokumentet i projektets data i Firestore.
+  4. Returnera ett tydligt resultat till användaren.
+
+### **Chatt & Filhantering**
+- **Regel:** När en fil laddas upp i en chatt:
+  1. Använd `lib/google-server.ts` för att få en autentiserad Drive-klient.
+  2. Hämta projektets unika mapp-ID från Firestore.
+  3. Ladda upp filen till den specifika projektmappen.
+  4. Spara en referens till filen i chatt-meddelandet i Firestore.
+
+### **Kalender & Tasks**
+- **Regel:** När en kalenderhändelse eller en task skapas:
+  1. Använd `lib/google-server.ts` för att få en autentiserad `Calendar` eller `Tasks` klient.
+  2. Skapa händelsen/tasken med relevant information.
+  3. Spara eventuellt ID i Firestore om framtida referens behövs.
+  4. Bekräfta skapandet för användaren.
