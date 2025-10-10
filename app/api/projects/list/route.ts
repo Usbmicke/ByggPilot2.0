@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { db } from '@/services/firestoreService';
+import { adminDb } from '@/lib/admin'; // KORRIGERAD: Använder nu den centraliserade adminDb-instansen.
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
@@ -12,7 +12,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    const projectsSnapshot = await db.collection('projects')
+    // KORRIGERAD: Bytte 'db' till 'adminDb' för att matcha den korrekta importen.
+    const projectsSnapshot = await adminDb.collection('projects')
       .where('userId', '==', session.user.id)
       .orderBy('createdAt', 'desc')
       .get();

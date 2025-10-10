@@ -8,8 +8,9 @@ import { adminDb, adminAuth } from "@/lib/admin";
 
 // =================================================================================
 // GULDSTANDARD - NEXT-AUTH KONFIGURATION
-// Version 8.3 - Korrigerat alla Google-scopes för full funktionalitet
-// Inkluderar nu gmail.readonly för att kunna läsa e-post.
+// Version 8.4 - Kritisk korrigering: 'prompt: consent' borttagen.
+// Detta förhindrar att refresh token ogiltigförklaras vid varje inloggning,
+// vilket löser den centrala buggen "Token has been expired or revoked".
 // =================================================================================
 
 
@@ -26,7 +27,7 @@ export const authOptions: NextAuthOptions = {
             authorization: {
                 params: {
                     access_type: "offline",
-                    prompt: "consent",
+                    // prompt: "consent",  // BORTTAGEN - Detta är den kritiska ändringen.
                     scope: "openid email profile https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks"
                 }
             },
@@ -60,7 +61,7 @@ export const authOptions: NextAuthOptions = {
                     const newTokens = await response.json();
 
                     if (!response.ok) {
-                        throw new Error(`Failed to refresh token: ${newTokens.error_description}`);
+                        throw new Error(`Failed to refresh token: ${newTokens.error_description || 'No error description'}`);
                     }
 
                     token.accessToken = newTokens.access_token;

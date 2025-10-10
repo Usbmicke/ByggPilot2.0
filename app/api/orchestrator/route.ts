@@ -9,14 +9,15 @@ import { listProjectsForUser } from '@/services/projectService';
 // import { listCustomersForUser } from '@/services/customerService'; 
 
 // =================================================================================
-// GULDSTANDARD: ORCHESTRATOR v1.0
-// Denna API-endpoint agerar som en intelligent "dirigent" framför chatten.
-// Dess enda syfte är att analysera användarens avsikt och hämta relevant
-// kontext från databasen *innan* det slutgiltiga AI-anropet görs.
-// Detta skapar en högmedveten och intelligent AI-assistent.
+// GULDSTANDARD: ORCHESTRATOR v1.1 - KORRIGERING AV API-NYCKEL
+// Korrigerar anropet för att använda GEMINI_API_KEY.
 // =================================================================================
 
-const google = createGoogleGenerativeAI();
+// KORRIGERING: Explicit API-nyckelhantering
+if (!process.env.GEMINI_API_KEY) {
+  throw new Error("FATAL ERROR: GEMINI_API_KEY environment variable is not set.");
+}
+const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 const model = google('gemini-1.5-flash-latest');
 
 // Systemprompt specifikt för avsiktsanalys.

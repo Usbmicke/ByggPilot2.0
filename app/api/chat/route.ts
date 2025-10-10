@@ -9,10 +9,9 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { z } from 'zod';
 
 // =================================================================================
-// GULDSTANDARD V.6.0 - TOOL-ENABLED ARCHITECTURE
-// Detta är den slutgiltiga versionen som implementerar "Tool Use".
-// Chatten kan nu förstå när den ska anropa server-funktioner och agera på dem.
-// Den använder generateText för att hantera komplexa flöden med verktygsanrop.
+// GULDSTANDARD V.6.1 - KORRIGERING AV API-NYCKEL
+// Korrigerar anropet för att använda GEMINI_API_KEY istället för den implicita
+// GOOGLE_GENERATIVE_AI_API_KEY. Detta löser felet "API key is missing".
 // =================================================================================
 
 interface ClientMessage {
@@ -20,8 +19,14 @@ interface ClientMessage {
   parts: [{ text: string }];
 }
 
-const google = createGoogleGenerativeAI();
+// KORRIGERING: Explicit API-nyckelhantering
+if (!process.env.GEMINI_API_KEY) {
+  throw new Error("FATAL ERROR: GEMINI_API_KEY environment variable is not set.");
+}
+const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 const model = google('gemini-1.5-flash-latest');
+
+// ... (resten av filen är oförändrad) ...
 
 // Simulerad funktion för att skapa en offert. I en riktig app skulle denna
 // anropa en annan intern API-endpoint (t.ex. /api/projects/create-offer)
