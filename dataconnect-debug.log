@@ -1,56 +1,37 @@
-E1011 04:05:25.133252     479 dev.go:79] Failed to load initial config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:05:25.142078     479 watch.go:102] watchAllDir unable to walk dir `/home/user/ByggPilot2.0/dataconnect`: lstat /home/user/ByggPilot2.0/dataconnect: no such file or directory
-I1011 04:05:25.153710     479 dev.go:102] Listening on address (HTTP + gRPC): 127.0.0.1:50001
-E1011 04:05:35.144711     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:05:45.150668     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:05:55.143220     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:06:05.150751     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:06:15.151739     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:06:25.142984     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:06:35.152215     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:06:45.151470     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:06:55.142828     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:07:05.147710     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:07:15.152961     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:07:25.143104     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:07:25.143157     479 watch.go:102] watchAllDir unable to walk dir `/home/user/ByggPilot2.0/dataconnect`: lstat /home/user/ByggPilot2.0/dataconnect: no such file or directory
-E1011 04:07:35.145792     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:07:45.144813     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:07:55.143235     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:08:05.151700     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:08:15.144244     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:08:25.142627     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:08:35.152064     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:08:45.152177     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:08:55.142535     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:09:05.144260     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:09:15.152014     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:09:25.142408     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:09:25.142475     479 watch.go:102] watchAllDir unable to walk dir `/home/user/ByggPilot2.0/dataconnect`: lstat /home/user/ByggPilot2.0/dataconnect: no such file or directory
-E1011 04:09:35.151134     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:09:45.143224     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:09:55.143219     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:10:05.151701     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:10:15.152158     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:10:25.143310     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:10:35.151468     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:10:45.151672     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:10:55.142841     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:11:05.152155     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:11:15.150883     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:11:25.143208     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:11:25.143263     479 watch.go:102] watchAllDir unable to walk dir `/home/user/ByggPilot2.0/dataconnect`: lstat /home/user/ByggPilot2.0/dataconnect: no such file or directory
-E1011 04:11:35.150707     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:11:45.151709     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:11:55.142496     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:12:05.151757     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:12:15.152033     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:12:25.143314     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:12:35.151413     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:12:45.144293     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:12:55.142709     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:13:05.152038     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:13:15.152150     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:13:25.142441     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
-E1011 04:13:25.142506     479 watch.go:102] watchAllDir unable to walk dir `/home/user/ByggPilot2.0/dataconnect`: lstat /home/user/ByggPilot2.0/dataconnect: no such file or directory
-E1011 04:13:35.144222     479 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:21:00.823097     461 dev.go:79] Failed to load initial config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:21:00.833386     461 watch.go:102] watchAllDir unable to walk dir `/home/user/ByggPilot2.0/dataconnect`: lstat /home/user/ByggPilot2.0/dataconnect: no such file or directory
+I1011 07:21:00.860447     461 dev.go:102] Listening on address (HTTP + gRPC): 127.0.0.1:50001
+E1011 07:21:10.839342     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:21:20.843212     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:21:30.833695     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:21:40.842359     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:21:50.838689     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:22:00.833753     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:22:10.838630     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:22:20.842353     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:22:30.833802     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:22:40.838687     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:22:50.842863     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:23:00.834008     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:23:00.834207     461 watch.go:102] watchAllDir unable to walk dir `/home/user/ByggPilot2.0/dataconnect`: lstat /home/user/ByggPilot2.0/dataconnect: no such file or directory
+E1011 07:23:10.833888     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:23:20.834139     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:23:30.834730     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:23:40.842442     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:23:50.838772     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:24:00.833707     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:24:10.842481     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:24:20.842468     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:24:30.833660     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:24:40.833922     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:24:50.838584     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:25:00.834310     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:25:00.834367     461 watch.go:102] watchAllDir unable to walk dir `/home/user/ByggPilot2.0/dataconnect`: lstat /home/user/ByggPilot2.0/dataconnect: no such file or directory
+E1011 07:25:10.838669     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:25:20.834794     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:25:30.834266     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:25:40.842426     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:25:50.842826     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:26:00.833673     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:26:10.842325     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
+E1011 07:26:20.834370     461 watch.go:31] Failed to load config from "/home/user/ByggPilot2.0/dataconnect": could not find dataconnect.yaml in `/home/user/ByggPilot2.0/dataconnect`
