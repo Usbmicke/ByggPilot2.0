@@ -2,7 +2,7 @@
 'use server';
 
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/api/auth/[...nextauth]/route';
 import { adminDb } from '@/lib/admin';
 
 // Guldstandard: Hämta specifik användarstatus för klientlogik

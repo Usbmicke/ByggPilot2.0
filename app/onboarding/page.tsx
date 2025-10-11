@@ -6,16 +6,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { updateCompanyProfile, createDriveStructure, skipOnboarding } from '@/app/actions/onboardingActions';
+import { updateCompanyProfile, createDriveStructure, skipOnboarding } from '@/actions/onboardingActions';
 import { useRouter } from 'next/navigation';
 
 // =================================================================================
-// GULDSTANDARD - Onboarding V12.0 (FULLSTÄNDIG ÅTERSTÄLLNING & KORREKT NAVIGERING)
+// GULDSTANDARD - Onboarding V12.1 (KORRIGERING AV HOPPA ÖVER)
 // REVIDERING:
-// 1. Återställer den kompletta 3-stegslogiken enligt checklistan.
-// 2. API-anrop för adress sker ENDAST vid klick på "Hämta"-knapp.
-// 3. Navigering i sista steget använder window.location.href för att tvinga
-//    en session-omladdning och garantera korrekt övergång till dashboard.
+// 1. Återställer handleSkip till att använda router.push efter att server-anropet
+//    är slutfört. Detta är den korrekta metoden för denna specifika funktion.
+// 2. Behåller window.location.href för sista steget, där det krävs.
 // =================================================================================
 
 const companyProfileSchema = z.object({
@@ -165,12 +164,17 @@ export default function OnboardingPage() {
     const handleNext = () => setCurrentStep(prev => prev + 1);
     
     const handleSkip = async () => {
-        const result = await skipOnboarding();
-        if (result.success) {
-             // Använder också window.location.href här för konsistens och robusthet
-            window.location.href = '/dashboard';
+        try {
+            const result = await skipOnboarding();
+            if (result.success) {
+                router.push('/dashboard');
+            } else {
+                throw new Error(result.error || "Något gick fel.");
+            }
+        } catch (error) {
+            console.error("Kunde inte hoppa över:", error);
+            alert("Kunde inte hoppa över. Försök igen.");
         }
-        else alert("Kunde inte hoppa över. Försök igen.");
     };
 
     const steps = [

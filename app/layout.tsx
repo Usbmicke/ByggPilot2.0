@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import AppProviders from '@/providers/AppProviders'; // Den nya, korrekta providern
-import OnboardingPage from '@/app/onboarding/page'; // Importera onboardingsidan
+import { authOptions } from '@/api/auth/[...nextauth]/route';
+import Providers from '@/providers';
+import OnboardingPage from '@/onboarding/page';
 import CookieBanner from "@/components/CookieBanner";
 import { Toaster } from 'react-hot-toast';
 
@@ -17,10 +17,8 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // Hämta sessionen på servern för att avgöra vad som ska renderas.
   const session = await getServerSession(authOptions);
 
-  // Villkorlig rendering baserat på användarstatus
   const isNewUser = session?.user?.isNewUser ?? false;
 
   return (
@@ -38,14 +36,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }}
         />
         {
-          // Om användaren är ny, visa ENBART onboarding-sidan.
           isNewUser ? (
             <OnboardingPage />
           ) : (
-            // Annars, rendera huvudapplikationen med alla nödvändiga providers.
-            <AppProviders>
+            <Providers>
               {children}
-            </AppProviders>
+            </Providers>
           )
         }
         <CookieBanner />

@@ -5,11 +5,18 @@ import { FirestoreAdapter } from "@auth/firebase-adapter";
 import { adminAuth, adminDb } from "@/lib/admin";
 
 // =================================================================================
-// GULDSTANDARD - NEXTAUTH OPTIONS V7.1 (GMAIL SCOPE + SÄKERSTÄLLD SYNK)
+// GULDSTANDARD - NEXTAUTH OPTIONS V8.0 (SESSION SOM SANNINSKÄLLA)
 // REVIDERING:
-// 1. LÄGGER TILL GMAIL SCOPE: Inkluderar `gmail.readonly` för att kunna läsa användarens e-post.
-// 2. BEHÅLLER KORREKT SIGNIN-LOGIK: Säkerställer att den befintliga, robusta logiken för
-//    att synkronisera e-post från Google till Firebase Auth (och undvika "-"-felet) är aktiv.
+// 1. OMFATTANDE REFAKTORERING AV `session` CALLBACK: Gör sessionen till den enda källan
+//    till sanning (Single Source of Truth) för användarens status.
+// 2. HÄMTAR DATA FRÅN FIRESTORE: `session` hämtar nu `onboardingComplete` och `tourCompleted`
+//    direkt från Firestore-dokumentet vid varje sessionsladdning.
+// 3. HÄRLEDD `isNewUser`: `isNewUser`-flaggan är inte längre ett fält i databasen, utan
+//    härleds i realtid baserat på `onboardingComplete`. `isNewUser = !onboardingComplete`.
+//    Detta eliminerar risken för osynkroniserad data mellan databasen och sessionen.
+// 4. BEHÅLLER KRITISK `signIn` LOGIK: Den viktiga `signIn`-callbacken behålls för att
+//    korrekt synkronisera e-post till Firebase Auth och förhindra race conditions vid
+//    första inloggningen.
 // =================================================================================
 
 export const authOptions: NextAuthOptions = {
@@ -22,7 +29,6 @@ export const authOptions: NextAuthOptions = {
                     prompt: "consent",
                     access_type: "offline",
                     response_type: "code",
-                    // Lade till gmail.readonly för att begära åtkomst till e-post
                     scope: "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/gmail.readonly",
                 },
             },
@@ -50,12 +56,38 @@ export const authOptions: NextAuthOptions = {
             return token;
         },
         async session({ session, token }) {
-            if (session.user) {
+            if (token.id && session.user) {
                 session.user.id = token.id as string;
+
+                try {
+                    const userDocRef = adminDb.collection("users").doc(token.id as string);
+                    const userDoc = await userDocRef.get();
+
+                    if (userDoc.exists) {
+                        const userData = userDoc.data();
+                        
+                        session.user.onboardingComplete = userData?.onboardingComplete ?? false;
+                        session.user.tourCompleted = userData?.tourCompleted ?? false;
+                        
+                        // isNewUser är nu en härledd egenskap. Detta är den "enda källan till sanning".
+                        session.user.isNewUser = !session.user.onboardingComplete;
+
+                    } else {
+                        console.warn(`[Auth Session]: Användardokument för id ${token.id} hittades inte i Firestore.`);
+                        session.user.onboardingComplete = false;
+                        session.user.tourCompleted = false;
+                        session.user.isNewUser = true;
+                    }
+                } catch (error) {
+                    console.error("[Auth Session]: Fel vid hämtning av användardata från Firestore:", error);
+                    // Sätt säkra standardvärden vid fel
+                    session.user.onboardingComplete = false;
+                    session.user.tourCompleted = false;
+                    session.user.isNewUser = true;
+                }
             }
             return session;
         },
-        // Denna callback säkerställer att e-post synkroniseras korrekt till Firebase Auth
         async signIn({ user, account, profile }) {
             console.log("[Auth SignIn]: Callback startad.");
             if (user.id && user.email) {

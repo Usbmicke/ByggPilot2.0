@@ -8,7 +8,7 @@ import DashboardSummary from '@/components/dashboard/DashboardSummary';
 import { ProjectList } from '@/components/dashboard/ProjectList';
 import { ActionSuggestions } from '@/components/dashboard/ActionSuggestions';
 import GuidedTour from '@/components/tour/GuidedTour';
-import { getUserStatus, markTourAsCompleted } from '@/app/actions/userActions';
+import { getUserStatus, markTourAsCompleted } from '@/actions/userActions';
 
 // =================================================================================
 // GULDSTANDARD - Dashboard V2.0 (TOUR-INITIERING VIA URL)
