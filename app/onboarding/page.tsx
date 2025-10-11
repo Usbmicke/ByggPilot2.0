@@ -10,9 +10,10 @@ import { updateCompanyProfile, searchAddress, createDriveStructure, skipOnboardi
 import { useRouter } from 'next/navigation';
 
 // =================================================================================
-// GULDSTANDARD - Onboarding V6.0 (DIREKTLÄNK TILL DRIVE)
-// REVIDERING: Lägger till state för driveFolderId och en ny knapp på sista steget
-// som länkar användaren direkt till den nyskapade mappstrukturen.
+// GULDSTANDARD - Onboarding V9.0 (ANVÄNDARSTYRT FLÖDE)
+// REVIDERING: Återinför det sista "Klart"-steget. Användaren måste nu aktivt
+// klicka på en knapp för att gå vidare till dashboarden, vilket förhindrar
+// förvirrande automatiska omdirigeringar och initierar den guidade turen.
 // =================================================================================
 
 const companyProfileSchema = z.object({
@@ -32,13 +33,7 @@ const RocketIcon = () => <svg className="w-16 h-16 mb-6 text-purple-400" fill="n
 
 // --- Steg-komponenter ---
 const CompanyProfileForm = ({ onSave }: { onSave: () => void }) => {
-    const { register, handleSubmit, formState: { errors, isSubmitting }, setValue } = useForm<CompanyProfileValues>({ resolver: zodResolver(companyProfileSchema) });
-    const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
-    const handleAddressSearch = async (query: string) => {
-        if (query.length < 3) { setAddressSuggestions([]); return; }
-        const result = await searchAddress(query);
-        if (result.success) setAddressSuggestions(result.data.platsnamn || []);
-    };
+    const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<CompanyProfileValues>({ resolver: zodResolver(companyProfileSchema) });
     const onSubmit: SubmitHandler<CompanyProfileValues> = async (data) => {
         const formData = new FormData();
         Object.keys(data).forEach(key => {
@@ -50,7 +45,28 @@ const CompanyProfileForm = ({ onSave }: { onSave: () => void }) => {
     };
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {/* ... formulärfält ... */}
+            <div>
+                <label htmlFor="companyName" className="block text-sm font-medium text-gray-300 mb-1">Företagsnamn</label>
+                <input id="companyName" {...register('companyName')} className="input-field w-full" />
+                {errors.companyName && <p className="error-text">{errors.companyName.message}</p>}
+            </div>
+             <div>
+                <label htmlFor="streetAddress" className="block text-sm font-medium text-gray-300 mb-1">Gatuadress</label>
+                <input id="streetAddress" {...register('streetAddress')} className="input-field w-full" />
+                {errors.streetAddress && <p className="error-text">{errors.streetAddress.message}</p>}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label htmlFor="postalCode" className="block text-sm font-medium text-gray-300 mb-1">Postnr</label>
+                    <input id="postalCode" {...register('postalCode')} className="input-field w-full" />
+                    {errors.postalCode && <p className="error-text">{errors.postalCode.message}</p>}
+                </div>
+                <div>
+                    <label htmlFor="city" className="block text-sm font-medium text-gray-300 mb-1">Ort</label>
+                    <input id="city" {...register('city')} className="input-field w-full" />
+                    {errors.city && <p className="error-text">{errors.city.message}</p>}
+                </div>
+            </div>
             <button type="submit" disabled={isSubmitting} className="btn-primary w-full">{isSubmitting ? 'Sparar...' : 'Spara och fortsätt'}</button>
         </form>
     );
@@ -60,8 +76,7 @@ const DriveStructureStep = ({ onComplete }: { onComplete: (folderId: string) => 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const handleCreateStructure = async () => {
-        setLoading(true);
-        setError('');
+        setLoading(true); setError('');
         const result = await createDriveStructure();
         if (result.success && result.driveFolderId) {
             onComplete(result.driveFolderId);
@@ -74,9 +89,7 @@ const DriveStructureStep = ({ onComplete }: { onComplete: (folderId: string) => 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full text-center">
             <h3 className="text-2xl font-bold text-white mb-3">Skapa ert Digitala Kontor</h3>
             <p className="text-gray-300 mb-8">Klicka på knappen så bygger ByggPilot er ISO-inspirerade mappstruktur i Google Drive.</p>
-            <button onClick={handleCreateStructure} disabled={loading} className="btn-primary w-full text-lg py-4">
-                {loading ? 'Bygger ert digitala kontor...' : 'Ja, bygg min mappstruktur!'}
-            </button>
+            <button onClick={handleCreateStructure} disabled={loading} className="btn-primary w-full text-lg py-4">{loading ? 'Bygger ert digitala kontor...' : 'Ja, bygg min mappstruktur!'}</button>
             {error && <p className="error-text mt-4 bg-red-900/50 p-3 rounded-md">{error}</p>}
         </motion.div>
     );
@@ -84,23 +97,14 @@ const DriveStructureStep = ({ onComplete }: { onComplete: (folderId: string) => 
 
 const AllSetStep = ({ driveFolderId }: { driveFolderId: string | null }) => {
     const router = useRouter();
-    const handleOpenDrive = () => {
-        if (driveFolderId) {
-            window.open(`https://drive.google.com/drive/folders/${driveFolderId}`, '_blank');
-        }
+    const handleContinue = () => {
+        router.push('/dashboard?tour=true');
     };
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center w-full space-y-4">
             <h3 className="text-3xl font-bold text-white mb-2">Allt är klart!</h3>
-            <p className="text-gray-300 mb-6 text-lg">Er digitala grund är lagd. Vad vill ni göra nu?</p>
-            {driveFolderId && (
-                <button onClick={handleOpenDrive} className="btn-secondary w-full text-lg py-3">
-                    Utforska min nya mappstruktur
-                </button>
-            )}
-            <button onClick={() => router.push('/dashboard')} className="btn-primary w-full text-lg py-3">
-                Ta mig till min Dashboard
-            </button>
+            <p className="text-gray-300 mb-6 text-lg">Er digitala grund är lagd. Nu är det dags att börja arbeta smartare.</p>
+            <button onClick={handleContinue} className="btn-primary w-full text-lg py-3">Ta mig till min Dashboard</button>
         </motion.div>
     );
 };
@@ -112,21 +116,22 @@ export default function OnboardingPage() {
     const router = useRouter();
 
     const handleNext = () => setCurrentStep(prev => prev + 1);
+    
     const handleStructureComplete = (folderId: string) => {
         setDriveFolderId(folderId);
         handleNext();
     };
+
     const handleSkip = async () => {
         const result = await skipOnboarding();
         if (result.success) router.push('/dashboard');
         else alert("Kunde inte hoppa över. Försök igen.");
     };
 
-    // Definiera stegen
     const steps = [
-        { id: 1, name: 'Profil', Component: (props: any) => <CompanyProfileForm {...props} onSave={handleNext} /> },
-        { id: 2, name: 'Struktur', Component: (props: any) => <DriveStructureStep {...props} onComplete={handleStructureComplete} /> },
-        { id: 3, name: 'Klart', Component: () => <AllSetStep driveFolderId={driveFolderId} /> }
+        { id: 1, name: 'Företagsprofil', icon: BriefcaseIcon, title: 'Välkommen till ByggPilot', description: 'Börja med att fylla i grundläggande information om ditt företag. Detta hjälper oss att skräddarsy din upplevelse.', Component: (props: any) => <CompanyProfileForm {...props} onSave={handleNext} /> },
+        { id: 2, name: 'Digital Struktur', icon: DriveIcon, title: 'Skapa ert Digitala Kontor', description: 'Vi sätter upp en ISO-inspirerad mappstruktur i er Google Drive.', Component: (props: any) => <DriveStructureStep {...props} onComplete={handleStructureComplete} /> },
+        { id: 3, name: 'Färdigt!', icon: RocketIcon, title: 'Allt är klart!', description: 'Er digitala grund är lagd. Dags att börja arbeta smartare.', Component: () => <AllSetStep driveFolderId={driveFolderId} /> }
     ];
 
     const activeStepInfo = steps.find(s => s.id === currentStep) || steps[0];
@@ -135,7 +140,24 @@ export default function OnboardingPage() {
         <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4 relative">
             <button onClick={handleSkip} className="absolute top-6 right-6 text-gray-400 hover:text-white">Hoppa över</button>
             <div className="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-                {/* ... Vänster kolumn (oförändrad) ... */}
+                
+                <div className="text-center md:text-left">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={currentStep}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.3 }}
+                            className="flex flex-col items-center md:items-start"
+                        >
+                            <activeStepInfo.icon />
+                            <h1 className="text-4xl font-bold text-white mb-4">{activeStepInfo.title}</h1>
+                            <p className="text-gray-300 text-lg">{activeStepInfo.description}</p>
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
+
                 <div className="w-full max-w-md mx-auto">
                     <div className="bg-gray-800 p-8 rounded-2xl shadow-2xl">
                          <div className="mb-8">

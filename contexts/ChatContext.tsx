@@ -3,14 +3,12 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useSession, SessionContextValue } from 'next-auth/react';
-import { useChat as useAiChat, UseChatOptions } from 'ai/react';
+import { useChat as useAiChat, type UseChatOptions } from '@ai-sdk/react';
 import toast from 'react-hot-toast';
 
 // =================================================================================
-// GULDSTANDARD: CHAT CONTEXT v6.0
-// BESKRIVNING: Denna fil är nu en tunn "wrapper" runt Vercel AI SDK:s `useChat`-hook.
-// All manuell state-hantering, fetch-logik och streaming är borttagen.
-// Den ansluter direkt till den nya, streamUI-kompatibla `/api/chat`-endpointen.
+// GULDSTANDARD: CHAT CONTEXT v6.1
+// BESKRIVNING: Korrigerat import-sökvägen för Vercel AI SDK. `ai/react` är nu `@ai-sdk/react`.
 // =================================================================================
 
 // Typdefinition för de props som vår hook kommer att returnera.

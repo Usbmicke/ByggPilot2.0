@@ -1,29 +1,19 @@
 
 import React from 'react';
-import { redirect } from 'next/navigation';
+
 // =================================================================================
-// KORRIGERING: Importera authOptions från den enda, sanna källan.
+// GULDSTANDARD: Main App Layout v2.0
+// BESKRIVNING: Denna layout är nu en "dum" komponent. All logik för sessionhantering
+// och routing har flyttats till rotlayouten (`app/layout.tsx`). Dess enda ansvar
+// är att definiera den visuella strukturen för huvudapplikationen (t.ex. med sidomeny).
 // =================================================================================
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'; 
-import { getServerSession } from 'next-auth/next';
-import MainAppClientBoundary from './MainAppClientBoundary';
 
-const MainAppLayout = async ({ children }: { children: React.ReactNode }) => {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user?.id) {
-    return redirect('/'); 
-  }
-
-  // isNewUser hanteras nu helt och hållet på klientsidan i MainAppClientBoundary
-  // baserat på information från useSession-hooken.
-  const isNewUser = session.user.isNewUser ?? false; // Skickas med som prop
-
+export default function MainAppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <MainAppClientBoundary isNewUser={isNewUser}>
+    <div className="h-full">
+      {/* Här skulle den visuella layouten för appen ligga, t.ex. sidomeny, header etc. */}
+      {/* För nu renderar vi bara children direkt. */}
       {children}
-    </MainAppClientBoundary>
+    </div>
   );
-};
-
-export default MainAppLayout;
+}

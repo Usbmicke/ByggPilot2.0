@@ -5,9 +5,11 @@ import { FirestoreAdapter } from "@auth/firebase-adapter";
 import { adminAuth, adminDb } from "@/lib/admin";
 
 // =================================================================================
-// GULDSTANDARD - NEXTAUTH OPTIONS V7.0 (DIAGNOSTISK LOGGNING)
-// REVIDERING: Lägger till extremt detaljerad loggning i 'signIn'-callbacken för att
-// slutgiltigt diagnostisera varför e-post-synkroniseringen till Firebase Auth misslyckas.
+// GULDSTANDARD - NEXTAUTH OPTIONS V7.1 (GMAIL SCOPE + SÄKERSTÄLLD SYNK)
+// REVIDERING:
+// 1. LÄGGER TILL GMAIL SCOPE: Inkluderar `gmail.readonly` för att kunna läsa användarens e-post.
+// 2. BEHÅLLER KORREKT SIGNIN-LOGIK: Säkerställer att den befintliga, robusta logiken för
+//    att synkronisera e-post från Google till Firebase Auth (och undvika "-"-felet) är aktiv.
 // =================================================================================
 
 export const authOptions: NextAuthOptions = {
@@ -20,7 +22,8 @@ export const authOptions: NextAuthOptions = {
                     prompt: "consent",
                     access_type: "offline",
                     response_type: "code",
-                    scope: "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/tasks",
+                    // Lade till gmail.readonly för att begära åtkomst till e-post
+                    scope: "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/gmail.readonly",
                 },
             },
         }),
@@ -52,6 +55,7 @@ export const authOptions: NextAuthOptions = {
             }
             return session;
         },
+        // Denna callback säkerställer att e-post synkroniseras korrekt till Firebase Auth
         async signIn({ user, account, profile }) {
             console.log("[Auth SignIn]: Callback startad.");
             if (user.id && user.email) {
@@ -65,7 +69,7 @@ export const authOptions: NextAuthOptions = {
                         console.log(`[Auth SignIn]: E-post skiljer sig. Försöker uppdatera...`);
                         await adminAuth.updateUser(user.id, {
                             email: user.email,
-                            displayName: user.name, // Lägger till displayName också för fullständighet
+                            displayName: user.name,
                         });
                         console.log(`[Auth SignIn]: Firebase Auth-användare ${user.id} har uppdaterats med e-post ${user.email}.`);
                     } else {
