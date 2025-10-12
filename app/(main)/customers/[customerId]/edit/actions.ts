@@ -1,11 +1,11 @@
 'use server';
 
-import { authOptions } from '@/api/auth/[...nextauth]/route';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { getServerSession } from 'next-auth/next';
 import { updateCustomer, archiveCustomer } from '@/services/customerService';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { Customer } from '@/types';
+import { Customer } from '@/types/index';
 
 export async function updateCustomerAction(customerId: string, formData: FormData) {
   const session = await getServerSession(authOptions);

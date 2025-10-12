@@ -6,9 +6,8 @@ import { InvoicePdfTemplate } from '@/components/pdf/InvoicePdfTemplate';
 import { getGoogleAuthClient } from '@/lib/google';
 import { getGoogleDriveService } from '@/lib/google';
 import { Project } from '@/types/project';
-import { Customer } from '@/types/customer';
+import { Customer, Company } from '@/types/index';
 import { Calculation } from '@/types/calculation';
-import { Company } from '@/types/company';
 import { Readable } from 'stream';
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('sv-SE', { style: 'currency', currency: 'SEK' }).format(amount);

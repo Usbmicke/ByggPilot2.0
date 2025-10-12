@@ -6,7 +6,6 @@ import { streamUI, generateText } from 'ai/rsc';
 import { z } from 'zod';
 import { getSystemPrompt } from '@/ai/prompts';
 import { Suspense } from 'react';
-import { Spinner } from '@/components/Spinner'; // Antagen spinner-komponent
 
 // =================================================================================
 // GULDSTANDARD: CHAT/ORCHESTRATOR v2.0
@@ -14,6 +13,8 @@ import { Spinner } from '@/components/Spinner'; // Antagen spinner-komponent
 // Den kombinerar AI-konversation, kontextmedvetenhet och verktygsanvändning
 // med hjälp av streamUI för att dynamiskt rendera svar och verktyg på klienten.
 // Den gamla, separata orkestreraren och chatt-api:et är helt ersatta.
+// KORRIGERING: Borttagning av felaktig import av en UI-komponent (Spinner)
+// i en API-route. Ersatt med ett textmeddelande.
 // =================================================================================
 
 // Explicit API-nyckelhantering
@@ -67,7 +68,7 @@ export async function POST(req: Request) {
                     })).describe('En lista med alla rader i offerten.'),
                 }),
                 generate: async function* (args) {
-                    yield <div className="text-center text-gray-400"><Spinner /> Skapar offert...</div>;
+                    yield <div className="text-center text-gray-400">Skapar offert...</div>;
                     const { success, pdfUrl, message } = await createOfferPdfTool(args);
                     if (success) {
                         return <div className="text-green-400 p-4 bg-gray-700 rounded-lg">Offert skapad! <a href={pdfUrl} target="_blank" className="underline">Ladda ner PDF</a></div>;

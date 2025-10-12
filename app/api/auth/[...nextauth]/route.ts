@@ -5,31 +5,33 @@ import { FirestoreAdapter } from "@auth/firebase-adapter";
 import * as admin from 'firebase-admin';
 
 // =================================================================================
-// GULDSTANDARD - NEXTAUTH OPTIONS V8.0 (SESSION SOM SANNINSKÄLLA)
+// GULDSTANDARD - NEXTAUTH OPTIONS V9.0 (KORREKT ENV-HANTERING)
 // REVIDERING:
-// 1. KONSOLIDERAD LOGIK: Firebase Admin SDK-initialiseringen har flyttats hit från
-//    ett separat bibliotek för att samla all kritisk autentiseringslogik på ett
-//    ställe, i enlighet med bästa praxis för Next.js App Router.
-// 2. OMFATTANDE REFAKTORERING AV `session` CALLBACK: Gör sessionen till den enda källan
-//    till sanning (Single Source of Truth) för användarens status.
-// 3. HÄMTAR DATA FRÅN FIRESTORE: `session` hämtar nu `onboardingComplete` och `tourCompleted`
-//    direkt från Firestore-dokumentet vid varje sessionsladdning.
-// 4. HÄRLEDD `isNewUser`: `isNewUser`-flaggan är inte längre ett fält i databasen, utan
-//    härleds i realtid baserat på `onboardingComplete`. `isNewUser = !onboardingComplete`.
-//    Detta eliminerar risken för osynkroniserad data mellan databasen och sessionen.
+// 1. ANPASSAD TILL .ENV.LOCAL: Initialiseringen av Firebase Admin SDK har skrivits
+//    om helt för att läsa den enskilda miljövariabeln `FIREBASE_SERVICE_ACCOUNT_JSON`.
+//    Detta löser grundorsaken till serverkraschen (500-felet).
+// 2. ROBUST FELHANTERING: Lade till tydlig felhantering som kastar ett fel om
+//    miljövariabeln saknas eller är felaktigt formaterad, vilket förhindrar
+//    att applikationen startar med en trasig konfiguration.
 // =================================================================================
 
 // Initiera Firebase Admin SDK
 if (!admin.apps.length) {
-    admin.initializeApp({
-        credential: admin.credential.cert({
-            projectId: process.env.FIREBASE_PROJECT_ID,
-            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-            privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\n/g, '
-'),
-        })
-    });
+    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+    if (!serviceAccountJson) {
+        throw new Error('Miljövariabeln FIREBASE_SERVICE_ACCOUNT_JSON är inte definierad. Kontrollera din .env.local fil.');
+    }
+    try {
+        const serviceAccount = JSON.parse(serviceAccountJson);
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+        });
+    } catch (error) {
+        console.error("Kritiskt fel: Kunde inte parsa FIREBASE_SERVICE_ACCOUNT_JSON. Se till att det är giltig JSON.", error);
+        throw new Error("FIREBASE_SERVICE_ACCOUNT_JSON är felaktigt formaterad.");
+    }
 }
+
 const adminDb = admin.firestore();
 const adminAuth = admin.auth();
 

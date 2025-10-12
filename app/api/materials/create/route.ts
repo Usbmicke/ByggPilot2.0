@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { firestoreAdmin } from "@/lib/admin";
-import { MaterialCost } from "@/app/types/material";
+import { MaterialCost } from "@/types/material";
 import { Timestamp } from 'firebase-admin/firestore';
 
 export async function POST(request: Request) {

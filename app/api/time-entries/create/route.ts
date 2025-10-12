@@ -2,12 +2,12 @@
 // Fil: app/api/time-entries/create/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { handler } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { firestoreAdmin } from "@/lib/admin";
-import { TimeEntry } from "@/app/types/time";
+import { TimeEntry } from "@/types/index";
 
 export async function POST(request: Request) {
-  const session = await getServerSession(handler);
+  const session = await getServerSession(authOptions);
   if (!session || !session.user || !session.user.id) {
     return new NextResponse(JSON.stringify({ message: 'Användaren är inte auktoriserad.' }), { status: 401 });
   }

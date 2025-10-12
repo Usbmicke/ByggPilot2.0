@@ -1,9 +1,9 @@
-import { authOptions } from '@/api/auth/[...nextauth]/route';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { getServerSession } from 'next-auth/next';
 import { getProject } from '@/services/projectService';
 import { notFound } from 'next/navigation';
 import { updateProjectAction, archiveProjectAction } from './actions';
-import { ProjectStatus } from '@/types';
+import { ProjectStatus } from '@/types/index';
 
 interface EditProjectPageProps {
   params: {

@@ -4,7 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getProjects } from "@/actions/projectActions";
 import ProjectList from "./ProjectList"; // Klientkomponent som vi skapar härnäst
 import Header from '@/components/layout/Header';
-import CreateNewMenu from '@/components/dashboard/CreateNewButton';
+import CreateNewMenu from '@/components/layout/CreateNewButton';
 
 // Server Component för att hämta projektdata
 export default async function ProjectsPage() {

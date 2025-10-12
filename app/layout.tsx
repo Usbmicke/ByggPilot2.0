@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/api/auth/[...nextauth]/route';
-import Providers from '@/providers';
-import OnboardingPage from '@/onboarding/page';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import Providers from '@/app/providers';
+import OnboardingPage from '@/app/onboarding/page';
 import CookieBanner from "@/components/CookieBanner";
 import { Toaster } from 'react-hot-toast';
 

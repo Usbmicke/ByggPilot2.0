@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/api/auth/[...nextauth]/route';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { getProjects } from '@/actions/projectActions';
 import ProjectsView from '@/components/views/ProjectsView';
 

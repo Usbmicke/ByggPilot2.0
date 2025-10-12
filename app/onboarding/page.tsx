@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { updateCompanyProfile, createDriveStructure, skipOnboarding } from '@/actions/onboardingActions';
+import { updateCompanyProfile, createDriveStructure, skipOnboarding } from '@/app/actions/onboardingActions';
 import { useRouter } from 'next/navigation';
 
 // =================================================================================

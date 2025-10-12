@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { listInvoicesForProjectFromFirestore, createInvoiceInFirestore } from '@/services/firestoreService';
 import { getProject } from '@/services/projectService';
-import { Invoice } from '@/types/invoice';
+import { Invoice } from '@/types/index';
 
 /**
  * API-rutt för att hämta alla fakturor för ett projekt.

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { ChatMessage } from '@/app/contexts/ChatContext';
+import { ChatMessage } from '@/contexts/ChatContext';
 import ReactMarkdown from 'react-markdown';
 
 interface MessageFeedProps {
