@@ -10,11 +10,13 @@ import { updateCompanyProfile, createDriveStructure, skipOnboarding } from '@/ap
 import { useRouter } from 'next/navigation';
 
 // =================================================================================
-// GULDSTANDARD - Onboarding V12.1 (KORRIGERING AV HOPPA ÖVER)
+// GULDSTANDARD - Onboarding V14.0 (KORREKT ARKITEKTUR)
 // REVIDERING:
-// 1. Återställer handleSkip till att använda router.push efter att server-anropet
-//    är slutfört. Detta är den korrekta metoden för denna specifika funktion.
-// 2. Behåller window.location.href för sista steget, där det krävs.
+// 1. ELIMINERAT STEG 3: Det meningslösa "Färdigt"-steget har tagits bort helt.
+//    Detta var grundorsaken till alla omdirigeringsproblem och race conditions.
+// 2. DIREKT Omdirigering: Efter att mappstrukturen har skapats (Steg 2),
+//    anropas nu `router.push()` omedelbart. Detta säkerställer att sessionen hinner
+//    uppdateras innan användaren når nästa sida, vilket löser hela flödet.
 // =================================================================================
 
 const companyProfileSchema = z.object({
@@ -30,8 +32,6 @@ type CompanyProfileValues = z.infer<typeof companyProfileSchema>;
 // --- Ikoner ---
 const BriefcaseIcon = () => <svg className="w-16 h-16 mb-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>;
 const DriveIcon = () => <svg className="w-16 h-16 mb-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>;
-const RocketIcon = () => <svg className="w-16 h-16 mb-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>;
-
 
 // --- Steg 1: Företagsprofil ---
 const CompanyProfileForm = ({ onSave }: { onSave: () => void }) => {
@@ -111,7 +111,7 @@ const CompanyProfileForm = ({ onSave }: { onSave: () => void }) => {
     );
 };
 
-// --- Steg 2: Digital Struktur ---
+// --- Steg 2: Digital Struktur (Hanterar nu omdirigering) ---
 const DriveStructureStep = ({ onComplete }: { onComplete: () => void }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -120,7 +120,7 @@ const DriveStructureStep = ({ onComplete }: { onComplete: () => void }) => {
         setError('');
         const result = await createDriveStructure();
         if (result.success) {
-            onComplete();
+            onComplete(); // Anropar onComplete som nu kommer att omdirigera
         } else {
             setError(result.error || 'Ett okänt fel inträffade.');
             setLoading(false);
@@ -131,30 +131,13 @@ const DriveStructureStep = ({ onComplete }: { onComplete: () => void }) => {
             <h3 className="text-2xl font-bold text-white mb-3">Skapa ert Digitala Kontor</h3>
             <p className="text-gray-300 mb-8">Klicka på knappen så bygger ByggPilot er ISO-inspirerade mappstruktur i Google Drive. Detta kan ta upp till en minut.</p>
             <button onClick={handleCreateStructure} disabled={loading} className="btn-primary w-full text-lg py-4">
-                {loading ? 'Bygger ert digitala kontor...' : 'Ja, bygg min mappstruktur!'}
+                {loading ? 'Bygger ert digitala kontor...' : 'Ja, bygg min mappstruktur & slutför!'}
             </button>
             {error && <p className="error-text mt-4 bg-red-900/50 p-3 rounded-md">{error}</p>}
         </motion.div>
     );
 };
 
-// --- Steg 3: Färdigt! ---
-const AllSetStep = () => {
-    const handleRedirect = () => {
-        // Använder window.location.href för att tvinga en fullständig sidomladdning.
-        // Detta säkerställer att NextAuth-sessionen uppdateras och att servern
-        // känner igen att onboardingen är slutförd.
-        window.location.href = '/dashboard?tour=true';
-    };
-
-    return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center w-full space-y-4">
-            <h3 className="text-3xl font-bold text-white mb-2">Allt är klart!</h3>
-            <p className="text-gray-300 mb-6 text-lg">Er digitala grund är lagd. Nu är det dags att börja arbeta smartare.</p>
-            <button onClick={handleRedirect} className="btn-primary w-full text-lg py-3">Ta mig till min Dashboard</button>
-        </motion.div>
-    );
-};
 
 // --- Huvudkomponent och State-hantering ---
 export default function OnboardingPage() {
@@ -163,6 +146,11 @@ export default function OnboardingPage() {
 
     const handleNext = () => setCurrentStep(prev => prev + 1);
     
+    // Denna funktion anropas från Steg 2 och omdirigerar användaren
+    const handleCompletion = () => {
+        router.push('/dashboard?tour=true');
+    };
+
     const handleSkip = async () => {
         try {
             const result = await skipOnboarding();
@@ -179,8 +167,7 @@ export default function OnboardingPage() {
 
     const steps = [
         { id: 1, name: 'Företagsprofil', icon: BriefcaseIcon, title: 'Välkommen till ByggPilot', description: 'Börja med att fylla i grundläggande information om ditt företag. Detta hjälper oss att skräddarsy din upplevelse.', Component: () => <CompanyProfileForm onSave={handleNext} /> },
-        { id: 2, name: 'Digital Struktur', icon: DriveIcon, title: 'Skapa ert Digitala Kontor', description: 'Vi sätter upp en ISO-inspirerad mappstruktur i er Google Drive.', Component: () => <DriveStructureStep onComplete={handleNext} /> },
-        { id: 3, name: 'Färdigt!', icon: RocketIcon, title: 'Allt är klart!', description: 'Er digitala grund är lagd. Dags att börja arbeta smartare.', Component: AllSetStep }
+        { id: 2, name: 'Digital Struktur', icon: DriveIcon, title: 'Skapa ert Digitala Kontor', description: 'Vi sätter upp en ISO-inspirerad mappstruktur i er Google Drive.', Component: () => <DriveStructureStep onComplete={handleCompletion} /> }
     ];
 
     const activeStepInfo = steps.find(s => s.id === currentStep) || steps[0];
