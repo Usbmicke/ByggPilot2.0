@@ -1,9 +1,8 @@
 
 'use server';
 
-import { adminDb, admin } from '@/lib/admin'; // Korrigerad import
+import { adminDb, admin } from '@/lib/admin';
 
-// Det inkommande datainterfacet från formuläret
 interface CompanyFormData {
   companyName: string;
   orgNumber: string;
@@ -13,10 +12,6 @@ interface CompanyFormData {
   phone: string;
 }
 
-/**
- * Uppdaterar eller skapar en användares dokument med nästlad företagsinformation.
- * Denna åtgärd är den definitiva lösningen på buggen med företagsnamnet.
- */
 export async function updateCompanyInfo(formData: CompanyFormData, userId: string) {
   if (!userId) {
     console.error('updateCompanyInfo anropades utan userId.');
@@ -26,7 +21,6 @@ export async function updateCompanyInfo(formData: CompanyFormData, userId: strin
   try {
     const userDocRef = adminDb.collection('users').doc(userId);
     
-    // **KORRIGERINGEN:** Omvandla den platta formulärdatan till en nästlad struktur.
     const saveData = {
       company: {
         name: formData.companyName,
@@ -36,12 +30,11 @@ export async function updateCompanyInfo(formData: CompanyFormData, userId: strin
         city: formData.city,
         phone: formData.phone,
       },
-      isNewUser: false, // Markera att användaren har slutfört detta steg
+      isNewUser: false,
       companyInfoCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    // Använd .set() med { merge: true } för att säkert uppdatera eller skapa dokumentet.
     await userDocRef.set(saveData, { merge: true });
 
     console.log(`[ACTION SUCCESS] Företagsinformation sparad korrekt för användare ${userId}.`);
@@ -53,11 +46,6 @@ export async function updateCompanyInfo(formData: CompanyFormData, userId: strin
   }
 }
 
-/**
- * Hämtar en specifik användares data från Firestore.
- * @param userId Användarens unika ID (samma som dokument-ID i Firestore).
- * @returns Användardataobjektet eller null om det inte hittas.
- */
 export async function getUserData(userId: string) {
   if (!userId) {
     console.error('getUserData anropades utan userId.');
@@ -68,8 +56,8 @@ export async function getUserData(userId: string) {
     const userDocRef = adminDb.collection('users').doc(userId);
     const docSnap = await userDocRef.get();
 
-    if (docSnap.exists) { // Korrigerad från .exists() till .exists
-      return docSnap.data() as { isNewUser?: boolean; [key: string]: any; };
+    if (docSnap.exists) {
+      return docSnap.data() as { isNewUser?: boolean; tourCompleted?: boolean; onboardingComplete?: boolean; [key: string]: any; };
     } else {
       console.warn(`Ingen användare med ID ${userId} hittades i databasen.`);
       return null;
@@ -80,12 +68,6 @@ export async function getUserData(userId: string) {
   }
 }
 
-/**
- * Uppdaterar status för användarvillkoren för en specifik användare.
- * @param userId Användarens ID.
- * @param accepted Om användaren har accepterat villkoren.
- * @returns Ett resultatobjekt.
- */
 export async function updateUserTermsStatus(userId: string, accepted: boolean) {
   if (!userId) {
     return { success: false, error: 'Användar-ID saknas.' };
@@ -104,10 +86,6 @@ export async function updateUserTermsStatus(userId: string, accepted: boolean) {
   }
 }
 
-/**
- * NY FUNKTION: Markerar användarens onboarding som slutförd.
- * Detta är det sista steget som anropas när användaren klickar på "Gå till Dashboard".
- */
 export async function completeOnboarding(userId: string) {
   if (!userId) {
     console.error('completeOnboarding anropades utan userId.');
@@ -118,7 +96,7 @@ export async function completeOnboarding(userId: string) {
     const userDocRef = adminDb.collection('users').doc(userId);
     await userDocRef.update({
       onboardingCompleted: true,
-      isNewUser: false, // Sista bekräftelsen på att användaren inte längre är ny
+      isNewUser: false,
       onboardingCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     console.log(`[ACTION SUCCESS] Onboarding markerad som slutförd för användare ${userId}.`);
@@ -126,5 +104,28 @@ export async function completeOnboarding(userId: string) {
   } catch (error) {
     console.error(`[ACTION CRITICAL] Fel vid slutförande av onboarding för ${userId}:`, error);
     return { success: false, error: 'Kunde inte slutföra onboarding-processen.' };
+  }
+}
+
+/**
+ * GULDSTANDARD-IMPLEMENTERING: Markerar den guidade turen som slutförd.
+ */
+export async function markTourAsCompleted(userId: string) {
+  if (!userId) {
+    console.error('markTourAsCompleted anropades utan userId.');
+    return { success: false, error: 'Användar-ID saknas.' };
+  }
+
+  try {
+    const userDocRef = adminDb.collection('users').doc(userId);
+    await userDocRef.update({
+      tourCompleted: true,
+      tourCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    console.log(`[ACTION SUCCESS] Guidad tur markerad som slutförd för användare ${userId}.`);
+    return { success: true };
+  } catch (error) {
+    console.error(`[ACTION CRITICAL] Fel vid markering av guidad tur för ${userId}:`, error);
+    return { success: false, error: 'Kunde inte markera guiden som slutförd.' };
   }
 }

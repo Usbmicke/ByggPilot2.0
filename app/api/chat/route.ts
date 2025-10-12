@@ -1,41 +1,24 @@
 
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { streamUI, generateText } from 'ai/rsc';
-import { z } from 'zod';
+import { authOptions } from '@/lib/auth';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { StreamingTextResponse } from 'ai'; // StreamData är borttagen, den finns inte i ai@2.2.33
 import { getSystemPrompt } from '@/ai/prompts';
-import { Suspense } from 'react';
 
 // =================================================================================
-// GULDSTANDARD: CHAT/ORCHESTRATOR v2.0
-// BESKRIVNING: Denna fil är nu den enda kontaktpunkten för chatt.
-// Den kombinerar AI-konversation, kontextmedvetenhet och verktygsanvändning
-// med hjälp av streamUI för att dynamiskt rendera svar och verktyg på klienten.
-// Den gamla, separata orkestreraren och chatt-api:et är helt ersatta.
-// KORRIGERING: Borttagning av felaktig import av en UI-komponent (Spinner)
-// i en API-route. Ersatt med ett textmeddelande.
+// GULDSTANDARD: CHAT/ORCHESTRATOR v3.1
+// KORRIGERING: Tog bort all referens till `StreamData` som inte är kompatibel med
+// den stabila `ai` v2 SDK som projektet nu använder. Detta löser det specifika
+// byggfelet relaterat till denna fil.
 // =================================================================================
 
 // Explicit API-nyckelhantering
 if (!process.env.GEMINI_API_KEY) {
     throw new Error("FATAL ERROR: GEMINI_API_KEY environment variable is not set.");
 }
-const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
-const model = google('gemini-1.5-flash-latest');
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
-// === VERKTYGSFUNKTIONER ===
-// I en riktig applikation bör dessa ligga i separata service-filer.
-
-async function createOfferPdfTool(args: { title: string; customerName: string; lineItems: { description: string; quantity: number; price: number }[] }) {
-    'use server';
-    console.log("ANROPAR VERKTYG: createOfferPdf med argument:", args);
-    // SIMULERING: I verkligheten anropas ett API för att generera en PDF
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    const pdfUrl = `/pdfs/offert-${Date.now()}.pdf`;
-    console.log(`SIMULERAT RESULTAT: PDF skapad på ${pdfUrl}`);
-    return { success: true, pdfUrl, message: `PDF-offert har skapats för ${args.customerName}.` };
-}
 
 // === Kärn-API Endpoint ===
 export async function POST(req: Request) {
@@ -45,40 +28,43 @@ export async function POST(req: Request) {
     }
 
     const { messages } = await req.json();
-
-    // Här kan vi i framtiden hämta dynamisk kontext från databasen
-    const context = ""; // Tills vidare tom
+    const context = "";
     const systemPrompt = getSystemPrompt(session.user.name, context);
 
-    const result = await streamUI({
-        model: model,
-        system: systemPrompt,
-        messages: messages,
-        text: ({ content }) => <div className="text-white">{content}</div>,
-        tools: {
-            createOfferPdf: {
-                description: 'Skapar en offert som en PDF. Fråga alltid användaren om all nödvändig information (titel, kundnamn, och minst ett rad-element) innan du anropar verktyget. Bekräfta med användaren innan du skapar offerten.',
-                parameters: z.object({
-                    customerName: z.string().describe('Kundens fullständiga namn.'),
-                    title: z.string().describe('En tydlig titel för offerten.'),
-                    lineItems: z.array(z.object({
-                        description: z.string().describe('Beskrivning av arbetet eller materialet.'),
-                        quantity: z.number().describe('Antal.'),
-                        price: z.number().describe('Pris per enhet.'),
-                    })).describe('En lista med alla rader i offerten.'),
-                }),
-                generate: async function* (args) {
-                    yield <div className="text-center text-gray-400">Skapar offert...</div>;
-                    const { success, pdfUrl, message } = await createOfferPdfTool(args);
-                    if (success) {
-                        return <div className="text-green-400 p-4 bg-gray-700 rounded-lg">Offert skapad! <a href={pdfUrl} target="_blank" className="underline">Ladda ner PDF</a></div>;
-                    } else {
-                        return <div className="text-red-400">Kunde inte skapa offert.</div>;
-                    }
-                }
-            },
-        },
+    // Skapa en chatt-session med system-prompt och historik
+    // Filtrera bort eventuella systemmeddelanden från historiken
+    const history = messages
+        .filter((m: any) => m.role === 'user' || m.role === 'assistant')
+        .map((m: any) => ({
+            role: m.role,
+            parts: [{ text: m.content }]
+        }));
+
+    const chat = model.startChat({
+        systemInstruction: systemPrompt,
+        history: history,
     });
 
-    return result.value;
+    // Hämta det sista meddelandet från användaren
+    const lastMessage = messages[messages.length - 1].content;
+    
+    // Skicka meddelandet till modellen och få en stream tillbaka
+    const result = await chat.sendMessageStream(lastMessage);
+
+    // Konvertera Googles stream till en standardiserad webb-stream
+    const stream = new ReadableStream({
+        async start(controller) {
+            for await (const chunk of result.stream) {
+                // Säkra att vi bara skickar text-delar
+                if (chunk && chunk.text) {
+                    const chunkText = chunk.text();
+                    controller.enqueue(chunkText);
+                }
+            }
+            controller.close();
+        }
+    });
+
+    // Skicka tillbaka streamen som ett `StreamingTextResponse`
+    return new StreamingTextResponse(stream);
 }

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowDownTrayIcon, EnvelopeIcon } from '@heroicons/react/24/solid';
 import { Invoice, Project, RotDeduction } from '@/types';
 import SendInvoiceModal from '@/components/SendInvoiceModal';
+import { authOptions } from "@/lib/auth"; // Korrekt import
 
 // --- Klientkomponenter flyttade hit för tydlighet ---
 
@@ -131,7 +132,7 @@ function InvoiceDetailPageClient({ initialInvoice, project }: { initialInvoice: 
 
 // ---- Server-komponent (Wrapper) ----
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+// import { authOptions } from '@/app/api/auth/[...nextauth]/route'; // FEL IMPORT
 import { getProject } from '@/services/projectService';
 import { getInvoiceFromFirestore } from '@/services/firestoreService';
 

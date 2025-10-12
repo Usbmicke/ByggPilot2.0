@@ -1,13 +1,13 @@
 
 import { adminDb } from '@/lib/admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import { Project, Document, Message, Invoice, InvoiceLine } from '@/types';
+import { Project, Document, Message, Invoice } from '@/types';
 
 const db = adminDb;
 const projectsCollection = db.collection('projects');
 
 // ===============================================
-// PROJEKT-FUNKTIONER
+// PROJEKT-FUNKTIONER (GULDSTANDARD-REVIDERING)
 // ===============================================
 
 export const getHighestProjectNumberFromFirestore = async (userId: string): Promise<number> => {
@@ -18,8 +18,7 @@ export const getHighestProjectNumberFromFirestore = async (userId: string): Prom
         .get();
 
     if (snapshot.empty) {
-        // Om inga projekt finns, starta från 1000 så att första blir 1001
-        return 1000;
+        return 1000; 
     }
 
     const highestProject = snapshot.docs[0].data() as Project;
@@ -29,7 +28,7 @@ export const getHighestProjectNumberFromFirestore = async (userId: string): Prom
 export const listProjectsForUserFromFirestore = async (userId: string): Promise<Project[]> => {
     const snapshot = await projectsCollection
         .where('ownerId', '==', userId)
-        .where('archivedAt', '==', null)
+        .where('status', '!=', 'Arkiverat') // Guldstandard: Filtrera på status istället för ett separat fält
         .orderBy('lastActivity', 'desc')
         .get();
     if (snapshot.empty) return [];
@@ -42,7 +41,7 @@ export const listProjectsForUserFromFirestore = async (userId: string): Promise<
 
 export const createProjectInFirestore = async (projectData: Omit<Project, 'id'>): Promise<Project> => {
     const now = FieldValue.serverTimestamp();
-    const newProjectData = { ...projectData, createdAt: now, lastActivity: now, archivedAt: null, riskAnalysisJson: null };
+    const newProjectData = { ...projectData, createdAt: now, lastActivity: now, status: 'Aktivt' };
     const docRef = await projectsCollection.add(newProjectData);
     return { id: docRef.id, ...projectData };
 };
@@ -51,28 +50,33 @@ export const getProjectFromFirestore = async (projectId: string): Promise<Projec
     const doc = await projectsCollection.doc(projectId).get();
     if (!doc.exists) return null;
     const data = doc.data() as Omit<Project, 'id'>;
-    if (data.archivedAt) return null;
+    // Guldstandard: Kontrollera status istället för ett separat fält
+    if (data.status === 'Arkiverat') return null;
     return { id: doc.id, ...data };
 };
 
+/**
+ * GULDSTANDARD: En enda, generell funktion för att uppdatera projekt.
+ * Hanterar alla typer av uppdateringar, inklusive arkivering.
+ * Ägarskapskontroll sker i service-lagret, inte här.
+ */
 export const updateProjectInFirestore = async (projectId: string, updates: Partial<Project>): Promise<void> => {
     const updateData = { ...updates, lastActivity: FieldValue.serverTimestamp() };
     await projectsCollection.doc(projectId).update(updateData);
 };
 
-export const archiveProjectInFirestore = async (projectId: string): Promise<void> => {
-    const now = FieldValue.serverTimestamp();
-    await projectsCollection.doc(projectId).update({ archivedAt: now, lastActivity: now });
-};
+// DENNA ÄR BORTTAGEN. `updateProjectInFirestore` hanterar detta.
+// export const archiveProjectInFirestore = async (projectId: string): Promise<void> => { ... };
+
 
 // ===============================================
-// FAKTURA-FUNKTIONER (NYTT)
+// FAKTURA-FUNKTIONER
 // ===============================================
 
 export const createInvoiceInFirestore = async (projectId: string, invoiceData: Omit<Invoice, 'id'>): Promise<Invoice> => {
     const invoicesRef = projectsCollection.doc(projectId).collection('invoices');
     const docRef = await invoicesRef.add(invoiceData);
-    await updateProjectInFirestore(projectId, {}); // Uppdatera projektets lastActivity
+    await updateProjectInFirestore(projectId, {});
     return { id: docRef.id, ...invoiceData };
 };
 
@@ -95,7 +99,7 @@ export const getInvoiceFromFirestore = async (projectId: string, invoiceId: stri
 export const updateInvoiceStatusInFirestore = async (projectId: string, invoiceId: string, status: 'Utkast' | 'Skickad' | 'Betald'): Promise<void> => {
     const invoiceRef = projectsCollection.doc(projectId).collection('invoices').doc(invoiceId);
     await invoiceRef.update({ status: status });
-    await updateProjectInFirestore(projectId, {}); // Uppdatera projektets lastActivity
+    await updateProjectInFirestore(projectId, {});
 };
 
 
