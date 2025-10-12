@@ -2,22 +2,37 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { FirestoreAdapter } from "@auth/firebase-adapter";
-import { adminAuth, adminDb } from "@/lib/admin";
+import * as admin from 'firebase-admin';
 
 // =================================================================================
 // GULDSTANDARD - NEXTAUTH OPTIONS V8.0 (SESSION SOM SANNINSKÄLLA)
 // REVIDERING:
-// 1. OMFATTANDE REFAKTORERING AV `session` CALLBACK: Gör sessionen till den enda källan
+// 1. KONSOLIDERAD LOGIK: Firebase Admin SDK-initialiseringen har flyttats hit från
+//    ett separat bibliotek för att samla all kritisk autentiseringslogik på ett
+//    ställe, i enlighet med bästa praxis för Next.js App Router.
+// 2. OMFATTANDE REFAKTORERING AV `session` CALLBACK: Gör sessionen till den enda källan
 //    till sanning (Single Source of Truth) för användarens status.
-// 2. HÄMTAR DATA FRÅN FIRESTORE: `session` hämtar nu `onboardingComplete` och `tourCompleted`
+// 3. HÄMTAR DATA FRÅN FIRESTORE: `session` hämtar nu `onboardingComplete` och `tourCompleted`
 //    direkt från Firestore-dokumentet vid varje sessionsladdning.
-// 3. HÄRLEDD `isNewUser`: `isNewUser`-flaggan är inte längre ett fält i databasen, utan
+// 4. HÄRLEDD `isNewUser`: `isNewUser`-flaggan är inte längre ett fält i databasen, utan
 //    härleds i realtid baserat på `onboardingComplete`. `isNewUser = !onboardingComplete`.
 //    Detta eliminerar risken för osynkroniserad data mellan databasen och sessionen.
-// 4. BEHÅLLER KRITISK `signIn` LOGIK: Den viktiga `signIn`-callbacken behålls för att
-//    korrekt synkronisera e-post till Firebase Auth och förhindra race conditions vid
-//    första inloggningen.
 // =================================================================================
+
+// Initiera Firebase Admin SDK
+if (!admin.apps.length) {
+    admin.initializeApp({
+        credential: admin.credential.cert({
+            projectId: process.env.FIREBASE_PROJECT_ID,
+            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+            privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\n/g, '
+'),
+        })
+    });
+}
+const adminDb = admin.firestore();
+const adminAuth = admin.auth();
+
 
 export const authOptions: NextAuthOptions = {
     providers: [

@@ -1,13 +1,14 @@
 'use server';
 
-import { getServerSession } from '@/lib/auth';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/api/auth/[...nextauth]/route';
 import { createCustomer } from '@/services/customerService';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { Customer } from '@/types';
 
 export async function createCustomerAction(formData: FormData) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     throw new Error('Authentication is required to perform this action.');
   }

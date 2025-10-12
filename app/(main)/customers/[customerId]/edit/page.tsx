@@ -1,5 +1,5 @@
 
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/api/auth/[...nextauth]/route';
 import { getServerSession } from 'next-auth/next';
 import { getCustomer } from '@/services/customerService';
 import { notFound } from 'next/navigation';
