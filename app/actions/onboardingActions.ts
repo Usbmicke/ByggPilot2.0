@@ -2,7 +2,7 @@
 'use server';
 
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { adminDb } from '@/lib/admin';
 import { getGoogleAuthClient } from '@/lib/google-server';
 import { google } from 'googleapis';

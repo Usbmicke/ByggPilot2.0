@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { updateProject, archiveProject } from '@/services/projectService';
 import { Project, ProjectStatus } from '@/types';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 
 /**
  * Server Action för att uppdatera ett projekt.

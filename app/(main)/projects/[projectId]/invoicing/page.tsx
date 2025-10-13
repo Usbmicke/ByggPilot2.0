@@ -1,6 +1,6 @@
 
 import { getProject } from '@/services/projectService';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { getServerSession } from 'next-auth/next';
 import { notFound } from 'next/navigation';
 import InvoicingView from '@/components/views/InvoicingView';

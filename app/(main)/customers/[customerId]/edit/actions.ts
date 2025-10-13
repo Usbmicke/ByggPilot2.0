@@ -1,72 +1,69 @@
+
 'use server';
 
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { getServerSession } from 'next-auth/next';
-import { updateCustomer, archiveCustomer } from '@/services/customerService';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { Customer } from '@/types/index';
+import { authOptions } from '@/lib/auth'; // KORRIGERAD IMPORT
+import { updateCustomerInFirestore, archiveCustomerInFirestore } from '@/services/customerService';
 
-export async function updateCustomerAction(customerId: string, formData: FormData) {
-  const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
-
-  if (!userId) {
-    throw new Error('Authentication is required.');
-  }
-
-  const name = formData.get('name') as string;
-  const email = formData.get('email') as string | null;
-  const phone = formData.get('phone') as string | null;
-  const isCompany = formData.get('isCompany') === 'on';
-
-  if (!name) {
-    throw new Error('Name is a required field.');
-  }
-
-  const updatedData: Partial<Customer> = {
-    name,
-    email,
-    phone,
-    isCompany,
-  };
-
-  try {
-    await updateCustomer(customerId, userId, updatedData);
-  } catch (error) {
-    console.error("Failed to update customer:", error);
-    throw new Error('Could not update the customer due to a server error.');
-  }
-
-  revalidatePath('/customers');
-  revalidatePath(`/customers/${customerId}/edit`);
-  revalidatePath('/dashboard');
-
-  redirect('/customers');
+interface FormData {
+    customerId: string;
+    name: string;
+    email: string;
+    phone: string;
+    address: string;
+    orgNumber: string;
+    zipCode: string;
+    city: string;
 }
 
+export async function updateCustomerAction(formData: FormData) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+        throw new Error('Autentisering krävs.');
+    }
 
-export async function archiveCustomerAction(customerId: string) {
-  const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
+    const { customerId, ...customerData } = formData;
 
-  if (!userId) {
-    throw new Error('Authentication is required.');
-  }
+    if (!customerId) {
+        throw new Error('Kund-ID saknas.');
+    }
 
-  try {
-    // VIKTIGT: Här kan vi behöva lägga till logik för att också arkivera kundens projekt.
-    // För nu håller vi det enkelt och arkiverar bara kunden.
-    await archiveCustomer(customerId, userId);
-  } catch (error) {
-    console.error("Failed to archive customer:", error);
-    throw new Error('Could not archive the customer due to a server error.');
-  }
+    try {
+        await updateCustomerInFirestore(customerId, customerData);
+        console.log(`[ACTION] Kund ${customerId} uppdaterad.`);
 
-  // Rensa cachen för listor där kunden inte längre ska synas
-  revalidatePath('/customers');
-  revalidatePath('/dashboard');
+        revalidatePath(`/customers/${customerId}`);
+        revalidatePath('/customers');
+        redirect(`/customers/${customerId}`);
+    } catch (error) {
+        console.error(`[ACTION ERROR] Det gick inte att uppdatera kund ${customerId}:`, error);
+        throw new Error('Ett serverfel inträffade vid uppdatering av kund.');
+    }
+}
 
-  // Omdirigera till kundlistan där kunden nu är borta
-  redirect('/customers');
+export async function archiveCustomerAction(formData: FormData) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+        throw new Error('Autentisering krävs.');
+    }
+
+    const { customerId } = formData;
+
+    if (!customerId) {
+        throw new Error('Kund-ID saknas.');
+    }
+
+    try {
+        await archiveCustomerInFirestore(customerId);
+        console.log(`[ACTION] Kund ${customerId} arkiverad.`);
+
+        revalidatePath('/customers');
+        revalidatePath('/dashboard');
+        redirect('/customers');
+    } catch (error) {
+        console.error(`[ACTION ERROR] Det gick inte att arkivera kund ${customerId}:`, error);
+        throw new Error('Ett serverfel inträffade vid arkivering av kund.');
+    }
 }

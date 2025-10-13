@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { getServerSession } from 'next-auth/next';
 import { listCustomers } from '@/services/customerService';
 import { Customer } from '@/types/index';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'; 
+import { authOptions } from '@/lib/auth'; 
 
 export default async function CustomerListPage() {
   const session = await getServerSession(authOptions);
