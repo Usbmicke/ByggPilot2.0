@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { authOptions as auth } from '@/app/api/auth/[...nextauth]/route';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from '@/lib/auth';
 import { getProject } from '@/services/projectService';
 import { addMessageToProject, getMessagesForProject } from '@/services/firestoreService'; // Funktioner att skapa
 
@@ -8,7 +9,7 @@ import { addMessageToProject, getMessagesForProject } from '@/services/firestore
  * API-rutt för att hämta befintliga meddelanden.
  */
 export async function GET(req: NextRequest) {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
     
     const { searchParams } = new URL(req.url);
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest) {
  * API-rutt för att posta nya meddelanden.
  */
 export async function POST(req: NextRequest) {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
     const userName = session?.user?.name || 'Anonym';
     const userAvatar = session?.user?.image || '/default-avatar.png';

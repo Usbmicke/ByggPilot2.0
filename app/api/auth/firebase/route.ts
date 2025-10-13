@@ -1,11 +1,7 @@
 
 import { getServerSession } from "next-auth/next"
 import { NextResponse } from "next/server";
-// =================================================================================
-// KORRIGERING: Importera authOptions från den enda, sanna källan.
-// Detta löser "Module not found: Can't resolve '@/lib/auth'"-felet.
-// =================================================================================
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { admin } from "@/lib/admin";
 
 export async function POST(request: Request) {

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import Providers from '@/app/providers';
 import OnboardingPage from '@/app/onboarding/page';
 import CookieBanner from "@/components/CookieBanner";
