@@ -6,17 +6,15 @@ import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
+import GuidedTour from '@/components/tour/GuidedTour';
+import ChatBanner from '@/components/layout/ChatBanner'; // <-- Importerad!
 
 // =================================================================================
-// DASHBOARD LAYOUT V1.0 - GRUNDSTRUKTUR
+// DASHBOARD LAYOUT V1.3 - SLUTGILTIG CHAT-INTEGRATION
 // REVIDERING:
-// Skapar den grundläggande layouten för hela dashboard-vyn. Denna fil är
-// den centrala "ritningen" som sveper in alla sidor under /dashboard.
-// 1. Importerar och renderar Sidebar och Header.
-// 2. Hanterar state för att öppna/stänga sidomenyn på mobila enheter.
-// 3. Skyddar vyn och omdirigerar oinloggade användare.
-// 4. Skapar en huvud-container med korrekt padding och positionering för 
-//    att innehållet (children) ska hamna rätt.
+// Den nya ChatBanner-komponenten är nu importerad och placerad i botten av
+// <main>-elementet. Detta är den korrekta placeringen som säkerställer att
+// chatten är en del av sidans scroll-flöde och fungerar som avsett.
 // =================================================================================
 
 export default function DashboardLayout({
@@ -27,7 +25,6 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { data: session, status } = useSession();
 
-  // Skydda routen medan sessionen laddas eller om den är ogiltig
   if (status === 'loading') {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-gray-900 text-white">
@@ -37,7 +34,7 @@ export default function DashboardLayout({
   }
 
   if (status === 'unauthenticated') {
-    redirect('/'); // Skicka till landningssidan om inte inloggad
+    redirect('/');
   }
 
   return (
@@ -49,8 +46,11 @@ export default function DashboardLayout({
         
         <main className="flex-1 p-4 sm:p-6 lg:p-8 mt-[65px]">
             {children}
+            <ChatBanner /> { /* <-- Korrekt placerad här */ }
         </main>
       </div>
+
+      <GuidedTour />
     </div>
   );
 }
