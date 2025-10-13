@@ -25,7 +25,14 @@ export const authOptions: NextAuthOptions = {
     },
     callbacks: {
         async jwt({ token, user, account }) {
+            // Denna callback körs varje gång en JWT skapas eller uppdateras.
+
+            // 1. Första gången (direkt efter inloggning)
             if (account && user) {
+                token.accessToken = account.access_token;
+                token.id = user.id;
+
+                // Spara refresh/access tokens i Firestore för senare server-side-användning.
                 try {
                     await adminDb.collection("users").doc(user.id).update({
                         refreshToken: account.refresh_token,
@@ -35,76 +42,64 @@ export const authOptions: NextAuthOptions = {
                 } catch (error) {
                     console.error("[Auth Callback: jwt] Fel vid sparande av tokens till Firestore:", error);
                 }
-                token.accessToken = account.access_token;
-                token.id = user.id;
             }
-            return token;
-        },
-        async session({ session, token }) {
-            if (token.id && session.user) {
-                session.user.id = token.id as string;
 
+            // 2. VID VARJE ANROP (t.ex. av middleware eller getSession)
+            // Detta är den avgörande delen för att lösa race condition.
+            // Vi hämtar alltid den senaste användardatan från Firestore och bifogar den till token.
+            if (token.id) {
                 try {
-                    const userDocRef = adminDb.collection("users").doc(token.id as string);
-                    const userDoc = await userDocRef.get();
-
+                    const userDoc = await adminDb.collection("users").doc(token.id as string).get();
                     if (userDoc.exists) {
                         const userData = userDoc.data();
-                        
-                        session.user.onboardingComplete = userData?.onboardingComplete ?? false;
-                        session.user.tourCompleted = userData?.tourCompleted ?? false;
-                        
-                        session.user.isNewUser = !session.user.onboardingComplete;
-
+                        // Bifoga den FÄRSKA datan till token. Detta kommer sedan föras över till sessionen.
+                        token.onboardingComplete = userData?.onboardingComplete ?? false;
+                        token.driveFolderId = userData?.driveRootFolderId;
+                        token.tourCompleted = userData?.tourCompleted ?? false;
                     } else {
-                        console.warn(`[Auth Session]: Användardokument för id ${token.id} hittades inte i Firestore.`);
-                        session.user.onboardingComplete = false;
-                        session.user.tourCompleted = false;
-                        session.user.isNewUser = true;
+                        // Fallback om användaren inte finns, borde inte hända
+                        token.onboardingComplete = false;
                     }
                 } catch (error) {
-                    console.error("[Auth Session]: Fel vid hämtning av användardata från Firestore:", error);
-                    session.user.onboardingComplete = false;
-                    session.user.tourCompleted = false;
-                    session.user.isNewUser = true;
+                    console.error("[Auth Callback: jwt] Fel vid hämtning av färsk användardata från Firestore:", error);
+                    // Sätt en säker fallback
+                    token.onboardingComplete = false;
                 }
+            }
+
+            return token;
+        },
+
+        async session({ session, token }) {
+            // Denna callback skapar session-objektet som klienten får tillgång till.
+            // Den använder informationen från `jwt`-callbacken ovan.
+
+            if (session.user) {
+                // Överför datan från den (nu alltid färska) token till sessionsobjektet.
+                session.user.id = token.id as string;
+                session.user.onboardingComplete = token.onboardingComplete as boolean;
+                session.user.driveFolderId = token.driveFolderId as string | undefined;
+                session.user.tourCompleted = token.tourCompleted as boolean;
+
+                // Sätt en hjälp-flagga för klienten
+                session.user.isNewUser = !session.user.onboardingComplete;
             }
             return session;
         },
-        async signIn({ user, account, profile }) {
-            console.log("[Auth SignIn]: Callback startad.");
-            if (user.id && user.email) {
-                console.log(`[Auth SignIn]: Användare ${user.id} med e-post ${user.email} identifierad.`);
-                try {
-                    console.log(`[Auth SignIn]: Försöker hämta authUser för UID: ${user.id}...`);
-                    const authUser = await adminAuth.getUser(user.id);
-                    console.log(`[Auth SignIn]: authUser hämtad. E-post i Firebase Auth: '${authUser.email}'. E-post från Google: '${user.email}'.`);
 
+        async signIn({ user, account, profile }) {
+            // (Befintlig logik för att synka Firebase Auth-användare, ingen ändring behövs här)
+            if (user.id && user.email) {
+                try {
+                    const authUser = await adminAuth.getUser(user.id);
                     if (authUser.email !== user.email) {
-                        console.log(`[Auth SignIn]: E-post skiljer sig. Försöker uppdatera...`);
-                        await adminAuth.updateUser(user.id, {
-                            email: user.email,
-                            displayName: user.name,
-                        });
-                        console.log(`[Auth SignIn]: Firebase Auth-användare ${user.id} har uppdaterats med e-post ${user.email}.`);
-                    } else {
-                        console.log("[Auth SignIn]: E-post är redan synkroniserad. Ingen uppdatering behövs.");
+                        await adminAuth.updateUser(user.id, { email: user.email, displayName: user.name });
                     }
                 } catch (error: any) {
                     if (error.code === 'auth/user-not-found') {
-                        console.log(`[Auth SignIn]: Användaren ${user.id} hittades inte i Firebase Auth. Försöker skapa användare...`);
-                        await adminAuth.createUser({
-                            uid: user.id,
-                            email: user.email,
-                            displayName: user.name,
-                        });
-                        console.log(`[Auth SignIn]: Ny Firebase Auth-användare ${user.id} skapad med e-post ${user.email}.`);
-                    } else {
-                        console.error("[Auth SignIn]: Ett oväntat fel inträffade vid hantering av Auth-användare:", error);
+                        await adminAuth.createUser({ uid: user.id, email: user.email, displayName: user.name });
                     }
                 }
-            } else {
-                console.log("[Auth SignIn]: Antingen user.id eller user.email saknas. Avbryter synkronisering.", { userId: user.id, email: user.email });
             }
             return true;
         },

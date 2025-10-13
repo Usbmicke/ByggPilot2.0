@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { adminDb } from '@/lib/admin'; // KORRIGERAD: Använder nu den centraliserade adminDb-instansen.
 
 export async function GET(request: Request) {

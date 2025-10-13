@@ -1,10 +1,10 @@
 
-import { getDriveClient, getDocsClient } from './client';
+import { getDriveClient, getDocsClient } from '@/lib/google-server';
+import { adminDb } from './admin';
 
 const ROOT_FOLDER_NAME = 'ByggPilot - App';
 
-async function findOrCreateFolder(name: string, parentId?: string): Promise<string> {
-    const drive = getDriveClient();
+async function findOrCreateFolder(drive: any, name: string, parentId?: string): Promise<string> {
     let query = `mimeType='application/vnd.google-apps.folder' and name='${name}' and trashed=false`;
     if (parentId) {
         query += ` and '${parentId}' in parents`;
@@ -25,42 +25,89 @@ async function findOrCreateFolder(name: string, parentId?: string): Promise<stri
     return folder.data.id!;
 }
 
-async function getProjectFolderId(projectId: string, customerName: string): Promise<string> {
-    const rootFolderId = await findOrCreateFolder(ROOT_FOLDER_NAME);
-    const customerFolderName = `${projectId} - ${customerName.replace(/[^a-zA-Z0-9]/g, '_')}`;
-    const projectFolderId = await findOrCreateFolder(customerFolderName, rootFolderId);
-    const offersFolderId = await findOrCreateFolder('Offerter', projectFolderId);
-    return offersFolderId;
+export async function createInitialUserDriveStructure(userId: string, userDisplayName: string): Promise<{ rootFolderId: string, subFolderIds: { [key: string]: string } }> {
+    const drive = await getDriveClient(userId);
+    if (!drive) {
+        throw new Error('Kunde inte skapa Google Drive-klient.');
+    }
+
+    const rootFolderName = `Företag - ${userDisplayName}`;
+    const rootFolderId = await findOrCreateFolder(drive, rootFolderName);
+
+    const subFolders = ['Avtal', 'Ekonomi', 'Bilder & Media', 'Projektplanering', 'Ritningar'];
+    const subFolderIds: { [key: string]: string } = {};
+
+    for (const folderName of subFolders) {
+        const folderId = await findOrCreateFolder(drive, folderName, rootFolderId);
+        subFolderIds[folderName.toLowerCase().replace(/ & /g, '_')] = folderId;
+    }
+
+    return { rootFolderId, subFolderIds };
 }
 
-export async function createDocumentFromTemplate(title: string, htmlContent: string): Promise<string> {
-    const docs = getDocsClient();
+export async function createInitialProjectStructure(userId: string, projectName: string): Promise<{ rootFolderId: string, subFolderIds: { [key: string]: string } }> {
+    const drive = await getDriveClient(userId);
+    if (!drive) {
+        throw new Error('Kunde inte skapa Google Drive-klient.');
+    }
+
+    const userDoc = await adminDb.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+
+    if (!userData || !userData.driveRootFolderId) {
+        throw new Error('Användarens rotmapp i Google Drive kunde inte hittas.');
+    }
+
+    const projectFolderId = await findOrCreateFolder(drive, projectName, userData.driveRootFolderId);
+
+    const subFolders = ['Avtal', 'Ekonomi', 'Bilder & Media', 'Projektplanering', 'Ritningar', 'Tidsrapporter', 'ÄTA'];
+    const subFolderIds: { [key: string]: string } = {};
+
+    for (const folderName of subFolders) {
+        const folderId = await findOrCreateFolder(drive, folderName, projectFolderId);
+        subFolderIds[folderName.toLowerCase().replace(/ & /g, '_')] = folderId;
+    }
+
+    return { rootFolderId: projectFolderId, subFolderIds };
+}
+
+export async function createOfferPdfForProject(userId: string, projectId: string, offerData: any): Promise<string> {
+    const drive = await getDriveClient(userId);
+    if (!drive) {
+        throw new Error('Kunde inte skapa Google Drive-klient.');
+    }
+
+    const projectDoc = await adminDb.collection('users').doc(userId).collection('projects').doc(projectId).get();
+    const projectData = projectDoc.data();
+
+    if (!projectData || !projectData.googleDrive || !projectData.googleDrive.subFolderIds || !projectData.googleDrive.subFolderIds.offerter) {
+        throw new Error('Projektets offertmapp i Google Drive kunde inte hittas.');
+    }
+
+    const offerFolderId = projectData.googleDrive.subFolderIds.offerter;
+    const htmlContent = "<h1>Offert</h1><p>Här är detaljerna...</p>"; // Generera HTML från offerData
+    const docTitle = `Offert_${projectId}`;
+    const docId = await createDocumentFromTemplate(userId, docTitle, htmlContent);
+    const pdfFileName = `${docTitle}.pdf`;
+    const { webViewLink } = await exportDocAsPdf(userId, docId, offerFolderId, pdfFileName);
+    
+    await deleteFile(userId, docId);
+
+    return webViewLink;
+}
+
+async function createDocumentFromTemplate(userId: string, title: string, htmlContent: string): Promise<string> {
+    const docs = await getDocsClient(userId);
+    const drive = await getDriveClient(userId);
+    if (!docs || !drive) {
+        throw new Error('Kunde inte skapa Google-klienter.');
+    }
+
     const document = await docs.documents.create({ requestBody: { title } });
     const documentId = document.data.documentId!;
 
-    // Google Docs API kräver att man anropar batchUpdate för att lägga till innehåll.
-    // Även om det är en enda operation, är det så API:et är designat.
-    await docs.documents.batchUpdate({
-        documentId,
-        requestBody: {
-            requests: [
-                {
-                    insertText: {
-                        location: {
-                            index: 1,
-                        },
-                        text: '\n' // Vi kommer ersätta denna med HTML-innehåll via Drive API:et
-                    }
-                }
-            ]
-        }
-    });
-    
-    // Uppdatera med HTML-innehåll via Drive API:et då Docs API:et inte direkt stödjer HTML-import.
-    const drive = getDriveClient();
     await drive.files.update({
         fileId: documentId,
-        requestBody: { },
         media: {
             mimeType: 'text/html',
             body: htmlContent,
@@ -70,8 +117,12 @@ export async function createDocumentFromTemplate(title: string, htmlContent: str
     return documentId;
 }
 
-export async function exportDocAsPdf(documentId: string, folderId: string, pdfName: string): Promise<{ pdfId: string; webViewLink: string; }> {
-    const drive = getDriveClient();
+async function exportDocAsPdf(userId: string, documentId: string, folderId: string, pdfName: string): Promise<{ pdfId: string; webViewLink: string; }> {
+    const drive = await getDriveClient(userId);
+    if (!drive) {
+        throw new Error('Kunde inte skapa Google Drive-klient.');
+    }
+
     const pdfContent = await drive.files.export({ fileId: documentId, mimeType: 'application/pdf' }, { responseType: 'arraybuffer' });
 
     const pdfFile = await drive.files.create({
@@ -90,25 +141,10 @@ export async function exportDocAsPdf(documentId: string, folderId: string, pdfNa
     return { pdfId: pdfFile.data.id!, webViewLink: pdfFile.data.webViewLink! };
 }
 
-export async function deleteFile(fileId: string): Promise<void> {
-    const drive = getDriveClient();
-    await drive.files.delete({ fileId });
-}
-
-export async function createOfferPdf(projectId: string, customerName: string, offerTitle: string, offerHtml: string): Promise<string> {
-    // 1. Hitta eller skapa rätt mappstruktur
-    const offerFolderId = await getProjectFolderId(projectId, customerName);
-
-    // 2. Skapa ett temporärt Google Doc från HTML-mallen
-    const tempDocId = await createDocumentFromTemplate(offerTitle, offerHtml);
-
-    try {
-        // 3. Exportera dokumentet som en PDF i rätt mapp
-        const pdfFileName = `${offerTitle.replace(/ /g, '_')}.pdf`;
-        const { webViewLink } = await exportDocAsPdf(tempDocId, offerFolderId, pdfFileName);
-        return webViewLink;
-    } finally {
-        // 4. Städa undan det temporära Google Doc-dokumentet, oavsett om exporten lyckades eller ej
-        await deleteFile(tempDocId);
+async function deleteFile(userId: string, fileId: string): Promise<void> {
+    const drive = await getDriveClient(userId);
+    if (!drive) {
+        throw new Error('Kunde inte skapa Google Drive-klient.');
     }
+    await drive.files.delete({ fileId });
 }

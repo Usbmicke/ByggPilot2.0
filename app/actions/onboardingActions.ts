@@ -141,3 +141,10 @@ export async function searchAddress(query: string) {
         return { success: false, error: 'API search failed' };
     }
 }
+
+export async function triggerSessionUpdate() {
+    // Denna funktion är avsiktligt tom. Klientens anrop till denna via
+    // en server-åtgärd i samband med useSession().update() är det som
+    // får NextAuth att uppdatera session-cookien.
+    return { success: true };
+}

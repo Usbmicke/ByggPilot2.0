@@ -41,3 +41,15 @@ export async function getGoogleAuthClient(userId: string) {
 
     return auth;
 }
+
+export async function getDriveClient(userId: string) {
+    const auth = await getGoogleAuthClient(userId);
+    if (!auth) return null;
+    return google.drive({ version: 'v3', auth });
+}
+
+export async function getDocsClient(userId: string) {
+    const auth = await getGoogleAuthClient(userId);
+    if (!auth) return null;
+    return google.docs({ version: 'v1', auth });
+}

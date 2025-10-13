@@ -2,10 +2,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import Providers from '@/app/providers';
-import OnboardingPage from '@/app/onboarding/page';
 import CookieBanner from "@/components/CookieBanner";
 import { Toaster } from 'react-hot-toast';
 
@@ -16,35 +13,35 @@ export const metadata: Metadata = {
   description: "AI-assistent för byggbranschen som automatiserar administration och arbetsflöden.",
 };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const session = await getServerSession(authOptions);
-
-  const isNewUser = session?.user?.isNewUser ?? false;
-
+// =================================================================================
+// GULDSTANDARD - ROOTLAYOUT V2.0
+// REVIDERING: All villkorlig logik för onboarding har tagits bort. Middleware
+// är nu ensamt ansvarig för att styra användaren till rätt sida. Denna layout
+// har nu ett enda ansvar: att rendera globala providers och sidans innehåll.
+// Detta säkerställer att alla providers (inkl. UIProvider) ALLTID är tillgängliga
+// för alla delar av applikationen, vilket löser "useUI must be used within..."-felet.
+// =================================================================================
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="sv">
       <body className={`${inter.className} h-full bg-background-primary text-text-primary`}>
-        <Toaster 
-          position="bottom-right" 
-          toastOptions={{
-            className: '',
-            style: {
-              background: '#333',
-              color: '#fff',
-              border: '1px solid #555',
-            },
-          }}
-        />
-        {
-          isNewUser ? (
-            <OnboardingPage />
-          ) : (
-            <Providers>
-              {children}
-            </Providers>
-          )
-        }
-        <CookieBanner />
+        <Providers>
+          <Toaster 
+            position="bottom-right" 
+            toastOptions={{
+              className: '',
+              style: {
+                background: '#333',
+                color: '#fff',
+                border: '1px solid #555',
+              },
+            }}
+          />
+          {/* {children} kommer antingen att vara Onboarding eller Dashboard, 
+              bestämt av middleware. Båda kommer nu vara korrekt omslutna. */}
+          {children}
+          <CookieBanner />
+        </Providers>
       </body>
     </html>
   );
