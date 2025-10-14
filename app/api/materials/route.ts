@@ -2,7 +2,7 @@
 // Fil: app/api/materials/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth"; // KORRIGERAD SÖKVÄG
 import { firestoreAdmin } from "@/lib/admin";
 import { MaterialCost } from "@/types/material";
 

@@ -4,14 +4,14 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { adminDb } from '@/lib/admin';
-import { getGoogleAuthClient } from '@/lib/google-server';
+import { getGoogleAuthClient } from '@/lib/google';
 import { google } from 'googleapis';
 import { z } from 'zod';
 
 // =================================================================================
-// GULDSTANDARD - ONBOARDING ACTIONS V5.0 (FULLSTÄNDIG MAPPSTRUKTUR)
-// REVIDERING: Implementerar den fullständiga, ISO-inspirerade mappstrukturen
-// från den gamla API-routen och returnerar rotmappens ID för länkning.
+// GULDSTANDARD - ONBOARDING ACTIONS V5.1 (BUILD FIX)
+// REVIDERING: Korrigerade den felaktiga import-sökvägen från `google-server`
+// till den korrekta `google`, vilket löste `Module not found`-felet.
 // =================================================================================
 
 const companyProfileSchema = z.object({

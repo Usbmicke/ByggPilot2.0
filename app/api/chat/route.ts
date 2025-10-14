@@ -2,14 +2,15 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { StreamingTextResponse } from 'ai'; // StreamData är borttagen, den finns inte i ai@2.2.33
+import { StreamingTextResponse, GoogleGenerativeAIStream } from 'ai';
 import { getSystemPrompt } from '@/ai/prompts';
 
 // =================================================================================
-// GULDSTANDARD: CHAT/ORCHESTRATOR v3.1
-// KORRIGERING: Tog bort all referens till `StreamData` som inte är kompatibel med
-// den stabila `ai` v2 SDK som projektet nu använder. Detta löser det specifika
-// byggfelet relaterat till denna fil.
+// CHAT/ORCHESTRATOR v4.1 (BUILD FIX)
+// REVIDERING: Tog bort `export const runtime = 'edge';`.
+// `firebase-admin` är INTE kompatibelt med Edge-miljön. Genom att ta bort denna rad
+// återgår API:et till Node.js-miljön, vilket löser den enorma mängden
+// "Module not found" och "Attempted import"-fel som uppstod under byggprocessen.
 // =================================================================================
 
 // Explicit API-nyckelhantering
@@ -31,8 +32,6 @@ export async function POST(req: Request) {
     const context = "";
     const systemPrompt = getSystemPrompt(session.user.name, context);
 
-    // Skapa en chatt-session med system-prompt och historik
-    // Filtrera bort eventuella systemmeddelanden från historiken
     const history = messages
         .filter((m: any) => m.role === 'user' || m.role === 'assistant')
         .map((m: any) => ({
@@ -45,26 +44,11 @@ export async function POST(req: Request) {
         history: history,
     });
 
-    // Hämta det sista meddelandet från användaren
     const lastMessage = messages[messages.length - 1].content;
     
-    // Skicka meddelandet till modellen och få en stream tillbaka
     const result = await chat.sendMessageStream(lastMessage);
 
-    // Konvertera Googles stream till en standardiserad webb-stream
-    const stream = new ReadableStream({
-        async start(controller) {
-            for await (const chunk of result.stream) {
-                // Säkra att vi bara skickar text-delar
-                if (chunk && chunk.text) {
-                    const chunkText = chunk.text();
-                    controller.enqueue(chunkText);
-                }
-            }
-            controller.close();
-        }
-    });
+    const stream = GoogleGenerativeAIStream(result);
 
-    // Skicka tillbaka streamen som ett `StreamingTextResponse`
     return new StreamingTextResponse(stream);
 }

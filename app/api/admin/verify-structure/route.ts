@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next"
 import { authOptions } from '@/lib/auth';
 import { adminDb } from '@/lib/admin';
-import { getGoogleDriveService } from '@/lib/google';
+import { getDriveClient } from '@/lib/google'; // KORRIGERAT NAMN
 import { createFolder } from '@/services/driveService';
 
 // Guldstandardens definition av undermappar för ett aktivt projekt
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     }
 
     try {
-        const drive = await getGoogleDriveService(userId);
+        const drive = await getDriveClient(userId); // KORRIGERAT ANROP
         if (!drive) {
             return NextResponse.json({ error: 'Kunde inte ansluta till Google Drive.' }, { status: 500 });
         }

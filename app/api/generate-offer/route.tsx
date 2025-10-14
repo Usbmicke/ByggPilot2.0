@@ -3,8 +3,7 @@ import { NextResponse } from 'next/server';
 import { adminDb as db } from '@/lib/admin';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { InvoicePdfTemplate } from '@/components/pdf/InvoicePdfTemplate';
-import { getGoogleAuthClient } from '@/lib/google';
-import { getGoogleDriveService } from '@/lib/google';
+import { getDriveClient } from '@/lib/google';
 import { Project } from '@/types/project';
 import { Customer, Company } from '@/types/index';
 import { Calculation } from '@/types/calculation';
@@ -13,7 +12,7 @@ import { Readable } from 'stream';
 const formatCurrency = (amount: number) => new Intl.NumberFormat('sv-SE', { style: 'currency', currency: 'SEK' }).format(amount);
 
 async function uploadPdfToDrive(userId: string, pdfBuffer: Buffer, fileName: string, folderId: string) {
-    const drive = await getGoogleDriveService(userId);
+    const drive = await getDriveClient(userId);
     if (!drive) {
         throw new Error('Kunde inte initialisera Google Drive-service.');
     }
@@ -105,11 +104,6 @@ export async function POST(request: Request) {
         
         const pdfBuffer = await renderToBuffer(<InvoicePdfTemplate {...templateData} />);
         
-        const authClient = await getGoogleAuthClient(userId);
-        if (!authClient) {
-            return new NextResponse(JSON.stringify({ error: 'Kunde inte hämta Google-autentisering.' }), { status: 401 });
-        }
-
         const pdfFileName = `Offert ${project.projectNumber} - ${customer.name}.pdf`;
         const file = await uploadPdfToDrive(userId, pdfBuffer, pdfFileName, googleDriveFolderId);
         const pdfUrl = file.webViewLink; 

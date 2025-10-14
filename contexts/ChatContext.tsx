@@ -1,25 +1,34 @@
 
 'use client';
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, FormEventHandler } from 'react';
 import { useSession, SessionContextValue } from 'next-auth/react';
-import { useChat as useAiChat, type UseChatOptions } from '@ai-sdk/react';
+// Importera den korrekta Message-typen!
+import { useChat as useAiChat, type UseChatOptions, type Message } from '@ai-sdk/react';
 import toast from 'react-hot-toast';
 
 // =================================================================================
-// GULDSTANDARD: CHAT CONTEXT v6.1
-// BESKRIVNING: Korrigerat import-sökvägen för Vercel AI SDK. `ai/react` är nu `@ai-sdk/react`.
+// GULDSTANDARD: CHAT CONTEXT v7.0 (BUILD FIX)
+// BESKRIVNING: Helt omskriven ChatContextType för att vara en explicit interface.
+// Detta förhindrar att TypeScript-kompilatorn hamnar i en minneskrävande loop
+// när den försöker räkna ut den komplexa returtypen från `useAiChat`.
+// Detta löser `SIGKILL` (Out of Memory)-felet under `npm run build`.
+// `messages` använder nu också den korrekta `Message[]`-typen istället för `any[]`.
 // =================================================================================
 
-// Typdefinition för de props som vår hook kommer att returnera.
-// Notera att vi lägger till `session` och byter namn på vissa funktioner för att
-// bibehålla kompatibilitet med komponenterna som använder denna kontext.
-interface ChatContextType extends Omit<ReturnType<typeof useAiChat>, 'append' | 'messages'> {
-  messages: any[]; // ac-sdk returnerar en annan Message-typ, any tillåter flexibilitet.
+// Steg 1: Definiera typen explicit istället för att förlita oss på `ReturnType`
+interface ChatContextType {
+  messages: Message[]; // Använd den importerade typen
   isLoading: boolean;
   session: SessionContextValue;
-  sendMessage: (content: string, file?: File) => void; // Förenklad signatur
+  sendMessage: (content: string, file?: File) => void;
   clearChat: () => void;
+  stop: () => void;
+  reload: () => void;
+  input: string;
+  setInput: (value: string) => void;
+  handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement> | string) => void;
+  handleSubmit: FormEventHandler<HTMLFormElement>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -27,18 +36,12 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const session = useSession();
 
-  // Konfiguration för useChat-hooken.
   const chatOptions: UseChatOptions = {
-    // Endpointen som hanterar streaming av text och UI-komponenter.
     api: '/api/chat',
-    
-    // Felhantering: Visa ett toast-meddelande om något går fel.
     onError: (error) => {
       console.error("Fel i AI-chatt:", error);
       toast.error(`Ett fel uppstod: ${error.message}`);
     },
-
-    // Inledande meddelanden kan sättas här om så önskas.
     initialMessages: [
         {
             id: 'initial-welcome',
@@ -48,7 +51,6 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     ]
   };
 
-  // Anropa den centrala Vercel AI SDK-hooken.
   const { 
     messages, 
     append, 
@@ -56,11 +58,11 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     stop, 
     isLoading, 
     input, 
-    setInput 
+    setInput, 
+    handleInputChange, 
+    handleSubmit 
   } = useAiChat(chatOptions);
 
-  // Wrapper-funktion för att skicka meddelanden. `append` är SDK:ns funktion.
-  // Vi ignorerar `file` för tillfället eftersom den nya arkitekturen inte hanterar det än.
   const sendMessage = (content: string, file?: File) => {
     if (file) {
       toast.error('Filuppladdning stöds inte i denna version.');
@@ -68,16 +70,11 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     append({ role: 'user', content });
   };
 
-  // Wrapper-funktion för att rensa chatten. Sätter meddelandena till en tom array.
   const clearChat = () => {
-    // `useAiChat` har ingen inbyggd `clear`, så vi kan inte direkt rensa.
-    // En framtida lösning skulle vara att hantera detta via state management.
-    // För nu, meddelar vi användaren.
     toast('Funktionen \'Rensa chatt\' är inte fullt implementerad än.');
-    // Om vi hade full kontroll: setMessages([]); 
   };
 
-  // Sammanställ det värde som ska tillhandahållas av kontexten.
+  // Steg 2: Bygg det explicita värdeobjektet som matchar vår nya, enkla interface
   const value: ChatContextType = {
     messages,
     isLoading,
@@ -85,24 +82,16 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     sendMessage,
     stop,
     clearChat,
-    // Mappar om SDK:ns funktioner till de namn som förväntas av UI-komponenterna
     reload,
     input,
     setInput,
-    handleInputChange: setInput, // Mappning för kompatibilitet
-    handleSubmit: (e) => {
-        e.preventDefault();
-        if(input.trim()) {
-            sendMessage(input);
-            setInput('');
-        }
-    } 
+    handleInputChange,
+    handleSubmit
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 };
 
-// Exportera hooken som komponenterna använder för att komma åt kontexten.
 export const useChat = () => {
   const context = useContext(ChatContext);
   if (context === undefined) {

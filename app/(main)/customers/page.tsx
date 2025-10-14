@@ -1,7 +1,7 @@
 
 import Link from 'next/link';
 import { getServerSession } from 'next-auth/next';
-import { listCustomers } from '@/services/customerService';
+import { listCustomers } from './actions'; // KORRIGERAD IMPORT
 import { Customer } from '@/types/index';
 import { authOptions } from '@/lib/auth'; 
 

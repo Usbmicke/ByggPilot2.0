@@ -1,69 +1,48 @@
-
 'use server';
 
 import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { authOptions } from '@/lib/auth'; // KORRIGERAD IMPORT
-import { updateCustomerInFirestore, archiveCustomerInFirestore } from '@/services/customerService';
+import { updateCustomer, archiveCustomer } from '../../actions'; // Importera från den överordnade actions-filen
 
-interface FormData {
-    customerId: string;
-    name: string;
-    email: string;
-    phone: string;
-    address: string;
-    orgNumber: string;
-    zipCode: string;
-    city: string;
+// Action för att uppdatera en kund
+export async function updateCustomerAction(customerId: string, formData: FormData) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    throw new Error('Not authenticated');
+  }
+
+  const data = {
+    name: formData.get('name') as string,
+    email: formData.get('email') as string,
+    phone: formData.get('phone') as string,
+    isCompany: formData.get('isCompany') === 'on',
+  };
+
+  try {
+    await updateCustomer(customerId, session.user.id, data);
+    revalidatePath('/customers'); // Uppdatera listvyn
+    revalidatePath(`/customers/${customerId}/edit`); // Uppdatera denna sida
+  } catch (error) {
+    console.error("Kunde inte uppdatera kund:", error);
+    // Hantera fel (t.ex. returnera ett felmeddelande)
+  }
 }
 
-export async function updateCustomerAction(formData: FormData) {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-        throw new Error('Autentisering krävs.');
-    }
+// Action för att arkivera en kund
+export async function archiveCustomerAction(customerId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    throw new Error('Not authenticated');
+  }
 
-    const { customerId, ...customerData } = formData;
-
-    if (!customerId) {
-        throw new Error('Kund-ID saknas.');
-    }
-
-    try {
-        await updateCustomerInFirestore(customerId, customerData);
-        console.log(`[ACTION] Kund ${customerId} uppdaterad.`);
-
-        revalidatePath(`/customers/${customerId}`);
-        revalidatePath('/customers');
-        redirect(`/customers/${customerId}`);
-    } catch (error) {
-        console.error(`[ACTION ERROR] Det gick inte att uppdatera kund ${customerId}:`, error);
-        throw new Error('Ett serverfel inträffade vid uppdatering av kund.');
-    }
-}
-
-export async function archiveCustomerAction(formData: FormData) {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-        throw new Error('Autentisering krävs.');
-    }
-
-    const { customerId } = formData;
-
-    if (!customerId) {
-        throw new Error('Kund-ID saknas.');
-    }
-
-    try {
-        await archiveCustomerInFirestore(customerId);
-        console.log(`[ACTION] Kund ${customerId} arkiverad.`);
-
-        revalidatePath('/customers');
-        revalidatePath('/dashboard');
-        redirect('/customers');
-    } catch (error) {
-        console.error(`[ACTION ERROR] Det gick inte att arkivera kund ${customerId}:`, error);
-        throw new Error('Ett serverfel inträffade vid arkivering av kund.');
-    }
+  try {
+    await archiveCustomer(customerId, session.user.id);
+    revalidatePath('/customers');
+    redirect('/customers'); // Omdirigera användaren efter arkivering
+  } catch (error) {
+    console.error("Kunde inte arkivera kund:", error);
+    // Hantera fel
+  }
 }

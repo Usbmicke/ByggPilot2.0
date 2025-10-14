@@ -1,9 +1,9 @@
 
-import { authOptions } from '@/lib/auth'; // KORRIGERAD IMPORT
+import { authOptions } from '@/lib/auth';
 import { getServerSession } from 'next-auth/next';
-import { getCustomer } from '@/services/customerService';
+import { getCustomer } from '../../actions'; // KORRIGERAD IMPORT
 import { notFound } from 'next/navigation';
-import { updateCustomerAction, archiveCustomerAction } from './actions'; // Byt namn på action
+import { updateCustomerAction, archiveCustomerAction } from './actions';
 
 interface EditCustomerPageProps {
   params: {
@@ -20,20 +20,18 @@ export default async function EditCustomerPage({ params }: EditCustomerPageProps
     return <p>Autentisering krävs.</p>;
   }
 
-  // Använd getCustomer som vanligt, den returnerar null om kunden är arkiverad, vilket är korrekt
   const customer = await getCustomer(customerId, userId);
 
   if (!customer) {
-    notFound(); // Om kunden inte finns eller redan är arkiverad, visa 404
+    notFound();
   }
 
   const updateActionWithId = updateCustomerAction.bind(null, customerId);
-  const archiveActionWithId = archiveCustomerAction.bind(null, customerId); // Byt namn på action
+  const archiveActionWithId = archiveCustomerAction.bind(null, customerId);
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       
-      {/* -- Redigeringsformulär (oförändrat) -- */}
       <div>
         <h2 className="text-2xl font-semibold mb-6">Redigera Kund</h2>
         <form action={updateActionWithId} className="space-y-6 bg-white p-8 rounded-lg shadow-md">
@@ -65,7 +63,6 @@ export default async function EditCustomerPage({ params }: EditCustomerPageProps
         </form>
       </div>
 
-      {/* -- Sektion för arkivering -- */}
       <div className="border-t pt-8">
          <h3 className="text-xl font-semibold text-yellow-700">Arkiveringszon</h3>
          <div className="mt-4 bg-yellow-50 p-4 rounded-lg flex items-center justify-between">
