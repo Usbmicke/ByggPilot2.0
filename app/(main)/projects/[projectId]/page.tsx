@@ -1,11 +1,9 @@
-'use client';
 
-import React from 'react';
+import { getServerSession } from 'next-auth/next';
+import { notFound } from 'next/navigation';
+import { authOptions } from '@/lib/authOptions';
+import { getProject, getInvoicesForProject, getAtasForProject, getDocumentsForProject } from '@/actions/projectActions';
 import ProjectDetailView from '@/components/views/ProjectDetailView';
-
-// Denna komponent fungerar som en "wrapper" eller "entry point" för en specifik projektsida.
-// Dess enda uppgift är att fånga upp `projectId` från URL:en och skicka den vidare
-// till den klient-renderade komponenten som innehåller all logik och UI.
 
 interface ProjectDetailPageProps {
   params: {
@@ -13,10 +11,32 @@ interface ProjectDetailPageProps {
   };
 }
 
-export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
-  // Extrahera projectId från params som kommer från Next.js dynamiska routing.
+export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const { projectId } = params;
+  const session = await getServerSession(authOptions);
+  const userId = session?.user?.id;
 
-  // Rendera klientkomponenten och skicka med projectId som en prop.
-  return <ProjectDetailView projectId={projectId} />;
+  if (!userId) {
+    notFound();
+  }
+
+  const [projectResult, invoicesResult, atasResult, documentsResult] = await Promise.all([
+    getProject(projectId, userId),
+    getInvoicesForProject(projectId, userId),
+    getAtasForProject(projectId, userId),
+    getDocumentsForProject(projectId, userId),
+  ]);
+
+  if (!projectResult.success || !projectResult.data) {
+    notFound();
+  }
+
+  return (
+    <ProjectDetailView
+      project={projectResult.data}
+      initialInvoices={invoicesResult.success ? invoicesResult.data : []}
+      initialAtas={atasResult.success ? atasResult.data : []}
+      initialDocuments={documentsResult.success ? documentsResult.data : []}
+    />
+  );
 }

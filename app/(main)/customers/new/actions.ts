@@ -1,8 +1,8 @@
 'use server';
 
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth'; // KORRIGERAD IMPORT
-import { createCustomer } from '../../actions'; // KORRIGERAD IMPORT
+import { authOptions } from '@/lib/authOptions'; // KORRIGERAD IMPORT
+import { createCustomer } from '../../actions';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { Customer } from '@/types';

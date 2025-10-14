@@ -1,9 +1,6 @@
 
 import NextAuth from "next-auth";
-import { authOptions } from "@/lib/auth"; // Importera från den nya delade filen
-
-// All Firebase Admin-initialisering finns nu i lib/admin.ts och behöver inte vara här.
-// Detta håller API-routen ren och fokuserad.
+import { authOptions } from "@/lib/authOptions"; // KORRIGERAD IMPORT
 
 const handler = NextAuth(authOptions);
 

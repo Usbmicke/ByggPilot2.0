@@ -1,14 +1,12 @@
-'use client'; // Behövs för state och interaktivitet
 
-import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/authOptions';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { getProject } from '@/services/projectService';
-import { Project } from '@/types';
+import { getProject } from '@/actions/projectActions';
 
 import MessageFeed from '@/components/chat/MessageFeed';
-import ChatInput from '@/components/chat/ChatInput';
+import ChatInputWrapper from '@/components/chat/ChatInputWrapper'; // Ny wrapper för klientkomponenter
 
 interface ProjectCommunicationPageProps {
     params: {
@@ -16,44 +14,19 @@ interface ProjectCommunicationPageProps {
     };
 }
 
-export default function ProjectCommunicationPage({ params }: ProjectCommunicationPageProps) {
+export default async function ProjectCommunicationPage({ params }: ProjectCommunicationPageProps) {
     const { projectId } = params;
-    const { data: session, status } = useSession();
-    const [project, setProject] = useState<Project | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [key, setKey] = useState(0); // Nyckel för att tvinga omladdning av meddelanden
+    const session = await getServerSession(authOptions);
 
-    useEffect(() => {
-        const fetchProjectData = async () => {
-            if (status === 'authenticated' && session?.user?.id) {
-                try {
-                    const projectData = await getProject(projectId, session.user.id);
-                    if (!projectData) {
-                        notFound();
-                    } else {
-                        setProject(projectData);
-                    }
-                } catch (error) {
-                    console.error("Fel vid hämtning av projekt", error);
-                    notFound();
-                }
-            }
-            if (status === 'unauthenticated') {
-                notFound();
-            }
-            setLoading(false);
-        };
+    if (!session?.user?.id) {
+        notFound();
+    }
 
-        fetchProjectData();
-    }, [projectId, session, status]);
+    const { data: project, error } = await getProject(projectId, session.user.id);
 
-    const handleMessageSent = useCallback(() => {
-        console.log("Nytt meddelande skickat! Uppdaterar flödet...");
-        setKey(prevKey => prevKey + 1); // Ändrar nyckeln för att trigga omladdning
-    }, []);
-
-    if (loading || !project) {
-        return <p className="text-center text-gray-400 p-8">Laddar projektinformation...</p>;
+    if (error || !project) {
+        console.error("Fel vid hämtning av projekt", error);
+        notFound();
     }
 
     return (
@@ -68,10 +41,11 @@ export default function ProjectCommunicationPage({ params }: ProjectCommunicatio
 
             <div className="flex-grow flex flex-col bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden">
                 <div className="flex-grow p-6 overflow-y-auto">
-                    <MessageFeed projectId={projectId} key={key} />
+                    <MessageFeed projectId={projectId} />
                 </div>
                 <div className="p-4 bg-gray-900/60 border-t border-gray-700">
-                    <ChatInput projectId={projectId} onMessageSent={handleMessageSent} />
+                    {/* ChatInput behöver state och flyttas till en klientkomponent-wrapper */}
+                    <ChatInputWrapper projectId={projectId} />
                 </div>
             </div>
         </div>

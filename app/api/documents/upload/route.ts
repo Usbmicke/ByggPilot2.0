@@ -1,14 +1,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next"
-import { authOptions } from '@/lib/auth';
-import { adminDb } from '@/lib/admin'; // KORRIGERAD
+import { authOptions } from '@/lib/authOptions'; // KORRIGERAD SÖKVÄG
+import { adminDb } from '@/lib/admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import { uploadFileToDrive, getOrCreateSubFolder } from '@/services/driveService'; // KORRIGERAD
+import { uploadFileToDrive, getOrCreateSubFolder } from '@/lib/drive'; // KORRIGERAD SÖKVÄG
 
 export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
-    const userId = session?.user?.id; // KORRIGERAD
+    const userId = session?.user?.id;
 
     if (!userId) {
         return NextResponse.json({ message: 'Autentisering krävs' }, { status: 401 });

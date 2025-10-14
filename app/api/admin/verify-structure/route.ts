@@ -1,12 +1,11 @@
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next"
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/authOptions'; // KORRIGERAD SÖKVÄG
 import { adminDb } from '@/lib/admin';
-import { getDriveClient } from '@/lib/google'; // KORRIGERAT NAMN
-import { createFolder } from '@/services/driveService';
+import { getDriveClient } from '@/lib/google';
+import { createFolder } from '@/lib/drive'; // KORRIGERAD SÖKVÄG
 
-// Guldstandardens definition av undermappar för ett aktivt projekt
 const GOLD_STANDARD_SUBFOLDERS = {
     avtal: '1_Avtal & Underlag',
     ekonomi: '2_Ekonomi',
@@ -14,7 +13,7 @@ const GOLD_STANDARD_SUBFOLDERS = {
     media: '4_Foton & Media'
 };
 
-async function verifyAndFix(drive: any, parentFolderId: string, expectedFolderIds: Record<string, string>, expectedFolderNames: Record<string, string>): Promise<{ fixes: string[], updates: Record<string, string> }> {
+async function verifyAndFix(userId: string, drive: any, parentFolderId: string, expectedFolderIds: Record<string, string>, expectedFolderNames: Record<string, string>): Promise<{ fixes: string[], updates: Record<string, string> }> {
     const fixes: string[] = [];
     const updates: Record<string, string> = {};
 
@@ -27,12 +26,12 @@ async function verifyAndFix(drive: any, parentFolderId: string, expectedFolderId
                 await drive.files.get({ fileId: folderId, fields: 'id' });
             } catch (error) {
                 fixes.push(`Mappen \"${folderName}\" (ID: ${folderId}) saknades och skapades på nytt.`);
-                const newFolder = await createFolder(drive.auth, folderName, parentFolderId);
+                const newFolder = await createFolder(userId, folderName, parentFolderId);
                 updates[`googleDrive.subFolderIds.${key}`] = newFolder.id;
             }
         } else {
             fixes.push(`Mapp-ID för \"${folderName}\" saknades i databasen och mappen har nu skapats.`);
-            const newFolder = await createFolder(drive.auth, folderName, parentFolderId);
+            const newFolder = await createFolder(userId, folderName, parentFolderId);
             updates[`googleDrive.subFolderIds.${key}`] = newFolder.id;
         }
     }
@@ -48,7 +47,7 @@ export async function POST(request: Request) {
     }
 
     try {
-        const drive = await getDriveClient(userId); // KORRIGERAT ANROP
+        const drive = await getDriveClient(userId);
         if (!drive) {
             return NextResponse.json({ error: 'Kunde inte ansluta till Google Drive.' }, { status: 500 });
         }
@@ -63,6 +62,7 @@ export async function POST(request: Request) {
 
             if (projectData.status === 'Pågående' && projectData.googleDrive?.folderId) {
                 const { fixes, updates } = await verifyAndFix(
+                    userId, // Skicka med userId
                     drive,
                     projectData.googleDrive.folderId,
                     projectData.googleDrive.subFolderIds || {},

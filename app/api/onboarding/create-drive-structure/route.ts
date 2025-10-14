@@ -1,105 +1,47 @@
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'; // Korrigerad sökväg
+import { authOptions } from '@/lib/authOptions';
 import { firestoreAdmin } from '@/lib/admin';
-import { getAuthenticatedClient, createFolder, createGoogleDoc } from '@/services/driveService';
-import { google } from 'googleapis';
-
-// Hjälpfunktion för att hantera mappskapande och undvika kodupprepning
-async function createAndGetFolder(drive: any, name: string, parentId: string): Promise<{ id: string; url: string }> {
-    const folder = await createFolder(drive, name, parentId);
-    if (!folder || !folder.id || !folder.webViewLink) {
-        throw new Error(`Kunde inte skapa mappen: ${name}`);
-    }
-    return { id: folder.id, url: folder.webViewLink };
-}
+import { createInitialUserDriveStructure } from '@/lib/drive';
 
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
+    const userDisplayName = session?.user?.name;
 
-    if (!userId) {
-        return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
+    if (!userId || !userDisplayName) {
+        return NextResponse.json({ success: false, error: 'Not authenticated or user name is missing' }, { status: 401 });
     }
 
     try {
-        // 1. Hämta användarens refreshToken från Firestore
         const userDocRef = firestoreAdmin.collection('users').doc(userId);
+
+        // Anropa den centraliserade funktionen för att skapa hela strukturen
+        const { rootFolderId, subFolderIds } = await createInitialUserDriveStructure(userId, userDisplayName);
+
+        if (!rootFolderId) {
+            throw new Error('Misslyckades med att skapa rotmappen i Drive.');
+        }
+
         const userDocSnap = await userDocRef.get();
-
-        if (!userDocSnap.exists) {
-            return NextResponse.json({ success: false, error: 'User not found in Firestore' }, { status: 404 });
-        }
-
         const userData = userDocSnap.data();
-        const refreshToken = userData?.googleRefreshToken;
 
-        if (!refreshToken) {
-            return NextResponse.json({ success: false, error: 'Missing Google refresh token for user.' }, { status: 400 });
-        }
-
-        // 2. Skapa en autentiserad Google Drive-klient
-        const auth = getAuthenticatedClient(refreshToken);
-        const drive = google.drive({ version: 'v3', auth });
-
-        const companyName = userData?.company?.name?.trim() || 'Mitt Företag';
-        const rootFolderName = `ByggPilot - ${companyName}`;
-
-        // 3. Skapa rotmappen
-        const rootFolder = await createFolder(drive, rootFolderName, 'root');
-        if (!rootFolder || !rootFolder.id || !rootFolder.webViewLink) {
-            throw new Error('Kunde inte skapa rotmappen i Google Drive.');
-        }
-        const rootFolderId = rootFolder.id;
-        const rootFolderUrl = rootFolder.webViewLink;
-
-        // 4. Skapa undermappar och dokument
-        const foldersToCreate = {
-            templates: '00_Företagsmallar',
-            prospects: '01_Kunder & Anbud',
-            active: '02_Pågående Projekt',
-            archived: '03_Avslutade Projekt',
-            companyEconomy: '04_Företagsekonomi',
-        };
-
-        const folderIds = {
-            root: rootFolderId,
-            templates: (await createAndGetFolder(drive, foldersToCreate.templates, rootFolderId)).id,
-            prospects: (await createAndGetFolder(drive, foldersToCreate.prospects, rootFolderId)).id,
-            active: (await createAndGetFolder(drive, foldersToCreate.active, rootFolderId)).id,
-            archived: (await createAndGetFolder(drive, foldersToCreate.archived, rootFolderId)).id,
-            companyEconomy: (await createAndGetFolder(drive, foldersToCreate.companyEconomy, rootFolderId)).id,
-        };
-
-        await createAndGetFolder(drive, 'Körjournaler', folderIds.companyEconomy);
-        await createAndGetFolder(drive, 'Leverantörsfakturor (Ej projektspecifika)', folderIds.companyEconomy);
-
-        const templateNames = ['Offertmall', 'Avtalsmall_Hantverkarformuläret17', 'Fakturaunderlag_mall'];
-        for (const name of templateNames) {
-            await createGoogleDoc(drive, name, folderIds.templates);
-        }
-
-        // 5. DEN KRITISKA UPPDATERINGEN: Uppdatera Firestore och sätt isNewUser till false!
+        // Uppdatera Firestore med den nya informationen
         await userDocRef.update({
-            isNewUser: false, // <-- DENNA RAD ÄR DEN VIKTIGASTE I HELA FLÖDET
-            'googleDrive.rootFolderId': folderIds.root,
-            'googleDrive.rootFolderName': rootFolderName,
-            'googleDrive.rootFolderUrl': rootFolderUrl,
-            'googleDrive.folderIds.templates': folderIds.templates,
-            'googleDrive.folderIds.prospects': folderIds.prospects,
-            'googleDrive.folderIds.active': folderIds.active,
-            'googleDrive.folderIds.archived': folderIds.archived,
-            'googleDrive.folderIds.companyEconomy': folderIds.companyEconomy,
+            isNewUser: false, // Markera användaren som inte längre ny
+            onboardingComplete: true, // Sätt onboarding som slutförd
+            driveRootFolderId: rootFolderId,
+            driveFolderIds: subFolderIds,
             onboardingStatus: {
                 ...userData?.onboardingStatus,
                 createdDriveStructure: true,
             }
         });
 
-        console.log(`[API-SUCCESS] Drive-struktur skapad och användare ${userId} är inte längre ny.`);
+        console.log(`[API-SUCCESS] Drive-struktur skapad för ${userId} och onboarding markerad som slutförd.`);
         
-        return NextResponse.json({ success: true, folderUrl: rootFolderUrl });
+        return NextResponse.json({ success: true, rootFolderId: rootFolderId });
 
     } catch (error) {
         console.error('[API-ERROR] create-drive-structure:', error);

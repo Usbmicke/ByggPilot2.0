@@ -1,12 +1,6 @@
 
 import * as admin from 'firebase-admin';
 
-// =================================================================================
-// GULDSTANDARD: lib/admin.ts (KORRIGERAD VERSION 2.0)
-// Exporterar nu adminDb och adminAuth för att matcha resten av applikationen.
-// =================================================================================
-
-// Kontrollera om Firebase Admin redan har initierats för att undvika dubbel-initiering.
 if (!admin.apps.length) {
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
@@ -30,7 +24,7 @@ if (!admin.apps.length) {
   }
 }
 
-const adminDb = admin.firestore();
+const firestoreAdmin = admin.firestore();
 const adminAuth = admin.auth();
 
-export { admin, adminDb, adminAuth };
+export { admin, firestoreAdmin, adminAuth };

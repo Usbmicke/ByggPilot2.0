@@ -1,7 +1,7 @@
 
 import CalculationEngine from '@/components/dashboard/CalculationEngine';
-import { getProject } from '@/services/projectService';
-import { authOptions } from '@/lib/auth';
+import { getProject } from '@/actions/projectActions';
+import { authOptions } from '@/lib/authOptions';
 import { getServerSession } from 'next-auth/next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -21,20 +21,18 @@ export default async function NewCalculationPage({ params }: NewCalculationPageP
     const userId = session?.user?.id;
 
     if (!userId) {
-        // Fallback för säkerhet, bör hanteras av middleware
         return <p className="text-center text-red-400 p-8">Åtkomst nekad. Du måste vara inloggad.</p>;
     }
 
-    // Verifiera att projektet existerar och tillhör användaren
-    const project = await getProject(projectId, userId);
+    const projectResult = await getProject(projectId, userId);
 
-    if (!project) {
-        notFound(); // Visar en 404-sida om projektet inte finns eller inte ägs av användaren
+    if (!projectResult.success || !projectResult.data) {
+        notFound();
     }
+    const project = projectResult.data;
 
     return (
         <div className="max-w-6xl mx-auto p-4 md:p-8">
-            {/* Sidhuvud med kontext */}
             <div className="mb-8">
                 <Link href={`/projects/${projectId}`} className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors">
                     &larr; Tillbaka till projektet: {project.name}
@@ -43,7 +41,6 @@ export default async function NewCalculationPage({ params }: NewCalculationPageP
                 <p className="text-gray-400">Skapa en detaljerad offert för ditt projekt.</p>
             </div>
 
-            {/* Rendera kalkylmotorn med projekt-ID */}
             <CalculationEngine projectId={projectId} />
         </div>
     );
