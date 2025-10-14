@@ -1,28 +1,42 @@
 
-rules_version = '2';
+// =================================================================================
+// SÄKERHETSREGLER V1.0 - NOLLTOLERANS MOT DATALÄCKAGE
+// ARKITEKTUR: Dessa regler bygger på principen om minsta möjliga privilegium.
+// 1. **Total Avstängning:** All tillgång är nekad som standard.
+// 2. **Användar-ägarskap:** En användare kan ENDAST komma åt sitt eget användardokument.
+//    Detta förhindrar all möjlighet att läsa andra användares profil, företag,
+//    eller känsliga tokens.
+// 3. **Ägarskap för Data:** Alla andra viktiga samlingar (projects, chats, etc.)
+//    är skyddade så att de bara kan kommas åt om dokumentets `userId` matchar
+//    den inloggade användarens ID.
+// =================================================================================
 
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Default-neka all åtkomst. Specifika regler nedan kommer att åsidosätta detta.
-    match /{document=**} {
-      allow read, write: if false;
-    }
 
-    // Tillåt endast autentiserade användare att läsa/skriva sina egna användardata.
+    // ===== ANVÄNDARE (HÖGSTA SÄKERHET) =====
+    // En användare får ENDAST läsa eller skriva sitt eget dokument.
+    // Detta är den viktigaste regeln i hela systemet.
     match /users/{userId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null;
+      allow read, write: if request.auth.uid == userId;
     }
 
-    // Tillåt en användare att läsa/skriva data som tillhör projekt de är ägare till.
-    // Detta är en grundregel som vi kan förfina.
-    match /projects/{projectId}/{document=**} {
-      allow read, write: if request.auth != null && get(/databases/$(database)/documents/projects/$(projectId)).data.ownerId == request.auth.uid;
+    // ===== PROJEKT, CHATTAR & MEDDELANDEN =====
+    // Samma princip: du kan bara komma åt dokument som är associerade med ditt ID.
+    // Detta förutsätter att dokumenten har ett fält som heter "userId".
+    match /projects/{projectId} {
+      allow read, write: if request.auth.uid == resource.data.userId;
     }
     
-    // Specifika regler för att skapa projekt
-    match /projects/{projectId} {
-        allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+    match /chats/{chatId} {
+    	allow read, write: if request.auth.uid == resource.data.userId;
     }
+    
+    match /messages/{messageId} {
+    	allow read, write: if request.auth.uid == resource.data.userId;
+    }
+
+    // OBS: Andra samlingar som inte listas här är helt blockerade som standard.
   }
 }

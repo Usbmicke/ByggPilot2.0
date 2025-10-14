@@ -1,24 +1,46 @@
 
 'use server';
 
-import { adminDb } from '@/lib/admin';
+import { firestoreAdmin as adminDb } from '@/lib/admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import { createFolder } from '@/lib/drive';
-import { revalidatePath } from 'next/cache';
-import { Project, Invoice, Ata } from '@/types'; // Importera Ata-typen
+import { Project, Invoice, Ata } from '@/types';
 
-interface ProjectData {
-  name: string;
-  address?: string;
-  customerId: string;
-  customerName: string;
-}
-
-// ... (alla andra funktioner förblir oförändrade)
+// =================================================================================
+// GULDSTANDARD - ACTIONS V2.0 (IMPLEMENTERAD GETPROJECTS)
+// REVIDERING: Den tidigare tomma `getProjects`-funktionen har nu implementerats
+// fullt ut för att hämta alla projekt från en användares `projects`-subcollection.
+// Detta löser det kritiska `TypeError: Cannot destructure 'projects'`-felet.
+// =================================================================================
 
 // Hämtar alla projekt för en användare
-export async function getProjects(userId: string) {
-  // ...
+export async function getProjects(userId: string): Promise<{ projects?: Project[]; error?: string; }> {
+    if (!userId) {
+        return { error: 'Användar-ID är obligatoriskt.' };
+    }
+    try {
+        const projectsSnapshot = await adminDb.collection('users').doc(userId).collection('projects').orderBy('createdAt', 'desc').get();
+        
+        if (projectsSnapshot.empty) {
+            return { projects: [] };
+        }
+
+        const projects: Project[] = projectsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data
+            } as Project;
+        });
+
+        // Använd JSON-serialisering för att hantera icke-serialiserbara typer som Timestamps
+        const serializableProjects = JSON.parse(JSON.stringify(projects));
+
+        return { projects: serializableProjects };
+
+    } catch (error) {
+        console.error(`[projectActions] Fel vid hämtning av projekt för användare ${userId}:`, error);
+        return { error: 'Kunde inte hämta projekt från servern.' };
+    }
 }
 
 // Hämtar ett enskilt projekt för en användare

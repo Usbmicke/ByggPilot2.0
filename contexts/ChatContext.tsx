@@ -1,101 +1,74 @@
 
 'use client';
 
-import React, { createContext, useContext, ReactNode, FormEventHandler } from 'react';
+import React, { createContext, useContext, ReactNode } from 'react';
+import { useChat as useVercelChat, CreateMessage } from 'ai/react';
 import { useSession, SessionContextValue } from 'next-auth/react';
-// Importera den korrekta Message-typen!
-import { useChat as useAiChat, type UseChatOptions, type Message } from '@ai-sdk/react';
-import toast from 'react-hot-toast';
+import { API_CHAT } from '@/app/constants/apiRoutes'; // IMPORTERA KONSTANT
 
-// =================================================================================
-// GULDSTANDARD: CHAT CONTEXT v7.0 (BUILD FIX)
-// BESKRIVNING: Helt omskriven ChatContextType för att vara en explicit interface.
-// Detta förhindrar att TypeScript-kompilatorn hamnar i en minneskrävande loop
-// när den försöker räkna ut den komplexa returtypen från `useAiChat`.
-// Detta löser `SIGKILL` (Out of Memory)-felet under `npm run build`.
-// `messages` använder nu också den korrekta `Message[]`-typen istället för `any[]`.
-// =================================================================================
-
-// Steg 1: Definiera typen explicit istället för att förlita oss på `ReturnType`
+// DEFINIERA TYPEN FÖR VÅR CONTEXT
 interface ChatContextType {
-  messages: Message[]; // Använd den importerade typen
-  isLoading: boolean;
-  session: SessionContextValue;
-  sendMessage: (content: string, file?: File) => void;
-  clearChat: () => void;
-  stop: () => void;
-  reload: () => void;
-  input: string;
-  setInput: (value: string) => void;
-  handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement> | string) => void;
-  handleSubmit: FormEventHandler<HTMLFormElement>;
+    messages: any[];
+    append: (message: CreateMessage) => Promise<string | null | undefined>;
+    isLoading: boolean;
+    stop: () => void;
+    clearChat: () => void;
+    input: string;
+    setInput: (value: string) => void;
+    handleInputChange: (e: any) => void;
+    session: SessionContextValue;
 }
 
+// SKAPA CONTEXTEN
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-export const ChatProvider = ({ children }: { children: ReactNode }) => {
-  const session = useSession();
-
-  const chatOptions: UseChatOptions = {
-    api: '/api/chat',
-    onError: (error) => {
-      console.error("Fel i AI-chatt:", error);
-      toast.error(`Ett fel uppstod: ${error.message}`);
-    },
-    initialMessages: [
-        {
-            id: 'initial-welcome',
-            role: 'assistant',
-            content: 'Välkommen till ByggPilot! Hur kan jag assistera dig idag?'
-        }
-    ]
-  };
-
-  const { 
-    messages, 
-    append, 
-    reload, 
-    stop, 
-    isLoading, 
-    input, 
-    setInput, 
-    handleInputChange, 
-    handleSubmit 
-  } = useAiChat(chatOptions);
-
-  const sendMessage = (content: string, file?: File) => {
-    if (file) {
-      toast.error('Filuppladdning stöds inte i denna version.');
+// EXPORTERA EN CUSTOM HOOK FÖR ATT ANVÄNDA CONTEXTEN
+export const useChat = () => {
+    const context = useContext(ChatContext);
+    if (!context) {
+        throw new Error('useChat must be used within a ChatProvider');
     }
-    append({ role: 'user', content });
-  };
-
-  const clearChat = () => {
-    toast('Funktionen \'Rensa chatt\' är inte fullt implementerad än.');
-  };
-
-  // Steg 2: Bygg det explicita värdeobjektet som matchar vår nya, enkla interface
-  const value: ChatContextType = {
-    messages,
-    isLoading,
-    session,
-    sendMessage,
-    stop,
-    clearChat,
-    reload,
-    input,
-    setInput,
-    handleInputChange,
-    handleSubmit
-  };
-
-  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
+    return context;
 };
 
-export const useChat = () => {
-  const context = useContext(ChatContext);
-  if (context === undefined) {
-    throw new Error('useChat måste användas inom en ChatProvider');
-  }
-  return context;
+// SKAPA PROVIDERN
+// GULDSTANDARD V5.0 - CENTRALISERAD API-SÖKVÄG
+// BESKRIVNING: Använder nu en importerad konstant `API_CHAT` för API-sökvägen.
+// Detta minskar risken för stavfel och gör koden enklare att underhålla.
+export const ChatProvider = ({ children }: { children: ReactNode }) => {
+    const session = useSession();
+    const { 
+        messages, 
+        append, 
+        isLoading, 
+        stop, 
+        setMessages,
+        input,
+        setInput,
+        handleInputChange 
+    } = useVercelChat({
+        api: API_CHAT, // ANVÄND IMPORTERAD KONSTANT
+    });
+
+    const clearChat = () => {
+        setMessages([]);
+    };
+    
+    const contextValue: ChatContextType = {
+        messages,
+        append,
+        isLoading,
+        stop,
+        clearChat,
+        input,
+        setInput,
+        handleInputChange,
+        session,
+    };
+
+    return (
+        <ChatContext.Provider value={contextValue}>
+            {children}
+        </ChatContext.Provider>
+    );
 };
