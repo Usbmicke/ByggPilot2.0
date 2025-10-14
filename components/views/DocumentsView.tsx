@@ -1,50 +1,69 @@
-
 'use client';
 
 import React from 'react';
-import { DocumentDuplicateIcon } from '@heroicons/react/24/outline';
+import { Document } from '@/types';
+import { FolderIcon, DocumentIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 
-const DocumentsView = () => {
-  // Hårdkodad data för exempel
-  const documents = [
-    { name: 'Bygglovsritning.pdf', date: '2023-10-26', url: '#' },
-    { name: 'Kvalitetsansvarig_rapport.docx', date: '2023-10-25', url: '#' },
-    { name: 'Besiktningsprotokoll.pdf', date: '2023-10-24', url: '#' },
-  ];
+interface DocumentsViewProps {
+  initialDocuments?: Document[];
+}
 
+const getFileIcon = (mimeType: string) => {
+    if (mimeType.includes('google-apps.folder')) {
+        return <FolderIcon className="w-6 h-6 text-cyan-400" />;
+    }
+    // Mer specifika ikoner för GDocs, GSheets etc.
+    if (mimeType.includes('google-apps.document')) {
+        return <DocumentIcon className="w-6 h-6 text-blue-400" />;
+    }
+    if (mimeType.includes('google-apps.spreadsheet')) {
+        return <DocumentIcon className="w-6 h-6 text-green-400" />;
+    }
+    if (mimeType.includes('pdf')) {
+        return <DocumentIcon className="w-6 h-6 text-red-400" />;
+    }
+    return <DocumentIcon className="w-6 h-6 text-gray-400" />;
+}
+
+export default function DocumentsView({ initialDocuments = [] }: DocumentsViewProps) {
   return (
-    <div className="animate-fade-in">
-      <h1 className="text-3xl font-bold text-white mb-6">Dokumenthantering</h1>
-      
-      <div className="bg-gray-800 shadow-lg rounded-lg p-6">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left">
-            <thead className="border-b border-gray-700">
-              <tr>
-                <th className="py-3 px-4 text-sm font-semibold text-gray-400">FILNAMN</th>
-                <th className="py-3 px-4 text-sm font-semibold text-gray-400">DATUM</th>
-                <th className="py-3 px-4 text-sm font-semibold text-gray-400 text-right">ÅTGÄRD</th>
-              </tr>
-            </thead>
-            <tbody>
-              {documents.map((doc, index) => (
-                <tr key={index} className="border-b border-gray-700/50 hover:bg-gray-700/50 transition-colors">
-                  <td className="py-4 px-4 flex items-center">
-                    <DocumentDuplicateIcon className="h-6 w-6 mr-3 text-blue-400" />
-                    <span className="font-medium text-white">{doc.name}</span>
-                  </td>
-                  <td className="py-4 px-4 text-gray-300">{doc.date}</td>
-                  <td className="py-4 px-4 text-right">
-                    <a href={doc.url} download className="text-blue-400 hover:text-blue-300 font-semibold">Ladda ner</a>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div className="p-4 md:p-8">
+        <h2 className="text-2xl font-bold text-white mb-6">Projektfiler & Dokument</h2>
+
+        <div className="bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden">
+             <div className="hidden md:grid grid-cols-12 gap-4 items-center p-4 border-b border-gray-700 text-gray-400 font-bold text-sm">
+                <div className="col-span-6">Namn</div>
+                <div className="col-span-3">Typ</div>
+                <div className="col-span-3">Senast ändrad</div>
+            </div>
+
+            {initialDocuments.length === 0 ? (
+                 <div className="p-8 text-center text-gray-400">
+                    <h3 className="text-lg font-semibold text-white">Inga dokument</h3>
+                    <p className="mt-2">Projektmappen på Google Drive är tom.</p>
+                </div>
+            ) : (
+                initialDocuments.map(file => (
+                    <a 
+                      href={file.webViewLink}
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      key={file.id} 
+                      className="grid grid-cols-12 gap-4 items-center p-4 border-b border-gray-700 hover:bg-gray-800 transition-colors duration-150 cursor-pointer last:border-b-0 group"
+                    >
+                        <div className="col-span-6 flex items-center gap-3">
+                            {getFileIcon(file.mimeType)}
+                            <span className="font-medium text-white truncate">{file.name}</span>
+                        </div>
+                        <div className="col-span-3 text-gray-400 text-sm truncate">{file.mimeType.replace('application/vnd.google-apps.', '')}</div>
+                        <div className="col-span-3 text-gray-400 text-sm flex justify-between items-center">
+                           <span>{new Date(file.modifiedTime).toLocaleDateString('sv-SE')}</span>
+                           <ArrowTopRightOnSquareIcon className="w-4 h-4 text-gray-600 group-hover:text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                    </a>
+                ))
+            )}
         </div>
-      </div>
     </div>
   );
-};
-
-export default DocumentsView;
+}

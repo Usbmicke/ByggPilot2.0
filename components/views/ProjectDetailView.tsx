@@ -1,108 +1,78 @@
-
 'use client';
-import React, { useState, useEffect } from 'react';
-import { FolderIcon, DocumentIcon, ArrowUturnLeftIcon } from '@heroicons/react/24/outline';
-import AtaView from '@/components/views/AtaView'; // Korrigerad import
 
-interface DriveFile {
-  id: string;
-  name: string;
-  mimeType: string;
-  modifiedTime: string;
-  webViewLink: string;
-}
+import React, { useState } from 'react';
+import { Project, Invoice, Ata, Document } from '@/types';
+import InvoicingView from './InvoicingView';
+import AtaView from './AtaView';
+import DocumentsView from './DocumentsView';
+import ProjectDashboard from '@/components/dashboard/ProjectDashboard'; // Återanvänd dashboarden
 
-// STEG 1: Justera props
+// Steg 1: Uppdatera props för att ta emot all data från servern
 interface ProjectDetailViewProps {
-  projectId: string; // <-- LÄGG TILL projectId
-  projectName: string;
-  folderId: string;
-  onBack: () => void;
+  project: Project;
+  initialInvoices: Invoice[];
+  initialAtas: Ata[];
+  initialDocuments: Document[];
 }
 
-const getFileIcon = (mimeType: string) => {
-    if (mimeType.includes('google-apps.folder')) {
-        return <FolderIcon className="w-6 h-6 text-cyan-400" />;
-    }
-    if (mimeType.includes('google-apps.document')) {
-        return <DocumentIcon className="w-6 h-6 text-blue-400" />;
-    }
-    if (mimeType.includes('google-apps.spreadsheet')) {
-        return <DocumentIcon className="w-6 h-6 text-green-400" />;
-    }
-    return <DocumentIcon className="w-6 h-6 text-gray-400" />;
-}
+// Steg 2: Skapa en typ för flikarna
+type Tab = 'invoices' | 'atas' | 'documents';
 
-const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projectId, projectName, folderId, onBack }) => {
-  const [files, setFiles] = useState<DriveFile[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ 
+    project, 
+    initialInvoices, 
+    initialAtas, 
+    initialDocuments 
+}) => {
+  
+  // Steg 3: State för att hantera aktiv flik
+  const [activeTab, setActiveTab] = useState<Tab>('invoices');
 
-  useEffect(() => {
-    if (folderId) {
-      const fetchFiles = async () => {
-        try {
-          setIsLoading(true);
-          const response = await fetch(`/api/google/drive/list-project-files?folderId=${folderId}`);
-          if (!response.ok) {
-            throw new Error('Kunde inte ladda projektfiler.');
-          }
-          const data = await response.json();
-          setFiles(data.files || []);
-        } catch (err: any) {
-          setError(err.message);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      fetchFiles();
+  // Steg 4: Funktion för att rendera innehållet i fliken
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'invoices':
+        return <InvoicingView project={project} initialInvoices={initialInvoices} />;
+      case 'atas':
+        return <AtaView project={project} initialAtas={initialAtas} />;
+      case 'documents':
+        return <DocumentsView initialDocuments={initialDocuments} />;
+      default:
+        return null;
     }
-  }, [folderId]);
+  };
+
+  // Steg 5: Funktion för att byta flik, med stilning för aktiv flik
+  const TabButton: React.FC<{ tabName: Tab; label: string; }> = ({ tabName, label }) => (
+    <button
+      onClick={() => setActiveTab(tabName)}
+      className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+        activeTab === tabName
+          ? 'bg-cyan-500 text-white'
+          : 'text-gray-300 hover:bg-gray-700'
+      }`}>
+      {label}
+    </button>
+  );
 
   return (
-    <div className="animate-fade-in">
-        <div className="flex items-center mb-6">
-            <button onClick={onBack} className="p-2 mr-4 rounded-full hover:bg-gray-700/50 transition-colors">
-                <ArrowUturnLeftIcon className="w-6 h-6 text-gray-300"/>
-            </button>
-            <h1 className="text-3xl font-bold text-white truncate">{projectName}</h1>
+    <div className="h-full flex flex-col bg-gray-900">
+        {/* Återanvänd den befintliga dashboard-komponenten för en enhetlig look */}
+        <ProjectDashboard project={project} />
+
+        {/* Flik-navigation */}
+        <div className="px-4 md:px-8 border-b border-gray-700">
+            <div className="flex items-center gap-4">
+                <TabButton tabName="invoices" label="Fakturering" />
+                <TabButton tabName="atas" label="ÄTA" />
+                <TabButton tabName="documents" label="Dokument" />
+            </div>
         </div>
 
-        {/* Google Drive-fillistan (befintlig kod) */}
-        <div className="bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden">
-             <div className="p-4 border-b border-gray-700">
-                <h3 className="text-lg font-semibold">Projektfiler (Google Drive)</h3>
-            </div>
-            <div className="grid grid-cols-12 gap-4 p-4 border-b border-gray-700 text-gray-400 font-bold text-sm">
-                <div className="col-span-6">Namn</div>
-                <div className="col-span-3">Typ</div>
-                <div className="col-span-3">Senast ändrad</div>
-            </div>
-
-            {isLoading && <div className="p-4 text-center text-gray-400">Laddar filer...</div>}
-            {error && <div className="p-4 text-center text-red-400">Fel: {error}</div>}
-            {!isLoading && !error && files.length === 0 && (
-                 <div className="p-8 text-center text-gray-400">
-                    <h3 className="text-lg font-semibold text-white">Tomt projekt</h3>
-                    <p className="mt-2">Den här projektmappen innehåller inga filer än.</p>
-                </div>
-            )}
-
-            {!isLoading && !error && files.map(file => (
-                <a href={file.webViewLink} target="_blank" rel="noopener noreferrer" key={file.id} className="grid grid-cols-12 gap-4 items-center p-4 border-b border-gray-700 hover:bg-gray-800 transition-colors duration-150 cursor-pointer last:border-b-0">
-                    <div className="col-span-6 flex items-center gap-3">
-                        {getFileIcon(file.mimeType)}
-                        <span className="font-medium text-white truncate">{file.name}</span>
-                    </div>
-                    <div className="col-span-3 text-gray-400 text-sm truncate">{file.mimeType.replace('application/vnd.google-apps.', '')}</div>
-                    <div className="col-span-3 text-gray-400 text-sm">{new Date(file.modifiedTime).toLocaleDateString('sv-SE')}</div>
-                </a>
-            ))}
+        {/* Innehåll för den valda fliken */}
+        <div className="flex-grow overflow-y-auto">
+            {renderTabContent()}
         </div>
-
-        {/* Korrigerad komponent */}
-        <AtaView projectId={projectId} />
-
     </div>
   );
 };
