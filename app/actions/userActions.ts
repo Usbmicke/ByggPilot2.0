@@ -1,12 +1,13 @@
-
 'use server';
 
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/api/auth/[...nextauth]/route';
+// KORRIGERING: Importera getServerSession och authOptions
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/authOptions';
 import { adminDb } from '@/lib/admin';
 
 // Guldstandard: Hämta specifik användarstatus för klientlogik
 export async function getUserStatus(): Promise<{ onboardingComplete: boolean; tourCompleted: boolean }> {
+    // KORRIGERING: Använd den korrekta metoden för v4
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
         console.error("Firebase-åtgärd misslyckades: Ingen session hittades.");
@@ -30,14 +31,9 @@ export async function getUserStatus(): Promise<{ onboardingComplete: boolean; to
     }
 }
 
-// =================================================================================
-// GULDSTANDARD - userActions V2.0 (ROBUST DATABASHANTERING)
-// REVIDERING: Byter ut den riskfyllda `update`-metoden mot `set` med `merge: true`.
-// Detta förhindrar ett kritiskt fel (race condition) där funktionen kan anropas
-// innan användarens dokument har skapats i Firestore. Den nya metoden är idempotent
-// och säkerställer att statusen ALLTID sparas korrekt.
-// =================================================================================
+// Guldstandard: Markera tour som slutförd
 export async function markTourAsCompleted(): Promise<{ success: boolean }> {
+    // KORRIGERING: Använd den korrekta metoden för v4
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
         console.error("Firebase-åtgärd misslyckades: Ingen session hittades vid försök att markera tour.");
@@ -45,8 +41,6 @@ export async function markTourAsCompleted(): Promise<{ success: boolean }> {
     }
 
     try {
-        // ANVÄNDER .set() MED MERGE FÖR ATT VARA ROBUST
-        // Detta skapar dokumentet om det saknas, annars uppdaterar det fältet.
         await adminDb.collection('users').doc(session.user.id).set({
             tourCompleted: true,
         }, { merge: true });

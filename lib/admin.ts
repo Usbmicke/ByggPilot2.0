@@ -1,66 +1,43 @@
-
 import admin from 'firebase-admin';
-import logger from './logger';
-import { env } from '@/config/env'; // Importera den centraliserade och validerade env-konfigurationen
+import { env } from '@/config/env';
 
-// =================================================================================
-// ADMIN SDK V4.0 - FRAMTIDSSÄKER OCH ROBUST SINGLETON
-// ARKITEKTUR: Denna version är den slutgiltiga, robusta lösningen som löser
-// grundorsaken till autentiseringsfelen. Den använder den centraliserade
-// `env`-konfigurationen från `config/env.ts` och implementerar en kritisk
-// korrigering för `private_key`.
-//
-// FÖRBÄTTRINGAR:
-// 1. CENTRALISERAD KONFIGURATION: All miljölogik är nu samlad i `config/env.ts`.
-//    Denna fil läser inte längre `process.env` direkt, vilket minskar risken för
-//    konflikter och stavfel (t.ex. `_KEY` vs `_JSON`).
-// 2. KRITISK NYCKELKORRIGERING: Implementerar en programmatisk ersättning av
-//    `\n` med `\n` i `private_key`. Detta säkerställer att Firebase Admin SDK
-//    alltid får en korrekt formaterad nyckel, oavsett hur den lagras i `.env.local`.
-// =================================================================================
+let adminDb: admin.firestore.Firestore;
+let adminAuth: admin.auth.Auth;
 
-declare global {
-  var firebaseAdminInstance: admin.app.App | undefined;
-}
-
-function getFirebaseAdmin() {
-  if (global.firebaseAdminInstance) {
-    return global.firebaseAdminInstance;
-  }
-
+if (!admin.apps.length) {
   try {
-    logger.info("Initierar ny Firebase Admin SDK-instans...");
-
-    // Hämta den redan tolkade och validerade service account-datan från env
+    // KORRIGERING: Behandla serviceAccount som ett objekt direkt, inte en sträng.
     const serviceAccount = env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
-    // **DEN AVGÖRANDE FIXEN:**
-    // Ersätt de literala '\n'-strängarna från .env-filen med faktiska radbrytningstecken.
-    const formattedPrivateKey = serviceAccount.private_key.replace(/\\n/g, '\n');
+    if (!serviceAccount || typeof serviceAccount !== 'object' || !serviceAccount.private_key) {
+      throw new Error("FIREBASE_SERVICE_ACCOUNT_JSON is not a valid service account object or is missing a private key.");
+    }
 
-    global.firebaseAdminInstance = admin.initializeApp({
-      credential: admin.credential.cert({
-        ...serviceAccount,
-        private_key: formattedPrivateKey, // Använd den korrigerade nyckeln
-      })
+    // Skapa en kopia för att undvika att modifiera det cachade objektet.
+    const serviceAccountCopy = { ...serviceAccount };
+
+    // Ersätt newline-tecken i privatnyckeln.
+    serviceAccountCopy.private_key = serviceAccount.private_key.replace(/\n/g, '\n');
+
+    // Logga det förberedda objektet för verifiering (utan privat nyckel).
+    const { private_key, ...serviceAccountForLogging } = serviceAccountCopy;
+    console.log("Attempting to initialize Firebase Admin with prepared service account:", JSON.stringify(serviceAccountForLogging, null, 2));
+
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccountCopy),
+      databaseURL: `https://${serviceAccountCopy.project_id}.firebaseio.com`,
+      projectId: serviceAccountCopy.project_id,
     });
 
-    logger.info("Firebase Admin SDK har initierats framgångsrikt.");
+    console.log("Firebase Admin SDK initialized successfully.");
 
   } catch (error: any) {
-    logger.error({
-        message: "Allvarligt fel under initiering av Firebase Admin. Applikationen kommer inte fungera korrekt.",
-        error: error.message
-    });
-    throw error; // Kasta felet vidare för att förhindra att servern startar i ett trasigt tillstånd.
+    console.error("FATAL ERROR: Could not initialize Firebase Admin SDK.", error);
+    throw new Error(`Could not initialize Firebase Admin SDK: ${error.message}`);
   }
-
-  return global.firebaseAdminInstance;
 }
 
-// Exportera de initierade tjänsterna
-const adminApp = getFirebaseAdmin();
-const adminDb = adminApp.firestore();
-const adminAuth = adminApp.auth();
+adminDb = admin.firestore();
+adminAuth = admin.auth();
 
 export { adminDb, adminAuth };

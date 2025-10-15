@@ -1,24 +1,34 @@
 
 'use server';
 
-import { getGoogleAuth, getDriveClient } from '@/lib/google';
+import { google } from 'googleapis';
+import { env } from '@/config/env';
 
-// =================================================================================
-// DRIVE SERVICE V2.0 - FULL CRUD-FUNKTIONALITET
-// BESKRIVNING: Innehåller nu metoder för att skapa (`createFolder`) mappar, 
-// vilket är en förutsättning för onboarding-flödet och framtida filhantering.
-// =================================================================================
+// HJÄLPFUNKTION: Skapar en autentiserad Google-klient från en accessToken.
+function getGoogleAuthFromToken(accessToken: string) {
+    const oauth2Client = new google.auth.OAuth2(
+        env.GOOGLE_CLIENT_ID,
+        env.GOOGLE_CLIENT_SECRET
+    );
+    oauth2Client.setCredentials({ access_token: accessToken });
+    return oauth2Client;
+}
+
+// HJÄLPFUNKTION: Skapar en Drive-klient.
+function getDriveClient(auth: any) {
+    return google.drive({ version: 'v3', auth });
+}
 
 /**
  * Skapar en ny mapp i Google Drive.
- * @param userId Användarens ID för autentisering.
+ * @param accessToken Användarens accessToken för Google API.
  * @param name Namnet på den nya mappen.
  * @param parentId ID på föräldramappen (valfritt).
  * @returns ID på den nyskapade mappen.
  */
-export async function createFolder(userId: string, name: string, parentId?: string): Promise<string> {
+export async function createFolder(accessToken: string, name: string, parentId?: string): Promise<string> {
     try {
-        const auth = await getGoogleAuth(userId);
+        const auth = getGoogleAuthFromToken(accessToken);
         const drive = getDriveClient(auth);
 
         const fileMetadata = {
@@ -38,7 +48,7 @@ export async function createFolder(userId: string, name: string, parentId?: stri
 
         return file.data.id;
     } catch (error) {
-        console.error(`[DriveService] Fel vid skapande av mapp "${name}" för användare ${userId}:`, error);
+        console.error(`[DriveService] Fel vid skapande av mapp "${name}":`, error);
         throw new Error(`Kunde inte skapa mappen "${name}" i Google Drive.`);
     }
 }
@@ -46,9 +56,9 @@ export async function createFolder(userId: string, name: string, parentId?: stri
 /**
  * Listar filer i en specifik Google Drive-mapp.
  */
-export async function listFiles(userId: string, folderId: string): Promise<{ id: string; name: string; }[]> {
+export async function listFiles(accessToken: string, folderId: string): Promise<{ id: string; name: string; }[]> {
     try {
-        const auth = await getGoogleAuth(userId);
+        const auth = getGoogleAuthFromToken(accessToken);
         const drive = getDriveClient(auth);
 
         const res = await drive.files.list({
@@ -64,7 +74,7 @@ export async function listFiles(userId: string, folderId: string): Promise<{ id:
         }));
 
     } catch (error) {
-        console.error(`[DriveService] Fel vid listning av filer för användare ${userId} i mapp ${folderId}:`, error);
+        console.error(`[DriveService] Fel vid listning av filer i mapp ${folderId}:`, error);
         throw new Error('Kunde inte lista filer från Google Drive.');
     }
 }
@@ -72,9 +82,9 @@ export async function listFiles(userId: string, folderId: string): Promise<{ id:
 /**
  * Hämtar innehållet i en specifik fil från Google Drive som text.
  */
-export async function getDriveFileContent(userId: string, fileId: string): Promise<string> {
+export async function getDriveFileContent(accessToken: string, fileId: string): Promise<string> {
     try {
-        const auth = await getGoogleAuth(userId);
+        const auth = getGoogleAuthFromToken(accessToken);
         const drive = getDriveClient(auth);
 
         const res = await drive.files.get(
@@ -90,7 +100,7 @@ export async function getDriveFileContent(userId: string, fileId: string): Promi
         throw new Error('Filinnehållet kunde inte tolkas som text.');
 
     } catch (error) {
-        console.error(`[DriveService] Fel vid läsning av fil ${fileId} för användare ${userId}:`, error);
+        console.error(`[DriveService] Fel vid läsning av fil ${fileId}:`, error);
         throw new Error(`Kunde inte läsa innehållet i fil med ID ${fileId}.`);
     }
 }

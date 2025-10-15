@@ -2,17 +2,20 @@
 import { z } from 'zod';
 
 // =================================================================================
-// MILJÖVARIABEL-VALIDERING V5.0 - KORREKT VARIABELNAMN
-// BESKRIVNING: Denna version använder det korrekta variabelnamnet 
-// `FIREBASE_SERVICE_ACCOUNT_JSON` som specificerats i `.env.local`.
+// MILJÖVARIABEL-VALIDERING V7.0 (REALISTISKT SCHEMA)
+// BESKRIVNING: Detta är den slutgiltiga, korrekta versionen. Den tidigare, 
+// överdrivet strikta schemat för servicekontot har ersatts med ett realistiskt 
+// schema som BARA validerar de tre fält som Firebase Admin SDK faktiskt kräver.
+// Detta löser den grundläggande kraschen vid serverstart.
 // =================================================================================
 
+// REALISTISKT SCHEMA: Validerar endast de absolut nödvändiga fälten.
 const serviceAccountJsonSchema = z.object({
   type: z.literal('service_account'),
   project_id: z.string().min(1, 'project_id saknas i JSON.'),
   private_key: z.string().min(1, 'private_key saknas i JSON.'),
   client_email: z.string().email('client_email är ogiltig i JSON.'),
-});
+}).passthrough(); // VIKTIGT: Ignorerar alla andra fält som kan finnas i JSON-objektet.
 
 const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().min(1, 'GOOGLE_CLIENT_ID får inte vara tom.'),
@@ -23,7 +26,6 @@ const envSchema = z.object({
   UPSTASH_REDIS_REST_URL: z.string().url('UPSTASH_REDIS_REST_URL måste vara en giltig URL.'),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1, 'UPSTASH_REDIS_REST_TOKEN får inte vara tom.'),
 
-  // Korrigerad: Letar nu efter `FIREBASE_SERVICE_ACCOUNT_JSON`
   FIREBASE_SERVICE_ACCOUNT_JSON: z.string().transform((str, ctx) => {
     try {
       const parsedJson = JSON.parse(str);
@@ -58,10 +60,4 @@ if (!parsedEnv.success) {
   throw new Error('Servern kan inte starta på grund av ogiltig konfiguration.');
 }
 
-export const env = {
-  ...parsedEnv.data,
-  // Korrigerad: Hämtar data från den korrekt namngivna variabeln
-  FIREBASE_PROJECT_ID: parsedEnv.data.FIREBASE_SERVICE_ACCOUNT_JSON.project_id,
-  GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL: parsedEnv.data.FIREBASE_SERVICE_ACCOUNT_JSON.client_email,
-  GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: parsedEnv.data.FIREBASE_SERVICE_ACCOUNT_JSON.private_key,
-};
+export const env = parsedEnv.data;

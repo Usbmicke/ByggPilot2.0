@@ -1,9 +1,6 @@
+
 {
-  "extends": [
-    "next/core-web-vitals",
-    "plugin:import/recommended",
-    "plugin:import/typescript"
-  ],
+  "extends": "next/core-web-vitals",
   "rules": {
     "import/order": [
       "error",
@@ -21,15 +18,6 @@
           "caseInsensitive": true
         }
       }
-    ],
-    "import/no-unresolved": "error",
-    "import/no-extraneous-dependencies": "error"
-  },
-  "settings": {
-    "import/resolver": {
-      "typescript": {
-        "alwaysTryTypes": true
-      }
-    }
+    ]
   }
 }

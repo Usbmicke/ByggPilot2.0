@@ -1,1 +1,0 @@
-// Denna fil är avsiktligt tom. Autentiseringskonfigurationen har flyttats till lib/authOptions.ts för att förhindra att server-exklusiv kod importeras på klientsidan.

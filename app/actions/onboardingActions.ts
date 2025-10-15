@@ -1,29 +1,25 @@
 
 "use server";
 
-import { auth } from "@/lib/auth";
-import { adminDb, admin } from "@/lib/admin"; // Importera admin för Timestamp
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/authOptions';
+import { adminDb, admin } from "@/lib/admin";
 import { createFolder } from "@/services/driveService";
 
-// Återanvändbar funktion för att hämta användar-ID, säkerställer autentisering
-async function getAuthenticatedUserId() {
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) {
-        throw new Error("Åtkomst nekad: Användaren är inte autentiserad.");
+// HJÄLPFUNKTION: Hämtar hela sessionen, säkerställer autentisering och åtkomst till accessToken.
+async function getAuthenticatedSession() {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id || !session.accessToken) {
+        throw new Error("Åtkomst nekad: Användaren är inte autentiserad eller sessionstoken saknas.");
     }
-    return userId;
-}
-
-// Funktion för att hämta användardokumentet
-async function getUserDocument(userId: string) {
-    return await adminDb.collection('users').doc(userId).get();
+    return session;
 }
 
 // Steg 1: Uppdatera Företagsprofil
 export async function updateCompanyProfile(formData: FormData) {
     try {
-        const userId = await getAuthenticatedUserId();
+        const session = await getAuthenticatedSession();
+        const userId = session.user.id;
         const companyName = formData.get("companyName") as string;
         if (!companyName) throw new Error("Företagsnamn är obligatoriskt.");
 
@@ -51,8 +47,12 @@ export async function updateCompanyProfile(formData: FormData) {
 export async function createDriveStructure(companyName: string) {
     const COOLDOWN_MINUTES = 5;
     try {
-        const userId = await getAuthenticatedUserId();
-        const userDoc = await getUserDocument(userId);
+        const session = await getAuthenticatedSession();
+        const userId = session.user.id;
+        const accessToken = session.accessToken;
+
+        const userDocRef = adminDb.collection("users").doc(userId);
+        const userDoc = await userDocRef.get();
         const userData = userDoc.data();
 
         // RATE LIMITING-LOGIK
@@ -68,16 +68,18 @@ export async function createDriveStructure(companyName: string) {
 
         // Huvudlogik
         const rootFolderName = `ByggPilot - ${companyName}`;
-        const rootFolderId = await createFolder(userId, rootFolderName);
+        // Skicka med accessToken till createFolder
+        const rootFolderId = await createFolder(accessToken, rootFolderName);
 
         const subFolders = ["01 Projekt", "02 Kunder", "03 Offerer", "04 Fakturor", "05 Dokumentmallar", "06 Leverantörsfakturor"];
-        await Promise.all(subFolders.map(folderName => createFolder(userId, folderName, rootFolderId)));
+        // Skicka med accessToken till varje anrop
+        await Promise.all(subFolders.map(folderName => createFolder(accessToken, folderName, rootFolderId)));
 
         // Uppdatera databasen med ID, steg och tidsstämpel för rate limiting
-        await adminDb.collection("users").doc(userId).update({
+        await userDocRef.update({
             driveRootFolderId: rootFolderId,
             onboardingStep: 2,
-            driveStructureLastCreated: admin.firestore.FieldValue.serverTimestamp(), // Sätt tidsstämpeln
+            driveStructureLastCreated: admin.firestore.FieldValue.serverTimestamp(),
         });
 
         return { success: true, driveFolderId: rootFolderId };
@@ -90,7 +92,8 @@ export async function createDriveStructure(companyName: string) {
 // Steg 3: Uppdatera Standardpriser
 export async function updateDefaultRates(formData: FormData) {
     try {
-        const userId = await getAuthenticatedUserId();
+        const session = await getAuthenticatedSession();
+        const userId = session.user.id;
         await adminDb.collection("users").doc(userId).update({
             defaultHourlyRate: formData.get('hourlyRate') as string,
             defaultMaterialMarkup: formData.get('materialMarkup') as string,
@@ -106,7 +109,8 @@ export async function updateDefaultRates(formData: FormData) {
 // Steg 4: Slutför Onboarding
 export async function completeOnboarding() {
     try {
-        const userId = await getAuthenticatedUserId();
+        const session = await getAuthenticatedSession();
+        const userId = session.user.id;
         await adminDb.collection("users").doc(userId).update({
             onboardingComplete: true,
             onboardingStep: 4,

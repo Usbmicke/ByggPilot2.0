@@ -1,48 +1,53 @@
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
+import { env } from '@/config/env'; // <-- KORREKT IMPORT
 
 // =================================================================================
-// Middleware V3.0 (ROBUST & FÖRENKLAD)
-// ARKITEKTUR: Denna version är säkrare och mer robust genom att vara "state-agnostisk".
-// 1. **Aggressivt skydd:** Den blockerar ALLA definierade skyddade rutter för oinloggade användare.
-// 2. **State-agnostisk:** Den förlitar sig INTE längre på JWT-token för onboarding-status,
-//    vilket löser problemet med föråldrad data i cookien. Sidans egen logik (`OnboardingPage`
-//    eller `DashboardPage`) ansvarar nu för att hämta aktuell status från databasen.
-//    Detta är ett mer pålitligt mönster.
+// Middleware V5.0 (ARKITEKTONISKT KORREKT)
+// ARKITEKTUR: Denna version anpassar middleware till den nya, säkra arkitekturen.
+//
+// ROTORSAK: Middleware använde `process.env.NEXTAUTH_SECRET` direkt, vilket är
+// `undefined` i den nya arkitekturen. Detta orsakade en krasch på servern.
+//
+// LÖSNING: Importerar och använder `env.NEXTAUTH_SECRET` från den centraliserade,
+// Zod-validerade miljöfilen. Detta säkerställer att middleware har tillgång till
+// rätt hemlighet och kan dekryptera JWT-tokens korrekt.
 // =================================================================================
 
 const protectedRoutes = ['/dashboard', '/onboarding'];
 
 export async function middleware(req: NextRequest) {
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    // KORREKT: Använd den validerade hemligheten från `env`-objektet.
+    const token = await getToken({ req, secret: env.NEXTAUTH_SECRET });
     const { pathname } = req.nextUrl;
 
     const isAuthenticated = !!token;
+    const isOnboardingComplete = token?.onboardingComplete as boolean;
 
-    // Kontrollera om den begärda sökvägen är en skyddad route
     const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
 
-    // FALL 1: Oinloggad användare försöker nå en skyddad sida
     if (!isAuthenticated && isProtectedRoute) {
-        // Omdirigera till startsidan/inloggningssidan
         return NextResponse.redirect(new URL('/', req.url));
     }
 
-    // FALL 2: Inloggad användare är på startsidan (inloggningssidan)
     if (isAuthenticated && pathname === '/') {
-        // Skicka dem direkt till dashboarden. De är redan inloggade.
-        // Notera: Dashboard-sidan kommer själv att hantera omdirigering till /onboarding om det behövs.
         return NextResponse.redirect(new URL('/dashboard', req.url));
     }
 
-    // Låt alla andra förfrågningar passera
+    if (isAuthenticated && !isOnboardingComplete && pathname.startsWith('/dashboard')) {
+        return NextResponse.redirect(new URL('/onboarding', req.url));
+    }
+
+    if (isAuthenticated && isOnboardingComplete && pathname.startsWith('/onboarding')) {
+        return NextResponse.redirect(new URL('/dashboard', req.url));
+    }
+
     return NextResponse.next();
 }
 
 export const config = {
     matcher: [
-        '/((?!api|_next/static|_next/image|favicon.ico).*)',
+        '/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)',
     ],
 };
