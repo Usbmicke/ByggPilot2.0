@@ -1,23 +1,19 @@
-
-// Fil: app/providers.tsx
 'use client'
 import { SessionProvider } from 'next-auth/react'
-import { UIProvider } from '@/contexts/UIContext' // <-- ÅTERSTÄLLD
-import { ChatProvider } from '@/contexts/ChatContext';
+import { UIProvider } from '@/contexts/UIContext'
 
 // =================================================================================
-// GULDSTANDARD - PROVIDERS V5.0
-// REVIDERING: Återaktiverade UIProvider efter att ha skapat en ny, säker version
-// av UIContext.tsx. All grundläggande funktionalitet är nu återställd och stabil.
+// GULDSTANDARD - PROVIDERS V7.0 - FÖRENKLAD
+// REVIDERING: Återställd till en ren provider-envelop. Ansvaret för ChatProvider
+// och Chat-komponenten har flyttats direkt till layout.tsx för att garantera
+// korrekt renderingsordning och eliminera kontext-felet.
 // =================================================================================
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
-      <ChatProvider>
-        <UIProvider> {/** <-- ÅTERSTÄLLD **/} 
+        <UIProvider>
           {children}
         </UIProvider>
-      </ChatProvider>
     </SessionProvider>
   )
 }

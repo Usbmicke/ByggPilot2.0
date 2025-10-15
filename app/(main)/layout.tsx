@@ -1,19 +1,22 @@
 
 import React from 'react';
+import Chat from '@/app/components/Chat'; // Importera den nya chatt-komponenten
 
 // =================================================================================
-// GULDSTANDARD: Main App Layout v2.0
-// BESKRIVNING: Denna layout är nu en "dum" komponent. All logik för sessionhantering
-// och routing har flyttats till rotlayouten (`app/layout.tsx`). Dess enda ansvar
-// är att definiera den visuella strukturen för huvudapplikationen (t.ex. med sidomeny).
+// GULDSTANDARD: Main App Layout v3.0 - MED CO-PILOT
+// BESKRIVNING: Denna layout integrerar nu den nya <Chat /> komponenten.
+// Co-Piloten blir därmed en fundamental och ständigt närvarande del av 
+// användarupplevelsen, precis som Guldstandard-planen föreskriver.
 // =================================================================================
 
 export default function MainAppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="h-full">
-      {/* Här skulle den visuella layouten för appen ligga, t.ex. sidomeny, header etc. */}
-      {/* För nu renderar vi bara children direkt. */}
-      {children}
+      {/* Huvudinnehållet i applikationen */}
+      <main>{children}</main>
+
+      {/* Co-Pilot Chatt-widget */}
+      <Chat />
     </div>
   );
 }

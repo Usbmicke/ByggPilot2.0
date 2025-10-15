@@ -2,7 +2,7 @@
 'use client';
 
 import { createContext, useContext, useState, ReactNode } from 'react';
-import { API_CHAT } from '@/constants/apiRoutes';
+import { API_CHAT } from '@/app/constants/apiRoutes'; // <-- KORRIGERAD SÖKVÄG
 
 // Definierar typen för ett enskilt chattmeddelande
 interface Message {
@@ -16,7 +16,7 @@ interface ChatContextType {
   messages: Message[];
   isLoading: boolean;
   error: Error | null;
-  append: (content: string) => Promise<void>; // Döpte om sendMessage till append
+  append: (content: string) => Promise<void>; 
 }
 
 // Skapar kontexten med ett initialt värde av undefined
@@ -34,23 +34,19 @@ export function ChatProvider({ children }: ChatProviderProps) {
   const [error, setError] = useState<Error | null>(null);
 
   // Funktion för att skicka ett meddelande till backend
-  const append = async (content: string) => { // Döpte om sendMessage till append
+  const append = async (content: string) => {
     setIsLoading(true);
     setError(null);
 
-    // Lägg till användarens meddelande i state direkt
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: 'user',
       content,
     };
     
-    // **BUGGFIX:** Skapa den nya meddelandelistan FÖRST.
-    // Detta förhindrar att ett "stale" state skickas till API:et.
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
 
-    // Förbered för assistentens svar
     const assistantMessageId = `asst-${Date.now()}`;
     let assistantMessageContent = '';
 
@@ -60,7 +56,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ messages: newMessages }), // Skicka den nya, korrekta listan
+        body: JSON.stringify({ messages: newMessages }), 
       });
 
       if (!response.ok) {
@@ -71,12 +67,10 @@ export function ChatProvider({ children }: ChatProviderProps) {
         throw new Error('Fick inget svar från servern.');
       }
 
-      // Hantera streamen från servern
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let done = false;
 
-      // Lägg till ett tomt assistentmeddelande direkt för att visa att svaret påbörjats
       setMessages(prev => [...prev, { id: assistantMessageId, role: 'assistant', content: '' }]);
 
       while (!done) {
@@ -85,7 +79,6 @@ export function ChatProvider({ children }: ChatProviderProps) {
         const chunk = decoder.decode(value, { stream: true });
         assistantMessageContent += chunk;
 
-        // Uppdatera assistentens meddelande i realtid
         setMessages(prev => 
             prev.map(m => 
                 m.id === assistantMessageId ? { ...m, content: assistantMessageContent } : m

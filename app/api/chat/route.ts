@@ -1,19 +1,25 @@
 
 import { NextRequest, NextResponse } from "next/server";
-import { Message, streamText, CoreMessage } from "ai";
+import { streamText, CoreMessage } from "ai";
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/authOptions';
 import { google } from "@ai-sdk/google";
-import { embed } from "ai";
-import { getPineconeClient } from "@/lib/pinecone";
-import { auth } from "@/lib/auth";
 import { adminDb } from "@/lib/admin";
 import { Ratelimit } from "@upstash/ratelimit";
 import { redis } from "@/lib/redis";
-import logger from "@/lib/logger"; // Importera den nya loggern
+import logger from "@/lib/logger";
+import fs from 'fs/promises'; // Använd asynkron fil-läsning
+import path from 'path';
 
 // =================================================================================
-// CHAT API V4.0 - ROBUST LOGGNING
-// ARKITEKTUR: Ersätter console.error med den nya strukturerade loggern.
-// Varje fel loggas nu som ett sökbart JSON-objekt med kontext.
+// CHAT API V6.0 - INTELLIGENS & MINNE
+// ARKITEKTUR:
+// 1.  **Dynamisk Prompt:** Läser nu dynamiskt in system-prompten från 
+//     `lib/prompts/v11-main.txt`, vilket gör AI:ns personlighet lätt att 
+//     konfigurera.
+// 2.  **Permanent Minne:** Sparar användarens och assistentens meddelanden till
+//     Firestore EFTER varje lyckad konversationstur. Detta uppfyller kravet
+//     för Guldstandardens "Single Source of Truth".
 // =================================================================================
 
 const ratelimit = new Ratelimit({
@@ -22,9 +28,21 @@ const ratelimit = new Ratelimit({
     analytics: true,
 });
 
+// Hjälpfunktion för att läsa prompt-filen (cache-as för prestanda i produktion)
+async function getSystemPrompt() {
+    const promptFilePath = path.join(process.cwd(), 'lib', 'prompts', 'v11-main.txt');
+    try {
+        const prompt = await fs.readFile(promptFilePath, 'utf-8');
+        return prompt;
+    } catch (error) {
+        logger.error({ error }, "Kunde inte läsa system-prompt filen. Använder en fallback.");
+        return "Du är en hjälpsam assistent."; // Fallback-prompt
+    }
+}
+
 export async function POST(req: NextRequest) {
     const ip = req.ip ?? "127.0.0.1";
-    let chatId: string | null = null; // Deklarera chatId här för att ha den i catch-blocket
+    let chatId: string | null = null;
 
     try {
         const { success } = await ratelimit.limit(ip);
@@ -33,41 +51,32 @@ export async function POST(req: NextRequest) {
         }
 
         const { messages, chatId: reqChatId }: { messages: CoreMessage[]; chatId: string } = await req.json();
-        chatId = reqChatId; // Sätt chatId värdet
-        const user = await auth();
-
-        if (!user?.user?.id) {
+        chatId = reqChatId;
+        
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.id) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const latestMessage = messages[messages.length - 1].content as string;
+        const latestMessage = messages[messages.length - 1];
 
-        const { embedding } = await embed({
-            model: google("models/text-embedding-004"),
-            value: latestMessage,
+        // Spara användarens meddelande OMEDELBART
+        const userMessageRef = adminDb.collection("users").doc(session.user.id).collection("chats").doc(chatId).collection("messages");
+        await userMessageRef.add({
+            role: 'user',
+            content: latestMessage.content,
+            createdAt: new Date(),
         });
 
-        const pineconeClient = await getPineconeClient();
-        const pineconeIndex = pineconeClient.index(process.env.PINECONE_INDEX_NAME!);
-
-        const queryResult = await pineconeIndex.query({
-            vector: embedding,
-            topK: 10,
-            includeMetadata: true,
-        });
-
-        const context = queryResult.matches
-            .map((match) => (match.metadata as { text: string }).text)
-            .join("\n\n---\n\n");
-
+        const systemPromptContent = await getSystemPrompt();
         const systemPrompt: CoreMessage = {
             role: "system",
-            content: `Du är en expert-assistent... (samma som V2.0)`,
+            content: systemPromptContent,
         };
         
         const finalMessages: CoreMessage[] = [
             systemPrompt,
-            ...messages.slice(-2),
+            ...messages.slice(-5), // Skicka med de 5 senaste meddelandena för kontext
         ];
 
         const result = await streamText({
@@ -77,14 +86,9 @@ export async function POST(req: NextRequest) {
 
         const stream = result.toAIStream({
             onCompletion: async (completion: string) => {
-                const userMessageRef = adminDb.collection("users").doc(user.user.id!).collection("chats").doc(chatId!).collection("messages");
+                // Spara assistentens fullständiga svar när det är klart
                 await userMessageRef.add({
-                    role: "user",
-                    content: latestMessage,
-                    createdAt: new Date(),
-                });
-                await userMessageRef.add({
-                    role: "assistant",
+                    role: 'assistant',
                     content: completion,
                     createdAt: new Date(),
                 });
@@ -94,11 +98,10 @@ export async function POST(req: NextRequest) {
         return new Response(stream);
 
     } catch (error: any) {
-        // Använd den nya, strukturerade loggern
         logger.error(
             { 
                 error: error.message, 
-                chatId: chatId, // Inkludera viktig kontext
+                chatId: chatId, 
                 userIp: ip,
                 stack: error.stack,
             },
