@@ -1,37 +1,36 @@
 
-'use client';
-
-import React from 'react';
-import { useSession } from 'next-auth/react';
+import { redirect } from 'next/navigation';
+import { auth } from '@/lib/auth';
+import { adminDb } from '@/lib/admin';
 import { FolderIcon, InboxIcon, SparklesIcon } from '@heroicons/react/24/outline';
 
 // =================================================================================
-// DASHBOARD PAGE V1.0 - VISUELL STRUKTUR
-// REVIDERING:
-// Skapar den faktiska huvudsidan för dashboarden. Denna fil renderas som
-// {children} inuti den nya app/dashboard/layout.tsx.
-// 1. Hämtar användarens session för att visa ett personligt välkomstmeddelande.
-// 2. Bygger upp de tre primära statistikkorten (än så länge med statisk data).
-// 3. Skapar de två informationsrutorna för projekt och inkorg.
-// 4. Använder genomgående professionell och ren styling med Flexbox/Grid för
-//    att säkerställa att allt är korrekt linjerat.
+// DASHBOARD PAGE V3.0 (SERVER COMPONENT & ROBUST AUTH)
+// ARKITEKTUR: Detta är nu en Server Component, vilket är Next.js bästa praxis.
+// 1. **Server-Side Auth:** Säkerhetskontrollen körs på servern INNAN sidan renderas.
+// 2. **Direkt Databasåtkomst:** Hämtar `onboardingComplete` direkt från Firestore,
+//    vilket är den enda tillförlitliga källan. Detta eliminerar buggar med
+//    föråldrad JWT-data.
+// 3. **Omedelbar Omdirigering:** Använder `redirect()` från `next/navigation` för att
+//    omedelbart skicka o-onboardade användare till rätt sida, utan att dashboarden
+//    någonsin visas i webbläsaren.
 // =================================================================================
 
-// --- Komponenter för Dashboard-kort ---
+// --- Komponenter (oförändrade, kan brytas ut till egen fil) ---
 
 interface StatCardProps {
-  title: string;
-  value: string | number;
-  description?: string;
-  main?: boolean;
+    title: string;
+    value: string | number;
+    description?: string;
+    main?: boolean;
 }
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, description, main = false }) => (
-  <div className={`bg-component-background border border-border p-5 rounded-lg shadow-sm ${main ? 'border-yellow-500/50' : ''}`}>
-    <h3 className="text-sm font-medium text-text-secondary truncate">{title}</h3>
-    <p className="mt-1 text-3xl font-semibold text-text-primary">{value}</p>
-    {description && <p className="text-xs text-text-tertiary mt-2">{description}</p>}
-  </div>
+    <div className={`bg-component-background border border-border p-5 rounded-lg shadow-sm ${main ? 'border-yellow-500/50' : ''}`}>
+        <h3 className="text-sm font-medium text-text-secondary truncate">{title}</h3>
+        <p className="mt-1 text-3xl font-semibold text-text-primary">{value}</p>
+        {description && <p className="text-xs text-text-tertiary mt-2">{description}</p>}
+    </div>
 );
 
 const InfoCard = ({ icon, title, text, ctaText }) => (
@@ -44,43 +43,54 @@ const InfoCard = ({ icon, title, text, ctaText }) => (
     </div>
 );
 
-// --- Huvudsaklig Dashboard-komponent ---
+// --- Huvudsaklig Dashboard-komponent (nu en Server Component) ---
 
-const DashboardPage = () => {
-  const { data: session } = useSession();
+export default async function DashboardPage() {
+    const session = await auth();
+    
+    // Om ingen session finns, borde middleware redan ha omdirigerat, men detta är en extra säkerhetsåtgärd.
+    if (!session?.user?.id) {
+        redirect('/');
+    }
 
-  return (
-    <div>
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary">Välkommen tillbaka, {session?.user?.name?.split(' ')[0] || '!'}</h1>
-        <p className="text-md text-text-secondary mt-1">Här är vad som händer i dina projekt idag.</p>
-      </div>
+    const userDoc = await adminDb.collection('users').doc(session.user.id).get();
+    const userData = userDoc.data();
 
-      {/* Statistikkort */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mt-6">
-        <StatCard title="Totalt antal projekt" value={0} />
-        <StatCard title="Pågående projekt" value={0} main={true} description="Aktivt just nu" />
-        <StatCard title="Totala intäkter (Fakturerat)" value="0.00 kr" />
-      </div>
+    // Den kritiska säkerhetskontrollen: Tvinga användaren till onboarding om den inte är slutförd.
+    if (!userData?.onboardingComplete) {
+        redirect('/onboarding');
+    }
 
-      {/* Informationskort */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-5">
-        <InfoCard 
-          icon={<FolderIcon className="h-6 w-6 text-text-secondary" />}
-          title="Du har inga aktiva projekt"
-          text="Skapa ett nytt projekt via"
-          ctaText="Skapa Nytt"
-        />
-        <InfoCard 
-          icon={<div className="relative"><InboxIcon className="h-6 w-6 text-text-secondary" /><SparklesIcon className="h-4 w-4 text-accent absolute -top-1 -right-1" /></div>}
-          title="Inkorgen är tom!"
-          text="Bra jobbat! Inga nya föreslagna åtgärder från din e-post just nu"
-          ctaText=""
-        />
-      </div>
-    </div>
-  );
-};
+    return (
+        <div>
+            {/* Page Header */}
+            <div>
+                <h1 className="text-2xl font-bold text-text-primary">Välkommen tillbaka, {session.user.name?.split(' ')[0] || '!'}</h1>
+                <p className="text-md text-text-secondary mt-1">Här är vad som händer i dina projekt idag.</p>
+            </div>
 
-export default DashboardPage;
+            {/* Statistikkort */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mt-6">
+                <StatCard title="Totalt antal projekt" value={0} />
+                <StatCard title="Pågående projekt" value={0} main={true} description="Aktivt just nu" />
+                <StatCard title="Totala intäkter (Fakturerat)" value="0.00 kr" />
+            </div>
+
+            {/* Informationskort */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-5">
+                <InfoCard 
+                    icon={<FolderIcon className="h-6 w-6 text-text-secondary" />}
+                    title="Du har inga aktiva projekt"
+                    text="Skapa ett nytt projekt via"
+                    ctaText="Skapa Nytt"
+                />
+                <InfoCard 
+                    icon={<div className="relative"><InboxIcon className="h-6 w-6 text-text-secondary" /><SparklesIcon className="h-4 w-4 text-accent absolute -top-1 -right-1" /></div>}
+                    title="Inkorgen är tom!"
+                    text="Bra jobbat! Inga nya föreslagna åtgärder från din e-post just nu"
+                    ctaText=""
+                />
+            </div>
+        </div>
+    );
+}

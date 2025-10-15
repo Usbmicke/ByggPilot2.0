@@ -1,85 +1,119 @@
 
-'use server';
+"use server";
 
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/authOptions';
-import { adminDb } from '@/lib/admin';
-import { z } from 'zod';
-import { revalidatePath } from 'next/cache';
-import { google } from 'googleapis';
-import { rateLimiter } from '@/lib/rate-limiter';
-import logger from '@/lib/logger'; // Importera vår nya logger
+import { auth } from "@/lib/auth";
+import { adminDb, admin } from "@/lib/admin"; // Importera admin för Timestamp
+import { createFolder } from "@/services/driveService";
 
-// Schema är oförändrat
-const companyProfileSchema = z.object({
-    companyName: z.string().min(2, 'Företagsnamn är ogiltigt'),
-    streetAddress: z.string().min(2, 'Gatuadress är ogiltig'),
-    postalCode: z.string().min(5, 'Postnummer är ogiltigt').max(6, 'Postnummer är för långt'),
-    city: z.string().min(2, 'Ort är ogiltig'),
-    orgnr: z.string().optional(),
-    phone: z.string().optional(),
-});
+// Återanvändbar funktion för att hämta användar-ID, säkerställer autentisering
+async function getAuthenticatedUserId() {
+    const session = await auth();
+    const userId = session?.user?.id;
+    if (!userId) {
+        throw new Error("Åtkomst nekad: Användaren är inte autentiserad.");
+    }
+    return userId;
+}
 
+// Funktion för att hämta användardokumentet
+async function getUserDocument(userId: string) {
+    return await adminDb.collection('users').doc(userId).get();
+}
+
+// Steg 1: Uppdatera Företagsprofil
 export async function updateCompanyProfile(formData: FormData) {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-        logger.warn('updateCompanyProfile anropades utan session.');
-        return { success: false, error: 'Autentisering misslyckades.' };
-    }
-    const userId = session.user.id;
-
-    // Rate Limiter
-    const { success: limitReached } = await rateLimiter.limit(userId);
-    if (!limitReached) {
-        logger.warn({ userId }, 'Rate limit överskreds för updateCompanyProfile.');
-        return { success: false, error: 'För många anrop, försök igen om en stund.' };
-    }
-
-    const rawData = Object.fromEntries(formData.entries());
-    const validationResult = companyProfileSchema.safeParse(rawData);
-
-    if (!validationResult.success) {
-        logger.warn({ userId, errors: validationResult.error.flatten() }, 'Validering misslyckades för updateCompanyProfile.');
-        return { success: false, error: 'Ogiltig data.' };
-    }
-    
-    logger.info({ userId, data: validationResult.data }, 'Försöker uppdatera företagsprofil...');
     try {
-        await adminDb.collection('users').doc(userId).set({ company: { ...validationResult.data }, onboardingStep: 1 }, { merge: true });
-        revalidatePath('/onboarding');
-        logger.info({ userId }, 'Företagsprofil uppdaterad framgångsrikt.');
-        return { success: true };
+        const userId = await getAuthenticatedUserId();
+        const companyName = formData.get("companyName") as string;
+        if (!companyName) throw new Error("Företagsnamn är obligatoriskt.");
+
+        const companyProfile = {
+            companyName,
+            orgnr: formData.get("orgnr") as string,
+            streetAddress: formData.get("streetAddress") as string,
+            postalCode: formData.get("postalCode") as string,
+            city: formData.get("city") as string,
+        };
+
+        await adminDb.collection("users").doc(userId).update({
+            ...companyProfile,
+            onboardingStep: 1,
+        });
+
+        return { success: true, companyName };
     } catch (error: any) {
-        logger.error({ userId, error: error.message, stack: error.stack }, 'Databasfel vid uppdatering av företagsprofil.');
-        return { success: false, error: 'Databasfel.' };
+        console.error("Fel i updateCompanyProfile:", error);
+        return { success: false, error: error.message };
     }
 }
 
-// ... andra funktioner ...
-
-export async function completeOnboarding() {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-        logger.warn('completeOnboarding anropades utan session.');
-        return { success: false, error: 'Autentisering misslyckades.' };
-    }
-    const userId = session.user.id;
-
-    // Rate Limiter
-    const { success: limitReached } = await rateLimiter.limit(userId);
-    if (!limitReached) {
-        logger.warn({ userId }, 'Rate limit överskreds för completeOnboarding.');
-        return { success: false, error: 'För många anrop, försök igen om en stund.' };
-    }
-
-    logger.info({ userId }, 'Försöker slutföra onboarding...');
+// Steg 2: Skapa Mappstruktur i Google Drive (med Rate Limiting)
+export async function createDriveStructure(companyName: string) {
+    const COOLDOWN_MINUTES = 5;
     try {
-        await adminDb.collection('users').doc(userId).set({ onboardingComplete: true, onboardingStep: 3 }, { merge: true });
-        revalidatePath('/dashboard');
-        logger.info({ userId }, 'Onboarding slutförd framgångsrikt.');
+        const userId = await getAuthenticatedUserId();
+        const userDoc = await getUserDocument(userId);
+        const userData = userDoc.data();
+
+        // RATE LIMITING-LOGIK
+        if (userData?.driveStructureLastCreated) {
+            const lastCreated = userData.driveStructureLastCreated.toDate();
+            const now = new Date();
+            const diffMinutes = (now.getTime() - lastCreated.getTime()) / (1000 * 60);
+
+            if (diffMinutes < COOLDOWN_MINUTES) {
+                throw new Error(`För att undvika dubbletter, vänta ${Math.ceil(COOLDOWN_MINUTES - diffMinutes)} minuter innan du försöker igen.`);
+            }
+        }
+
+        // Huvudlogik
+        const rootFolderName = `ByggPilot - ${companyName}`;
+        const rootFolderId = await createFolder(userId, rootFolderName);
+
+        const subFolders = ["01 Projekt", "02 Kunder", "03 Offerer", "04 Fakturor", "05 Dokumentmallar", "06 Leverantörsfakturor"];
+        await Promise.all(subFolders.map(folderName => createFolder(userId, folderName, rootFolderId)));
+
+        // Uppdatera databasen med ID, steg och tidsstämpel för rate limiting
+        await adminDb.collection("users").doc(userId).update({
+            driveRootFolderId: rootFolderId,
+            onboardingStep: 2,
+            driveStructureLastCreated: admin.firestore.FieldValue.serverTimestamp(), // Sätt tidsstämpeln
+        });
+
+        return { success: true, driveFolderId: rootFolderId };
+    } catch (error: any) {
+        console.error("Fel i createDriveStructure:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+// Steg 3: Uppdatera Standardpriser
+export async function updateDefaultRates(formData: FormData) {
+    try {
+        const userId = await getAuthenticatedUserId();
+        await adminDb.collection("users").doc(userId).update({
+            defaultHourlyRate: formData.get('hourlyRate') as string,
+            defaultMaterialMarkup: formData.get('materialMarkup') as string,
+            onboardingStep: 3,
+        });
         return { success: true };
     } catch (error: any) {
-        logger.error({ userId, error: error.message, stack: error.stack }, 'Kunde inte slutföra onboarding.');
-        return { success: false, error: 'Kunde inte slutföra onboarding.' };
+        console.error("Fel i updateDefaultRates:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+// Steg 4: Slutför Onboarding
+export async function completeOnboarding() {
+    try {
+        const userId = await getAuthenticatedUserId();
+        await adminDb.collection("users").doc(userId).update({
+            onboardingComplete: true,
+            onboardingStep: 4,
+        });
+        return { success: true };
+    } catch (error: any) {
+        console.error("Fel i completeOnboarding:", error);
+        return { success: false, error: error.message };
     }
 }

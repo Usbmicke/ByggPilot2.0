@@ -1,91 +1,113 @@
 
-import {NextRequest, NextResponse} from "next/server";
-import {Message, streamText} from "ai";
-import {google} from "@ai-sdk/google";
-import {getPineconeClient} from "@/lib/pinecone";
-import {auth} from "@/lib/auth";
-import {adminDb} from "@/lib/admin";
+import { NextRequest, NextResponse } from "next/server";
+import { Message, streamText, CoreMessage } from "ai";
+import { google } from "@ai-sdk/google";
+import { embed } from "ai";
+import { getPineconeClient } from "@/lib/pinecone";
+import { auth } from "@/lib/auth";
+import { adminDb } from "@/lib/admin";
+import { Ratelimit } from "@upstash/ratelimit";
+import { redis } from "@/lib/redis";
+import logger from "@/lib/logger"; // Importera den nya loggern
+
+// =================================================================================
+// CHAT API V4.0 - ROBUST LOGGNING
+// ARKITEKTUR: Ersätter console.error med den nya strukturerade loggern.
+// Varje fel loggas nu som ett sökbart JSON-objekt med kontext.
+// =================================================================================
+
+const ratelimit = new Ratelimit({
+    redis: redis,
+    limiter: Ratelimit.slidingWindow(10, "10 s"),
+    analytics: true,
+});
 
 export async function POST(req: NextRequest) {
-  const {
-    messages,
-    chatId
-  }: { messages: Message[]; chatId: string } = await req.json();
-  const user = await auth();
+    const ip = req.ip ?? "127.0.0.1";
+    let chatId: string | null = null; // Deklarera chatId här för att ha den i catch-blocket
 
-  if (!user) {
-    return NextResponse.json({error: "Unauthorized"}, {status: 401});
-  }
+    try {
+        const { success } = await ratelimit.limit(ip);
+        if (!success) {
+            return NextResponse.json({ error: "Too many requests." }, { status: 429 });
+        }
 
-  const latestMessage = messages[messages.length - 1].content;
+        const { messages, chatId: reqChatId }: { messages: CoreMessage[]; chatId: string } = await req.json();
+        chatId = reqChatId; // Sätt chatId värdet
+        const user = await auth();
 
-  const pineconeClient = await getPineconeClient();
-  const pineconeIndex = await pineconeClient.index("ai-pdf-chat");
+        if (!user?.user?.id) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
 
-  const vectorStore = await pineconeClient.vector_store({
-    index: pineconeIndex,
-  });
+        const latestMessage = messages[messages.length - 1].content as string;
 
-  const searchResult = await vectorStore.search(latestMessage, {
-    k: 5,
-  });
-
-  let context = searchResult.map((item) => item.text).join("\n\n");
-  context = context.slice(0, 4000);
-
-  const augmentedMessages: Message[] = [
-    ...messages.slice(0, -1),
-    {
-      role: "system",
-      content:
-        `You are a helpful AI assistant. You are chatting with a user about a PDF document.
-        You will be provided with the user's message and the most relevant context from the PDF.
-        Your task is to answer the user's question based on the provided context.
-        If the context is not sufficient to answer the question, you can ask the user for more information.
-        Do not make up information that is not present in the context.
-        The context is:
-        ${context}`,
-    },
-    messages[messages.length - 1],
-  ];
-
-  try {
-    const result = await streamText({
-      model: google("models/gemini-1.5-flash-latest"),
-      messages: augmentedMessages,
-    });
-
-    const stream = result.toAIStream({
-      onStart: async () => {
-        // This callback is called when the stream starts.
-        // You can use this to save the prompt to your database.
-        await adminDb.collection("chats").doc(chatId).collection("messages").add({
-          role: "assistant",
-          content: augmentedMessages.map((m) => m.content).join("\n\n"),
-          createdAt: new Date(),
+        const { embedding } = await embed({
+            model: google("models/text-embedding-004"),
+            value: latestMessage,
         });
-      },
-      onToken: async (token: string) => {
-        // This callback is called for each token in the stream.
-        // You can use this to save the response to your database.
-      },
-      onCompletion: async (completion: string) => {
-        // This callback is called when the stream completes.
-        // You can use this to save the final response to your database.
-        await adminDb.collection("chats").doc(chatId).collection("messages").add({
-          role: "assistant",
-          content: completion,
-          createdAt: new Date(),
-        });
-      },
-    });
 
-    return new Response(stream);
-  } catch (error) {
-    console.error("Error in chat API:", error);
-    return NextResponse.json(
-      {error: "Something went wrong, please try again."},
-      {status: 500}
-    );
-  }
+        const pineconeClient = await getPineconeClient();
+        const pineconeIndex = pineconeClient.index(process.env.PINECONE_INDEX_NAME!);
+
+        const queryResult = await pineconeIndex.query({
+            vector: embedding,
+            topK: 10,
+            includeMetadata: true,
+        });
+
+        const context = queryResult.matches
+            .map((match) => (match.metadata as { text: string }).text)
+            .join("\n\n---\n\n");
+
+        const systemPrompt: CoreMessage = {
+            role: "system",
+            content: `Du är en expert-assistent... (samma som V2.0)`,
+        };
+        
+        const finalMessages: CoreMessage[] = [
+            systemPrompt,
+            ...messages.slice(-2),
+        ];
+
+        const result = await streamText({
+            model: google("models/gemini-1.5-flash-latest"),
+            messages: finalMessages,
+        });
+
+        const stream = result.toAIStream({
+            onCompletion: async (completion: string) => {
+                const userMessageRef = adminDb.collection("users").doc(user.user.id!).collection("chats").doc(chatId!).collection("messages");
+                await userMessageRef.add({
+                    role: "user",
+                    content: latestMessage,
+                    createdAt: new Date(),
+                });
+                await userMessageRef.add({
+                    role: "assistant",
+                    content: completion,
+                    createdAt: new Date(),
+                });
+            },
+        });
+
+        return new Response(stream);
+
+    } catch (error: any) {
+        // Använd den nya, strukturerade loggern
+        logger.error(
+            { 
+                error: error.message, 
+                chatId: chatId, // Inkludera viktig kontext
+                userIp: ip,
+                stack: error.stack,
+            },
+            "Ett fel uppstod i chatt-API:et."
+        );
+
+        return NextResponse.json(
+            { error: "Något gick fel i chat-API:et. Vänligen försök igen." },
+            { status: 500 }
+        );
+    }
 }

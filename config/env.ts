@@ -2,10 +2,9 @@
 import { z } from 'zod';
 
 // =================================================================================
-// MILJÖVARIABEL-VALIDERING V4.0 - SYNKRONISERAD
-// BESKRIVNING: Denna version har synkroniserats med resten av applikationen
-// för att konsekvent använda `FIREBASE_SERVICE_ACCOUNT_KEY`. Detta löser den
-// grundläggande konfigurationskonflikten som orsakade startfel.
+// MILJÖVARIABEL-VALIDERING V5.0 - KORREKT VARIABELNAMN
+// BESKRIVNING: Denna version använder det korrekta variabelnamnet 
+// `FIREBASE_SERVICE_ACCOUNT_JSON` som specificerats i `.env.local`.
 // =================================================================================
 
 const serviceAccountJsonSchema = z.object({
@@ -24,8 +23,8 @@ const envSchema = z.object({
   UPSTASH_REDIS_REST_URL: z.string().url('UPSTASH_REDIS_REST_URL måste vara en giltig URL.'),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1, 'UPSTASH_REDIS_REST_TOKEN får inte vara tom.'),
 
-  // Synkroniserad: Letar nu efter `FIREBASE_SERVICE_ACCOUNT_KEY`
-  FIREBASE_SERVICE_ACCOUNT_KEY: z.string().transform((str, ctx) => {
+  // Korrigerad: Letar nu efter `FIREBASE_SERVICE_ACCOUNT_JSON`
+  FIREBASE_SERVICE_ACCOUNT_JSON: z.string().transform((str, ctx) => {
     try {
       const parsedJson = JSON.parse(str);
       const result = serviceAccountJsonSchema.safeParse(parsedJson);
@@ -33,7 +32,7 @@ const envSchema = z.object({
       if (!result.success) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: 'Innehållet i FIREBASE_SERVICE_ACCOUNT_KEY är ogiltigt.',
+          message: 'Innehållet i FIREBASE_SERVICE_ACCOUNT_JSON är ogiltigt.',
           path: result.error.flatten().fieldErrors,
         });
         return z.NEVER;
@@ -42,7 +41,7 @@ const envSchema = z.object({
     } catch (e) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'FIREBASE_SERVICE_ACCOUNT_KEY är inte en giltig JSON-sträng.',
+        message: 'FIREBASE_SERVICE_ACCOUNT_JSON är inte en giltig JSON-sträng.',
       });
       return z.NEVER;
     }
@@ -61,8 +60,8 @@ if (!parsedEnv.success) {
 
 export const env = {
   ...parsedEnv.data,
-  // Synkroniserad: Hämtar data från den korrekt namngivna variabeln
-  FIREBASE_PROJECT_ID: parsedEnv.data.FIREBASE_SERVICE_ACCOUNT_KEY.project_id,
-  GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL: parsedEnv.data.FIREBASE_SERVICE_ACCOUNT_KEY.client_email,
-  GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: parsedEnv.data.FIREBASE_SERVICE_ACCOUNT_KEY.private_key,
+  // Korrigerad: Hämtar data från den korrekt namngivna variabeln
+  FIREBASE_PROJECT_ID: parsedEnv.data.FIREBASE_SERVICE_ACCOUNT_JSON.project_id,
+  GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL: parsedEnv.data.FIREBASE_SERVICE_ACCOUNT_JSON.client_email,
+  GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: parsedEnv.data.FIREBASE_SERVICE_ACCOUNT_JSON.private_key,
 };

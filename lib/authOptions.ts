@@ -5,9 +5,11 @@ import { FirestoreAdapter } from "@auth/firebase-adapter";
 import { adminDb } from './admin';
 
 // =================================================================================
-// AUTH OPTIONS V7.0 (FÖRENKLAD)
-// ARKITEKTUR: Tagit bort beroendet av `adminAuth` från `lib/admin.ts`.
-// Detta minskar risken för problem om `admin.ts` inte är korrekt konfigurerad.
+// AUTH OPTIONS V8.0 (MINIMALISTISKA SCOPES)
+// ARKITEKTUR: I enlighet med principen om "minimala nödvändiga behörigheter" har
+// scopes för Kalender, Tasks och Gmail tagits bort. Detta minskar applikationens
+// attackyta och ökar användarens förtroende, då vi bara begär åtkomst till
+// det som är absolut nödvändigt för den nuvarande funktionaliteten (Drive).
 // =================================================================================
 
 export const authOptions: NextAuthOptions = {
@@ -20,7 +22,11 @@ export const authOptions: NextAuthOptions = {
                     prompt: "consent",
                     access_type: "offline",
                     response_type: "code",
-                    scope: ["https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/calendar", "https://www.googleapis.com/auth/tasks", "https://www.googleapis.com/auth/gmail.send"].join(" ")
+                    scope: [
+                        "https://www.googleapis.com/auth/userinfo.profile", 
+                        "https://www.googleapis.com/auth/userinfo.email", 
+                        "https://www.googleapis.com/auth/drive"
+                    ].join(" ")
                 }
             }
         })

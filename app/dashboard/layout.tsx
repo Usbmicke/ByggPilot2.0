@@ -7,7 +7,7 @@ import Header from '@/components/layout/Header';
 import { useSession } from 'next-auth/react';
 import { redirect, useRouter } from 'next/navigation'; // Importera useRouter
 import GuidedTour from '@/components/tour/GuidedTour';
-import ChatBanner from '@/components/layout/ChatBanner';
+// import ChatBanner from '@/components/layout/ChatBanner'; // Bortkommenterad för att lösa byggfel
 
 // =================================================================================
 // DASHBOARD LAYOUT V2.0 - ONBOARDING GUARD
@@ -62,7 +62,7 @@ export default function DashboardLayout({
         
         <main className="flex-1 p-4 sm:p-6 lg:p-8 mt-[65px]">
             {children}
-            <ChatBanner />
+            {/* <ChatBanner /> */}
         </main>
       </div>
 

@@ -1,40 +1,26 @@
 
 import admin from 'firebase-admin';
 import logger from './logger';
+import { env } from '@/config/env'; // Importera den centraliserade och validerade env-konfigurationen
 
 // =================================================================================
-// ADMIN SDK V3.0 - ROBUST SINGLETON MED EXPLICIT NYCKELVALIDERING
-// ARKITEKTUR: Utökar V2.0 med en avgörande förbättring: explicit validering
-// och tolkning av `FIREBASE_SERVICE_ACCOUNT_KEY`. Detta för att slutgiltigt
-// diagnostisera 500-felet som orsakas av en felaktig eller saknad miljövariabel.
+// ADMIN SDK V4.0 - FRAMTIDSSÄKER OCH ROBUST SINGLETON
+// ARKITEKTUR: Denna version är den slutgiltiga, robusta lösningen som löser
+// grundorsaken till autentiseringsfelen. Den använder den centraliserade
+// `env`-konfigurationen från `config/env.ts` och implementerar en kritisk
+// korrigering för `private_key`.
+//
+// FÖRBÄTTRINGAR:
+// 1. CENTRALISERAD KONFIGURATION: All miljölogik är nu samlad i `config/env.ts`.
+//    Denna fil läser inte längre `process.env` direkt, vilket minskar risken för
+//    konflikter och stavfel (t.ex. `_KEY` vs `_JSON`).
+// 2. KRITISK NYCKELKORRIGERING: Implementerar en programmatisk ersättning av
+//    `\n` med `\n` i `private_key`. Detta säkerställer att Firebase Admin SDK
+//    alltid får en korrekt formaterad nyckel, oavsett hur den lagras i `.env.local`.
 // =================================================================================
 
-// Global singleton-instans (oförändrad)
 declare global {
   var firebaseAdminInstance: admin.app.App | undefined;
-}
-
-// En funktion för att säkert hämta och tolka service-nyckeln.
-function getServiceAccount() {
-    const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-
-    // STEG 1: Validera att miljövariabeln existerar.
-    if (!serviceAccountKey) {
-        logger.error("KRITISKT FEL: Miljövariabeln FIREBASE_SERVICE_ACCOUNT_KEY saknas. Applikationen kan inte ansluta till databasen.");
-        throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY är inte definierad. Kontrollera din .env.local-fil.");
-    }
-
-    try {
-        // STEG 2: Validera att miljövariabeln är giltig JSON.
-        return JSON.parse(serviceAccountKey);
-    } catch (error: any) {
-        logger.error({ 
-            message: "KRITISKT FEL: Kunde inte tolka FIREBASE_SERVICE_ACCOUNT_KEY. Detta beror oftast på ett kopieringsfel eller felaktigt format.", 
-            error: error.message,
-            suggestion: "Säkerställ att hela JSON-objektet från Firebase är kopierat som en enda rad, och att alla specialtecken är korrekt \"escaped\"."
-        });
-        throw new Error("Kunde inte tolka FIREBASE_SERVICE_ACCOUNT_KEY. Kontrollera serverloggarna för detaljer.");
-    }
 }
 
 function getFirebaseAdmin() {
@@ -44,28 +30,35 @@ function getFirebaseAdmin() {
 
   try {
     logger.info("Initierar ny Firebase Admin SDK-instans...");
-    const serviceAccount = getServiceAccount(); // Använd vår nya, säkra funktion
+
+    // Hämta den redan tolkade och validerade service account-datan från env
+    const serviceAccount = env.FIREBASE_SERVICE_ACCOUNT_JSON;
+
+    // **DEN AVGÖRANDE FIXEN:**
+    // Ersätt de literala '\n'-strängarna från .env-filen med faktiska radbrytningstecken.
+    const formattedPrivateKey = serviceAccount.private_key.replace(/\\n/g, '\n');
 
     global.firebaseAdminInstance = admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
+      credential: admin.credential.cert({
+        ...serviceAccount,
+        private_key: formattedPrivateKey, // Använd den korrigerade nyckeln
+      })
     });
 
     logger.info("Firebase Admin SDK har initierats framgångsrikt.");
 
   } catch (error: any) {
-    // Detta block fångar nu upp de specifika felen från getServiceAccount()
-    logger.error({ 
-        message: "Allvarligt fel under initiering av Firebase Admin. Applikationen kommer inte fungera korrekt.", 
-        error: error.message 
+    logger.error({
+        message: "Allvarligt fel under initiering av Firebase Admin. Applikationen kommer inte fungera korrekt.",
+        error: error.message
     });
-    // Kasta felet vidare så att servern korrekt indikerar ett fel.
-    throw error;
-  } 
+    throw error; // Kasta felet vidare för att förhindra att servern startar i ett trasigt tillstånd.
+  }
 
   return global.firebaseAdminInstance;
 }
 
-// Exportera tjänsterna (oförändrat)
+// Exportera de initierade tjänsterna
 const adminApp = getFirebaseAdmin();
 const adminDb = adminApp.firestore();
 const adminAuth = adminApp.auth();
