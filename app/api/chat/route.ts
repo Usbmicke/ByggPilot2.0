@@ -1,87 +1,91 @@
 
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/authOptions';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { experimental_streamText, experimental_streamObject } from 'ai';
-import { z } from 'zod';
-import { getProjects } from '@/actions/projectActions';
-import { listFiles, getDriveFileContent } from '@/services/driveService';
-import { env } from '@/config/env';
-import { ratelimit } from '@/lib/rate-limiter';
-import logger from '@/lib/logger';
+import {NextRequest, NextResponse} from "next/server";
+import {Message, streamText} from "ai";
+import {google} from "@ai-sdk/google";
+import {getPineconeClient} from "@/lib/pinecone";
+import {auth} from "@/lib/auth";
+import {adminDb} from "@/lib/admin";
 
-// =================================================================================
-// CHAT API V4.3 - UX (VISUALISERING AV VERKTYGSANROP)
-// BESKRIVNING: Implementerar callbacks (`onToolCall`, `onToolResult`) för att
-// omedelbart strömma meddelanden om verktygsanrop till klienten.
-// Användaren ser nu när AI:n "arbetar" (t.ex. "Läser fil...").
-// Fas C i arkitekturplanen är nu slutförd.
-// =================================================================================
+export async function POST(req: NextRequest) {
+  const {
+    messages,
+    chatId
+  }: { messages: Message[]; chatId: string } = await req.json();
+  const user = await auth();
 
-const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+  if (!user) {
+    return NextResponse.json({error: "Unauthorized"}, {status: 401});
+  }
 
-export async function POST(req: Request) {
-    const requestStartTime = Date.now();
-    const ip = req.headers.get('x-forwarded-for') ?? '127.0.0.1';
+  const latestMessage = messages[messages.length - 1].content;
 
-    try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
-            logger.warn({ ip }, 'Åtkomst nekad: Autentisering krävs.');
-            return new Response(JSON.stringify({ error: 'Autentisering krävs' }), { status: 401 });
-        }
+  const pineconeClient = await getPineconeClient();
+  const pineconeIndex = await pineconeClient.index("ai-pdf-chat");
 
-        const userId = session.user.id;
-        const log = logger.child({ userId, ip });
+  const vectorStore = await pineconeClient.vector_store({
+    index: pineconeIndex,
+  });
 
-        log.info('Mottog ny chatt-förfrågan.');
+  const searchResult = await vectorStore.search(latestMessage, {
+    k: 5,
+  });
 
-        const { success } = await ratelimit.limit(userId);
-        if (!success) {
-            log.warn('Rate limit överskriden.');
-            return new Response(JSON.stringify({ error: 'För många anrop.' }), { status: 429 });
-        }
+  let context = searchResult.map((item) => item.text).join("\n\n");
+  context = context.slice(0, 4000);
 
-        const driveFolderId = session.user.driveFolderId;
-        const { messages } = await req.json();
+  const augmentedMessages: Message[] = [
+    ...messages.slice(0, -1),
+    {
+      role: "system",
+      content:
+        `You are a helpful AI assistant. You are chatting with a user about a PDF document.
+        You will be provided with the user's message and the most relevant context from the PDF.
+        Your task is to answer the user's question based on the provided context.
+        If the context is not sufficient to answer the question, you can ask the user for more information.
+        Do not make up information that is not present in the context.
+        The context is:
+        ${context}`,
+    },
+    messages[messages.length - 1],
+  ];
 
-        const result = await experimental_streamText({
-            model: model,
-            messages: messages,
-            tools: {
-                // ... (verktygsdefinitioner är oförändrade)
-            },
+  try {
+    const result = await streamText({
+      model: google("models/gemini-1.5-flash-latest"),
+      messages: augmentedMessages,
+    });
 
-            // --- NYTT: Callbacks för att visualisera verktygsanrop ---
-            onToolCall: (toolCall) => {
-                log.info({ toolName: toolCall.toolName, args: toolCall.args }, `[Tool Call] Anropar verktyget ${toolCall.toolName}`);
-                // Skickar ett meddelande till klienten direkt när ett verktyg anropas.
-                // `useChat` kommer automatiskt att rendera detta med rollen 'tool'.
-                return {
-                    role: 'tool',
-                    // Skapa ett läsbart meddelande för användaren.
-                    content: `Använder verktyg: ${toolCall.toolName}...`
-                };
-            },
-            onToolResult: (toolResult) => {
-                log.info({ toolName: toolResult.toolName, result: toolResult.result }, `[Tool Result] Fick resultat från ${toolResult.toolName}`);
-                // Vi behöver inte skicka tillbaka resultatet till klienten, bara till AI:n.
-                // SDK:n hanterar detta automatiskt.
-            },
-            // --- SLUT PÅ NYTT ---
-
-            onFinish: () => {
-                const duration = Date.now() - requestStartTime;
-                log.info({ duration }, `Förfrågan slutförd på ${duration}ms.`);
-            }
+    const stream = result.toAIStream({
+      onStart: async () => {
+        // This callback is called when the stream starts.
+        // You can use this to save the prompt to your database.
+        await adminDb.collection("chats").doc(chatId).collection("messages").add({
+          role: "assistant",
+          content: augmentedMessages.map((m) => m.content).join("\n\n"),
+          createdAt: new Date(),
         });
+      },
+      onToken: async (token: string) => {
+        // This callback is called for each token in the stream.
+        // You can use this to save the response to your database.
+      },
+      onCompletion: async (completion: string) => {
+        // This callback is called when the stream completes.
+        // You can use this to save the final response to your database.
+        await adminDb.collection("chats").doc(chatId).collection("messages").add({
+          role: "assistant",
+          content: completion,
+          createdAt: new Date(),
+        });
+      },
+    });
 
-        return result.toAIStream();
-
-    } catch (error) {
-        const duration = Date.now() - requestStartTime;
-        logger.error({ error, duration, ip }, 'Allvarligt fel i chatt-API:n.');
-        return new Response(JSON.stringify({ error: 'Internt serverfel' }), { status: 500 });
-    }
+    return new Response(stream);
+  } catch (error) {
+    console.error("Error in chat API:", error);
+    return NextResponse.json(
+      {error: "Something went wrong, please try again."},
+      {status: 500}
+    );
+  }
 }
