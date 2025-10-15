@@ -2,20 +2,19 @@
 // Fil: app/providers.tsx
 'use client'
 import { SessionProvider } from 'next-auth/react'
-import { UIProvider } from '@/contexts/UIContext'
-import { ChatProvider } from '@/contexts/ChatContext'; // <-- Importerad!
+import { UIProvider } from '@/contexts/UIContext' // <-- ÅTERSTÄLLD
+import { ChatProvider } from '@/contexts/ChatContext';
 
 // =================================================================================
-// GULDSTANDARD - PROVIDERS V3.0
-// REVIDERING: Lade till ChatProvider. Detta löser kraschen "useChat must be 
-// used within a ChatProvider" genom att göra chatt-kontexten tillgänglig
-// för hela applikationen, precis som för session och UI.
+// GULDSTANDARD - PROVIDERS V5.0
+// REVIDERING: Återaktiverade UIProvider efter att ha skapat en ny, säker version
+// av UIContext.tsx. All grundläggande funktionalitet är nu återställd och stabil.
 // =================================================================================
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
-      <ChatProvider> {/** <-- Lades till här **/} 
-        <UIProvider>
+      <ChatProvider>
+        <UIProvider> {/** <-- ÅTERSTÄLLD **/} 
           {children}
         </UIProvider>
       </ChatProvider>

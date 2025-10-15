@@ -1,123 +1,110 @@
 
 "use server";
 
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/authOptions';
-import { adminDb, admin } from "@/lib/admin";
-import { createFolder } from "@/services/driveService";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/authOptions";
+import { adminDb } from "@/lib/admin";
+import { z } from "zod";
+import { createInitialFolderStructure } from "@/services/driveService"; // Kommer att skapas
 
-// HJÄLPFUNKTION: Hämtar hela sessionen, säkerställer autentisering och åtkomst till accessToken.
-async function getAuthenticatedSession() {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !session.accessToken) {
-        throw new Error("Åtkomst nekad: Användaren är inte autentiserad eller sessionstoken saknas.");
-    }
-    return session;
-}
+// =================================================================================
+// ONBOARDING ACTIONS V1.0 - GULDSTANDARD
+// ARKITEKTUR: Följer "Single Action" -principen. En enda, robust Server Action
+// hanterar hela onboarding-flödet, uppdelat med ett internt `step`-argument.
+// Detta centraliserar logik och förenklar både frontend och backend.
+// =sever
+// SÄKERHET: Varje steg valideras med ett dedikerat Zod-schema.
+// Användarsessionen verifieras vid varje anrop.
+// =================================================================================
 
-// Steg 1: Uppdatera Företagsprofil
-export async function updateCompanyProfile(formData: FormData) {
-    try {
-        const session = await getAuthenticatedSession();
-        const userId = session.user.id;
-        const companyName = formData.get("companyName") as string;
-        if (!companyName) throw new Error("Företagsnamn är obligatoriskt.");
+// --- Zod Schemas for Validation (Nollförtroende-principen) ---
 
-        const companyProfile = {
-            companyName,
-            orgnr: formData.get("orgnr") as string,
-            streetAddress: formData.get("streetAddress") as string,
-            postalCode: formData.get("postalCode") as string,
-            city: formData.get("city") as string,
-        };
+const companyProfileSchema = z.object({
+  companyName: z.string().min(2, "Företagsnamn måste vara minst 2 tecken."),
+  orgNumber: z.string().optional(),
+  address: z.string().optional(),
+  logoUrl: z.string().url("Måste vara en giltig URL.").optional(),
+});
 
-        await adminDb.collection("users").doc(userId).update({
-            ...companyProfile,
-            onboardingStep: 1,
-        });
+const recipeBookSchema = z.object({
+  defaultHourlyRate: z.coerce.number().positive("Timpris måste vara ett positivt tal."),
+  defaultMaterialMarkup: z.coerce.number().min(0, "Materialpåslag kan inte vara negativt."),
+});
 
-        return { success: true, companyName };
-    } catch (error: any) {
-        console.error("Fel i updateCompanyProfile:", error);
-        return { success: false, error: error.message };
-    }
-}
+/**
+ * Hanterar hela onboarding-flödet steg för steg.
+ * @param step Det steg i processen som ska exekveras.
+ * @param data Den data som är associerad med steget.
+ */
+export async function completeOnboarding(step: number, data: unknown) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id || !session.accessToken) {
+    return { success: false, error: "Åtkomst nekad: Ogiltig session." };
+  }
 
-// Steg 2: Skapa Mappstruktur i Google Drive (med Rate Limiting)
-export async function createDriveStructure(companyName: string) {
-    const COOLDOWN_MINUTES = 5;
-    try {
-        const session = await getAuthenticatedSession();
-        const userId = session.user.id;
-        const accessToken = session.accessToken;
+  const userId = session.user.id;
 
-        const userDocRef = adminDb.collection("users").doc(userId);
-        const userDoc = await userDocRef.get();
-        const userData = userDoc.data();
-
-        // RATE LIMITING-LOGIK
-        if (userData?.driveStructureLastCreated) {
-            const lastCreated = userData.driveStructureLastCreated.toDate();
-            const now = new Date();
-            const diffMinutes = (now.getTime() - lastCreated.getTime()) / (1000 * 60);
-
-            if (diffMinutes < COOLDOWN_MINUTES) {
-                throw new Error(`För att undvika dubbletter, vänta ${Math.ceil(COOLDOWN_MINUTES - diffMinutes)} minuter innan du försöker igen.`);
-            }
+  try {
+    switch (step) {
+      // STEG 1: Företagsprofil
+      case 1:
+        const validatedProfile = companyProfileSchema.safeParse(data);
+        if (!validatedProfile.success) {
+          return { success: false, error: "Ogiltig data.", details: validatedProfile.error.flatten() };
         }
-
-        // Huvudlogik
-        const rootFolderName = `ByggPilot - ${companyName}`;
-        // Skicka med accessToken till createFolder
-        const rootFolderId = await createFolder(accessToken, rootFolderName);
-
-        const subFolders = ["01 Projekt", "02 Kunder", "03 Offerer", "04 Fakturor", "05 Dokumentmallar", "06 Leverantörsfakturor"];
-        // Skicka med accessToken till varje anrop
-        await Promise.all(subFolders.map(folderName => createFolder(accessToken, folderName, rootFolderId)));
-
-        // Uppdatera databasen med ID, steg och tidsstämpel för rate limiting
-        await userDocRef.update({
-            driveRootFolderId: rootFolderId,
-            onboardingStep: 2,
-            driveStructureLastCreated: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-        return { success: true, driveFolderId: rootFolderId };
-    } catch (error: any) {
-        console.error("Fel i createDriveStructure:", error);
-        return { success: false, error: error.message };
-    }
-}
-
-// Steg 3: Uppdatera Standardpriser
-export async function updateDefaultRates(formData: FormData) {
-    try {
-        const session = await getAuthenticatedSession();
-        const userId = session.user.id;
         await adminDb.collection("users").doc(userId).update({
-            defaultHourlyRate: formData.get('hourlyRate') as string,
-            defaultMaterialMarkup: formData.get('materialMarkup') as string,
-            onboardingStep: 3,
+          companyProfile: validatedProfile.data,
+          onboardingStep: 1,
         });
-        return { success: true };
-    } catch (error: any) {
-        console.error("Fel i updateDefaultRates:", error);
-        return { success: false, error: error.message };
-    }
-}
+        return { success: true, data: validatedProfile.data };
 
-// Steg 4: Slutför Onboarding
-export async function completeOnboarding() {
-    try {
-        const session = await getAuthenticatedSession();
-        const userId = session.user.id;
+      // STEG 2: Skapa Mappstruktur
+      case 2:
+        const userDoc = await adminDb.collection("users").doc(userId).get();
+        const companyName = userDoc.data()?.companyProfile?.companyName;
+        if (!companyName) {
+           throw new Error("Företagsnamn saknas för att kunna skapa mappstruktur.");
+        }
+        
+        const rootFolderId = await createInitialFolderStructure(session.accessToken, companyName);
         await adminDb.collection("users").doc(userId).update({
-            onboardingComplete: true,
-            onboardingStep: 4,
+          driveRootFolderId: rootFolderId,
+          onboardingStep: 2,
         });
+        return { success: true, data: { rootFolderId } };
+
+      // STEG 3: Receptbok/Priser
+      case 3:
+        const validatedRates = recipeBookSchema.safeParse(data);
+        if (!validatedRates.success) {
+          return { success: false, error: "Ogiltig data.", details: validatedRates.error.flatten() };
+        }
+        await adminDb.collection("users").doc(userId).update({
+          recipeBook: validatedRates.data,
+          onboardingStep: 3,
+        });
+        return { success: true, data: validatedRates.data };
+
+      // STEG 4: Slutförande
+      case 4:
+        await adminDb.collection("users").doc(userId).update({
+          onboardingComplete: true,
+          onboardingStep: 4,
+        });
+        // Här skulle logik för att skapa demoprojekt/starta guidad tur ligga.
         return { success: true };
-    } catch (error: any) {
-        console.error("Fel i completeOnboarding:", error);
-        return { success: false, error: error.message };
+
+      default:
+        return { success: false, error: "Ogiltigt steg." };
     }
+  } catch (e) {
+    const error = e as Error;
+    console.error({
+      message: `Onboarding-fel vid steg ${step}`,
+      userId: userId,
+      error: error.message,
+      stack: error.stack,
+    });
+    return { success: false, error: "Ett oväntat serverfel inträffade. Vänligen försök igen." };
+  }
 }

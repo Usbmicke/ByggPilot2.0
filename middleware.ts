@@ -1,53 +1,70 @@
+
+import { withAuth, type NextRequestWithAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
-import { env } from '@/config/env'; // <-- KORREKT IMPORT
 
 // =================================================================================
-// Middleware V5.0 (ARKITEKTONISKT KORREKT)
-// ARKITEKTUR: Denna version anpassar middleware till den nya, säkra arkitekturen.
+// GULDSTANDARD - MIDDLEWARE V3.0
+// ARKITEKTUR: Denna version är designad för att vara extremt robust och förhindra
+// de oändliga omdirigeringsloopar som kan uppstå när sessionens status är
+// osynkroniserad med användarens faktiska data i databasen.
 //
-// ROTORSAK: Middleware använde `process.env.NEXTAUTH_SECRET` direkt, vilket är
-// `undefined` i den nya arkitekturen. Detta orsakade en krasch på servern.
-//
-// LÖSNING: Importerar och använder `env.NEXTAUTH_SECRET` från den centraliserade,
-// Zod-validerade miljöfilen. Detta säkerställer att middleware har tillgång till
-// rätt hemlighet och kan dekryptera JWT-tokens korrekt.
+// LÖSNING:
+// 1. **IGNORERA /onboarding:** Om användaren redan är på /onboarding, gör
+//    ingenting. Detta är den viktigaste ändringen för att bryta loopar direkt
+//    efter att onboardingen är slutförd.
+// 2. **SÄKRARE KONTROLLER:** Logiken är nu mer strikt och agerar bara när
+//    sessionstoken (`token`) är fullständigt definierad och har ett känt
+//    onboarding-tillstånd.
+// 3. **TYDLIGARE FLÖDE:** Separata `if`-block för varje scenario gör koden
+//    lättare att förstå och felsöka.
 // =================================================================================
 
-const protectedRoutes = ['/dashboard', '/onboarding'];
+export default withAuth(
+    function middleware(request: NextRequestWithAuth) {
+        const { pathname } = request.nextUrl;
+        const { token } = request.nextauth;
 
-export async function middleware(req: NextRequest) {
-    // KORREKT: Använd den validerade hemligheten från `env`-objektet.
-    const token = await getToken({ req, secret: env.NEXTAUTH_SECRET });
-    const { pathname } = req.nextUrl;
+        // Om vi är på onboarding-sidan, gör ingenting och låt sidan renderas.
+        // Detta förhindrar omdirigeringsloopar.
+        if (pathname.startsWith('/onboarding')) {
+            return NextResponse.next();
+        }
 
-    const isAuthenticated = !!token;
-    const isOnboardingComplete = token?.onboardingComplete as boolean;
+        // Om användaren är autentiserad och har en token...
+        if (token) {
+            // ...men INTE har slutfört onboarding, skicka till onboarding-sidan.
+            if (token.onboardingComplete === false) {
+                return NextResponse.redirect(new URL('/onboarding', request.url));
+            }
 
-    const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
+            // Om användaren är på startsidan och HAR slutfört onboarding, skicka till dashboard.
+            if (pathname === '/' && token.onboardingComplete === true) {
+                 return NextResponse.redirect(new URL('/dashboard', request.url));
+            }
+        }
 
-    if (!isAuthenticated && isProtectedRoute) {
-        return NextResponse.redirect(new URL('/', req.url));
+        // I alla andra fall (t.ex. användare på skyddade sidor med giltig token),
+        // fortsätt som vanligt.
+        return NextResponse.next();
+    },
+    {
+        callbacks: {
+            // Denna callback avgör om middleware-funktionen överhuvudtaget ska köras.
+            // Vi vill att den ska köras på alla sidor FÖRUTOM rena API-anrop, bildfiler etc.
+            authorized: ({ token, req }) => {
+                const { pathname } = req.nextUrl;
+                
+                // Kör alltid middleware för vanliga sidor.
+                // Ignorera för api, next, och fil-requests.
+                if (pathname.startsWith('/api') || 
+                    pathname.startsWith('/_next') || 
+                    pathname.includes('.')) {
+                    return true; // Ignorera inte, men låt passera utan redirect-logik
+                }
+                
+                // Om det finns en token (användaren är inloggad), kör alltid middleware-logiken.
+                return !!token;
+            },
+        },
     }
-
-    if (isAuthenticated && pathname === '/') {
-        return NextResponse.redirect(new URL('/dashboard', req.url));
-    }
-
-    if (isAuthenticated && !isOnboardingComplete && pathname.startsWith('/dashboard')) {
-        return NextResponse.redirect(new URL('/onboarding', req.url));
-    }
-
-    if (isAuthenticated && isOnboardingComplete && pathname.startsWith('/onboarding')) {
-        return NextResponse.redirect(new URL('/dashboard', req.url));
-    }
-
-    return NextResponse.next();
-}
-
-export const config = {
-    matcher: [
-        '/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)',
-    ],
-};
+);

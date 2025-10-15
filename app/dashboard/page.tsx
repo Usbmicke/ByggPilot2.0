@@ -1,22 +1,18 @@
 
 import { redirect } from 'next/navigation';
-import { auth } from '@/lib/auth';
+import { getServerSession } from 'next-auth/next'; // <-- KORRIGERAD
+import { authOptions } from '@/lib/authOptions'; // <-- KORRIGERAD
 import { adminDb } from '@/lib/admin';
 import { FolderIcon, InboxIcon, SparklesIcon } from '@heroicons/react/24/outline';
 
 // =================================================================================
-// DASHBOARD PAGE V3.0 (SERVER COMPONENT & ROBUST AUTH)
-// ARKITEKTUR: Detta är nu en Server Component, vilket är Next.js bästa praxis.
-// 1. **Server-Side Auth:** Säkerhetskontrollen körs på servern INNAN sidan renderas.
-// 2. **Direkt Databasåtkomst:** Hämtar `onboardingComplete` direkt från Firestore,
-//    vilket är den enda tillförlitliga källan. Detta eliminerar buggar med
-//    föråldrad JWT-data.
-// 3. **Omedelbar Omdirigering:** Använder `redirect()` från `next/navigation` för att
-//    omedelbart skicka o-onboardade användare till rätt sida, utan att dashboarden
-//    någonsin visas i webbläsaren.
+// DASHBOARD PAGE V4.0 (KORREKT AUTH-HÄMTNING)
+// REVIDERING: Bytte ut den felaktiga `auth` importen mot den korrekta 
+// `getServerSession(authOptions)`. Detta löser `Module not found`-felet och
+// tillåter sidan att hämta användarsessionen korrekt på serversidan.
 // =================================================================================
 
-// --- Komponenter (oförändrade, kan brytas ut till egen fil) ---
+// --- Komponenter (oförändrade) ---
 
 interface StatCardProps {
     title: string;
@@ -43,12 +39,12 @@ const InfoCard = ({ icon, title, text, ctaText }) => (
     </div>
 );
 
-// --- Huvudsaklig Dashboard-komponent (nu en Server Component) ---
+// --- Huvudsaklig Dashboard-komponent ---
 
 export default async function DashboardPage() {
-    const session = await auth();
+    // Korrekt metod för att hämta sessionen på en Server Component
+    const session = await getServerSession(authOptions);
     
-    // Om ingen session finns, borde middleware redan ha omdirigerat, men detta är en extra säkerhetsåtgärd.
     if (!session?.user?.id) {
         redirect('/');
     }
@@ -56,7 +52,6 @@ export default async function DashboardPage() {
     const userDoc = await adminDb.collection('users').doc(session.user.id).get();
     const userData = userDoc.data();
 
-    // Den kritiska säkerhetskontrollen: Tvinga användaren till onboarding om den inte är slutförd.
     if (!userData?.onboardingComplete) {
         redirect('/onboarding');
     }
