@@ -1,5 +1,3 @@
-
-// Fil: app/contexts/UIContext.tsx
 'use client'
 
 import { createContext, useContext, useState, ReactNode } from 'react';
@@ -8,6 +6,8 @@ import { createContext, useContext, useState, ReactNode } from 'react';
 interface UIContextType {
   isSidebarOpen: boolean;
   toggleSidebar: () => void;
+  isChatOpen: boolean; // <-- TILLAGD
+  toggleChat: () => void; // <-- TILLAGD
 }
 
 // Skapar kontexten
@@ -19,21 +19,24 @@ interface UIProviderProps {
 }
 
 // =================================================================================
-// GULDSTANDARD - UI CONTEXT V1.0
-// ARKITEKTUR: En enkel, säker och robust implementation för att hantera globala
-// UI-tillstånd. Denna första version hanterar endast sidomenyns synlighet.
-// Innehåller ingen komplex logik eller useEffects för att undvika de
-// oändliga loopar vi såg tidigare.
+// UI CONTEXT V2.0 - MED CHATT-LOGIK
+// REVIDERING: Lade till isChatOpen och toggleChat för att hantera synligheten
+// av chatt-komponenten. Detta var en kritisk saknad del.
 // =================================================================================
 export function UIProvider({ children }: UIProviderProps) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [isChatOpen, setChatOpen] = useState(false); // <-- TILLAGD
 
   const toggleSidebar = () => {
     setSidebarOpen(prev => !prev);
   };
 
+  const toggleChat = () => { // <-- TILLAGD
+    setChatOpen(prev => !prev);
+  };
+
   return (
-    <UIContext.Provider value={{ isSidebarOpen, toggleSidebar }}>
+    <UIContext.Provider value={{ isSidebarOpen, toggleSidebar, isChatOpen, toggleChat }}>
       {children}
     </UIContext.Provider>
   );

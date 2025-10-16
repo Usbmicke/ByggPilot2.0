@@ -1,30 +1,31 @@
-'use client'; // <-- DEN AVGÖRANDE RADEN SOM SAKNADES
+'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useChat } from '@/app/contexts/ChatContext';
+import { useUI } from '@/app/contexts/UIContext'; // <-- IMPORTERAD
 import ButtonSuggestions from './ButtonSuggestions';
 
 // =================================================================================
-// CHAT WIDGET V2.2 - "USE CLIENT" FIX
-// ARKITEKTUR:
-// 1.  **"use client" Direktiv:** Lade till direktivet högst upp i filen. Detta
-//     instruerar Next.js att rendera denna komponent på klientsidan, vilket 
-//     tillåter användning av interaktiva hooks som useState och useEffect. 
-//     Detta löser applikationskraschen.
+// CHAT WIDGET V3.0 - KOPPLAD TILL UI-KONTEXT
+// REVIDERING:
+// 1.  Importerar och använder nu useUI() för att hämta isChatOpen.
+// 2.  Komponenten returnerar nu `null` om isChatOpen är `false`, vilket döljer
+//     chattfönstret helt när det är meningen att det ska vara stängt.
 // =================================================================================
 
 const Chat = () => {
   const { messages, isLoading, append } = useChat();
+  const { isChatOpen } = useUI(); // <-- HÄMTAR STATUS
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }
-
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (isChatOpen) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isChatOpen]);
+
+  if (!isChatOpen) return null; // <-- AVGÖRANDE LOGIK: Dölj om stängd.
 
   const handleSend = () => {
     if (input.trim()) {
@@ -39,7 +40,7 @@ const Chat = () => {
 
   return (
     <div className="fixed bottom-8 right-8 w-[450px] h-[600px] flex flex-col bg-component-background border border-border rounded-lg shadow-2xl font-sans z-50">
-      <div className="p-4 border-b border-border">
+       <div className="p-4 border-b border-border">
         <h2 className="text-lg font-semibold text-text-primary">ByggPilot Co-Pilot</h2>
         <p className="text-sm text-text-secondary">Din digitala kollega, redo att hjälpa.</p>
       </div>
