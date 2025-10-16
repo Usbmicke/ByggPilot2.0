@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useUI } from '@/contexts/UIContext';
+import { useUI } from '@/app/contexts/UIContext'; // KORRIGERAD SÖKVÄG
 import { PlusIcon, DocumentTextIcon, FolderPlusIcon, UserPlusIcon, DocumentPlusIcon } from '@heroicons/react/24/outline';
 import Modal from '@/components/shared/Modal';
 

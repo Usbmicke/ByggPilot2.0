@@ -1,24 +1,13 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react'; // Importera useEffect
+import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import { useSession } from 'next-auth/react';
-import { redirect, useRouter } from 'next/navigation'; // Importera useRouter
+import { useRouter } from 'next/navigation';
 import GuidedTour from '@/components/tour/GuidedTour';
-// import ChatBanner from '@/components/layout/ChatBanner'; // Bortkommenterad för att lösa byggfel
-
-// =================================================================================
-// DASHBOARD LAYOUT V2.0 - ONBOARDING GUARD
-// REVIDERING:
-// 1. **Importerat `useEffect` och `useRouter`:** Nödvändiga hooks för att hantera
-//    logik efter rendering och för att kunna omdirigera användaren.
-// 2. **Lagt till Onboarding-skydd:** En `useEffect`-hook har implementerats.
-//    Denna hook kontrollerar `session.user.onboardingComplete`-flaggan.
-//    Om flaggan är `false`, tvingas användaren omedelbart till `/onboarding`,
-//    vilket löser det kritiska flödesfelet.
-// =================================================================================
+import IntegratedChat from '@/app/components/IntegratedChat'; // KORRIGERAD SÖKVÄG
 
 export default function DashboardLayout({
   children,
@@ -27,9 +16,8 @@ export default function DashboardLayout({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { data: session, status } = useSession();
-  const router = useRouter(); // Initiera routern
+  const router = useRouter();
 
-  // NYTT: Onboarding-skydd
   useEffect(() => {
     if (status === 'authenticated' && session?.user && !session.user.onboardingComplete) {
       router.push('/onboarding');
@@ -45,7 +33,6 @@ export default function DashboardLayout({
   }
 
   if (status === 'unauthenticated' || (status === 'authenticated' && !session.user.onboardingComplete)) {
-    // Visar ett tomt state eller en loader medan omdirigering sker för att undvika "flash"
     return (
         <div className="h-screen w-screen flex items-center justify-center bg-gray-900 text-white">
             Omdirigerar...
@@ -62,10 +49,10 @@ export default function DashboardLayout({
         
         <main className="flex-1 p-4 sm:p-6 lg:p-8 mt-[65px]">
             {children}
-            {/* <ChatBanner /> */}
         </main>
       </div>
 
+      <IntegratedChat />
       <GuidedTour />
     </div>
   );

@@ -1,22 +1,24 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useChat } from '@/app/contexts/ChatContext';
-import { useUI } from '@/app/contexts/UIContext'; // <-- IMPORTERAD
+import { useUI } from '@/app/contexts/UIContext';
 import ButtonSuggestions from './ButtonSuggestions';
+import { Message } from '@/app/components/messages/Message'; // KORRIGERAD IMPORT
+import MessageSkeleton from '@/components/messages/MessageSkeleton';
 
 // =================================================================================
-// CHAT WIDGET V3.0 - KOPPLAD TILL UI-KONTEXT
-// REVIDERING:
-// 1.  Importerar och använder nu useUI() för att hämta isChatOpen.
-// 2.  Komponenten returnerar nu `null` om isChatOpen är `false`, vilket döljer
-//     chattfönstret helt när det är meningen att det ska vara stängt.
+// CHAT WIDGET V4.0 - ALIGNED WITH useCompletion
+// REVISION:
+// 1.  Removes the local `input` state and the manual `handleSend` function.
+// 2.  Directly uses `input`, `handleInputChange`, and `handleSubmit` from the
+//     `useChat` hook, which is now powered by `useCompletion`.
+// 3.  The form now correctly uses the `handleSubmit` from the context.
 // =================================================================================
 
 const Chat = () => {
-  const { messages, isLoading, append } = useChat();
-  const { isChatOpen } = useUI(); // <-- HÄMTAR STATUS
-  const [input, setInput] = useState('');
+  const { messages, input, handleInputChange, handleSubmit, isLoading, append } = useChat();
+  const { isChatOpen } = useUI();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -25,18 +27,7 @@ const Chat = () => {
     }
   }, [messages, isChatOpen]);
 
-  if (!isChatOpen) return null; // <-- AVGÖRANDE LOGIK: Dölj om stängd.
-
-  const handleSend = () => {
-    if (input.trim()) {
-      append(input);
-      setInput('');
-    }
-  };
-
-  const handleSuggestionClick = (suggestion: string) => {
-    append(suggestion);
-  };
+  if (!isChatOpen) return null;
 
   return (
     <div className="fixed bottom-8 right-8 w-[450px] h-[600px] flex flex-col bg-component-background border border-border rounded-lg shadow-2xl font-sans z-50">
@@ -47,30 +38,19 @@ const Chat = () => {
 
       <div className="flex-1 p-4 overflow-y-auto space-y-4">
         {messages.map((m) => (
-          <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-xs md:max-w-md lg:max-w-lg px-4 py-3 rounded-2xl ${m.role === 'user' ? 'bg-accent text-white' : 'bg-background text-text-primary'}`}>
-              <p className="text-sm whitespace-pre-wrap">{m.content}</p>
-              {m.role === 'assistant' && <ButtonSuggestions text={m.content} onClick={handleSuggestionClick} />}
-            </div>
-          </div>
+          <Message key={m.id} message={m} />
         ))}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="px-4 py-3 rounded-2xl bg-background text-text-primary">
-                <span className="animate-pulse">●</span>
-            </div>
-          </div>
-        )}
+        {isLoading && <MessageSkeleton />}
         <div ref={messagesEndRef} />
       </div>
 
       <div className="p-4 border-t border-border">
-        <form onSubmit={(e) => { e.preventDefault(); handleSend(); }}>
+        <form onSubmit={handleSubmit}>
           <div className="relative">
             <input
               type="text"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={handleInputChange}
               placeholder="Skriv ett meddelande..."
               className="w-full bg-background border border-border rounded-md pl-4 pr-12 py-3 text-text-primary focus:ring-accent focus:border-accent"
               disabled={isLoading}

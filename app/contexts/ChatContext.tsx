@@ -1,111 +1,88 @@
-
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
-import { API_CHAT } from '@/app/constants/apiRoutes'; // <-- KORRIGERAD SÖKVÄG
+import { createContext, useContext, ReactNode } from 'react';
+import { useCompletion, type UseCompletionOptions } from 'ai/react';
+import { API_CHAT } from '@/app/constants/apiRoutes';
 
-// Definierar typen för ett enskilt chattmeddelande
+// Defines the shape of a single chat message
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
 }
 
-// Definierar typen för kontextens värde
+// Defines the shape of the context value
 interface ChatContextType {
   messages: Message[];
+  input: string;
+  handleInputChange: (e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLTextAreaElement>) => void;
+  handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   isLoading: boolean;
-  error: Error | null;
-  append: (content: string) => Promise<void>; 
+  append: (content: string) => void;
+  setInput: (value: string) => void; // <-- TILLAGD
 }
 
-// Skapar kontexten med ett initialt värde av undefined
+// Creates the context with an initial value of undefined
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-// Props för ChatProvider-komponenten
-interface ChatProviderProps {
-  children: ReactNode;
-}
+// =================================================================================
+// CHAT CONTEXT V13.0 - ADDED SETINPUT FOR QUICK ACTIONS
+// REVISION:
+// 1.  Added `setInput` to the context type and value. This function is provided
+//     by the `useCompletion` hook and allows us to programmatically set the
+//     chat input's content. This is the foundation for creating quick action buttons.
+// =================================================================================
 
-// Huvudprovider-komponenten som omsluter applikationen
-export function ChatProvider({ children }: ChatProviderProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<Error | null>(null);
+export function ChatProvider({ children }: { children: ReactNode }) {
+  const initialAssistantMessage: Message = {
+    id: `asst-${Date.now()}`,
+    role: 'assistant',
+    content: 'Hej! Jag är ByggPilot Co-Pilot. Hur kan jag hjälpa dig idag? Du kan be mig skapa ett nytt projekt, lägga till en kund eller något annat.'
+  };
 
-  // Funktion för att skicka ett meddelande till backend
-  const append = async (content: string) => {
-    setIsLoading(true);
-    setError(null);
+  const { 
+    messages, 
+    input, 
+    handleInputChange, 
+    handleSubmit, 
+    isLoading,
+    append: vercelAppend, // Rename to avoid conflict
+    setInput, // <-- TILLAGD
+  } = useCompletion({
+    api: API_CHAT,
+    // @ts-ignore
+    initialMessages: [initialAssistantMessage],
+  });
 
-    const userMessage: Message = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content,
-    };
-    
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
+  // Custom append function if needed for other interactions
+  const append = (content: string) => {
+     // @ts-ignore
+     vercelAppend({ role: 'user', content });
+  }
 
-    const assistantMessageId = `asst-${Date.now()}`;
-    let assistantMessageContent = '';
-
-    try {
-      const response = await fetch(API_CHAT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ messages: newMessages }), 
-      });
-
-      if (!response.ok) {
-        throw new Error(`API-fel: ${response.statusText}`);
-      }
-
-      if (!response.body) {
-        throw new Error('Fick inget svar från servern.');
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let done = false;
-
-      setMessages(prev => [...prev, { id: assistantMessageId, role: 'assistant', content: '' }]);
-
-      while (!done) {
-        const { value, done: streamDone } = await reader.read();
-        done = streamDone;
-        const chunk = decoder.decode(value, { stream: true });
-        assistantMessageContent += chunk;
-
-        setMessages(prev => 
-            prev.map(m => 
-                m.id === assistantMessageId ? { ...m, content: assistantMessageContent } : m
-            )
-        );
-      }
-
-    } catch (err: any) {
-      setError(err);
-      console.error("Fel vid sändning av meddelande:", err);
-    } finally {
-      setIsLoading(false);
-    }
+  const contextValue: ChatContextType = {
+    // @ts-ignore
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    isLoading,
+    append,
+    setInput, // <-- TILLAGD
   };
 
   return (
-    <ChatContext.Provider value={{ messages, isLoading, error, append }}>
+    <ChatContext.Provider value={contextValue}>
       {children}
     </ChatContext.Provider>
   );
 }
 
-// Custom hook för att enkelt använda ChatContext
+// Custom hook to easily use the ChatContext
 export function useChat() {
   const context = useContext(ChatContext);
   if (context === undefined) {
-    throw new Error('useChat måste användas inom en ChatProvider');
+    throw new Error('useChat must be used within a ChatProvider');
   }
   return context;
 }
