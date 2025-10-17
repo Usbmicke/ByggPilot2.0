@@ -1,5 +1,4 @@
 
-import { authOptions } from '@/lib/authOptions'; // Korrigerad sökväg
 import { getServerSession } from 'next-auth/next';
 import { getCustomer } from '../../actions'; 
 import { notFound } from 'next/navigation';
@@ -13,7 +12,7 @@ interface EditCustomerPageProps {
 
 export default async function EditCustomerPage({ params }: EditCustomerPageProps) {
   const { customerId } = params;
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   const userId = session?.user?.id;
 
   if (!userId) {

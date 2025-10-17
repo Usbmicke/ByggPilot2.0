@@ -2,8 +2,8 @@
 // Fil: app/api/materials/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/authOptions"; // KORRIGERAD SÖKVÄG
-import { firestoreAdmin } from "@/lib/admin";
+import { authOptions } from "@/lib/authOptions";
+import { adminDb } from "@/lib/admin"; // KORRIGERAD IMPORT
 import { MaterialCost } from "@/types/material";
 
 export async function GET(request: Request) {
@@ -21,12 +21,12 @@ export async function GET(request: Request) {
 
   try {
     // Verifiera att projektet tillhör den inloggade användaren
-    const projectDoc = await firestoreAdmin.collection('projects').doc(projectId).get();
+    const projectDoc = await adminDb.collection('projects').doc(projectId).get(); // KORRIGERAD
     if (!projectDoc.exists || projectDoc.data()?.userId !== session.user.id) {
         return new NextResponse(JSON.stringify({ message: 'Åtkomst nekad till projektet.' }), { status: 403 });
     }
 
-    const materialCostsRef = firestoreAdmin.collection('material-costs');
+    const materialCostsRef = adminDb.collection('material-costs'); // KORRIGERAD
     const q = materialCostsRef
       .where('projectId', '==', projectId)
       .orderBy('date', 'desc'); // Sortera med senaste först

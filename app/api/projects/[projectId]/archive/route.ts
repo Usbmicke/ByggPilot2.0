@@ -1,9 +1,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { getProject } from '@/services/projectService';
-import { archiveProjectInFirestore } from '@/services/firestoreService';
+import { authOptions } from "@/lib/authOptions"; // KORRIGERAD SÖKVÄG
+import { getProject, archiveProjectInFirestore } from '@/services/projectService'; // KORRIGERAD IMPORT
 
 /**
  * API-rutt för att arkivera ett projekt.
@@ -32,7 +31,7 @@ export async function POST(req: NextRequest, { params }: { params: { projectId: 
         }
 
         // Arkivera projektet i databasen
-        await archiveProjectInFirestore(projectId);
+        await archiveProjectInFirestore(projectId, userId);
 
         // Returnera ett framgångsmeddelande
         return NextResponse.json({ message: 'Projektet har arkiverats' }, { status: 200 });

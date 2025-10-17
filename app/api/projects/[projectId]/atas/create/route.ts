@@ -1,11 +1,12 @@
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/authOptions";
 import { z } from 'zod';
-import { firestoreAdmin } from '@/lib/admin';
+import { adminDb } from '@/lib/admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import { createFolder, createGoogleDoc } from '@/services/driveService';
+import { createSingleFolder, createGoogleDocFromTemplate } from '@/services/driveService';
+import logger from '@/lib/logger';
 
 const createAtaSchema = z.object({
     title: z.string().optional(),
@@ -14,44 +15,55 @@ const createAtaSchema = z.object({
 
 export async function POST(request: Request, { params }: { params: { projectId: string } }) {
     const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
-
-    if (!userId) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session?.user?.id || !session.accessToken) {
+        return NextResponse.json({ error: 'Unauthorized - Session or token missing' }, { status: 401 });
     }
+    const userId = session.user.id;
+    const accessToken = session.accessToken;
 
     const projectId = params.projectId;
     if (!projectId) {
         return NextResponse.json({ error: 'Projekt-ID saknas' }, { status: 400 });
     }
 
+    const log = logger.child({ api: 'atas/create', projectId, userId });
+
     try {
         const json = await request.json();
         const body = createAtaSchema.parse(json);
 
-        const projectRef = firestoreAdmin.collection('users').doc(userId).collection('projects').doc(projectId);
+        const projectRef = adminDb.collection('users').doc(userId).collection('projects').doc(projectId);
 
-        const newAta = await firestoreAdmin.runTransaction(async (transaction) => {
+        const newAta = await adminDb.runTransaction(async (transaction) => {
             const projectDoc = await transaction.get(projectRef);
             if (!projectDoc.exists) {
+                log.error('Projektet hittades inte.');
                 throw new Error('Projektet hittades inte.');
             }
             const projectData = projectDoc.data();
 
-            const ekonomiFolderId = projectData?.googleDrive?.subFolderIds?.ekonomi;
+            const userDoc = await adminDb.collection('users').doc(userId).get();
+            const userData = userDoc.data();
+            const ataTemplateDocId = userData?.documentTemplates?.ata;
+
+            if (!ataTemplateDocId) {
+                log.error('Standardmall för ÄTA saknas i användarinställningarna.');
+                throw new Error('Du har inte angett en standardmall för ÄTA-dokument. Gå till dina inställningar.');
+            }
+
+            const ekonomiFolderId = projectData?.googleDrive?.subFolderIds?.economy;
             if (!ekonomiFolderId) {
-                throw new Error('Mappen \"2_Ekonomi\" kunde inte hittas för detta projekt. Kör \"Verifiera & Reparera\".');
+                log.error('Mappen \"Ekonomi\" kunde inte hittas i Drive.');
+                throw new Error('Mappen \"Ekonomi\" kunde inte hittas för detta projekt. Kör \"Verifiera & Reparera\".');
             }
 
             let ataParentFolderId = projectData?.googleDrive?.subFolderIds?.ata;
             const updates: { [key: string]: any } = {};
 
             if (!ataParentFolderId) {
-                const ataFolder = await createFolder(userId, 'ÄTA', ekonomiFolderId);
-                if (!ataFolder || !ataFolder.id) {
-                    throw new Error('Kunde inte skapa mappen \"ÄTA\" i projektets ekonomimapp.');
-                }
-                ataParentFolderId = ataFolder.id;
+                log.info('Skapar ÄTA-mapp då den inte finns.');
+                const createdAtaFolderId = await createSingleFolder(accessToken, 'ÄTA', ekonomiFolderId);
+                ataParentFolderId = createdAtaFolderId;
                 updates['googleDrive.subFolderIds.ata'] = ataParentFolderId;
             }
 
@@ -61,10 +73,8 @@ export async function POST(request: Request, { params }: { params: { projectId: 
             const ataTitle = body.title || `ÄTA-underlag ${nextAtaNumber}`;
             const documentName = `ÄTA ${String(nextAtaNumber).padStart(2, '0')} - ${ataTitle}`;
 
-            const ataDoc = await createGoogleDoc(userId, documentName, ataParentFolderId);
-            if (!ataDoc || !ataDoc.id) {
-                throw new Error('Misslyckades med att skapa ÄTA-dokumentet i Google Drive.');
-            }
+            log.info({ documentName }, 'Skapar ÄTA-dokument från mall.');
+            const ataDoc = await createGoogleDocFromTemplate(accessToken, ataTemplateDocId, documentName, ataParentFolderId);
             
             const newAtaRef = projectRef.collection('atas').doc();
             const newAtaData = {
@@ -74,6 +84,7 @@ export async function POST(request: Request, { params }: { params: { projectId: 
                 notes: body.notes || '',
                 status: 'DRAFT',
                 googleDriveDocId: ataDoc.id,
+                googleDriveWebViewLink: ataDoc.webViewLink,
                 createdAt: FieldValue.serverTimestamp(),
                 updatedAt: FieldValue.serverTimestamp(),
             };
@@ -84,16 +95,17 @@ export async function POST(request: Request, { params }: { params: { projectId: 
             return newAtaData;
         });
         
-        console.log(`[Guldstandard] Nytt ÄTA-dokument skapat. Projekt: ${projectId}, ÄTA-ID: ${newAta.id}, Drive-dokument: ${newAta.googleDriveDocId}`);
+        log.info({ ataId: newAta.id, driveDocId: newAta.googleDriveDocId }, 'Nytt ÄTA-dokument skapat.');
 
         return NextResponse.json(newAta, { status: 201 });
 
     } catch (error) {
         if (error instanceof z.ZodError) {
+            log.warn({ error: error.errors }, 'Invalid input data.');
             return NextResponse.json({ error: 'Invalid input data', details: error.errors }, { status: 400 });
         }
-        console.error('Fel vid skapande av ÄTA:', error);
         const errorMessage = error instanceof Error ? error.message : 'Internal Server Error';
+        log.error({ error: errorMessage, stack: error instanceof Error ? error.stack : undefined }, 'Fel vid skapande av ÄTA.');
         return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }

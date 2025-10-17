@@ -108,11 +108,10 @@ function InvoiceDetailPageClient({ initialInvoice, project }: { initialInvoice: 
 // ---- Server-komponent (Wrapper) ----
 import { getServerSession } from 'next-auth/next';
 import { notFound } from 'next/navigation';
-import { authOptions } from '@/lib/authOptions';
 import { getProject, getInvoice } from '@/actions/projectActions';
 
 export default async function InvoiceDetailPage({ params }: { params: { projectId: string; invoiceId: string; }}) {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     const userId = session?.user?.id;
     if (!userId) { notFound(); }
 

@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/authOptions'; // KORRIGERAD SÖKVÄG
 import { getInvoiceFromFirestore, updateInvoiceStatusInFirestore } from '@/services/firestoreService';
 import { getProject } from '@/services/projectService';
 import { InvoicePdfTemplate } from '@/components/pdf/InvoicePdfTemplate';

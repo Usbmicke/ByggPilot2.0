@@ -1,7 +1,6 @@
 
 import { getServerSession } from 'next-auth/next';
 import { notFound } from 'next/navigation';
-import { authOptions } from '@/lib/authOptions';
 import { getProject, getAta } from '@/actions/projectActions';
 import ProjectDashboard from '@/components/dashboard/ProjectDashboard';
 import AtaDetailView from '@/components/views/AtaDetailView';
@@ -15,7 +14,7 @@ interface AtaDetailPageProps {
 
 // Detta är en Server Component som ansvarar för att hämta data
 export default async function AtaDetailPage({ params }: AtaDetailPageProps) {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     const userId = session?.user?.id;
 
     if (!userId) { notFound(); }

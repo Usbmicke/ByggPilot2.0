@@ -1,6 +1,5 @@
 
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/authOptions';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getProject } from '@/actions/projectActions';
@@ -16,7 +15,7 @@ interface ProjectCommunicationPageProps {
 
 export default async function ProjectCommunicationPage({ params }: ProjectCommunicationPageProps) {
     const { projectId } = params;
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
 
     if (!session?.user?.id) {
         notFound();

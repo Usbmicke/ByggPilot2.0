@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { authOptions } from '@/lib/authOptions';
 import { getServerSession } from 'next-auth/next';
 import { getProject } from '@/actions/projectActions';
 import { getFilesForProject } from '@/services/firestoreService';
@@ -15,7 +14,7 @@ interface PageProps {
 
 const ProjectDocumentsPage = async ({ params }: PageProps) => {
   const { projectId } = params;
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   const userId = session?.user?.id;
 
   if (!userId) {

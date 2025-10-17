@@ -1,7 +1,6 @@
 
 import { getServerSession } from 'next-auth/next';
 import { notFound } from 'next/navigation';
-import { authOptions } from '@/lib/authOptions';
 import { getProject, getInvoicesForProject, getAtasForProject, getDocumentsForProject } from '@/actions/projectActions';
 import ProjectDetailView from '@/components/views/ProjectDetailView';
 
@@ -13,7 +12,7 @@ interface ProjectDetailPageProps {
 
 export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const { projectId } = params;
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession();
   const userId = session?.user?.id;
 
   if (!userId) {
