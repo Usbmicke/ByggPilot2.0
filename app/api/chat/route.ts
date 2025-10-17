@@ -1,146 +1,106 @@
-
 import { NextRequest, NextResponse } from "next/server";
-import { streamText, CoreMessage } from "ai";
+import { CoreMessage, streamText } from "ai";
+import { google } from "@ai-sdk/google";
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
-import { google } from "@ai-sdk/google";
 import { adminDb } from "@/lib/admin";
 import { Ratelimit } from "@upstash/ratelimit";
 import { redis } from "@/lib/redis";
 import logger from "@/lib/logger";
 import fs from 'fs/promises';
 import path from 'path';
+import { toolDefinition } from "@/lib/tools";
 
 // =================================================================================
-// CHAT API V7.0 - KONVERSATIONELLA FLÖDEN & VERKTYGSANROP (SIMULERAD)
-// ARKITEKTUR:
-// 1.  **Avancerad System-Prompt:** Använder nu `v12-conversational.txt`, som instruerar
-//     modellen att vara tillståndskänslig, ställa följdfrågor, sammanfatta och
-//     invänta bekräftelse.
-// 2.  **Verktygsanrops-logik:** Innehåller nu logik för att detektera och parsa
-//     `[TOOL_CALL]` i AI:ns svar. I denna version loggas anropet endast, men
-//     grunden är lagd för att faktiskt exekvera funktioner.
-// 3.  **Förbättrad Minneshantering:** Skickar nu med en större del av konversations-
-//     historiken (`slice(-10)`) för att ge AI:n bättre kontext för de nya
-//     stegvisa flödena.
+// CHAT API V8.1 - FÖRBÄTTRAD LOGGNING & SPÅRBARHET
+// FÖRÄNDRINGAR:
+// 1.  **Trace ID:** `chatId` används nu som ett `traceId` i alla loggar för en
+//     specifik request. Detta gör det möjligt att spåra en hel konversationstur
+//     genom systemet, från inkommande anrop till verktygsexekvering.
 // =================================================================================
 
 const ratelimit = new Ratelimit({
     redis: redis,
-    limiter: Ratelimit.slidingWindow(15, "10 s"), // Ökat limit något
-    analytics: true,
+    limiter: Ratelimit.slidingWindow(20, "15 s"),
 });
 
 async function getSystemPrompt() {
-    // Byt till den nya, avancerade prompten
-    const promptFilePath = path.join(process.cwd(), 'lib', 'prompts', 'v12-conversational.txt');
+    const promptFilePath = path.join(process.cwd(), 'lib', 'prompts', 'v13-tools.txt');
     try {
-        const prompt = await fs.readFile(promptFilePath, 'utf-8');
-        return prompt;
+        return await fs.readFile(promptFilePath, 'utf-8');
     } catch (error) {
-        logger.error({ error }, "Kunde inte läsa system-prompt filen v12. Använder en fallback.");
+        logger.error({ error }, "Kunde inte läsa v13-tools.txt. Använder fallback-prompt.");
         return "Du är en hjälpsam assistent.";
     }
 }
 
-// Funktion för att hantera simulerade verktygsanrop
-async function handleToolCall(toolCall: string, userId: string, chatId: string) {
-    // Exempel: [TOOL_CALL: CREATE_PROJECT, { "name": "Villa Solbacken", "customer": "Erik Nilsson" }]
-    const toolRegex = /^\[TOOL_CALL: (\w+), (\{.*\})\]$/;
-    const match = toolCall.match(toolRegex);
-
-    if (!match) {
-        logger.warn({ toolCall }, "Mottog ett ogiltigt formaterat verktygsanrop.");
-        return; // Inte ett giltigt anrop
-    }
-
-    const [, toolName, paramsJson] = match;
-    const params = JSON.parse(paramsJson);
-
-    logger.info({ toolName, params, userId, chatId }, `Verktygsanrop mottaget och parsat.`);
-
-    // ** FRAMTIDA IMPLEMENTATION **
-    // switch (toolName) {
-    //     case 'CREATE_PROJECT':
-    //         await createProjectInFirestore(params, userId);
-    //         // Skicka ett bekräftelsemeddelande tillbaka till chatten via en annan mekanism
-    //         break;
-    //     // Fler cases för andra verktyg
-    // }
-    
-    // För nu, logga bara anropet. I nästa steg kommer vi agera på det.
-}
-
 export async function POST(req: NextRequest) {
     const ip = req.ip ?? "127.0.0.1";
-    let chatId: string | null = null;
+    let chatId: string | null = null; // Definieras här för att vara tillgänglig i yttre catch
 
     try {
+        const { messages, chatId: reqChatId }: { messages: CoreMessage[]; chatId: string } = await req.json();
+        chatId = reqChatId; // Sätt chatId för spårning
+
+        const requestLogger = logger.child({ traceId: chatId }); // Skapa en under-logger med traceId
+
+        requestLogger.info("Inkommande chatt-request mottagen.");
+
         const { success } = await ratelimit.limit(ip);
         if (!success) {
+            requestLogger.warn({ ip }, "Rate limit överskriden.");
             return NextResponse.json({ error: "Too many requests." }, { status: 429 });
         }
 
-        const { messages, chatId: reqChatId }: { messages: CoreMessage[]; chatId: string } = await req.json();
-        chatId = reqChatId;
-        
         const session = await getServerSession(authOptions);
         if (!session?.user?.id) {
+            requestLogger.error("Obehörig request - ingen session hittades.");
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
         const userId = session.user.id;
+        const chatRef = adminDb.collection("users").doc(userId).collection("chats").doc(chatId).collection("messages");
 
-        const latestMessage = messages[messages.length - 1];
-        const userMessageRef = adminDb.collection("users").doc(userId).collection("chats").doc(chatId).collection("messages");
-
-        // Spara användarens meddelande, men bara om det inte är tomt
-        if (latestMessage?.content) {
-            await userMessageRef.add({ role: 'user', content: latestMessage.content, createdAt: new Date() });
+        const userMessage = messages[messages.length - 1];
+        if (userMessage?.content) {
+            await chatRef.add({ ...userMessage, createdAt: new Date() });
         }
 
-        const systemPromptContent = await getSystemPrompt();
-        const systemPrompt: CoreMessage = { role: "system", content: systemPromptContent };
-        
-        const finalMessages: CoreMessage[] = [ systemPrompt, ...messages.slice(-10) ];
+        const systemPrompt = await getSystemPrompt();
+        const allMessages: CoreMessage[] = [
+            { role: "system", content: systemPrompt },
+            ...messages
+        ];
 
         const result = await streamText({
             model: google("models/gemini-1.5-flash-latest"),
-            messages: finalMessages,
+            messages: allMessages,
+            tools: toolDefinition(chatId), // Skicka med traceId till verktygen
+            toolChoice: 'auto',
         });
 
-        // Specialhantering för att fånga upp verktygsanrop
-        const { textStream, a, b, c } = result.tee();
-
-        (async () => {
-            const fullResponse = await c.readToEnd();
-            if (fullResponse.startsWith('[TOOL_CALL:')) {
-                await handleToolCall(fullResponse, userId, chatId!);
-            }
-        })();
-
         const stream = result.toAIStream({
-            onCompletion: async (completion: string) => {
-                // Spara assistentens svar, men INTE om det var ett verktygsanrop
-                if (!completion.startsWith('[TOOL_CALL:')) {
-                    await userMessageRef.add({
-                        role: 'assistant',
-                        content: completion,
-                        createdAt: new Date(),
-                    });
-                }
+            onFinal: async (completion) => {
+                await chatRef.add({
+                    role: 'assistant',
+                    content: completion,
+                    createdAt: new Date(),
+                });
+                requestLogger.info("Assistentens slutgiltiga svar sparat.");
             },
         });
 
+        requestLogger.info("Stream till klienten påbörjad.");
         return new Response(stream);
 
     } catch (error: any) {
-        logger.error(
-            { error: error.message, chatId: chatId, userIp: ip, stack: error.stack },
-            "Ett fel uppstod i chatt-API:et."
+        // Använd den yttre logger-instansen om chatId inte kunde parsas
+        const errorLogger = logger.child({ traceId: chatId });
+        errorLogger.error(
+            { error: error.message, userIp: ip, stack: error.stack },
+            "Kritiskt fel i chatt-API:et."
         );
-
         return NextResponse.json(
-            { error: "Något gick fel i chatt-API:et. Vänligen försök igen." },
+            { error: "Ett kritiskt fel uppstod. Vänligen försök igen." },
             { status: 500 }
         );
     }

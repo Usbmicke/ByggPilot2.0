@@ -2,10 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { updateProject, archiveProject } from '@/services/projectService';
+import { updateProject, archiveProject } from '@/actions/projectActions';
 import { Project, ProjectStatus } from '@/types';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/authOptions';
 
 /**
  * Server Action för att uppdatera ett projekt.

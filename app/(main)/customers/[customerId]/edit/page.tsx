@@ -1,7 +1,7 @@
 
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/authOptions'; // Korrigerad sökväg
 import { getServerSession } from 'next-auth/next';
-import { getCustomer } from '../../actions'; // KORRIGERAD IMPORT
+import { getCustomer } from '../../actions'; 
 import { notFound } from 'next/navigation';
 import { updateCustomerAction, archiveCustomerAction } from './actions';
 

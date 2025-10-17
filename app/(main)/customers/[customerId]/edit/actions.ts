@@ -1,10 +1,10 @@
 'use server';
 
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/authOptions'; // Korrigerad sökväg
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { updateCustomer, archiveCustomer } from '../../actions'; // Importera från den överordnade actions-filen
+import { updateCustomer, archiveCustomer } from '../../actions'; 
 
 // Action för att uppdatera en kund
 export async function updateCustomerAction(customerId: string, formData: FormData) {
@@ -22,8 +22,8 @@ export async function updateCustomerAction(customerId: string, formData: FormDat
 
   try {
     await updateCustomer(customerId, session.user.id, data);
-    revalidatePath('/customers'); // Uppdatera listvyn
-    revalidatePath(`/customers/${customerId}/edit`); // Uppdatera denna sida
+    revalidatePath('/customers'); 
+    revalidatePath(`/customers/${customerId}/edit`); 
   } catch (error) {
     console.error("Kunde inte uppdatera kund:", error);
     // Hantera fel (t.ex. returnera ett felmeddelande)
@@ -40,7 +40,7 @@ export async function archiveCustomerAction(customerId: string) {
   try {
     await archiveCustomer(customerId, session.user.id);
     revalidatePath('/customers');
-    redirect('/customers'); // Omdirigera användaren efter arkivering
+    redirect('/customers'); 
   } catch (error) {
     console.error("Kunde inte arkivera kund:", error);
     // Hantera fel

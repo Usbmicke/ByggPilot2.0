@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/authOptions';
 import { getServerSession } from 'next-auth/next';
-import { getProject } from '@/services/projectService';
+import { getProject } from '@/actions/projectActions';
 import { getFilesForProject } from '@/services/firestoreService';
 import DocumentsView from '@/components/views/DocumentsView';
 import { notFound } from 'next/navigation';
@@ -22,8 +22,8 @@ const ProjectDocumentsPage = async ({ params }: PageProps) => {
     return notFound();
   }
 
-  const project = await getProject(projectId, userId);
-  if (!project) {
+  const { data: project, error } = await getProject(projectId, userId);
+  if (error || !project) {
     return notFound();
   }
 

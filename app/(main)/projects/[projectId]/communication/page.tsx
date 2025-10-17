@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { getProject } from '@/actions/projectActions';
 
 import MessageFeed from '@/components/chat/MessageFeed';
-import ChatInputWrapper from '@/components/chat/ChatInputWrapper'; // Ny wrapper för klientkomponenter
+import ChatInput from '@/components/chat/ChatInput'; // Korrigerad import
 
 interface ProjectCommunicationPageProps {
     params: {
@@ -44,8 +44,7 @@ export default async function ProjectCommunicationPage({ params }: ProjectCommun
                     <MessageFeed projectId={projectId} />
                 </div>
                 <div className="p-4 bg-gray-900/60 border-t border-gray-700">
-                    {/* ChatInput behöver state och flyttas till en klientkomponent-wrapper */}
-                    <ChatInputWrapper projectId={projectId} />
+                    <ChatInput projectId={projectId} onMessageSent={() => {}} />
                 </div>
             </div>
         </div>

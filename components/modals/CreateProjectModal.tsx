@@ -3,7 +3,6 @@
 
 import React, { useState, useEffect } from 'react';
 import Modal from '@/components/shared/Modal';
-import { useUI } from '@/contexts/UIContext';
 import { createActiveProject } from '@/actions/projectActions';
 import { getCustomers } from '@/actions/customerActions';
 import { useSession } from 'next-auth/react';
@@ -11,8 +10,16 @@ import toast from 'react-hot-toast';
 
 type Customer = { id: string; name: string; };
 
-const CreateProjectModal = () => {
-  const { isModalOpen, closeModal, getModalPayload } = useUI();
+interface CreateProjectModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  initialData?: {
+    projectName?: string;
+    customerId?: string;
+  };
+}
+
+const CreateProjectModal = ({ isOpen, onClose, initialData }: CreateProjectModalProps) => {
   const { data: session } = useSession();
 
   const [name, setName] = useState('');
@@ -24,32 +31,29 @@ const CreateProjectModal = () => {
   const [isCustomerLoading, setIsCustomerLoading] = useState(false);
 
   useEffect(() => {
-    const modalId = 'createProject';
-    if (isModalOpen(modalId) && session?.user?.id) {
-      const payload = getModalPayload(modalId);
-      if (payload) {
-        setName(payload.projectName || '');
-        setSelectedCustomerId(payload.customerId || '');
+    if (isOpen && session?.user?.id) {
+      if (initialData) {
+        setName(initialData.projectName || '');
+        setSelectedCustomerId(initialData.customerId || '');
       }
 
       setIsCustomerLoading(true);
       getCustomers(session.user.id)
         .then(res => {
-          // Använder den nya returstrukturen från getCustomers
           if (res.customers) {
             setCustomers(res.customers as Customer[]);
           }
         })
         .finally(() => setIsCustomerLoading(false));
     }
-  }, [isModalOpen, session?.user?.id, getModalPayload]);
+  }, [isOpen, session?.user?.id, initialData]);
 
   const handleClose = () => {
     setName('');
     setAddress('');
     setSelectedCustomerId('');
     setCustomers([]);
-    closeModal('createProject');
+    onClose();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,14 +81,13 @@ const CreateProjectModal = () => {
     if (result.success && result.project) {
       toast.success(`Projekt "${result.project.name}" skapades!`);
       handleClose();
-      // Revalidering sker i Server Action, ingen reload behövs.
     } else {
       toast.error(`Fel: ${result.error}`);
     }
   };
 
   return (
-    <Modal isOpen={isModalOpen('createProject')} onClose={handleClose} title="Skapa Nytt Projekt">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Skapa Nytt Projekt">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
             <label htmlFor="project-name" className="block text-sm font-medium text-text-secondary">Projektnamn</label>
