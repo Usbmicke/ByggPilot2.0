@@ -1,16 +1,17 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/authOptions';
 import { adminDb } from '@/lib/admin';
-import { createInitialProjectStructure } from '@/services/driveService';
+import { createInitialProjectStructure } from '@/services/driveService'; // Korrekt import
 import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
+    const accessToken = session?.accessToken; // Hämta accessToken
 
-    if (!userId) {
+    if (!userId || !accessToken) { // Validera även accessToken
         return NextResponse.json({ message: 'Autentisering krävs' }, { status: 401 });
     }
 
@@ -22,16 +23,19 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ message: 'Projektnamn, kund och projektnummer krävs.' }, { status: 400 });
         }
 
-        const { rootFolderId, subFolderIds } = await createInitialProjectStructure(userId, projectName);
+        // Anropa den korrekta funktionen med alla nödvändiga argument
+        const { rootFolderId, subFolderIds } = await createInitialProjectStructure(accessToken, userId, projectName);
 
         if (!rootFolderId || Object.keys(subFolderIds).length === 0) {
             throw new Error('Mappstrukturen kunde inte skapas i Google Drive.');
         }
 
-        const newProjectRef = adminDb.collection('users').doc(userId).collection('projects').doc();
+        // Använd adminDb, vilket redan var korrekt här
+        const newProjectRef = adminDb.collection('projects').doc();
         
         const newProjectData = {
             id: newProjectRef.id,
+            userId: userId, // Spara userId för framtida referens
             projectName,
             customerId,
             projectNumber,

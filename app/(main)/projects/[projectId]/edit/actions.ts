@@ -2,7 +2,6 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { updateProject, archiveProject } from '@/actions/projectActions';
 import { Project, ProjectStatus } from '@/types';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
@@ -25,15 +24,25 @@ export async function updateProjectAction(formData: FormData) {
     const deadlineValue = formData.get('deadline') as string;
 
     const updates: Partial<Project> = {
-        name: formData.get('name') as string,
-        address: formData.get('address') as string,
+        projectName: formData.get('projectName') as string,
+        projectDescription: formData.get('projectDescription') as string,
         status: formData.get('status') as ProjectStatus,
-        progress: Number(formData.get('progress')),
-        deadline: deadlineValue ? new Date(deadlineValue) : null
     };
 
     try {
-        await updateProject(projectId, userId, updates);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/projects/update`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.accessToken}`
+            },
+            body: JSON.stringify({ projectId, updates })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Okänt fel vid uppdatering av projekt');
+        }
     } catch (error) {
         console.error("Misslyckades med att uppdatera projektet:", error);
         throw new Error("Kunde inte uppdatera projektet på grund av ett serverfel.");
@@ -60,7 +69,17 @@ export async function archiveProjectAction(formData: FormData) {
     }
 
     try {
-        await archiveProject(projectId, userId);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/projects/${projectId}/archive`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${session.accessToken}`
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Okänt fel vid arkivering av projekt');
+        }
     } catch (error) {
         console.error("Misslyckades med att arkivera projektet:", error);
         throw new Error("Kunde inte arkivera projektet på grund av ett serverfel.");

@@ -2,12 +2,12 @@
 // Fil: app/api/projects/update/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { handler } from "@/app/api/auth/[...nextauth]/route";
-import { firestoreAdmin } from "@/lib/admin";
+import { authOptions } from "@/lib/authOptions"; // KORRIGERAD SÖKVÄG
+import { adminDb } from "@/lib/admin"; // KORRIGERAD IMPORT
 import { Timestamp } from 'firebase-admin/firestore';
 
 export async function PUT(request: Request) {
-  const session = await getServerSession(handler);
+  const session = await getServerSession(authOptions);
   if (!session || !session.user || !session.user.id) {
     return new NextResponse(JSON.stringify({ message: 'Användaren är inte auktoriserad.' }), { status: 401 });
   }
@@ -23,7 +23,7 @@ export async function PUT(request: Request) {
   }
 
   try {
-    const projectRef = firestoreAdmin.collection('projects').doc(projectId);
+    const projectRef = adminDb.collection('projects').doc(projectId); // KORRIGERAD
     const projectDoc = await projectRef.get();
 
     // Säkerhetskontroll: Äger användaren detta projekt?

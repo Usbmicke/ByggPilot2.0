@@ -2,8 +2,8 @@
 // Fil: app/api/materials/create/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth"; // KORRIGERAD SÖKVÄG
-import { firestoreAdmin } from "@/lib/admin";
+import { authOptions } from "@/lib/authOptions";
+import { adminDb } from "@/lib/admin"; // KORRIGERAD IMPORT
 import { MaterialCost } from "@/types/material";
 import { Timestamp } from 'firebase-admin/firestore';
 
@@ -25,12 +25,12 @@ export async function POST(request: Request) {
 
   try {
     // Verifiera att projektet tillhör den inloggade användaren
-    const projectDoc = await firestoreAdmin.collection('projects').doc(projectId).get();
+    const projectDoc = await adminDb.collection('projects').doc(projectId).get(); // KORRIGERAD
     if (!projectDoc.exists || projectDoc.data()?.userId !== session.user.id) {
       return new NextResponse(JSON.stringify({ message: 'Åtkomst nekad till projektet.' }), { status: 403 });
     }
 
-    const newMaterialCostRef = firestoreAdmin.collection('material-costs').doc();
+    const newMaterialCostRef = adminDb.collection('material-costs').doc(); // KORRIGERAD
 
     const newMaterialCost: Omit<MaterialCost, 'id'> = {
       projectId,

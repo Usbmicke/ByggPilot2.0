@@ -1,9 +1,9 @@
 
 'use server';
 
-import { firestoreAdmin as adminDb } from '@/lib/admin';
+import { adminDb } from '@/lib/admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import { Project, Invoice, Ata } from '@/types';
+import { Project, Invoice, Ata, Document } from '@/types';
 
 // =================================================================================
 // GULDSTANDARD - ACTIONS V2.0 (IMPLEMENTERAD GETPROJECTS)
@@ -89,6 +89,21 @@ export async function getInvoice(projectId: string, invoiceId: string, userId: s
     }
 }
 
+// Hämtar alla fakturor för ett projekt
+export async function getInvoicesForProject(projectId: string, userId: string): Promise<{ success: boolean; data?: Invoice[]; error?: string; }> {
+    if (!userId || !projectId) {
+        return { success: false, error: 'Användar-ID och Projekt-ID är obligatoriska.' };
+    }
+    try {
+        const invoicesSnapshot = await adminDb.collection('users').doc(userId).collection('projects').doc(projectId).collection('invoices').get();
+        const invoices: Invoice[] = invoicesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invoice));
+        return { success: true, data: JSON.parse(JSON.stringify(invoices)) };
+    } catch (error) {
+        console.error(`Fel vid hämtning av fakturor för projekt ${projectId}:`, error);
+        return { success: false, error: 'Kunde inte hämta fakturor från servern.' };
+    }
+}
+
 // Hämtar en enskild ÄTA för ett projekt
 export async function getAta(projectId: string, ataId: string, userId: string): Promise<{ success: boolean; data?: Ata; error?: string; }> {
     if (!userId || !projectId || !ataId) {
@@ -113,5 +128,35 @@ export async function getAta(projectId: string, ataId: string, userId: string): 
     } catch (error) {
         console.error(`Fel vid hämtning av ÄTA ${ataId}:`, error);
         return { success: false, error: 'Kunde inte hämta ÄTA från servern.' };
+    }
+}
+
+// Hämtar alla ÄTOr för ett projekt
+export async function getAtasForProject(projectId: string, userId: string): Promise<{ success: boolean; data?: Ata[]; error?: string; }> {
+    if (!userId || !projectId) {
+        return { success: false, error: 'Användar-ID och Projekt-ID är obligatoriska.' };
+    }
+    try {
+        const atasSnapshot = await adminDb.collection('users').doc(userId).collection('projects').doc(projectId).collection('atas').get();
+        const atas: Ata[] = atasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ata));
+        return { success: true, data: JSON.parse(JSON.stringify(atas)) };
+    } catch (error) {
+        console.error(`Fel vid hämtning av ÄTOr för projekt ${projectId}:`, error);
+        return { success: false, error: 'Kunde inte hämta ÄTOr från servern.' };
+    }
+}
+
+// Hämtar alla dokument för ett projekt
+export async function getDocumentsForProject(projectId: string, userId: string): Promise<{ success: boolean; data?: Document[]; error?: string; }> {
+    if (!userId || !projectId) {
+        return { success: false, error: 'Användar-ID och Projekt-ID är obligatoriska.' };
+    }
+    try {
+        const documentsSnapshot = await adminDb.collection('users').doc(userId).collection('projects').doc(projectId).collection('documents').get();
+        const documents: Document[] = documentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Document));
+        return { success: true, data: JSON.parse(JSON.stringify(documents)) };
+    } catch (error) {
+        console.error(`Fel vid hämtning av dokument för projekt ${projectId}:`, error);
+        return { success: false, error: 'Kunde inte hämta dokument från servern.' };
     }
 }

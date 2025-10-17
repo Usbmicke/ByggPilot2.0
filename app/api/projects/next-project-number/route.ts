@@ -1,8 +1,8 @@
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { getProjectsForUser } from '@/services/projectService'; // Antagande att denna funktion finns
+import { authOptions } from '@/lib/authOptions';
+import { listProjectsForUser } from '@/services/projectService';
 
 // Hjälpfunktion för att generera ett slumpmässigt startnummer
 const generateInitialProjectNumber = () => {
@@ -21,7 +21,7 @@ export async function GET() {
 
     try {
         // Hämta alla befintliga projekt för användaren
-        const projects = await getProjectsForUser(userId);
+        const projects = await listProjectsForUser(userId);
 
         let latestNumber = 0;
         let latestPrefix = '';
@@ -30,7 +30,7 @@ export async function GET() {
 
         if (projects && projects.length > 0) {
             for (const project of projects) {
-                const match = project.name.match(projectNumberRegex);
+                const match = project.projectName.match(projectNumberRegex);
                 if (match) {
                     const prefix = match[1];
                     const currentSequence = parseInt(match[2], 10);
@@ -58,15 +58,4 @@ export async function GET() {
         console.error('Error fetching next project number:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
-}
-
-// Mock-funktion i brist på riktig databasåtkomst i denna kontext.
-// I ett riktigt scenario skulle denna funktion hämta projekt från databasen.
-async function getProjectsForUser(userId: string): Promise<{name: string}[]> {
-    console.log(`Simulerar hämtning av projekt för användare ${userId}`);
-    // Detta skulle vara en databasfråga, t.ex. `prisma.project.findMany({ where: { userId } })`
-    return [
-        // { name: 'Projekt 353-2474: Renovering Kök' },
-        // { name: 'Projekt 353-2475: Altanbygge' },
-    ];
 }

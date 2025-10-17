@@ -3,7 +3,6 @@
 
 import React, { useState, useEffect } from 'react';
 import Modal from '@/components/shared/Modal';
-import { createActiveProject } from '@/actions/projectActions';
 import { getCustomers } from '@/actions/customerActions';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
@@ -13,17 +12,18 @@ type Customer = { id: string; name: string; };
 interface CreateProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onProjectCreated: () => void; // Callback för att uppdatera projektlistan
   initialData?: {
     projectName?: string;
     customerId?: string;
   };
 }
 
-const CreateProjectModal = ({ isOpen, onClose, initialData }: CreateProjectModalProps) => {
+const CreateProjectModal = ({ isOpen, onClose, onProjectCreated, initialData }: CreateProjectModalProps) => {
   const { data: session } = useSession();
 
-  const [name, setName] = useState('');
-  const [address, setAddress] = useState('');
+  const [projectName, setProjectName] = useState('');
+  const [projectDescription, setProjectDescription] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -32,10 +32,10 @@ const CreateProjectModal = ({ isOpen, onClose, initialData }: CreateProjectModal
 
   useEffect(() => {
     if (isOpen && session?.user?.id) {
-      if (initialData) {
-        setName(initialData.projectName || '');
-        setSelectedCustomerId(initialData.customerId || '');
-      }
+      // Återställ formuläret när modalen öppnas
+      setProjectName(initialData?.projectName || '');
+      setSelectedCustomerId(initialData?.customerId || '');
+      setProjectDescription('');
 
       setIsCustomerLoading(true);
       getCustomers(session.user.id)
@@ -49,10 +49,6 @@ const CreateProjectModal = ({ isOpen, onClose, initialData }: CreateProjectModal
   }, [isOpen, session?.user?.id, initialData]);
 
   const handleClose = () => {
-    setName('');
-    setAddress('');
-    setSelectedCustomerId('');
-    setCustomers([]);
     onClose();
   };
 
@@ -63,26 +59,44 @@ const CreateProjectModal = ({ isOpen, onClose, initialData }: CreateProjectModal
         return;
     }
 
-    const customer = customers.find(c => c.id === selectedCustomerId);
-    if (!customer) {
-        toast.error("Fel: Kunden kunde inte hittas.");
-        return;
-    }
-
     setIsLoading(true);
-    const result = await createActiveProject({ 
-        name, 
-        address, 
-        customerId: selectedCustomerId,
-        customerName: customer.name,
-    }, session.user.id);
-    setIsLoading(false);
+    try {
+      // 1. Hämta nästa projektnummer
+      const projectNumberRes = await fetch('/api/projects/next-project-number');
+      if (!projectNumberRes.ok) throw new Error('Kunde inte hämta projektnummer.');
+      const { nextProjectNumber } = await projectNumberRes.json();
 
-    if (result.success && result.project) {
-      toast.success(`Projekt "${result.project.name}" skapades!`);
+      // 2. Skapa projektet via API-anrop
+      const response = await fetch('/api/projects/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          projectName: `${nextProjectNumber}: ${projectName}`,
+          customerId: selectedCustomerId,
+          projectNumber: nextProjectNumber,
+          projectDescription: projectDescription,
+          startDate: new Date().toISOString().split('T')[0], // Dagens datum
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Ett okänt fel inträffade.');
+      }
+
+      const result = await response.json();
+
+      toast.success(`Projekt "${result.project.projectName}" skapades!`);
+      onProjectCreated(); // Anropa callback för att uppdatera listan
       handleClose();
-    } else {
-      toast.error(`Fel: ${result.error}`);
+
+    } catch (error) {
+      console.error('Fel vid skapande av projekt:', error);
+      toast.error(`Fel: ${error instanceof Error ? error.message : 'Okänt fel'}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -90,23 +104,23 @@ const CreateProjectModal = ({ isOpen, onClose, initialData }: CreateProjectModal
     <Modal isOpen={isOpen} onClose={handleClose} title="Skapa Nytt Projekt">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-            <label htmlFor="project-name" className="block text-sm font-medium text-text-secondary">Projektnamn</label>
+            <label htmlFor="project-name" className="block text-sm font-medium text-text-secondary">Projektnamn (exkl. projektnummer)</label>
             <input 
                 type="text"
                 id="project-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
                 required
                 className="mt-1 block w-full rounded-md border-border-primary bg-background-primary shadow-sm p-2.5"
             />
         </div>
         <div>
-            <label htmlFor="project-address" className="block text-sm font-medium text-text-secondary">Adress</label>
-            <input 
-                type="text"
-                id="project-address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
+            <label htmlFor="project-description" className="block text-sm font-medium text-text-secondary">Beskrivning</label>
+            <textarea
+                id="project-description"
+                value={projectDescription}
+                onChange={(e) => setProjectDescription(e.target.value)}
+                rows={3}
                 className="mt-1 block w-full rounded-md border-border-primary bg-background-primary shadow-sm p-2.5"
             />
         </div>

@@ -2,12 +2,13 @@
 // Fil: app/api/projects/delete/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { authOptions as handler } from "@/app/api/auth/[...nextauth]/route";
-import { firestoreAdmin } from "@/lib/admin";
+import { authOptions } from "@/lib/authOptions"; // KORRIGERAD SÖKVÄG
+import { adminDb } from "@/lib/admin"; // KORRIGERAD IMPORT
+import { WriteBatch } from "firebase-admin/firestore"; // Importera WriteBatch
 
 // Helper-funktion för att ta bort dokument i en collection baserat på projectId
-async function deleteCollection(collectionName: string, projectId: string, batch: FirebaseFirestore.WriteBatch) {
-    const collectionRef = firestoreAdmin.collection(collectionName);
+async function deleteCollection(collectionName: string, projectId: string, batch: WriteBatch) {
+    const collectionRef = adminDb.collection(collectionName); // KORRIGERAD
     const q = collectionRef.where('projectId', '==', projectId);
     const snapshot = await q.get();
     
@@ -19,7 +20,7 @@ async function deleteCollection(collectionName: string, projectId: string, batch
 }
 
 export async function DELETE(request: Request) {
-  const session = await getServerSession(handler);
+  const session = await getServerSession(authOptions);
   if (!session || !session.user || !session.user.id) {
     return new NextResponse(JSON.stringify({ message: 'Användaren är inte auktoriserad.' }), { status: 401 });
   }
@@ -31,7 +32,7 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    const projectRef = firestoreAdmin.collection('projects').doc(projectId);
+    const projectRef = adminDb.collection('projects').doc(projectId); // KORRIGERAD
     const projectDoc = await projectRef.get();
 
     // Säkerhetskontroll: Äger användaren detta projekt?
@@ -40,7 +41,7 @@ export async function DELETE(request: Request) {
     }
 
     // Starta en batch-operation för att säkerställa atomicitet
-    const batch = firestoreAdmin.batch();
+    const batch = adminDb.batch(); // KORRIGERAD
 
     // 1. Ta bort alla associerade tidrapporter
     await deleteCollection('time-entries', projectId, batch);
