@@ -1,6 +1,6 @@
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/authOptions';
 import { getServerSession } from 'next-auth/next';
-import { getProject } from '@/services/projectService';
+import { getProject } from '@/actions/projectActions';
 import { notFound } from 'next/navigation';
 import { updateProjectAction, archiveProjectAction } from './actions';
 import { ProjectStatus } from '@/types/index';
@@ -20,9 +20,9 @@ export default async function EditProjectPage({ params }: EditProjectPageProps) 
     return <p>Autentisering krävs.</p>;
   }
 
-  const project = await getProject(projectId, userId);
+  const { data: project, error } = await getProject(projectId, userId);
 
-  if (!project) {
+  if (error || !project) {
     notFound();
   }
   

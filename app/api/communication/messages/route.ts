@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/authOptions';
 import { getProject } from '@/services/projectService';
 import { addMessageToProject, getMessagesForProject } from '@/services/firestoreService'; // Funktioner att skapa
 

@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { createInitialUserDriveStructure } from '@/lib/drive'; // KORRIGERAD IMPORT
+import { createInitialUserDriveStructure } from '@/services/driveService'; // KORRIGERAD IMPORT
 import { adminAuth, adminDb } from '@/lib/admin';
 
 /**

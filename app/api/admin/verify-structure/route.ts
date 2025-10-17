@@ -1,10 +1,9 @@
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next"
-import { authOptions } from '@/lib/authOptions'; // KORRIGERAD SÖKVÄG
+import { authOptions } from '@/lib/authOptions';
 import { adminDb } from '@/lib/admin';
-import { getDriveClient } from '@/lib/google';
-import { createFolder } from '@/lib/drive'; // KORRIGERAD SÖKVÄG
+import { getDriveClient, createSingleFolder as createFolder } from '@/services/driveService';
 
 const GOLD_STANDARD_SUBFOLDERS = {
     avtal: '1_Avtal & Underlag',
@@ -26,13 +25,13 @@ async function verifyAndFix(userId: string, drive: any, parentFolderId: string, 
                 await drive.files.get({ fileId: folderId, fields: 'id' });
             } catch (error) {
                 fixes.push(`Mappen \"${folderName}\" (ID: ${folderId}) saknades och skapades på nytt.`);
-                const newFolder = await createFolder(userId, folderName, parentFolderId);
-                updates[`googleDrive.subFolderIds.${key}`] = newFolder.id;
+                const newFolderId = await createFolder(drive, folderName, parentFolderId);
+                updates[`googleDrive.subFolderIds.${key}`] = newFolderId;
             }
         } else {
             fixes.push(`Mapp-ID för \"${folderName}\" saknades i databasen och mappen har nu skapats.`);
-            const newFolder = await createFolder(userId, folderName, parentFolderId);
-            updates[`googleDrive.subFolderIds.${key}`] = newFolder.id;
+            const newFolderId = await createFolder(drive, folderName, parentFolderId);
+            updates[`googleDrive.subFolderIds.${key}`] = newFolderId;
         }
     }
     return { fixes, updates };
@@ -47,7 +46,7 @@ export async function POST(request: Request) {
     }
 
     try {
-        const drive = await getDriveClient(userId);
+        const drive = await getDriveClient(session.accessToken);
         if (!drive) {
             return NextResponse.json({ error: 'Kunde inte ansluta till Google Drive.' }, { status: 500 });
         }

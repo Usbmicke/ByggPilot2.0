@@ -1,6 +1,6 @@
 
-import { getProject } from '@/services/projectService';
-import { authOptions } from '@/lib/auth';
+import { getProject } from '@/actions/projectActions';
+import { authOptions } from '@/lib/authOptions';
 import { getServerSession } from 'next-auth/next';
 import { notFound } from 'next/navigation';
 import InvoicingView from '@/components/views/InvoicingView';
@@ -24,9 +24,9 @@ export default async function ProjectInvoicingPage({ params }: ProjectInvoicingP
     notFound();
   }
 
-  const project = await getProject(projectId, userId);
+  const { data: project, error } = await getProject(projectId, userId);
 
-  if (!project) {
+  if (error || !project) {
     // Om projektet inte finns eller om användaren inte äger det, visa 404.
     notFound();
   }

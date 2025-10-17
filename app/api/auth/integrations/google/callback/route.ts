@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/authOptions";
 import { adminDb } from "@/lib/admin";
 import { encrypt } from "@/lib/encryption";
 import { google } from 'googleapis';

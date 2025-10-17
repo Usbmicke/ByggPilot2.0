@@ -38,7 +38,7 @@ function getDriveClient(auth: any) {
  * @param parentId ID på föräldramappen (valfritt).
  * @returns ID på den nyskapade mappen.
  */
-async function createSingleFolder(drive: any, name: string, parentId?: string): Promise<string> {
+export async function createSingleFolder(drive: any, name: string, parentId?: string): Promise<string> {
     try {
         const fileMetadata = {
             name: name,
@@ -93,3 +93,5 @@ export async function createInitialFolderStructure(accessToken: string, companyN
         throw new Error("Den initiala mappstrukturen i Google Drive kunde inte skapas.");
     }
 }
+
+export { getDriveClient };

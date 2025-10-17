@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { getProject } from '@/actions/projectActions';
 
 import MessageFeed from '@/components/chat/MessageFeed';
-import ChatInput from '@/components/chat/ChatInput'; // Korrigerad import
+import { ChatWindow } from '@/components/chat/ChatWindow';
 
 interface ProjectCommunicationPageProps {
     params: {
@@ -40,12 +40,7 @@ export default async function ProjectCommunicationPage({ params }: ProjectCommun
             </div>
 
             <div className="flex-grow flex flex-col bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden">
-                <div className="flex-grow p-6 overflow-y-auto">
-                    <MessageFeed projectId={projectId} />
-                </div>
-                <div className="p-4 bg-gray-900/60 border-t border-gray-700">
-                    <ChatInput projectId={projectId} onMessageSent={() => {}} />
-                </div>
+                <ChatWindow projectId={projectId} />
             </div>
         </div>
     );
