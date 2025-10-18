@@ -1,70 +1,73 @@
-
-import { withAuth, type NextRequestWithAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
+import { getToken } from 'next-auth/jwt';
+import type { NextRequest } from 'next/server';
 
-// =================================================================================
-// GULDSTANDARD - MIDDLEWARE V3.0
-// ARKITEKTUR: Denna version är designad för att vara extremt robust och förhindra
-// de oändliga omdirigeringsloopar som kan uppstå när sessionens status är
-// osynkroniserad med användarens faktiska data i databasen.
-//
-// LÖSNING:
-// 1. **IGNORERA /onboarding:** Om användaren redan är på /onboarding, gör
-//    ingenting. Detta är den viktigaste ändringen för att bryta loopar direkt
-//    efter att onboardingen är slutförd.
-// 2. **SÄKRARE KONTROLLER:** Logiken är nu mer strikt och agerar bara när
-//    sessionstoken (`token`) är fullständigt definierad och har ett känt
-//    onboarding-tillstånd.
-// 3. **TYDLIGARE FLÖDE:** Separata `if`-block för varje scenario gör koden
-//    lättare att förstå och felsöka.
-// =================================================================================
+// --- Konfiguration ---
+const ONBOARDING_PATH = '/onboarding';
+const DASHBOARD_PATH = '/dashboard';
+const LANDING_PAGE_PATH = '/';
+const SIGNIN_PATH = '/api/auth/signin';
 
-export default withAuth(
-    function middleware(request: NextRequestWithAuth) {
-        const { pathname } = request.nextUrl;
-        const { token } = request.nextauth;
+// Lista över publika sökvägar som inte kräver autentisering
+const PUBLIC_PATHS = ['/anvandarvillkor', '/integritetspolicy'];
 
-        // Om vi är på onboarding-sidan, gör ingenting och låt sidan renderas.
-        // Detta förhindrar omdirigeringsloopar.
-        if (pathname.startsWith('/onboarding')) {
-            return NextResponse.next();
-        }
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
 
-        // Om användaren är autentiserad och har en token...
-        if (token) {
-            // ...men INTE har slutfört onboarding, skicka till onboarding-sidan.
-            if (token.onboardingComplete === false) {
-                return NextResponse.redirect(new URL('/onboarding', request.url));
-            }
+  // Ignorera interna Next.js-anrop och fil-assets
+  if (
+    pathname.startsWith('/_next/') ||
+    pathname.startsWith('/api/') || // API-routes hanterar sin egen auth
+    pathname.includes('.') // T.ex. favicon.ico, .png
+  ) {
+    return NextResponse.next();
+  }
 
-            // Om användaren är på startsidan och HAR slutfört onboarding, skicka till dashboard.
-            if (pathname === '/' && token.onboardingComplete === true) {
-                 return NextResponse.redirect(new URL('/dashboard', request.url));
-            }
-        }
+  // Hämta sessionstoken PÅ ETT SÄKERT sätt
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
-        // I alla andra fall (t.ex. användare på skyddade sidor med giltig token),
-        // fortsätt som vanligt.
-        return NextResponse.next();
-    },
-    {
-        callbacks: {
-            // Denna callback avgör om middleware-funktionen överhuvudtaget ska köras.
-            // Vi vill att den ska köras på alla sidor FÖRUTOM rena API-anrop, bildfiler etc.
-            authorized: ({ token, req }) => {
-                const { pathname } = req.nextUrl;
-                
-                // Kör alltid middleware för vanliga sidor.
-                // Ignorera för api, next, och fil-requests.
-                if (pathname.startsWith('/api') || 
-                    pathname.startsWith('/_next') || 
-                    pathname.includes('.')) {
-                    return true; // Ignorera inte, men låt passera utan redirect-logik
-                }
-                
-                // Om det finns en token (användaren är inloggad), kör alltid middleware-logiken.
-                return !!token;
-            },
-        },
+  const isPublicPath = PUBLIC_PATHS.some((path) => pathname.startsWith(path));
+
+  // --- Logik ---
+
+  // 1. Användare är inloggad (har en token)
+  if (token) {
+    const onboardingComplete = token.onboardingComplete === true;
+
+    // 1a. Onboarding är INTE komplett
+    if (!onboardingComplete) {
+      // Om de inte redan är på onboarding-sidan, skicka dit dem.
+      if (pathname !== ONBOARDING_PATH) {
+        return NextResponse.redirect(new URL(ONBOARDING_PATH, req.url));
+      }
     }
-);
+    
+    // 1b. Onboarding ÄR komplett
+    else {
+      // Om de är på onboarding- eller landningssidan, skicka dem till sin dashboard.
+      if (pathname === ONBOARDING_PATH || pathname === LANDING_PAGE_PATH) {
+        return NextResponse.redirect(new URL(DASHBOARD_PATH, req.url));
+      }
+    }
+  }
+
+  // 2. Användare är INTE inloggad (har ingen token)
+  else {
+    // Om de försöker nå en skyddad sida (som inte är publik och inte landningssidan),
+    // skicka dem till inloggningssidan.
+    if (!isPublicPath && pathname !== LANDING_PAGE_PATH) {
+        // Skapa en ren sign-in URL utan dubbla callbacks.
+        const signInUrl = new URL(SIGNIN_PATH, req.url);
+        signInUrl.searchParams.set('callbackUrl', req.nextUrl.pathname);
+        return NextResponse.redirect(signInUrl);
+    }
+  }
+
+  // 3. Om ingen av reglerna ovan matchar, låt förfrågan passera.
+  return NextResponse.next();
+}
+
+export const config = {
+  // Matcha alla sökvägar FÖRUTOM de som har en punkt (filer) eller börjar med /api eller /_next
+  matcher: ['/((?!api|_next/static|.*\..*).*)'],
+};

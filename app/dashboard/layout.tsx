@@ -1,13 +1,11 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import GuidedTour from '@/components/tour/GuidedTour';
-import IntegratedChat from '@/app/components/IntegratedChat'; // KORRIGERAD SÖKVÄG
+import IntegratedChat from '@/app/components/IntegratedChat';
 
 export default function DashboardLayout({
   children,
@@ -15,30 +13,10 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { data: session, status } = useSession();
-  const router = useRouter();
 
-  useEffect(() => {
-    if (status === 'authenticated' && session?.user && !session.user.onboardingComplete) {
-      router.push('/onboarding');
-    }
-  }, [status, session, router]);
-
-  if (status === 'loading') {
-    return (
-      <div className="h-screen w-screen flex items-center justify-center bg-gray-900 text-white">
-        Laddar session...
-      </div>
-    );
-  }
-
-  if (status === 'unauthenticated' || (status === 'authenticated' && !session.user.onboardingComplete)) {
-    return (
-        <div className="h-screen w-screen flex items-center justify-center bg-gray-900 text-white">
-            Omdirigerar...
-        </div>
-    );
-  }
+  // All session-based redirection logic has been removed from this component.
+  // The middleware (`middleware.ts`) is now the single source of truth for routing,
+  // ensuring this layout only renders for authenticated and onboarded users.
 
   return (
     <div className="min-h-screen bg-background text-text-primary">
