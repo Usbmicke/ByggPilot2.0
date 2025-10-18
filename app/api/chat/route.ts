@@ -1,7 +1,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
-import { CoreMessage } from "ai";
-import { streamText } from "@ai-sdk/core"; // KORRIGERAD IMPORT
+import { CoreMessage, streamText } from "ai";
 import { google } from "@ai-sdk/google";
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Bot, Settings, Info } from 'lucide-react';
-import { useChat } from '@/contexts/ChatContext';
+import { useChatContext } from '@/app/contexts/ChatContext';
 import { useUI } from '@/contexts/UIContext';
 
 interface OnboardingChatProps {
@@ -14,7 +14,7 @@ const SETUP_COMMAND = "*Användare har godkänt onboarding. Kör `create_google_
 
 const OnboardingChat: React.FC<OnboardingChatProps> = ({ onComplete }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const { sendMessage } = useChat();
+  const { append } = useChatContext();
   const { openModal } = useUI(); // Hämta openModal-funktionen
 
   const handleSelection = async (selection: 'accept' | 'decline') => {
@@ -22,7 +22,7 @@ const OnboardingChat: React.FC<OnboardingChatProps> = ({ onComplete }) => {
       setIsLoading(true);
       try {
         console.log("User accepted, sending setup command to AI...");
-        await sendMessage(SETUP_COMMAND);
+        await append({role: 'user', content: SETUP_COMMAND});
         console.log("AI command sent. Opening Company Vision modal...");
 
         // Öppna CompanyVisionModal som nästa steg i flödet
