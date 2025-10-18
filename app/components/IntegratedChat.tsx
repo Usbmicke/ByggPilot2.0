@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useEffect } from 'react';
-import { useChat } from '@/app/contexts/ChatContext';
+import { useChatContext } from '@/app/contexts/ChatContext';
 import { useUI } from '@/app/contexts/UIContext';
 import { Message } from '@/app/components/messages/Message';
 import MessageSkeleton from '@/components/messages/MessageSkeleton';
@@ -19,7 +19,7 @@ const QuickActionButton = ({ label, icon, onClick }) => (
 );
 
 const IntegratedChat = () => {
-  const { messages, input, handleInputChange, handleSubmit, isLoading, setInput } = useChat();
+  const { messages, input, handleInputChange, handleSubmit, isLoading, setInput } = useChatContext();
   const { isChatOpen, toggleChat } = useUI();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 

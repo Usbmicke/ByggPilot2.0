@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
-import { CoreMessage, streamText } from "ai";
+import { CoreMessage, streamText, StreamingTextResponse } from "ai"; // KORRIGERAD IMPORT
 import { google } from "@ai-sdk/google";
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
@@ -11,14 +11,6 @@ import logger from "@/lib/logger";
 import fs from 'fs/promises';
 import path from 'path';
 import { toolDefinition } from "@/lib/tools";
-
-// =================================================================================
-// CHAT API V8.1 - FÖRBÄTTRAD LOGGNING & SPÅRBARHET
-// FÖRÄNDRINGAR:
-// 1.  **Trace ID:** `chatId` används nu som ett `traceId` i alla loggar för en
-//     specifik request. Detta gör det möjligt att spåra en hel konversationstur
-//     genom systemet, från inkommande anrop till verktygsexekvering.
-// =================================================================================
 
 const ratelimit = new Ratelimit({
     redis: redis,
@@ -37,13 +29,13 @@ async function getSystemPrompt() {
 
 export async function POST(req: NextRequest) {
     const ip = req.ip ?? "127.0.0.1";
-    let chatId: string | null = null; // Definieras här för att vara tillgänglig i yttre catch
+    let chatId: string | null = null;
 
     try {
         const { messages, chatId: reqChatId }: { messages: CoreMessage[]; chatId: string } = await req.json();
-        chatId = reqChatId; // Sätt chatId för spårning
+        chatId = reqChatId;
 
-        const requestLogger = logger.child({ traceId: chatId }); // Skapa en under-logger med traceId
+        const requestLogger = logger.child({ traceId: chatId });
 
         requestLogger.info("Inkommande chatt-request mottagen.");
 
@@ -75,7 +67,7 @@ export async function POST(req: NextRequest) {
         const result = await streamText({
             model: google("models/gemini-1.5-flash-latest"),
             messages: allMessages,
-            tools: toolDefinition(chatId), // Skicka med traceId till verktygen
+            tools: toolDefinition(chatId),
             toolChoice: 'auto',
         });
 
@@ -91,10 +83,10 @@ export async function POST(req: NextRequest) {
         });
 
         requestLogger.info("Stream till klienten påbörjad.");
-        return new Response(stream);
+        // KORRIGERING: Använd StreamingTextResponse för korrekt streaming-hantering
+        return new StreamingTextResponse(stream);
 
     } catch (error: any) {
-        // Använd den yttre logger-instansen om chatId inte kunde parsas
         const errorLogger = logger.child({ traceId: chatId });
         errorLogger.error(
             { error: error.message, userIp: ip, stack: error.stack },
