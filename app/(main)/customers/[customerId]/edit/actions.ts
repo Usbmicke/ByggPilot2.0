@@ -1,10 +1,10 @@
 'use server';
 
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/authOptions'; // Korrigerad sökväg
+import { authOptions } from '@/lib/authOptions';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { updateCustomer, archiveCustomer } from '../../actions'; 
+import { updateCustomer, archiveCustomer } from '@/app/(main)/customers/actions'; 
 
 // Action för att uppdatera en kund
 export async function updateCustomerAction(customerId: string, formData: FormData) {

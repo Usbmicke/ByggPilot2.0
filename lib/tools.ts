@@ -1,57 +1,60 @@
+
 import { z } from 'zod';
 import { tool } from 'ai';
-import { adminDb } from './admin'; 
-import logger from './logger';
+import * as dal from './data-access'; 
+import { ProjectStatus } from '@/types';
 
 // =================================================================================
-// VERKTYGS-BIBLIOTEK FÖR BYGGPILOT CO-PILOT (v1.2 - SPÅRBARHET)
-// FÖRÄNDRINGAR:
-// 1.  **Funktions-export:** Exporterar nu en funktion som tar ett `traceId`.
-// 2.  **Spårbar Exekvering:** `execute`-funktionen använder `traceId` för att skapa
-//     en specifik logger, vilket gör varje verktygsanrop fullt spårbart.
+// VERKTYGS-BIBLIOTEK FÖR BYGGPILOT CO-PILOT (v2.0 - DAL-Driven)
+// Guldstandard: Denna fil definierar AI:ns handlingsförmåga.
+// Varje verktyg är en ren funktion som anropar Data Access Layer (DAL).
+// Ingen direkt databasåtkomst är tillåten.
 // =================================================================================
 
-export const toolDefinition = (traceId: string) => ({
+export const tools = {
   createProject: tool({
-    description: 'Skapar ett nytt projekt i systemet.',
+    description: 'Skapar ett nytt projekt. Fråga alltid efter kund och namn. Status sätts automatiskt till "Planerat".',
     parameters: z.object({
       name: z.string().describe('Namnet på det nya projektet.'),
       customerId: z.string().describe('ID för den befintliga kunden som projektet tillhör.'),
-      budget: z.number().optional().describe('Projektets budget i kronor.'),
-      timeline: z.string().optional().describe('En kort beskrivning av projektets tidslinje (t.ex. "Q4 2024").'),
+      customerName: z.string().describe('Namnet på kunden som projektet tillhör.'),
     }),
-    execute: async ({ name, customerId, budget, timeline }) => {
-      const toolLogger = logger.child({ traceId, toolName: 'createProject' });
-
-      try {
-        toolLogger.info(
-          { name, customerId, budget, timeline },
-          'Påbörjar skapande av projekt i Firestore.'
-        );
-
-        const projectRef = await adminDb.collection('projects').add({
-          name,
-          customerId, 
-          budget: budget || null,
-          timeline: timeline || null,
-          status: 'pending', 
-          createdAt: new Date(),
-          updatedAt: new Date(),
+    execute: async ({ name, customerId, customerName }) => {
+        // Anropa DAL för att skapa projektet.
+        // DAL hanterar validering, databasskrivning och felhantering.
+        const newProject = await dal.createProject('system-user', { // Hårdkodad userId tills sessionshantering är på plats
+            name,
+            customerId,
+            customerName,
+            status: ProjectStatus.PENDING,
         });
 
-        const projectId = projectRef.id;
-        toolLogger.info({ projectId }, 'Projekt skapat framgångsrikt i Firestore.');
-
+        // Returnera ett tydligt resultat. Eventuella fel har redan kastats av DAL.
         return { 
           success: true, 
-          projectId,
-          message: `Projektet \'${name}\' har skapats med ID ${projectId}.` 
+          projectId: newProject.id,
+          message: `Projektet "${name}" har skapats med status "Planerat".` 
         };
-
-      } catch (error) {
-        toolLogger.error({ error, name, customerId }, 'Kritiskt fel vid skapande av projekt i Firestore.');
-        return { success: false, message: `Kunde inte skapa projektet \'${name}\' på grund av ett databasfel.` };
-      }
     },
   }),
-});
+  
+  getCustomers: tool({
+      description: 'Hämtar en lista på alla befintliga kunder i systemet. Använd detta för att hjälpa användaren att välja en kund när ett nytt projekt ska skapas.',
+      parameters: z.object({}),
+      execute: async () => {
+          const customers = await dal.getCustomers('system-user'); // Hårdkodad userId
+          if (customers.length === 0) {
+              return {
+                  success: true,
+                  message: "Det finns inga kunder i systemet ännu.",
+                  customers: [],
+              }
+          }
+          return {
+              success: true,
+              message: `Hämtade ${customers.length} kunder.`,
+              customers: customers.map(c => ({ id: c.id, name: c.name })),
+          }
+      }
+  })
+};

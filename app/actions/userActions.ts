@@ -1,54 +1,55 @@
 'use server';
 
-// KORRIGERING: Importera getServerSession och authOptions
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
-import { adminDb } from '@/lib/admin';
+import { getUserStatus as getUserStatusFromDAL, markTourAsCompleted as markTourAsCompletedFromDAL } from '@/lib/data-access';
+import logger from '@/lib/logger';
 
-// Guldstandard: Hämta specifik användarstatus för klientlogik
+/**
+ * Guldstandard: Server Action för att hämta användarstatus.
+ * Denna action hanterar sessionen och anropar sedan DAL för att hämta data.
+ */
 export async function getUserStatus(): Promise<{ onboardingComplete: boolean; tourCompleted: boolean }> {
-    // KORRIGERING: Använd den korrekta metoden för v4
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-        console.error("Firebase-åtgärd misslyckades: Ingen session hittades.");
+        logger.error("[Action - getUserStatus] Åtkomst nekad: Ingen session hittades.");
+        // På klientsidan är det ofta bättre att returnera ett standardvärde än att kasta ett fel.
         return { onboardingComplete: false, tourCompleted: false };
     }
 
     try {
-        const userDoc = await adminDb.collection('users').doc(session.user.id).get();
-        if (!userDoc.exists) {
-            console.log(`Användardokument ${session.user.id} hittades inte. Returnerar standardstatus.`);
-            return { onboardingComplete: false, tourCompleted: false };
-        }
-        const userData = userDoc.data();
-        return {
-            onboardingComplete: userData?.onboardingComplete || false,
-            tourCompleted: userData?.tourCompleted || false,
-        };
+        // Anropar DAL-funktionen med användar-ID från sessionen.
+        return await getUserStatusFromDAL(session.user.id);
     } catch (error) {
-        console.error("Fel vid hämtning av användarstatus:", error);
+        logger.error({ 
+            message: "[Action - getUserStatus] Fel vid hämtning av användarstatus", 
+            userId: session.user.id, 
+            error: error instanceof Error ? error.message : String(error)
+        });
         return { onboardingComplete: false, tourCompleted: false };
     }
 }
 
-// Guldstandard: Markera tour som slutförd
+/**
+ * Guldstandard: Server Action för att markera guiden som slutförd.
+ * Denna action hanterar sessionen och anropar sedan DAL för att utföra skrivningen.
+ */
 export async function markTourAsCompleted(): Promise<{ success: boolean }> {
-    // KORRIGERING: Använd den korrekta metoden för v4
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-        console.error("Firebase-åtgärd misslyckades: Ingen session hittades vid försök att markera tour.");
+        logger.error("[Action - markTourAsCompleted] Åtkomst nekad: Ingen session hittades.");
         return { success: false };
     }
 
     try {
-        await adminDb.collection('users').doc(session.user.id).set({
-            tourCompleted: true,
-        }, { merge: true });
-        
-        console.log(`Användare ${session.user.id} markerades som att ha slutfört turen.`);
-        return { success: true };
+        // Anropar DAL-funktionen med användar-ID från sessionen.
+        return await markTourAsCompletedFromDAL(session.user.id);
     } catch (error) {
-        console.error("Fel vid markering av tour som slutförd:", error);
+        logger.error({ 
+            message: "[Action - markTourAsCompleted] Fel vid markering av tour som slutförd", 
+            userId: session.user.id, 
+            error: error instanceof Error ? error.message : String(error)
+        });
         return { success: false };
     }
 }

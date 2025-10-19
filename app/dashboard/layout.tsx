@@ -5,7 +5,6 @@ import React, { useState } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import GuidedTour from '@/components/tour/GuidedTour';
-import IntegratedChat from '@/app/components/IntegratedChat';
 
 export default function DashboardLayout({
   children,
@@ -30,7 +29,6 @@ export default function DashboardLayout({
         </main>
       </div>
 
-      <IntegratedChat />
       <GuidedTour />
     </div>
   );

@@ -1,21 +1,8 @@
-
 'use client';
 
 import { useState } from 'react';
-
-// Typdefinition baserad på projectActions och databasstrukturen
-type Project = {
-  id: string;
-  name: string;
-  customerName: string;
-  status: string;
-  totalQuote: number;
-  [key: string]: any;
-};
-
-interface ProjectListProps {
-  initialProjects: Project[];
-}
+import { useProjects } from '@/lib/hooks/useProjects'; // Importera vår nya hook
+import { Project } from '@/types'; // Återanvänd den globala typen
 
 // Funktion för att formatera valuta
 const formatCurrency = (value: number) => {
@@ -27,24 +14,24 @@ const formatCurrency = (value: number) => {
     }).format(value);
 };
 
-export default function ProjectList({ initialProjects }: ProjectListProps) {
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
+// Funktion för att mappa status till färg och text
+const getStatusBadge = (status: string) => {
+    switch (status) {
+        case 'active': return { text: 'Aktivt', className: 'bg-green-500/20 text-green-300' };
+        case 'planning': return { text: 'Planering', className: 'bg-yellow-500/20 text-yellow-300' };
+        case 'completed': return { text: 'Slutfört', className: 'bg-gray-500/20 text-gray-300' };
+        default: return { text: status, className: 'bg-gray-600 text-gray-200' };
+    }
+};
+
+export default function ProjectList() {
+  const { projects, isLoading, isError } = useProjects();
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredProjects = projects.filter(project => 
+  const filteredProjects = projects?.filter(project => 
     project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     project.customerName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Funktion för att mappa status till färg och text
-  const getStatusBadge = (status: string) => {
-      switch (status) {
-          case 'active': return { text: 'Aktivt', className: 'bg-green-500/20 text-green-300' };
-          case 'planning': return { text: 'Planering', className: 'bg-yellow-500/20 text-yellow-300' };
-          case 'completed': return { text: 'Slutfört', className: 'bg-gray-500/20 text-gray-300' };
-          default: return { text: status, className: 'bg-gray-600 text-gray-200' };
-      }
-  };
+  ) ?? [];
 
   return (
     <div className="bg-gray-800/50 border border-gray-700 rounded-lg shadow-lg">
@@ -72,7 +59,17 @@ export default function ProjectList({ initialProjects }: ProjectListProps) {
                   </tr>
               </thead>
               <tbody className="bg-gray-800/50 divide-y divide-gray-700">
-                  {filteredProjects.length > 0 ? (
+                  {isLoading && (
+                      <tr>
+                          <td colSpan={5} className="text-center py-12 text-gray-500">Laddar projekt...</td>
+                      </tr>
+                  )}
+                  {isError && (
+                      <tr>
+                          <td colSpan={5} className="text-center py-12 text-red-400">Kunde inte ladda projekt. Försök ladda om sidan.</td>
+                      </tr>
+                  )}
+                  {!isLoading && !isError && filteredProjects.length > 0 ? (
                       filteredProjects.map(project => {
                           const badge = getStatusBadge(project.status);
                           return (
@@ -91,7 +88,7 @@ export default function ProjectList({ initialProjects }: ProjectListProps) {
                               </tr>
                           );
                       })
-                  ) : (
+                  ) : !isLoading && !isError && (
                       <tr>
                           <td colSpan={5} className="text-center py-12 text-gray-500">
                               <p>Inga projekt hittades.</p>

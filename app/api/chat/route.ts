@@ -1,99 +1,87 @@
 
-import { NextRequest, NextResponse } from "next/server";
-import { CoreMessage, streamText, StreamingTextResponse } from "ai"; // KORRIGERAD IMPORT
+import { NextResponse } from "next/server";
+import { CoreMessage, streamText, tool, ToolCallPart, experimental_StreamData, StreamingTextResponse } from "ai";
 import { google } from "@ai-sdk/google";
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
-import { adminDb } from "@/lib/admin";
-import { Ratelimit } from "@upstash/ratelimit";
-import { redis } from "@/lib/redis";
+import * as dal from '@/lib/data-access';
+import { tools } from '@/lib/tools';
 import logger from "@/lib/logger";
-import fs from 'fs/promises';
-import path from 'path';
-import { toolDefinition } from "@/lib/tools";
+import { z } from "zod";
+import { v4 as uuidv4 } from 'uuid';
 
-const ratelimit = new Ratelimit({
-    redis: redis,
-    limiter: Ratelimit.slidingWindow(20, "15 s"),
+
+const ChatRequestSchema = z.object({
+    chatId: z.string().nullable(),
+    messages: z.array(z.any()),
 });
 
-async function getSystemPrompt() {
-    const promptFilePath = path.join(process.cwd(), 'lib', 'prompts', 'v13-tools.txt');
-    try {
-        return await fs.readFile(promptFilePath, 'utf-8');
-    } catch (error) {
-        logger.error({ error }, "Kunde inte läsa v13-tools.txt. Använder fallback-prompt.");
-        return "Du är en hjälpsam assistent.";
-    }
+async function getSystemPrompt(): Promise<CoreMessage> {
+    return {
+        role: 'system',
+        content: `Du är ByggPilot Co-Pilot, en expertassistent för byggföretag. Använd dina verktyg proaktivt.`
+    };
 }
 
-export async function POST(req: NextRequest) {
-    const ip = req.ip ?? "127.0.0.1";
-    let chatId: string | null = null;
+export async function POST(req: Request) {
+    const traceId = uuidv4();
+    const requestLogger = logger.child({ traceId });
+    const data = new experimental_StreamData();
 
     try {
-        const { messages, chatId: reqChatId }: { messages: CoreMessage[]; chatId: string } = await req.json();
-        chatId = reqChatId;
-
-        const requestLogger = logger.child({ traceId: chatId });
-
-        requestLogger.info("Inkommande chatt-request mottagen.");
-
-        const { success } = await ratelimit.limit(ip);
-        if (!success) {
-            requestLogger.warn({ ip }, "Rate limit överskriden.");
-            return NextResponse.json({ error: "Too many requests." }, { status: 429 });
-        }
-
         const session = await getServerSession(authOptions);
         if (!session?.user?.id) {
-            requestLogger.error("Obehörig request - ingen session hittades.");
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
         const userId = session.user.id;
-        const chatRef = adminDb.collection("users").doc(userId).collection("chats").doc(chatId).collection("messages");
 
-        const userMessage = messages[messages.length - 1];
-        if (userMessage?.content) {
-            await chatRef.add({ ...userMessage, createdAt: new Date() });
+        const rawBody = await req.json();
+        const validationResult = ChatRequestSchema.safeParse(rawBody);
+        if (!validationResult.success) {
+            return NextResponse.json({ error: validationResult.error.flatten() }, { status: 400 });
+        }
+        let { chatId, messages } = validationResult.data;
+        let isNewChat = !chatId;
+
+        if (isNewChat) {
+            const firstUserMessage = messages.find(m => m.role === 'user');
+            if (firstUserMessage) {
+                chatId = await dal.createChat(userId, firstUserMessage);
+                requestLogger.info({ newChatId: chatId }, "Ny chatt skapad i DAL.");
+                data.append({ chatId: chatId }); // Skicka nya chatId till klienten
+            }
+        } else {
+            const lastMessage = messages[messages.length - 1];
+            if (lastMessage && lastMessage.role === 'user') {
+                await dal.addMessageToChat(userId, chatId!, lastMessage);
+            }
         }
 
         const systemPrompt = await getSystemPrompt();
-        const allMessages: CoreMessage[] = [
-            { role: "system", content: systemPrompt },
-            ...messages
-        ];
+        const history = chatId ? await dal.getChatMessages(userId, chatId) : messages;
+        const allMessages: CoreMessage[] = [systemPrompt, ...history];
 
         const result = await streamText({
             model: google("models/gemini-1.5-flash-latest"),
             messages: allMessages,
-            tools: toolDefinition(chatId),
-            toolChoice: 'auto',
-        });
-
-        const stream = result.toAIStream({
-            onFinal: async (completion) => {
-                await chatRef.add({
+            tools,
+            onFinish: async ({ text }) => {
+                requestLogger.info({ chatId }, "Stream avslutad, sparar assistentens svar.");
+                await dal.addMessageToChat(userId, chatId!, {
                     role: 'assistant',
-                    content: completion,
-                    createdAt: new Date(),
+                    content: text,
                 });
-                requestLogger.info("Assistentens slutgiltiga svar sparat.");
+                data.close();
             },
         });
-
-        requestLogger.info("Stream till klienten påbörjad.");
-        // KORRIGERING: Använd StreamingTextResponse för korrekt streaming-hantering
-        return new StreamingTextResponse(stream);
+        
+        return new StreamingTextResponse(result.toAIStream(), {}, data);
 
     } catch (error: any) {
-        const errorLogger = logger.child({ traceId: chatId });
-        errorLogger.error(
-            { error: error.message, userIp: ip, stack: error.stack },
-            "Kritiskt fel i chatt-API:et."
-        );
+        requestLogger.error({ error: error.message, stack: error.stack }, "Kritiskt fel i chatt-API:et.");
+        data.close();
         return NextResponse.json(
-            { error: "Ett kritiskt fel uppstod. Vänligen försök igen." },
+            { error: "Ett internt serverfel uppstod." },
             { status: 500 }
         );
     }

@@ -1,10 +1,9 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { IconPlus } from '@/app/constants';
+import { IconPlus } from '@tabler/icons-react';
 import NewTimeEntryModal from '@/components/NewTimeEntryModal';
-import { TimeEntry, Project } from '@/app/types';
+import { TimeEntry, Project } from '@/types';
 
 const TimeEntryRow: React.FC<{ entry: TimeEntry }> = ({ entry }) => (
     <div className="grid grid-cols-4 gap-4 items-center p-4 border-b border-gray-700/50 hover:bg-gray-700/30 transition-colors duration-200 last:border-b-0">

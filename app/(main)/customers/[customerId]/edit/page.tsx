@@ -1,6 +1,6 @@
 
 import { getServerSession } from 'next-auth/next';
-import { getCustomer } from '../../actions'; 
+import { getCustomer } from '@/app/(main)/customers/actions'; 
 import { notFound } from 'next/navigation';
 import { updateCustomerAction, archiveCustomerAction } from './actions';
 

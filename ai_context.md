@@ -1,7 +1,7 @@
 
 # ByggPilot Guldstandard: Bindande Operativ Manual
 
-**Version 4.1**
+**Version 4.2**
 
 ## Inledning & Syfte
 
@@ -33,9 +33,9 @@ Detta dokument är den enda källan till sanning för utvecklingen av ByggPilot.
 
 ---
 
-## Del 4: Guldstandard för Chatt-funktionen (Version 2.0 - Verktygsdriven)
+## Del 4: Guldstandard för Chatt-funktionen (Version 2.1 - DAL-Driven)
 
-**Princip:** Chatt-systemet är en server-driven, verktygsorienterad arkitektur. Klienten är en "dum" terminal som renderar konversationen, medan all logik, tillstånds-hantering och handlingar styrs av backend. Detta garanterar maximal säkerhet, robusthet och framtida utbyggbarhet.
+**Princip:** Chatt-systemet är en server-driven, verktygsorienterad arkitektur. Klienten är en "dum" terminal som renderar konversationen, medan all logik, tillstånds-hantering och handlingar styrs av backend i enlighet med DAL-mönstret. Detta garanterar maximal säkerhet, robusthet och framtida utbyggbarhet.
 
 **1. Chattens Orkestratör: API-routen**
    - **Sökväg:** `app/api/chat/route.ts`
@@ -45,7 +45,7 @@ Detta dokument är den enda källan till sanning för utvecklingen av ByggPilot.
 **2. Chattens Handlingsförmåga: Verktygsbiblioteket**
    - **Sökväg:** `lib/tools.ts`
    - **Roll:** Definerar alla handlingar som Co-Pilot kan utföra.
-   - **Direktiv:** Varje verktyg **ska** definieras med `tool()`-funktionen från AI SDK. Parametrar **ska** valideras med ett `zod`-schema. `execute`-funktionen innehåller den faktiska affärslogiken (t.ex. att skriva till Firestore) och **ska** returnera ett tydligt resultatobjekt.
+   - **Direktiv:** Varje verktyg **ska** definieras med `tool()`-funktionen från AI SDK. Parametrar **ska** valideras med ett `zod`-schema. `execute`-funktionen **ska agera som en orkestrerare**. Den anropar funktioner i Data Access Layer (`lib/data-access.ts`) för alla databasinteraktioner eller andra relevanta tjänster (t.ex. `driveService`). Ett verktyg får **ALDRIG** direkt interagera med databasen (`adminDb`). Det **ska** returnera ett tydligt resultatobjekt från anropet.
 
 **3. Chattens Personlighet: System-prompts**
    - **Sökväg:** `lib/prompts/`
@@ -58,4 +58,4 @@ Detta dokument är den enda källan till sanning för utvecklingen av ByggPilot.
    - **Direktiv:** Klient-komponenterna **ska inte** innehålla någon komplex affärslogik. Deras primära uppgift är att hantera UI-state och kommunicera med API-routen. Logik för att initiera flöden (t.ex. via knappar) är tillåten, men den ska resultera i ett anrop till backend, inte i lokal logikhantering.
 
 **Sammanfattning av exekveringsflöde:**
-`Klient (knappklick)` -> `Klient skickar meddelande till API` -> `API-route (Orchestrator)` anropar `AI-modell` med `Verktyg` -> `AI` bestämmer sig för att använda ett verktyg -> `API-route` exekverar koden i `lib/tools.ts` -> `API-route` skickar resultat till `AI` -> `AI` formulerar svar -> `API-route` streamar svar till `Klient`.
+`Klient (knappklick)` -> `Klient skickar meddelande till API` -> `API-route (Orchestrator)` anropar `AI-modell` med `Verktyg` -> `AI` bestämmer sig för att använda ett verktyg -> `API-route` exekverar koden i `lib/tools.ts` -> **`Verktyg` anropar `lib/data-access.ts`** -> `DAL` utför databasoperation -> `API-route` skickar resultat till `AI` -> `AI` formulerar svar -> `API-route` streamar svar till `Klient`.
