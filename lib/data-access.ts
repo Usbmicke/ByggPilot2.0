@@ -7,7 +7,7 @@ import { Project, Invoice, Ata, Document, Chat, Message, Customer, Task, TimeEnt
 import { v4 as uuidv4 } from 'uuid';
 
 // =================================================================================
-// DATA ACCESS LAYER (DAL) - GULDSTANDARD V4.6
+// DATA ACCESS LAYER (DAL) - GULDSTANDARD V4.7
 // =================================================================================
 
 // --- SESSION & SECURITY ---
@@ -208,10 +208,9 @@ export async function createTask(taskData: { text: string; projectId: string; })
 
 // --- CHAT FUNCTIONS ---
 
-export async function createChat(userId: string, firstUserMessage: any): Promise<string> {
+export async function createChat(firstUserMessage: any): Promise<string> {
     const traceId = uuidv4();
-    const verifiedUserId = await verifyUserSession(traceId);
-    if (userId !== verifiedUserId) throw new Error("Mismatched user ID");
+    const userId = await verifyUserSession(traceId);
 
     const chatId = uuidv4();
     const chatRef = adminDb.collection('users').doc(userId).collection('chats').doc(chatId);
@@ -222,16 +221,15 @@ export async function createChat(userId: string, firstUserMessage: any): Promise
         title: firstUserMessage.content.substring(0, 30),
     });
 
-    await addMessageToChat(userId, chatId, firstUserMessage);
+    await addMessageToChat(chatId, firstUserMessage);
     
     logger.info({ traceId, userId, chatId }, "New chat created.");
     return chatId;
 }
 
-export async function addMessageToChat(userId: string, chatId: string, message: { role: 'user' | 'assistant'; content: string; }) {
+export async function addMessageToChat(chatId: string, message: { role: 'user' | 'assistant'; content: string; }) {
     const traceId = uuidv4();
-    const verifiedUserId = await verifyUserSession(traceId);
-     if (userId !== verifiedUserId) throw new Error("Mismatched user ID");
+    const userId = await verifyUserSession(traceId);
 
     const messageId = uuidv4();
     const messageRef = adminDb.collection('users').doc(userId).collection('chats').doc(chatId).collection('messages').doc(messageId);
@@ -244,10 +242,9 @@ export async function addMessageToChat(userId: string, chatId: string, message: 
     logger.info({ traceId, userId, chatId, messageId }, "Message added to chat.");
 }
 
-export async function getChatMessages(userId: string, chatId: string): Promise<Message[]> {
+export async function getChatMessages(chatId: string): Promise<Message[]> {
     const traceId = uuidv4();
-    const verifiedUserId = await verifyUserSession(traceId);
-    if (userId !== verifiedUserId) throw new Error("Mismatched user ID");
+    const userId = await verifyUserSession(traceId);
 
     const messagesSnapshot = await adminDb.collection('users').doc(userId).collection('chats').doc(chatId).collection('messages').orderBy('createdAt', 'asc').get();
     
@@ -487,7 +484,7 @@ export async function createCustomer(customerData: Omit<Customer, 'id' | 'create
             id: customerRef.id,
             ...customerData,
             createdAt: new Date().toISOString(),
-            updatedAt: new D ate().toISOString(),
+            updatedAt: new Date().toISOString(),
         };
 
         await customerRef.set(newCustomer);

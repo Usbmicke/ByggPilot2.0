@@ -45,11 +45,11 @@ export async function POST(req: Request) {
     const data = new experimental_StreamData();
 
     try {
+        // Sessionen valideras nu helt inom DAL, men vi gör en initial kontroll här.
         const session = await getServerSession(authOptions);
         if (!session?.user?.id) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-        const userId = session.user.id;
 
         const rawBody = await req.json();
         const validationResult = ChatRequestSchema.safeParse(rawBody);
@@ -62,19 +62,22 @@ export async function POST(req: Request) {
         if (isNewChat) {
             const firstUserMessage = messages.find(m => m.role === 'user');
             if (firstUserMessage) {
-                chatId = await dal.createChat(userId, firstUserMessage);
+                // Anropar den nya, säkra DAL-funktionen utan userId
+                chatId = await dal.createChat(firstUserMessage);
                 requestLogger.info({ newChatId: chatId }, "Ny chatt skapad i DAL.");
                 data.append({ chatId: chatId }); // Skicka nya chatId till klienten
             }
         } else {
             const lastMessage = messages[messages.length - 1];
             if (lastMessage && lastMessage.role === 'user') {
-                await dal.addMessageToChat(userId, chatId!, lastMessage);
+                // Anropar den nya, säkra DAL-funktionen utan userId
+                await dal.addMessageToChat(chatId!, lastMessage);
             }
         }
 
         const systemPrompt = await getSystemPrompt();
-        const history = chatId ? await dal.getChatMessages(userId, chatId) : messages;
+        // Anropar den nya, säkra DAL-funktionen utan userId
+        const history = chatId ? await dal.getChatMessages(chatId) : messages;
         const allMessages: CoreMessage[] = [systemPrompt, ...history];
 
         const result = await streamText({
@@ -91,7 +94,10 @@ export async function POST(req: Request) {
                 }
                 
                 requestLogger.info({ chatId }, "Stream avslutad, sparar assistentens svar.");
-                await dal.addMessageToChat(userId, chatId!, assistantResponse);
+                // Anropar den nya, säkra DAL-funktionen utan userId
+                if (chatId) {
+                    await dal.addMessageToChat(chatId, assistantResponse);
+                }
                 data.close();
             },
         });
@@ -101,9 +107,11 @@ export async function POST(req: Request) {
     } catch (error: any) {
         requestLogger.error({ error: error.message, stack: error.stack }, "Kritiskt fel i chatt-API:et.");
         data.close();
+        // Om felet kommer från DAL:s session-verifiering, sätt rätt status.
+        const status = error.message === 'Unauthorized' ? 401 : 500;
         return NextResponse.json(
             { error: "Ett internt serverfel uppstod." },
-            { status: 500 }
+            { status }
         );
     }
 }
