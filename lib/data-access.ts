@@ -3,15 +3,14 @@ import { adminDb } from './admin';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from './authOptions';
 import logger from './logger';
-import { Project, Invoice, Ata, Document, Chat, Message, Customer } from '@/types'; // Lade till Customer
+import { Project, Invoice, Ata, Document, Chat, Message, Customer, Task } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
 // =================================================================================
-// DATA ACCESS LAYER (DAL) - GULDSTANDARD V3.1 (med Customer-funktioner)
+// DATA ACCESS LAYER (DAL) - GULDSTANDARD V4.3
 // =================================================================================
 
-
-// --- SESSION & SÄKERHET ---
+// --- SESSION & SECURITY ---
 
 async function verifyUserSession(traceId: string): Promise<string> {
     const session = await getServerSession(authOptions);
@@ -24,7 +23,83 @@ async function verifyUserSession(traceId: string): Promise<string> {
 }
 
 
-// --- CHAT-FUNKTIONER (oförändrade) ---
+// --- TASK FUNCTIONS (NEW) ---
+
+export async function getTasksForProject(projectId: string): Promise<Task[]> {
+    const traceId = uuidv4();
+    const userId = await verifyUserSession(traceId);
+
+    try {
+        // First, verify the user has access to the project.
+        const projectRef = adminDb.collection('users').doc(userId).collection('projects').doc(projectId);
+        const projectDoc = await projectRef.get();
+        if (!projectDoc.exists) {
+            logger.warn({ traceId, userId, projectId }, "DAL: User attempted to access tasks for a non-existent or unauthorized project.");
+            throw new Error("Project not found or user lacks access.");
+        }
+
+        // As tasks are in a separate top-level collection, query them directly.
+        const tasksSnapshot = await adminDb.collection('users').doc(userId).collection('tasks')
+            .where('projectId', '==', projectId)
+            .orderBy('createdAt', 'asc')
+            .get();
+
+        if (tasksSnapshot.empty) {
+            return [];
+        }
+
+        const tasks = tasksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Task);
+        logger.info({ traceId, userId, projectId, taskCount: tasks.length }, "DAL: Tasks retrieved successfully for project.");
+        return JSON.parse(JSON.stringify(tasks));
+
+    } catch (error) {
+        logger.error({ traceId, userId, projectId, error }, "DAL: Failed to get tasks for project.");
+        throw new Error("Could not fetch tasks.");
+    }
+}
+
+export async function createTask(taskData: { text: string; projectId: string; }): Promise<Task> {
+    const traceId = uuidv4();
+    const userId = await verifyUserSession(traceId);
+
+    const { text, projectId } = taskData;
+
+    try {
+        if (!text || !projectId) {
+            throw new Error("Task text and projectId are required.");
+        }
+        
+        // Verify the user has access to the project before creating a task.
+        const projectRef = adminDb.collection('users').doc(userId).collection('projects').doc(projectId);
+        const projectDoc = await projectRef.get();
+        if (!projectDoc.exists) {
+            logger.warn({ traceId, userId, projectId }, "DAL: User attempted to create a task for a non-existent or unauthorized project.");
+            throw new Error("Project not found or user lacks access.");
+        }
+
+        const newTaskRef = adminDb.collection('users').doc(userId).collection('tasks').doc();
+        const newTask: Task = {
+            id: newTaskRef.id,
+            text,
+            projectId,
+            completed: false,
+            createdAt: new Date().toISOString(),
+            userId: userId,
+        };
+
+        await newTaskRef.set(newTask);
+        logger.info({ traceId, userId, projectId, taskId: newTask.id }, "DAL: Task created successfully.");
+
+        return JSON.parse(JSON.stringify(newTask));
+
+    } catch (error) {
+        logger.error({ traceId, userId, taskData, error }, "DAL: Failed to create task.");
+        throw new Error("Could not create task.");
+    }
+}
+
+
+// --- CHAT FUNCTIONS ---
 
 export async function createChat(userId: string, firstUserMessage: any): Promise<string> {
     const traceId = uuidv4();
@@ -75,7 +150,7 @@ export async function getChatMessages(userId: string, chatId: string): Promise<M
 }
 
 
-// --- PROJEKT-FUNKTIONER (oförändrade) ---
+// --- PROJECT FUNCTIONS ---
 
 export async function getProjectsForUser(): Promise<Project[]> {
     const traceId = uuidv4();
@@ -89,7 +164,7 @@ export async function getProjectsForUser(): Promise<Project[]> {
         const projects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Project);
         return JSON.parse(JSON.stringify(projects));
     } catch (error) {
-        logger.error({ traceId, userId, error }, "Failed to get projects from Firestore.");
+        logger.error({ traceId, userId, error }, "DAL: Failed to get projects from Firestore.");
         throw new Error("Could not fetch projects.");
     }
 }
@@ -99,8 +174,272 @@ export async function getProjectForUser(projectId: string): Promise<Project | nu
     const userId = await verifyUserSession(traceId);
 
     if (!projectId) {
-        logger.warn({ traceId, userId }, "getProjectForUser called without projectId.");
+        logger.warn({ traceId, userId }, "DAL: getProjectForUser called without projectId.");
         return null;
     }
 
     try {
+        const projectRef = adminDb.collection('users').doc(userId).collection('projects').doc(projectId);
+        const projectSnap = await projectRef.get();
+
+        if (!projectSnap.exists) {
+            logger.warn({ traceId, userId, projectId }, "DAL: Project not found or user lacks access.");
+            return null;
+        }
+
+        const project = { id: projectSnap.id, ...projectSnap.data() } as Project;
+        return JSON.parse(JSON.stringify(project));
+
+    } catch (error) {
+        logger.error({ traceId, userId, projectId, error }, "DAL: Failed to get project from Firestore.");
+        throw new Error("Could not fetch project.");
+    }
+}
+
+export async function createProject(userId: string, projectData: any): Promise<Project> {
+    const traceId = uuidv4();
+    const verifiedUserId = await verifyUserSession(traceId);
+    if (userId !== verifiedUserId) throw new Error("Mismatched user ID");
+
+    const { name, ...rest } = projectData;
+
+    try {
+        const newProjectRef = adminDb.collection('users').doc(userId).collection('projects').doc();
+        const newProject = {
+            id: newProjectRef.id,
+            name,
+            ...rest,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        };
+
+        await newProjectRef.set(newProject);
+        logger.info({ traceId, userId, projectId: newProject.id }, "DAL: Project created successfully.");
+
+        return newProject as Project;
+
+    } catch (error) {
+        logger.error({ traceId, userId, projectData, error }, "DAL: Failed to create project.");
+        throw new Error("Could not create project.");
+    }
+}
+
+
+// --- INVOICE FUNCTIONS ---
+
+export async function createInvoice(invoiceData: any): Promise<Invoice> {
+    const traceId = uuidv4();
+    const userId = await verifyUserSession(traceId);
+
+    try {
+        const { projectId, lines } = invoiceData;
+        if (!projectId || !lines || !Array.isArray(lines) || lines.length === 0) {
+            throw new Error("Invalid invoice data provided.");
+        }
+
+        const projectRef = adminDb.collection('users').doc(userId).collection('projects').doc(projectId);
+        const projectSnap = await projectRef.get();
+
+        if (!projectSnap.exists) {
+            logger.warn({ traceId, userId, projectId }, "DAL: Attempted to create invoice for non-existent or inaccessible project.");
+            throw new Error("Project not found or user lacks access.");
+        }
+
+        const batch = adminDb.batch();
+        const totalAmount = lines.reduce((acc, line) => acc + (line.quantity * line.unitPrice), 0);
+        const invoiceDocRef = projectRef.collection('invoices').doc();
+
+        const newInvoice: Omit<Invoice, 'id'> = {
+            ...invoiceData,
+            status: 'draft',
+            totalAmount,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        };
+
+        batch.set(invoiceDocRef, newInvoice);
+
+        const currentInvoiced = projectSnap.data()?.totalInvoiced || 0;
+        batch.update(projectRef, { totalInvoiced: currentInvoiced + totalAmount });
+
+        await batch.commit();
+
+        logger.info({ traceId, userId, projectId, invoiceId: invoiceDocRef.id }, "DAL: Invoice created successfully.");
+
+        const result: Invoice = { ...newInvoice, id: invoiceDocRef.id };
+        return JSON.parse(JSON.stringify(result));
+
+    } catch (error) {
+        logger.error({ traceId, userId, invoiceData, error }, "DAL: Failed to create invoice.");
+        throw new Error("Could not create the invoice.");
+    }
+}
+
+export async function getInvoicesForProject(projectId: string): Promise<Invoice[]> {
+    const traceId = uuidv4();
+    const userId = await verifyUserSession(traceId);
+    try {
+        const invoicesSnapshot = await adminDb.collection('users').doc(userId).collection('projects').doc(projectId).collection('invoices').orderBy('createdAt', 'desc').get();
+        if (invoicesSnapshot.empty) return [];
+        const invoices = invoicesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Invoice);
+        return JSON.parse(JSON.stringify(invoices));
+    } catch (error) {
+        logger.error({ traceId, userId, projectId, error }, "DAL: Failed to get invoices for project.");
+        throw new Error("Could not fetch invoices.");
+    }
+}
+
+
+// --- ATA FUNCTIONS ---
+
+export async function getAtasForProject(projectId: string): Promise<Ata[]> {
+    const traceId = uuidv4();
+    const userId = await verifyUserSession(traceId);
+    try {
+        const atasSnapshot = await adminDb.collection('users').doc(userId).collection('projects').doc(projectId).collection('atas').orderBy('createdAt', 'desc').get();
+        if (atasSnapshot.empty) return [];
+        const atas = atasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Ata);
+        return JSON.parse(JSON.stringify(atas));
+    } catch (error) {
+        logger.error({ traceId, userId, projectId, error }, "DAL: Failed to get ATAs for project.");
+        throw new Error("Could not fetch ATAs.");
+    }
+}
+
+
+// --- DOCUMENT FUNCTIONS ---
+
+export async function getDocumentsForProject(projectId: string): Promise<Document[]> {
+    const traceId = uuidv4();
+    const userId = await verifyUserSession(traceId);
+    try {
+        const docsSnapshot = await adminDb.collection('users').doc(userId).collection('projects').doc(projectId).collection('documents').orderBy('createdAt', 'desc').get();
+        if (docsSnapshot.empty) return [];
+        const documents = docsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Document);
+        return JSON.parse(JSON.stringify(documents));
+    } catch (error) {
+        logger.error({ traceId, userId, projectId, error }, "DAL: Failed to get documents for project.");
+        throw new Error("Could not fetch documents.");
+    }
+}
+
+
+// --- CUSTOMER FUNCTIONS ---
+
+export async function getCustomersForUser(): Promise<Customer[]> {
+    const traceId = uuidv4();
+    const userId = await verifyUserSession(traceId);
+    try {
+        const customersSnapshot = await adminDb.collection('users').doc(userId).collection('customers').orderBy('name', 'asc').get();
+        if (customersSnapshot.empty) return [];
+        const customers = customersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Customer);
+        return JSON.parse(JSON.stringify(customers));
+    } catch (error) {
+        logger.error({ traceId, userId, error }, "DAL: Failed to get customers for user.");
+        throw new Error("Could not fetch customers.");
+    }
+}
+
+export async function getCustomerForUser(customerId: string): Promise<Customer | null> {
+    const traceId = uuidv4();
+    const userId = await verifyUserSession(traceId);
+
+    if (!customerId) {
+        logger.warn({ traceId, userId }, "DAL: getCustomerForUser called without customerId.");
+        return null;
+    }
+
+    try {
+        const customerRef = adminDb.collection('users').doc(userId).collection('customers').doc(customerId);
+        const doc = await customerRef.get();
+
+        if (!doc.exists) {
+            logger.warn({ traceId, userId, customerId }, "DAL: Customer not found or user lacks access.");
+            return null;
+        }
+
+        const customer = { id: doc.id, ...doc.data() } as Customer;
+        return JSON.parse(JSON.stringify(customer));
+
+    } catch (error) {
+        logger.error({ traceId, userId, customerId, error }, "DAL: Failed to get customer from Firestore.");
+        throw new Error("Could not fetch customer.");
+    }
+}
+
+export async function createCustomer(customerData: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>): Promise<Customer> {
+    const traceId = uuidv4();
+    const userId = await verifyUserSession(traceId);
+    try {
+        if (!customerData.name) {
+            throw new Error("Customer name is required.");
+        }
+
+        const customerRef = adminDb.collection('users').doc(userId).collection('customers').doc();
+        const newCustomer = {
+            id: customerRef.id,
+            ...customerData,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        };
+
+        await customerRef.set(newCustomer);
+        logger.info({ traceId, userId, customerId: newCustomer.id }, "DAL: Customer created successfully.");
+
+        return newCustomer as Customer;
+
+    } catch (error) {
+        logger.error({ traceId, userId, customerData, error }, "DAL: Failed to create customer.");
+        throw new Error("Could not create customer.");
+    }
+}
+
+export async function updateCustomer(customerId: string, data: Partial<Customer>): Promise<Customer> {
+    const traceId = uuidv4();
+    const userId = await verifyUserSession(traceId);
+
+    try {
+        const customerRef = adminDb.collection('users').doc(userId).collection('customers').doc(customerId);
+        const doc = await customerRef.get();
+
+        if (!doc.exists) {
+            throw new Error("Customer not found.");
+        }
+
+        const updateData = {
+            ...data,
+            updatedAt: new Date().toISOString(),
+        };
+
+        await customerRef.update(updateData);
+        logger.info({ traceId, userId, customerId }, "DAL: Customer updated successfully.");
+
+        const updatedDoc = await customerRef.get();
+        return { id: updatedDoc.id, ...updatedDoc.data() } as Customer;
+
+    } catch (error) {
+        logger.error({ traceId, userId, customerId, data, error }, "DAL: Failed to update customer.");
+        throw new Error("Could not update customer.");
+    }
+}
+
+export async function archiveCustomer(customerId: string): Promise<void> {
+    const traceId = uuidv4();
+    const userId = await verifyUserSession(traceId);
+
+    try {
+        const customerRef = adminDb.collection('users').doc(userId).collection('customers').doc(customerId);
+        const doc = await customerRef.get();
+
+        if (!doc.exists) {
+            throw new Error("Customer not found.");
+        }
+
+        await customerRef.update({ archived: true, updatedAt: new Date().toISOString() });
+        logger.info({ traceId, userId, customerId }, "DAL: Customer archived successfully.");
+
+    } catch (error) {
+        logger.error({ traceId, userId, customerId, error }, "DAL: Failed to archive customer.");
+        throw new Error("Could not archive customer.");
+    }
+}

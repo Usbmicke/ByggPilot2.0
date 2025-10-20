@@ -1,8 +1,8 @@
 
-import { getServerSession } from 'next-auth/next';
-import { getCustomer } from '@/app/(main)/customers/actions'; 
 import { notFound } from 'next/navigation';
+import * as dal from '@/lib/data-access';
 import { updateCustomerAction, archiveCustomerAction } from './actions';
+import logger from '@/lib/logger';
 
 interface EditCustomerPageProps {
   params: {
@@ -12,16 +12,24 @@ interface EditCustomerPageProps {
 
 export default async function EditCustomerPage({ params }: EditCustomerPageProps) {
   const { customerId } = params;
-  const session = await getServerSession();
-  const userId = session?.user?.id;
-
-  if (!userId) {
-    return <p>Autentisering krävs.</p>;
-  }
-
-  const customer = await getCustomer(customerId, userId);
+  
+  // DAL hanterar session/auth-check, vi behöver bara fånga felet.
+  const customer = await (async () => {
+    try {
+      return await dal.getCustomerForUser(customerId);
+    } catch (error: any) {
+      logger.error({ 
+        customerId,
+        error: error.message, 
+        stack: error.stack
+      }, '[EditCustomerPage] Failed to fetch customer data.');
+      return null; // Returnerar null för att kunna hantera felet nedan
+    }
+  })();
 
   if (!customer) {
+    // Antingen hittades inte kunden, användaren saknar behörighet, eller ett serverfel inträffade.
+    // notFound() visar en standard 404-sida.
     notFound();
   }
 

@@ -1,17 +1,13 @@
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { adminDb as db } from '@/lib/admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import * as dal from '@/lib/data-access';
+import logger from '@/lib/logger';
 
-// Hämta uppgifter för ett projekt
+/**
+ * GET-metod för att hämta uppgifter (Tasks) för ett specifikt projekt.
+ * Anropar DAL för att säkerställa att användaren är autentiserad och har åtkomst till projektet.
+ */
 export async function GET(request: Request) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.id) {
-        return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get('projectId');
 
@@ -20,53 +16,42 @@ export async function GET(request: Request) {
     }
 
     try {
-        const tasksRef = db.collection('users').doc(session.user.id).collection('tasks').where('projectId', '==', projectId);
-        const snapshot = await tasksRef.orderBy('createdAt', 'asc').get();
-
-        if (snapshot.empty) {
-            return NextResponse.json({ tasks: [] });
-        }
-
-        const tasks: any[] = [];
-        snapshot.forEach(doc => {
-            tasks.push({ id: doc.id, ...doc.data() });
-        });
-
+        const tasks = await dal.getTasksForProject(projectId);
         return NextResponse.json({ tasks });
+    } catch (error: any) {
+        // DAL hanterar detaljerad loggning, här loggar vi kontexten för API-anropet.
+        logger.error({ 
+            projectId,
+            error: error.message, 
+            stack: error.stack 
+        }, '[API /tasks GET] Failed to fetch tasks.');
 
-    } catch (error) {
-        console.error('Error fetching tasks:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        // Skicka ett generiskt felmeddelande till klienten.
+        const status = error.message === 'Unauthorized' ? 401 : 500;
+        return NextResponse.json({ error: 'Internal Server Error' }, { status });
     }
 }
 
-// Skapa en ny uppgift
+/**
+ * POST-metod för att skapa en ny uppgift (Task).
+ * Anropar DAL som validerar indata och skapar uppgiften på ett säkert sätt.
+ */
 export async function POST(request: Request) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.id) {
-        return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-    }
-
     try {
         const { text, projectId } = await request.json();
-        if (!text || !projectId) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-        }
 
-        const newTask = {
-            text,
-            projectId,
-            completed: false,
-            createdAt: FieldValue.serverTimestamp(),
-            userId: session.user.id,
-        };
+        // DAL kommer att validera att text och projectId finns.
+        const newTask = await dal.createTask({ text, projectId });
 
-        const newTaskRef = await db.collection('users').doc(session.user.id).collection('tasks').add(newTask);
+        return NextResponse.json(newTask, { status: 201 }); // 201 Created
 
-        return NextResponse.json({ id: newTaskRef.id, ...newTask });
+    } catch (error: any) {
+        logger.error({ 
+            error: error.message, 
+            stack: error.stack 
+        }, '[API /tasks POST] Failed to create task.');
 
-    } catch (error) {
-        console.error('Error creating task:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        const status = error.message === 'Unauthorized' ? 401 : (error.message.includes('required') ? 400 : 500);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status });
     }
 }

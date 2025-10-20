@@ -1,48 +1,50 @@
+
 'use server';
 
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/authOptions';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { updateCustomer, archiveCustomer } from '@/app/(main)/customers/actions'; 
+import * as dal from '@/lib/data-access';
+import logger from '@/lib/logger';
 
-// Action för att uppdatera en kund
 export async function updateCustomerAction(customerId: string, formData: FormData) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    throw new Error('Not authenticated');
-  }
-
-  const data = {
-    name: formData.get('name') as string,
-    email: formData.get('email') as string,
-    phone: formData.get('phone') as string,
-    isCompany: formData.get('isCompany') === 'on',
-  };
-
   try {
-    await updateCustomer(customerId, session.user.id, data);
-    revalidatePath('/customers'); 
-    revalidatePath(`/customers/${customerId}/edit`); 
-  } catch (error) {
-    console.error("Kunde inte uppdatera kund:", error);
-    // Hantera fel (t.ex. returnera ett felmeddelande)
+    const data = {
+      name: formData.get('name') as string,
+      email: formData.get('email') as string,
+      phone: formData.get('phone') as string,
+      isCompany: formData.get('isCompany') === 'on',
+    };
+
+    await dal.updateCustomer(customerId, data);
+    
+    revalidatePath('/customers');
+    revalidatePath(`/customers/${customerId}/edit`);
+
+  } catch (error: any) {
+    logger.error({ 
+        customerId,
+        error: error.message, 
+        stack: error.stack 
+    }, '[updateCustomerAction] Failed to update customer.');
+
+    // TBD: Return a more specific error message to the UI
   }
 }
 
-// Action för att arkivera en kund
 export async function archiveCustomerAction(customerId: string) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    throw new Error('Not authenticated');
-  }
-
   try {
-    await archiveCustomer(customerId, session.user.id);
+    await dal.archiveCustomer(customerId);
+    
     revalidatePath('/customers');
-    redirect('/customers'); 
-  } catch (error) {
-    console.error("Kunde inte arkivera kund:", error);
-    // Hantera fel
+    redirect('/customers');
+
+  } catch (error: any) {
+      logger.error({ 
+        customerId,
+        error: error.message, 
+        stack: error.stack 
+    }, '[archiveCustomerAction] Failed to archive customer.');
+
+    // TBD: Return a more specific error message to the UI
   }
 }
