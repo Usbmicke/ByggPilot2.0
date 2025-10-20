@@ -1,3 +1,4 @@
+
 import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import type { NextRequest } from 'next/server';
@@ -17,57 +18,54 @@ export async function middleware(req: NextRequest) {
   // Ignorera interna Next.js-anrop och fil-assets
   if (
     pathname.startsWith('/_next/') ||
-    pathname.startsWith('/api/') || // API-routes hanterar sin egen auth
-    pathname.includes('.') // T.ex. favicon.ico, .png
+    pathname.startsWith('/api/') ||
+    pathname.includes('.')
   ) {
     return NextResponse.next();
   }
 
-  // Hämta sessionstoken PÅ ETT SÄKERT sätt
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-
   const isPublicPath = PUBLIC_PATHS.some((path) => pathname.startsWith(path));
 
-  // --- Logik ---
+  // --- NY, ROBUST LOGIK ---
 
-  // 1. Användare är inloggad (har en token)
-  if (token) {
-    const onboardingComplete = token.onboardingComplete === true;
-
-    // 1a. Onboarding är INTE komplett
-    if (!onboardingComplete) {
-      // Om de inte redan är på onboarding-sidan, skicka dit dem.
-      if (pathname !== ONBOARDING_PATH) {
-        return NextResponse.redirect(new URL(ONBOARDING_PATH, req.url));
-      }
-    }
-    
-    // 1b. Onboarding ÄR komplett
-    else {
-      // Om de är på onboarding- eller landningssidan, skicka dem till sin dashboard.
-      if (pathname === ONBOARDING_PATH || pathname === LANDING_PAGE_PATH) {
-        return NextResponse.redirect(new URL(DASHBOARD_PATH, req.url));
-      }
-    }
-  }
-
-  // 2. Användare är INTE inloggad (har ingen token)
-  else {
+  // 1. Användare är INTE inloggad
+  if (!token) {
     // Om de försöker nå en skyddad sida (som inte är publik och inte landningssidan),
     // skicka dem till inloggningssidan.
     if (!isPublicPath && pathname !== LANDING_PAGE_PATH) {
-        // Skapa en ren sign-in URL utan dubbla callbacks.
         const signInUrl = new URL(SIGNIN_PATH, req.url);
         signInUrl.searchParams.set('callbackUrl', req.nextUrl.pathname);
         return NextResponse.redirect(signInUrl);
     }
+    // Låt dem annars vara (på landningssida eller publik sida)
+    return NextResponse.next();
   }
 
-  // 3. Om ingen av reglerna ovan matchar, låt förfrågan passera.
+  // 2. Användare ÄR inloggad
+  const onboardingComplete = token.onboardingComplete === true;
+
+  // 2a. Onboarding är INTE komplett
+  if (!onboardingComplete) {
+    // Om de INTE redan är på onboarding-sidan, tvinga dem dit.
+    if (pathname !== ONBOARDING_PATH) {
+      return NextResponse.redirect(new URL(ONBOARDING_PATH, req.url));
+    }
+    // Om de redan är där, låt dem vara.
+    return NextResponse.next();
+  }
+
+  // 2b. Onboarding ÄR komplett
+  // Om en färdig användare är på landningssidan, onboarding-sidan
+  // eller en inloggnings-relaterad sida, skicka dem till sin dashboard.
+  if (pathname === LANDING_PAGE_PATH || pathname === ONBOARDING_PATH) {
+      return NextResponse.redirect(new URL(DASHBOARD_PATH, req.url));
+  }
+
+  // 3. Om ingen av de tvingande reglerna ovan matchar, låt förfrågan passera.
   return NextResponse.next();
 }
 
 export const config = {
-  // Matcha alla sökvägar FÖRUTOM de som har en punkt (filer) eller börjar med /api eller /_next
   matcher: ['/((?!api|_next/static|.*\..*).*)'],
 };

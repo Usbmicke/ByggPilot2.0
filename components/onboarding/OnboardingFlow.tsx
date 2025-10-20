@@ -11,20 +11,16 @@ import Step_CreateStructure from './Step_CreateStructure';
 import Step_Success from './Step_Success';
 
 // =================================================================================
-// GULDSTANDARD: ONBOARDING-FLÖDE V3.1 - KORRIGERAT API-ANROP
-// Korrigerar API-endpointen från den felaktiga /api/onboarding till den korrekta
-// /api/onboarding/create-drive-structure. Detta återställer hela flödets
-// funktionalitet.
+// ONBOARDING-FLÖDE V4.1 - RENsad STYLING
+// LÖSNING: Den omslutande `div`-en har inte längre egna styling-klasser. Ansvaret
+// för layout och bakgrund ligger nu helt på den överordnade sid-komponenten.
 // =================================================================================
 
 export type OnboardingStep = 'welcome' | 'security' | 'creating' | 'success';
 
-interface OnboardingFlowProps {
-    companyName: string;
-}
-
-export default function OnboardingFlow({ companyName }: OnboardingFlowProps) {
+export default function OnboardingFlow() {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
+  const [companyName, setCompanyName] = useState<string>(''); 
   const [error, setError] = useState<string | null>(null);
   const [folderUrl, setFolderUrl] = useState<string | null>(null);
   const { data: session } = useSession();
@@ -35,13 +31,12 @@ export default function OnboardingFlow({ companyName }: OnboardingFlowProps) {
     setError(null);
 
     try {
-      // KORRIGERING: Anropar nu den korrekta API-endpointen.
       const response = await fetch('/api/onboarding/create-drive-structure', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ companyName }),
+        body: JSON.stringify({ companyName }), 
       });
 
       const data = await response.json();
@@ -69,6 +64,8 @@ export default function OnboardingFlow({ companyName }: OnboardingFlowProps) {
       case 'welcome':
         return <Step_Welcome 
                   userName={session?.user?.name || ''} 
+                  companyName={companyName}             
+                  setCompanyName={setCompanyName}     
                   onProceed={handleCreateStructure} 
                   onSkip={() => router.push('/dashboard')} 
                   onShowSecurity={() => setCurrentStep('security')} 

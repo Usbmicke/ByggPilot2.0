@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getServerSession } from 'next-auth/next';
 import { listCustomers } from './actions';
 import { Customer } from '@/types/index';
+import { logger } from '@/lib/logger';
 
 export default async function CustomerListPage() {
   const session = await getServerSession();
@@ -13,7 +14,7 @@ export default async function CustomerListPage() {
     try {
       customers = await listCustomers(userId);
     } catch (error) {
-      console.error("Kunde inte hämta kunder:", error);
+      logger.error({ error }, "Kunde inte hämta kunder:");
       return <p className="text-red-500">Ett fel uppstod vid hämtning av kunder.</p>;
     }
   }

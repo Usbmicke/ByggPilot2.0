@@ -6,6 +6,7 @@ import { getCustomer } from '@/services/customerService';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { ProjectStatus } from '@/types';
+import { logger } from '@/lib/logger';
 
 export async function createProjectAction(formData: FormData) {
   const session = await getServerSession();
@@ -29,8 +30,7 @@ export async function createProjectAction(formData: FormData) {
       throw new Error('Customer not found or access denied.');
   }
 
-  try {
-    const newProject = await createProject({
+  const projectData = {
       userId,
       name,
       customerId,
@@ -39,13 +39,16 @@ export async function createProjectAction(formData: FormData) {
       status: ProjectStatus.NotStarted,
       progress: 0,
       deadline: deadline || null, // Spara deadline
-    });
+  };
+
+  try {
+    const newProject = await createProject(projectData);
     
     // Omdirigera till den nya projektdetaljsidan
     redirect(`/projects/${newProject.id}`);
 
   } catch (error) {
-    console.error("Failed to create project:", error);
+    logger.error({ error, projectData }, "Failed to create project:");
     throw new Error('Could not create the project due to a server error.');
   }
 

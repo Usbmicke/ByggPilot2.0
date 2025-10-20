@@ -1,13 +1,13 @@
 
 import { NextResponse, NextRequest } from 'next/server';
-import { firestoreAdmin } from '@/lib/admin';
+import { adminDb } from '@/lib/admin';
 import { getServerSession } from "next-auth/next";
-import { handler } from "@/app/api/auth/[...nextauth]/route";
-import { TimeEntry } from '@/app/types';
+import { authOptions } from "@/lib/authOptions";
+import { TimeEntry } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(handler);
+    const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return new NextResponse(JSON.stringify({ message: 'Authentication required' }), { status: 401 });
     }
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     }
 
     // **SÄKERHETSÅTGÄRD: Verifiera att användaren äger projektet**
-    const projectRef = firestoreAdmin.collection("projects").doc(projectId);
+    const projectRef = adminDb.collection("projects").doc(projectId);
     const projectSnap = await projectRef.get();
 
     if (!projectSnap.exists || projectSnap.data()?.userId !== session.user.id) {
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Nu är det säkert att hämta tidrapporterna
-    const q = firestoreAdmin.collection('timeEntries')
+    const q = adminDb.collection('timeEntries')
       .where('projectId', '==', projectId)
       .orderBy('date', 'desc');
 

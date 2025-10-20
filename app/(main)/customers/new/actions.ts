@@ -6,6 +6,7 @@ import { createCustomer } from '../../actions';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { Customer } from '@/types';
+import { logger } from '@/lib/logger';
 
 export async function createCustomerAction(formData: FormData) {
   const session = await getServerSession(authOptions);
@@ -33,7 +34,7 @@ export async function createCustomerAction(formData: FormData) {
   try {
     await createCustomer(customerData);
   } catch (error) {
-    console.error('Failed to create customer:', error);
+    logger.error({ error, customerData }, 'Failed to create customer:');
     throw new Error('Could not create the customer due to a server error.');
   }
 

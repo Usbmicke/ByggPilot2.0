@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { Project, ProjectStatus } from '@/types';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
+import { logger } from '@/lib/logger';
 
 /**
  * Server Action för att uppdatera ett projekt.
@@ -44,7 +45,7 @@ export async function updateProjectAction(formData: FormData) {
             throw new Error(errorData.message || 'Okänt fel vid uppdatering av projekt');
         }
     } catch (error) {
-        console.error("Misslyckades med att uppdatera projektet:", error);
+        logger.error({ error, projectId, updates }, "Misslyckades med att uppdatera projektet:");
         throw new Error("Kunde inte uppdatera projektet på grund av ett serverfel.");
     }
 
@@ -81,7 +82,7 @@ export async function archiveProjectAction(formData: FormData) {
             throw new Error(errorData.message || 'Okänt fel vid arkivering av projekt');
         }
     } catch (error) {
-        console.error("Misslyckades med att arkivera projektet:", error);
+        logger.error({ error, projectId }, "Misslyckades med att arkivera projektet:");
         throw new Error("Kunde inte arkivera projektet på grund av ett serverfel.");
     }
 

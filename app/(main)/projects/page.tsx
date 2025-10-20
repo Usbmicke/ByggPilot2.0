@@ -3,6 +3,7 @@ import React from 'react';
 import { getServerSession } from 'next-auth/next';
 import { getProjects } from '@/actions/projectActions';
 import ProjectsView from '@/components/views/ProjectsView';
+import { logger } from '@/lib/logger';
 
 const ProjectsPage = async () => {
   // Korrekt, standardiserad metod för att hämta sessionen i en Server Component.
@@ -12,7 +13,7 @@ const ProjectsPage = async () => {
   // Om ingen userId finns, returnera en tom vy. 
   // Detta bör inte hända tack vare vår middleware, men är en bra säkerhetsåtgärd.
   if (!userId) {
-    console.error("[ProjectsPage] Ingen användar-ID hittades i sessionen.");
+    logger.error("[ProjectsPage] Ingen användar-ID hittades i sessionen.");
     // Returnerar en tom vy för att undvika en krasch.
     return <ProjectsView projects={[]} />;
   }
@@ -20,7 +21,7 @@ const ProjectsPage = async () => {
   const { projects, error } = await getProjects(userId);
 
   if (error) {
-    console.error("Error fetching projects: ", error);
+    logger.error({ error }, "Error fetching projects: ");
     return <ProjectsView projects={[]} />;
   }
 

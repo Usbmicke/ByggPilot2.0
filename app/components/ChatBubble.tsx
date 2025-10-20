@@ -1,6 +1,6 @@
 'use client';
 
-import { useUI } from '@/app/contexts/UIContext';
+import { useUI } from '@/contexts/UIContext';
 import { FaCommentDots } from 'react-icons/fa'; // Importerar en lämplig ikon
 
 // =================================================================================

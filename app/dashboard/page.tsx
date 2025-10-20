@@ -1,6 +1,6 @@
 
-import { AI } from '@/app/action';
-import { Chat } from '@/components/Chat';
+import { AI } from '@/lib/chat/actions';
+import { Chat } from '@/components/chat/chat';
 
 // =================================================================================
 // DASHBOARD PAGE V2.0 - REFAKTORERAD (GULDSTANDARD)

@@ -5,10 +5,9 @@ import { authOptions } from "@/lib/authOptions";
 import { redirect } from "next/navigation";
 
 // =================================================================================
-// ONBOARDING-SIDA V1.0 - GULDSTANDARD
-// ARKITEKTUR: Denna sida agerar som en "container". Den hanterar serverside-logik
-// som att hämta användardata och omdirigera redan onboardade användare.
-// Själva flödet delegeras till en ren klient-komponent (`OnboardingFlow`).
+// ONBOARDING-SIDA V1.1 - KORRIGERAD PROPS
+// LÖSNING: Den felaktiga `user`-propen har tagits bort från anropet till
+// `OnboardingFlow` för att matcha den nya, mer robusta implementationen.
 // =================================================================================
 
 export default async function OnboardingPage() {
@@ -26,7 +25,7 @@ export default async function OnboardingPage() {
 
     return (
         <main className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-            <OnboardingFlow user={session.user} />
+            <OnboardingFlow />
         </main>
     );
 }

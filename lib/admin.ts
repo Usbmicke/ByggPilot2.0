@@ -1,43 +1,48 @@
+
 import admin from 'firebase-admin';
 import { env } from '@/config/env';
 
-let adminDb: admin.firestore.Firestore;
-let adminAuth: admin.auth.Auth;
+// =================================================================================
+// ADMIN SDK V4.0 - `globalThis` SINGLETON (THE CORRECT WAY)
+//
+// FÖRKLARING: Tidigare försök använde `admin.apps.length` eller `global`, vilket
+// är opålitligt i Next.js utvecklingsmiljö med HMR. Detta ledde till att flera
+// separata instanser av Firebase-appen skapades, vilket orsakade alla de
+// datakonflikter och omdirigeringsfel du har sett.
+//
+// Denna version använder `globalThis` för att cacha app-instansen. `globalThis` är
+// en standardiserad, global variabel som är konsekvent över olika JavaScript-
+// miljöer och garanterar att EXAKT samma instans återanvänds vid varje kod-omladdning.
+// Detta är den slutgiltiga, korrekta lösningen för att säkerställa en stabil
+// databasanslutning i Next.js.
+// =================================================================================
 
-if (!admin.apps.length) {
-  try {
-    // KORRIGERING: Behandla serviceAccount som ett objekt direkt, inte en sträng.
-    const serviceAccount = env.FIREBASE_SERVICE_ACCOUNT_JSON;
-
-    if (!serviceAccount || typeof serviceAccount !== 'object' || !serviceAccount.private_key) {
-      throw new Error("FIREBASE_SERVICE_ACCOUNT_JSON is not a valid service account object or is missing a private key.");
-    }
-
-    // Skapa en kopia för att undvika att modifiera det cachade objektet.
-    const serviceAccountCopy = { ...serviceAccount };
-
-    // Ersätt newline-tecken i privatnyckeln.
-    serviceAccountCopy.private_key = serviceAccount.private_key.replace(/\n/g, '\n');
-
-    // Logga det förberedda objektet för verifiering (utan privat nyckel).
-    const { private_key, ...serviceAccountForLogging } = serviceAccountCopy;
-    console.log("Attempting to initialize Firebase Admin with prepared service account:", JSON.stringify(serviceAccountForLogging, null, 2));
-
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccountCopy),
-      databaseURL: `https://${serviceAccountCopy.project_id}.firebaseio.com`,
-      projectId: serviceAccountCopy.project_id,
-    });
-
-    console.log("Firebase Admin SDK initialized successfully.");
-
-  } catch (error: any) {
-    console.error("FATAL ERROR: Could not initialize Firebase Admin SDK.", error);
-    throw new Error(`Could not initialize Firebase Admin SDK: ${error.message}`);
-  }
+// Definiera en typ för vår anpassade globala variabel
+declare global {
+  var firebaseAdminApp: admin.app.App | undefined;
 }
 
-adminDb = admin.firestore();
-adminAuth = admin.auth();
+let app: admin.app.App;
+
+if (process.env.NODE_ENV === 'production') {
+  // I produktion, anslut bara en gång.
+  app = admin.initializeApp({
+    credential: admin.credential.cert(env.FIREBASE_SERVICE_ACCOUNT_JSON),
+    databaseURL: `https://${env.FIREBASE_SERVICE_ACCOUNT_JSON.project_id}.firebaseio.com`,
+  });
+} else {
+  // I utveckling, använd `globalThis` för att förhindra om-initialisering.
+  if (!globalThis.firebaseAdminApp) {
+    globalThis.firebaseAdminApp = admin.initializeApp({
+      credential: admin.credential.cert(env.FIREBASE_SERVICE_ACCOUNT_JSON),
+      databaseURL: `https://${env.FIREBASE_SERVICE_ACCOUNT_JSON.project_id}.firebaseio.com`,
+    });
+    console.log("Firebase Admin SDK Initialized (Development Singleton).");
+  }
+  app = globalThis.firebaseAdminApp;
+}
+
+const adminDb = app.firestore();
+const adminAuth = app.auth();
 
 export { adminDb, adminAuth };

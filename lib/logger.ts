@@ -1,3 +1,4 @@
+
 /**
  * @file Detta är applikationens strukturerade logger.
  * ALL loggning (förutom temporär debuggning) SKA ske via funktioner i denna fil.
@@ -42,7 +43,7 @@ const log = (level: LogLevel, message: string, context: object = {}) => {
   }
 };
 
-const logger = {
+export const logger = {
   info: (message: string, context?: object) => log(LogLevel.INFO, message, context),
   warn: (message: string, context?: object) => log(LogLevel.WARN, message, context),
   // För error, acceptera ett Error-objekt för att få med stack trace
@@ -56,5 +57,3 @@ const logger = {
     log(LogLevel.ERROR, message, errorInfo);
   }
 };
-
-export default logger;

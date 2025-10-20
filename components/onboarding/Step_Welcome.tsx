@@ -3,20 +3,32 @@
 
 import React, { useState } from 'react';
 import { ArrowRight, Info, XCircle, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button'; // <-- Importerar den standardiserade knappen
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input'; // <<< IMPORTERAR INPUT-KOMPONENT
 
 interface Step_WelcomeProps {
     userName: string;
+    companyName: string; // Ny prop
+    setCompanyName: (name: string) => void; // Ny prop
     onProceed: () => void;
     onSkip: () => void;
     onShowSecurity: () => void;
     error: string | null;
 }
 
-export default function Step_Welcome({ userName, onProceed, onSkip, onShowSecurity, error }: Step_WelcomeProps) {
+export default function Step_Welcome({ 
+    userName, 
+    companyName, 
+    setCompanyName, 
+    onProceed, 
+    onSkip, 
+    onShowSecurity, 
+    error 
+}: Step_WelcomeProps) {
     const [isLoading, setIsLoading] = useState(false);
 
     const handleProceedClick = () => {
+        if (!companyName.trim()) return; // Extra säkerhetskoll
         setIsLoading(true);
         onProceed();
     };
@@ -25,10 +37,20 @@ export default function Step_Welcome({ userName, onProceed, onSkip, onShowSecuri
         <div className="bg-card border border-border/60 rounded-2xl p-8 text-center shadow-2xl animate-fade-in-down">
             <h2 className="text-4xl font-bold text-foreground mb-4">Välkommen till ByggPilot, {userName}!</h2>
             <p className="text-lg text-muted-foreground mb-6">
-                För att komma igång, anslut ditt Google-konto. Detta skapar en säker mappstruktur på din Google Drive där alla dina projekt, offerter och dokument kommer att lagras.
+                Börja med att ange namnet på ditt företag. Detta namn kommer att användas för att skapa en rotmapp på din Google Drive för all din projektdata.
             </p>
 
-            {/* ========= FELMEDDELANDE (Använder nu temafärger) ========= */}
+            {/* ========= FÖRETAGSNAMN INPUT ========= */}
+            <div className="max-w-md mx-auto mb-6">
+                <Input 
+                    type="text"
+                    placeholder="Ange ditt företagsnamn..."
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    className="text-center text-lg p-6"
+                />
+            </div>
+
             {error && (
                 <div className="bg-destructive/10 border border-destructive/50 text-destructive-foreground p-4 rounded-lg mb-6 flex items-center gap-3">
                     <XCircle className="h-5 w-5"/>
@@ -40,11 +62,10 @@ export default function Step_Welcome({ userName, onProceed, onSkip, onShowSecuri
             )}
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                {/* Använder nu den standardiserade Button-komponenten */}
                 <Button 
                     onClick={handleProceedClick} 
-                    disabled={isLoading} 
-                    size="lg" // Standardiserad storlek
+                    disabled={isLoading || !companyName.trim()} // Inaktiverad om inget namn
+                    size="lg" 
                     className="w-full sm:w-auto shadow-lg"
                 >
                     {isLoading ? (

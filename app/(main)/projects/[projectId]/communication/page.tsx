@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getProject } from '@/actions/projectActions';
-
+import { logger } from '@/lib/logger';
 import MessageFeed from '@/components/chat/MessageFeed';
 import ChatWindow from '@/components/chat/ChatWindow';
 
@@ -24,7 +24,7 @@ export default async function ProjectCommunicationPage({ params }: ProjectCommun
     const { data: project, error } = await getProject(projectId, session.user.id);
 
     if (error || !project) {
-        console.error("Fel vid hämtning av projekt", error);
+        logger.error({ error, projectId }, "Fel vid hämtning av projekt");
         notFound();
     }
 
