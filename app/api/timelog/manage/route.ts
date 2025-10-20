@@ -1,98 +1,58 @@
 
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { firestoreAdmin as firestore } from '@/lib/admin';
-import { Timestamp } from '@google-cloud/firestore';
+import { NextResponse } from 'next/server';
+import * as dal from '@/lib/data-access';
+import logger from '@/lib/logger';
 
-// Interface för en tidslogg
-interface TimeLog {
-  userId: string;
-  projectId: string;
-  startTime: Timestamp;
-  endTime: Timestamp | null;
-  status: 'running' | 'stopped';
-}
-
-// POST: Starta en ny timer
-export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  const userId = session.user.id;
-
-  const { projectId } = await req.json();
-  if (!projectId) {
-    return NextResponse.json({ error: 'ProjectId is required' }, { status: 400 });
-  }
-
-  try {
-    // Kontrollera om det redan finns en aktiv timer för denna användare
-    const runningTimers = await firestore.collection('timelogs')
-      .where('userId', '==', userId)
-      .where('status', '==', 'running')
-      .get();
-
-    if (!runningTimers.isEmpty) {
-        // Stoppa alla befintliga timers innan en ny startas för att undvika dubbletter
-        const batch = firestore.batch();
-        runningTimers.docs.forEach(doc => {
-            batch.update(doc.ref, { status: 'stopped', endTime: Timestamp.now() });
-        });
-        await batch.commit();
-    }
-
-    // Skapa den nya tidsloggen
-    const newLog: TimeLog = {
-      userId,
-      projectId,
-      startTime: Timestamp.now(),
-      endTime: null,
-      status: 'running',
-    };
-
-    const docRef = await firestore.collection('timelogs').add(newLog);
-    
-    return NextResponse.json({ success: true, logId: docRef.id, startTime: newLog.startTime.toMillis() });
-
-  } catch (error) {
-    console.error("Error starting timelog:", error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-  }
-}
-
-// PUT: Stoppa en pågående timer
-export async function PUT(req: NextRequest) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const userId = session.user.id;
-
+/**
+ * POST-metod för att starta en ny tidrapport (TimeEntry).
+ * Anropar DAL-funktionen startTimeEntry som hanterar all affärslogik och säkerhet.
+ */
+export async function POST(request: Request) {
     try {
-        const runningTimerQuery = await firestore.collection('timelogs')
-            .where('userId', '==', userId)
-            .where('status', '==', 'running')
-            .limit(1)
-            .get();
+        const { projectId } = await request.json();
 
-        if (runningTimerQuery.isEmpty) {
-            return NextResponse.json({ error: 'No running timer found to stop.' }, { status: 404 });
+        if (!projectId) {
+            return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
         }
 
-        const timerDoc = runningTimerQuery.docs[0];
-        const endTime = Timestamp.now();
+        const newTimeEntry = await dal.startTimeEntry(projectId);
 
-        await timerDoc.ref.update({
-            endTime: endTime,
-            status: 'stopped'
-        });
+        return NextResponse.json(newTimeEntry, { status: 201 }); // 201 Created
 
-        return NextResponse.json({ success: true, logId: timerDoc.id, endTime: endTime.toMillis() });
+    } catch (error: any) {
+        logger.error({ 
+            error: error.message, 
+            stack: error.stack 
+        }, '[API /timelog/manage POST] Failed to start time entry.');
 
-    } catch (error) {
-        console.error("Error stopping timelog:", error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        const status = error.message === 'Unauthorized' ? 401 : 500;
+        return NextResponse.json({ error: 'Internal Server Error' }, { status });
+    }
+}
+
+/**
+ * PUT-metod för att stoppa den pågående tidrapporten.
+ * Anropar DAL-funktionen stopActiveTimeEntry som hanterar logiken för att hitta och stoppa timern.
+ */
+export async function PUT(request: Request) {
+    try {
+        const stoppedTimeEntry = await dal.stopActiveTimeEntry();
+
+        return NextResponse.json(stoppedTimeEntry);
+
+    } catch (error: any) {
+        logger.error({ 
+            error: error.message, 
+            stack: error.stack 
+        }, '[API /timelog/manage PUT] Failed to stop time entry.');
+
+        let status = 500;
+        if (error.message === 'Unauthorized') {
+            status = 401;
+        } else if (error.message === 'No running timer found to stop.') {
+            status = 404; // Not Found
+        }
+
+        return NextResponse.json({ error: 'Internal Server Error' }, { status });
     }
 }

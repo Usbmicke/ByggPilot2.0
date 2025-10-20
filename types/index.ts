@@ -53,6 +53,28 @@ export interface Task {
 }
 
 // ========================================================================
+//  TYPER FÖR TIDRAPPORTERING (NY)
+// ========================================================================
+
+export enum TimeEntryStatus {
+  Running = 'running',
+  Paused = 'paused',
+  Stopped = 'stopped',
+}
+
+export interface TimeEntry {
+  id: string;
+  userId: string;
+  projectId: string;
+  status: TimeEntryStatus;
+  startTime: string; // ISO 8601
+  endTime: string | null; // ISO 8601
+  duration: number; // Sekunder
+  description: string | null;
+  createdAt: string; // ISO 8601
+}
+
+// ========================================================================
 //  TYPER FÖR FAKTURERING (Baserat på firestoreService.ts)
 // ========================================================================
 

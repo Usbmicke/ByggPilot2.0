@@ -1,42 +1,29 @@
 
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { firestoreAdmin as firestore } from '@/lib/admin';
+import { NextResponse } from 'next/server';
+import * as dal from '@/lib/data-access';
+import logger from '@/lib/logger';
 
-// GET: Hämta den för närvarande aktiva timern för en användare
-export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  const userId = session.user.id;
+/**
+ * GET-metod för att hämta den aktiva (pågående) tidrapporten för den autentiserade användaren.
+ * Anropar DAL för att på ett säkert sätt hämta datan.
+ */
+export async function GET(request: Request) {
+    try {
+        // DAL-funktionen hanterar all logik, inklusive sessionsvalidering.
+        const activeTimer = await dal.getActiveTimeEntry();
 
-  try {
-    const runningTimerQuery = await firestore.collection('timelogs')
-      .where('userId', '==', userId)
-      .where('status', '==', 'running')
-      .limit(1)
-      .get();
+        // Om ingen aktiv timer hittas, returneras null, vilket är ett förväntat och normalt scenario.
+        return NextResponse.json({ activeTimer });
 
-    if (runningTimerQuery.isEmpty) {
-      // Helt normalt, ingen timer är igång. Returnera null.
-      return NextResponse.json({ activeTimer: null });
+    } catch (error: any) {
+        // DAL hanterar detaljerad intern loggning. Här loggar vi kontexten för själva API-anropet.
+        logger.error({ 
+            error: error.message, 
+            stack: error.stack 
+        }, '[API /timelog/active GET] Failed to fetch active time entry.');
+
+        // Skicka ett generiskt och säkert felmeddelande till klienten.
+        const status = error.message === 'Unauthorized' ? 401 : 500;
+        return NextResponse.json({ error: 'Internal Server Error' }, { status });
     }
-
-    const timerDoc = runningTimerQuery.docs[0];
-    const timerData = timerDoc.data();
-
-    const activeTimer = {
-      logId: timerDoc.id,
-      projectId: timerData.projectId,
-      startTime: timerData.startTime.toMillis(), // Skicka som millisekunder
-    };
-
-    return NextResponse.json({ activeTimer });
-
-  } catch (error) {
-    console.error("Error fetching active timelog:", error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-  }
 }

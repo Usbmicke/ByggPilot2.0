@@ -5,35 +5,33 @@ import * as dal from './data-access';
 import { ProjectStatus } from '@/types';
 
 // =================================================================================
-// VERKTYGS-BIBLIOTEK FÖR BYGGPILOT CO-PILOT (v2.0 - DAL-Driven)
-// Guldstandard: Denna fil definierar AI:ns handlingsförmåga.
-// Varje verktyg är en ren funktion som anropar Data Access Layer (DAL).
-// Ingen direkt databasåtkomst är tillåten.
+// VERKTYGS-BIBLIOTEK FÖR BYGGPILOT CO-PILOT (v2.1 - Guldstandard)
+// Denna fil definierar AI:ns handlingsförmåga.
+// Varje verktyg anropar Data Access Layer (DAL) och förlitar sig på DAL 
+// för all databasinteraktion och sessionsvalidering.
 // =================================================================================
 
 export const tools = {
   createProject: tool({
-    description: 'Skapar ett nytt projekt. Fråga alltid efter kund och namn. Status sätts automatiskt till "Planerat".',
+    description: 'Skapar ett nytt projekt. Fråga alltid efter kund och namn. Status sätts automatiskt till "Ej påbörjat".',
     parameters: z.object({
       name: z.string().describe('Namnet på det nya projektet.'),
       customerId: z.string().describe('ID för den befintliga kunden som projektet tillhör.'),
       customerName: z.string().describe('Namnet på kunden som projektet tillhör.'),
     }),
     execute: async ({ name, customerId, customerName }) => {
-        // Anropa DAL för att skapa projektet.
-        // DAL hanterar validering, databasskrivning och felhantering.
-        const newProject = await dal.createProject('system-user', { // Hårdkodad userId tills sessionshantering är på plats
+        // DAL hanterar sessionsvalidering, databasskrivning och felhantering.
+        const newProject = await dal.createProject({ 
             name,
             customerId,
             customerName,
-            status: ProjectStatus.PENDING,
+            status: ProjectStatus.NotStarted, // Korrekt status enligt Guldstandard
         });
 
-        // Returnera ett tydligt resultat. Eventuella fel har redan kastats av DAL.
         return { 
           success: true, 
           projectId: newProject.id,
-          message: `Projektet "${name}" har skapats med status "Planerat".` 
+          message: `Projektet "${name}" har skapats med status "Ej påbörjat".` 
         };
     },
   }),
@@ -42,7 +40,8 @@ export const tools = {
       description: 'Hämtar en lista på alla befintliga kunder i systemet. Använd detta för att hjälpa användaren att välja en kund när ett nytt projekt ska skapas.',
       parameters: z.object({}),
       execute: async () => {
-          const customers = await dal.getCustomers('system-user'); // Hårdkodad userId
+          // DAL hanterar sessionsvalidering.
+          const customers = await dal.getCustomersForUser(); 
           if (customers.length === 0) {
               return {
                   success: true,

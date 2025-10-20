@@ -9,18 +9,34 @@ import { tools } from '@/lib/tools';
 import logger from "@/lib/logger";
 import { z } from "zod";
 import { v4 as uuidv4 } from 'uuid';
-
+import { promises as fs } from 'fs';
+import path from 'path';
 
 const ChatRequestSchema = z.object({
     chatId: z.string().nullable(),
     messages: z.array(z.any()),
 });
 
+/**
+ * Laddar dynamiskt Guldstandard-systemprompten från filsystemet.
+ * Detta säkerställer att AI:n alltid har de senaste instruktionerna.
+ */
 async function getSystemPrompt(): Promise<CoreMessage> {
-    return {
-        role: 'system',
-        content: `Du är ByggPilot Co-Pilot, en expertassistent för byggföretag. Använd dina verktyg proaktivt.`
-    };
+    const promptPath = path.join(process.cwd(), 'lib', 'prompts', 'v13-tools.txt');
+    try {
+        const promptContent = await fs.readFile(promptPath, 'utf-8');
+        logger.info("System prompt v13-tools.txt loaded successfully.");
+        return {
+            role: 'system',
+            content: promptContent,
+        };
+    } catch (error) {
+        logger.error({ error }, "CRITICAL: Failed to read system prompt file v13-tools.txt. Falling back to default.");
+        return {
+            role: 'system',
+            content: 'Du är ByggPilot Co-Pilot, en expertassistent. Varning: Huvudsystemprompten kunde inte laddas, funktionaliteten är begränsad.'
+        };
+    }
 }
 
 export async function POST(req: Request) {
@@ -65,12 +81,17 @@ export async function POST(req: Request) {
             model: google("models/gemini-1.5-flash-latest"),
             messages: allMessages,
             tools,
-            onFinish: async ({ text }) => {
+            onFinish: async ({ text, toolCalls, toolResults }) => {
+                 const assistantResponse = {
+                    role: 'assistant' as const,
+                    content: text || ''
+                };
+                 if (toolCalls && toolCalls.length > 0) {
+                    (assistantResponse.content as any) = toolCalls;
+                }
+                
                 requestLogger.info({ chatId }, "Stream avslutad, sparar assistentens svar.");
-                await dal.addMessageToChat(userId, chatId!, {
-                    role: 'assistant',
-                    content: text,
-                });
+                await dal.addMessageToChat(userId, chatId!, assistantResponse);
                 data.close();
             },
         });

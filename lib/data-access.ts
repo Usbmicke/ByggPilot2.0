@@ -3,11 +3,11 @@ import { adminDb } from './admin';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from './authOptions';
 import logger from './logger';
-import { Project, Invoice, Ata, Document, Chat, Message, Customer, Task } from '@/types';
+import { Project, Invoice, Ata, Document, Chat, Message, Customer, Task, TimeEntry, TimeEntryStatus, ProjectStatus } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
 // =================================================================================
-// DATA ACCESS LAYER (DAL) - GULDSTANDARD V4.3
+// DATA ACCESS LAYER (DAL) - GULDSTANDARD V4.6
 // =================================================================================
 
 // --- SESSION & SECURITY ---
@@ -22,15 +22,124 @@ async function verifyUserSession(traceId: string): Promise<string> {
     return session.user.id;
 }
 
+// --- TIME ENTRY FUNCTIONS ---
 
-// --- TASK FUNCTIONS (NEW) ---
+export async function getActiveTimeEntry(): Promise<TimeEntry | null> {
+    const traceId = uuidv4();
+    const userId = await verifyUserSession(traceId);
+
+    try {
+        const timeEntriesRef = adminDb.collection('users').doc(userId).collection('time-entries');
+        const runningTimerQuery = await timeEntriesRef
+            .where('status', '==', TimeEntryStatus.Running)
+            .limit(1)
+            .get();
+
+        if (runningTimerQuery.empty) {
+            logger.info({ traceId, userId }, "DAL: No active time entry found for user.");
+            return null;
+        }
+
+        const timerDoc = runningTimerQuery.docs[0];
+        const activeTimer = { id: timerDoc.id, ...timerDoc.data() } as TimeEntry;
+
+        logger.info({ traceId, userId, timeEntryId: activeTimer.id }, "DAL: Active time entry retrieved successfully.");
+        return JSON.parse(JSON.stringify(activeTimer));
+
+    } catch (error) {
+        logger.error({ traceId, userId, error }, "DAL: Failed to get active time entry.");
+        throw new Error("Could not fetch active time entry.");
+    }
+}
+
+export async function startTimeEntry(projectId: string): Promise<TimeEntry> {
+    const traceId = uuidv4();
+    const userId = await verifyUserSession(traceId);
+
+    try {
+        if (!projectId) {
+            throw new Error("Project ID is required to start a time entry.");
+        }
+        
+        const timeEntriesRef = adminDb.collection('users').doc(userId).collection('time-entries');
+        const runningTimersQuery = await timeEntriesRef.where('status', '==', TimeEntryStatus.Running).get();
+        
+        if (!runningTimersQuery.isEmpty) {
+            logger.warn({ traceId, userId }, "DAL: User tried to start a new timer while another was running. Stopping old timers.");
+            const batch = adminDb.batch();
+            runningTimersQuery.docs.forEach(doc => {
+                batch.update(doc.ref, { status: TimeEntryStatus.Stopped, endTime: new Date().toISOString() });
+            });
+            await batch.commit();
+        }
+
+        const newTimeEntryRef = timeEntriesRef.doc();
+        const newTimeEntry: TimeEntry = {
+            id: newTimeEntryRef.id,
+            userId,
+            projectId,
+            status: TimeEntryStatus.Running,
+            startTime: new Date().toISOString(),
+            endTime: null,
+            duration: 0,
+            description: null,
+            createdAt: new Date().toISOString(),
+        };
+
+        await newTimeEntryRef.set(newTimeEntry);
+        logger.info({ traceId, userId, projectId, timeEntryId: newTimeEntry.id }, "DAL: Time entry started successfully.");
+        
+        return JSON.parse(JSON.stringify(newTimeEntry));
+
+    } catch (error) {
+        logger.error({ traceId, userId, projectId, error }, "DAL: Failed to start time entry.");
+        throw new Error("Could not start time entry.");
+    }
+}
+
+export async function stopActiveTimeEntry(): Promise<TimeEntry> {
+    const traceId = uuidv4();
+    const userId = await verifyUserSession(traceId);
+
+    try {
+        const timeEntriesRef = adminDb.collection('users').doc(userId).collection('time-entries');
+        const runningTimerQuery = await timeEntriesRef.where('status', '==', TimeEntryStatus.Running).limit(1).get();
+
+        if (runningTimerQuery.isEmpty) {
+            throw new Error("No running timer found to stop.");
+        }
+
+        const timerDoc = runningTimerQuery.docs[0];
+        const startTime = new Date(timerDoc.data().startTime).getTime();
+        const endTime = new Date().getTime();
+        const duration = Math.floor((endTime - startTime) / 1000); // Duration in seconds
+
+        const updatedData = {
+            status: TimeEntryStatus.Stopped,
+            endTime: new Date(endTime).toISOString(),
+            duration: duration,
+        };
+
+        await timerDoc.ref.update(updatedData);
+        logger.info({ traceId, userId, timeEntryId: timerDoc.id }, "DAL: Active time entry stopped successfully.");
+
+        const updatedDoc = await timerDoc.ref.get();
+        return JSON.parse(JSON.stringify({ id: updatedDoc.id, ...updatedDoc.data() }));
+
+    } catch (error) {
+        logger.error({ traceId, userId, error }, "DAL: Failed to stop time entry.");
+        throw new Error("Could not stop time entry.");
+    }
+}
+
+
+// --- TASK FUNCTIONS ---
 
 export async function getTasksForProject(projectId: string): Promise<Task[]> {
     const traceId = uuidv4();
     const userId = await verifyUserSession(traceId);
 
     try {
-        // First, verify the user has access to the project.
         const projectRef = adminDb.collection('users').doc(userId).collection('projects').doc(projectId);
         const projectDoc = await projectRef.get();
         if (!projectDoc.exists) {
@@ -38,7 +147,6 @@ export async function getTasksForProject(projectId: string): Promise<Task[]> {
             throw new Error("Project not found or user lacks access.");
         }
 
-        // As tasks are in a separate top-level collection, query them directly.
         const tasksSnapshot = await adminDb.collection('users').doc(userId).collection('tasks')
             .where('projectId', '==', projectId)
             .orderBy('createdAt', 'asc')
@@ -69,7 +177,6 @@ export async function createTask(taskData: { text: string; projectId: string; })
             throw new Error("Task text and projectId are required.");
         }
         
-        // Verify the user has access to the project before creating a task.
         const projectRef = adminDb.collection('users').doc(userId).collection('projects').doc(projectId);
         const projectDoc = await projectRef.get();
         if (!projectDoc.exists) {
@@ -78,7 +185,7 @@ export async function createTask(taskData: { text: string; projectId: string; })
         }
 
         const newTaskRef = adminDb.collection('users').doc(userId).collection('tasks').doc();
-        const newTask: Task = {
+        const newTask: any = {
             id: newTaskRef.id,
             text,
             projectId,
@@ -196,27 +303,27 @@ export async function getProjectForUser(projectId: string): Promise<Project | nu
     }
 }
 
-export async function createProject(userId: string, projectData: any): Promise<Project> {
+export async function createProject(projectData: Omit<Project, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<Project> {
     const traceId = uuidv4();
-    const verifiedUserId = await verifyUserSession(traceId);
-    if (userId !== verifiedUserId) throw new Error("Mismatched user ID");
+    const userId = await verifyUserSession(traceId);
 
     const { name, ...rest } = projectData;
 
     try {
         const newProjectRef = adminDb.collection('users').doc(userId).collection('projects').doc();
-        const newProject = {
+        const newProject: Project = {
             id: newProjectRef.id,
+            userId,
             name,
             ...rest,
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            lastActivity: new Date().toISOString(),
         };
 
         await newProjectRef.set(newProject);
         logger.info({ traceId, userId, projectId: newProject.id }, "DAL: Project created successfully.");
 
-        return newProject as Project;
+        return JSON.parse(JSON.stringify(newProject));
 
     } catch (error) {
         logger.error({ traceId, userId, projectData, error }, "DAL: Failed to create project.");
@@ -246,7 +353,7 @@ export async function createInvoice(invoiceData: any): Promise<Invoice> {
         }
 
         const batch = adminDb.batch();
-        const totalAmount = lines.reduce((acc, line) => acc + (line.quantity * line.unitPrice), 0);
+        const totalAmount = lines.reduce((acc: number, line: { quantity: number; unitPrice: number; }) => acc + (line.quantity * line.unitPrice), 0);
         const invoiceDocRef = projectRef.collection('invoices').doc();
 
         const newInvoice: Omit<Invoice, 'id'> = {
@@ -376,11 +483,11 @@ export async function createCustomer(customerData: Omit<Customer, 'id' | 'create
         }
 
         const customerRef = adminDb.collection('users').doc(userId).collection('customers').doc();
-        const newCustomer = {
+        const newCustomer: any = {
             id: customerRef.id,
             ...customerData,
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            updatedAt: new D ate().toISOString(),
         };
 
         await customerRef.set(newCustomer);
