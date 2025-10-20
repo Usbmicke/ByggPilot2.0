@@ -1,37 +1,51 @@
 
 'use client';
 
-import { PartyPopperIcon } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Check, PartyPopper } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 // =================================================================================
-// ONBOARDING STEP 4 V1.0 - GULDSTANDARD
-// DESIGN: En bekräftelseskärm som ger användaren en känsla av att ha åstadkommit
-// något. Den leder dem tydligt till nästa steg: att utforska applikationen.
+// ONBOARDING STEP 4 V2.0 - REFAKTORERAD (GULDSTANDARD)
+// BESKRIVNING: Sista steget har fått en visuell uppgradering med Card-komponenter
+// för att rama in budskapet. Designen är renare och mer firande för att ge
+// användaren en positiv känsla av slutförande.
 // =================================================================================
 
-interface Step4Props {
+interface Step4FinishProps {
     onNext: () => void;
     isSubmitting: boolean;
 }
 
-export default function Step4_Finish({ onNext, isSubmitting }: Step4Props) {
+export default function Step4_Finish({ onNext, isSubmitting }: Step4FinishProps) {
     return (
-        <div className="text-center py-8">
-            <div className="flex justify-center items-center mb-6">
-                <PartyPopperIcon className="h-16 w-16 text-yellow-500" />
-            </div>
-            <h3 className="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-2">Allt är klart!</h3>
-            <p className="text-lg text-gray-600 dark:text-gray-400 max-w-lg mx-auto mb-8">
-                Din digitala arbetsplats är nu konfigurerad. Du är redo att skapa ditt första projekt och ta kontroll över din administration.
-            </p>
-            <button
-                type="button"
-                onClick={() => onNext()}
-                disabled={isSubmitting}
-                className="inline-flex items-center justify-center py-3 px-8 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed dark:disabled:bg-gray-600"
-            >
-                {isSubmitting ? 'Omdirigerar...' : 'Gå till min instrumentpanel'}
-            </button>
+        <div className="flex justify-center items-center py-8 animate-fade-in">
+            <Card className="w-full max-w-lg text-center shadow-lg">
+                <CardHeader>
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100 mb-4">
+                        <PartyPopper className="h-10 w-10 text-green-600" />
+                    </div>
+                    <CardTitle className="text-3xl">Allt är klart!</CardTitle>
+                    <CardDescription className="text-lg">
+                        Din digitala arbetsplats är nu konfigurerad.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground mb-8">
+                        Du är redo att skapa ditt första projekt, bjuda in en kund och ta full kontroll över din administration. Välkommen till ett smartare sätt att arbeta.
+                    </p>
+                    <Button 
+                        onClick={() => onNext()}
+                        disabled={isSubmitting}
+                        size="lg"
+                    >
+                        {isSubmitting ? (
+                            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Omdirigerar...</>
+                        ) : 'Gå till min instrumentpanel'}
+                    </Button>
+                </CardContent>
+            </Card>
         </div>
     );
 }

@@ -1,70 +1,106 @@
+
 'use client';
 
-import React, { useRef, useEffect } from 'react';
-import { useChat } from '@/app/contexts/ChatContext';
-import { useUI } from '@/app/contexts/UIContext';
-import ButtonSuggestions from './ButtonSuggestions';
-import { Message } from '@/app/components/messages/Message'; // KORRIGERAD IMPORT
-import MessageSkeleton from '@/components/messages/MessageSkeleton';
+import { useState } from 'react';
+import { useActions, useUIState } from 'ai/rsc';
+import { AI } from '@/app/action';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { PlusIcon, SendHorizonalIcon, FilePlus02Icon, UserPlusIcon, Building02Icon, RocketIcon } from 'lucide-react';
 
 // =================================================================================
-// CHAT WIDGET V4.0 - ALIGNED WITH useCompletion
-// REVISION:
-// 1.  Removes the local `input` state and the manual `handleSend` function.
-// 2.  Directly uses `input`, `handleInputChange`, and `handleSubmit` from the
-//     `useChat` hook, which is now powered by `useCompletion`.
-// 3.  The form now correctly uses the `handleSubmit` from the context.
+// CHAT COMPONENT V2.0 - REFAKTORERAD (GULDSTANDARD)
+// BESKRIVNING: Byggd från grunden för att vara hjärtat i den AI-drivna dashboarden.
+// Den använder SWR för state management (`useUIState`), anropar Server Actions via `useActions`,
+// och har ett modernt, responsivt UI byggt med shadcn/ui. "Skapa nytt"-knappen
+// är central för att initiera de fyra kärnfunktionerna.
 // =================================================================================
 
-const Chat = () => {
-  const { messages, input, handleInputChange, handleSubmit, isLoading, append } = useChat();
-  const { isChatOpen } = useUI();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+const menuOptions = [
+    { label: 'ÄTA', icon: FilePlus02Icon, description: 'Starta en ny ÄTA-hantering' },
+    { label: 'Ny kund', icon: UserPlusIcon, description: 'Lägg till en ny kund' },
+    { label: 'Nytt projekt', icon: Building02Icon, description: 'Skapa ett helt nytt projekt' },
+    { label: 'Offertmotorn', icon: RocketIcon, description: 'Starta offertverktyget' },
+];
 
-  useEffect(() => {
-    if (isChatOpen) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages, isChatOpen]);
+export function Chat() {
+    const [inputValue, setInputValue] = useState('');
+    const [messages, setMessages] = useUIState<typeof AI>();
+    const { submit } = useActions<typeof AI>();
 
-  if (!isChatOpen) return null;
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (inputValue.trim()) {
+            setMessages(currentMessages => [
+                ...currentMessages,
+                { id: Date.now(), role: 'user', display: inputValue },
+            ]);
 
-  return (
-    <div className="fixed bottom-8 right-8 w-[450px] h-[600px] flex flex-col bg-component-background border border-border rounded-lg shadow-2xl font-sans z-50">
-       <div className="p-4 border-b border-border">
-        <h2 className="text-lg font-semibold text-text-primary">ByggPilot Co-Pilot</h2>
-        <p className="text-sm text-text-secondary">Din digitala kollega, redo att hjälpa.</p>
-      </div>
+            const responseMessage = await submit(inputValue);
+            setMessages(currentMessages => [...currentMessages, responseMessage]);
+            setInputValue('');
+        }
+    };
+    
+    const handleMenuClick = async (label: string) => {
+        const responseMessage = await submit(`Skapa ${label}`);
+        setMessages(currentMessages => [...currentMessages, 
+            { id: Date.now(), role: 'user', display: `Skapa ${label}` }, 
+            responseMessage
+        ]);
+    };
 
-      <div className="flex-1 p-4 overflow-y-auto space-y-4">
-        {messages.map((m) => (
-          <Message key={m.id} message={m} />
-        ))}
-        {isLoading && <MessageSkeleton />}
-        <div ref={messagesEndRef} />
-      </div>
+    return (
+        <div className="flex flex-col h-full bg-background/95 backdrop-blur-sm">
+            <div className="flex-grow overflow-y-auto p-4 space-y-4">
+                {messages.map((message) => (
+                    <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <Card className={`max-w-xl p-3 ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                            {message.display}
+                        </Card>
+                    </div>
+                ))}
+            </div>
 
-      <div className="p-4 border-t border-border">
-        <form onSubmit={handleSubmit}>
-          <div className="relative">
-            <input
-              type="text"
-              value={input}
-              onChange={handleInputChange}
-              placeholder="Skriv ett meddelande..."
-              className="w-full bg-background border border-border rounded-md pl-4 pr-12 py-3 text-text-primary focus:ring-accent focus:border-accent"
-              disabled={isLoading}
-            />
-            <button type="submit" className="absolute inset-y-0 right-0 flex items-center justify-center w-12 text-text-secondary hover:text-accent disabled:opacity-50" disabled={isLoading || !input.trim()}>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-              </svg>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-export default Chat;
+            <div className="p-4 border-t">
+                 <div className="relative">
+                    <Input
+                        type="text"
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSubmit(e)}
+                        placeholder="Skriv ett meddelande eller välj 'Skapa nytt'..."
+                        className="pr-24 pl-12 h-12 text-base"
+                    />
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button size="icon" variant="ghost">
+                                    <PlusIcon className="h-5 w-5" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 p-2 mb-2">
+                                <div className="grid">
+                                    {menuOptions.map((option) => (
+                                        <button key={option.label} onClick={() => handleMenuClick(option.label)} className="flex items-center p-2 rounded-md hover:bg-muted text-left">
+                                            <option.icon className="h-5 w-5 mr-3"/>
+                                            <div>
+                                                <p className="font-semibold">{option.label}</p>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                    <Button type="submit" onClick={handleSubmit} size="icon" className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <SendHorizonalIcon className="h-5 w-5" />
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+}

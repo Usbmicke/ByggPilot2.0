@@ -2,14 +2,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FiArrowRight, FiInfo, FiXCircle } from 'react-icons/fi';
+import { ArrowRight, Info, XCircle, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button'; // <-- Importerar den standardiserade knappen
 
 interface Step_WelcomeProps {
     userName: string;
     onProceed: () => void;
     onSkip: () => void;
     onShowSecurity: () => void;
-    error: string | null; // Acceptera ett felmeddelande
+    error: string | null;
 }
 
 export default function Step_Welcome({ userName, onProceed, onSkip, onShowSecurity, error }: Step_WelcomeProps) {
@@ -21,16 +22,16 @@ export default function Step_Welcome({ userName, onProceed, onSkip, onShowSecuri
     };
 
     return (
-        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/60 rounded-2xl p-8 text-center shadow-2xl animate-fade-in-down">
-            <h2 className="text-4xl font-bold text-white mb-4">Välkommen till ByggPilot, {userName}!</h2>
-            <p className="text-lg text-gray-300 mb-6">
+        <div className="bg-card border border-border/60 rounded-2xl p-8 text-center shadow-2xl animate-fade-in-down">
+            <h2 className="text-4xl font-bold text-foreground mb-4">Välkommen till ByggPilot, {userName}!</h2>
+            <p className="text-lg text-muted-foreground mb-6">
                 För att komma igång, anslut ditt Google-konto. Detta skapar en säker mappstruktur på din Google Drive där alla dina projekt, offerter och dokument kommer att lagras.
             </p>
 
-            {/* ========= FELMEDDELANDE ========= */}
+            {/* ========= FELMEDDELANDE (Använder nu temafärger) ========= */}
             {error && (
-                <div className="bg-red-900/50 border border-red-700 text-red-300 p-4 rounded-lg mb-6 flex items-center gap-3">
-                    <FiXCircle className="h-5 w-5"/>
+                <div className="bg-destructive/10 border border-destructive/50 text-destructive-foreground p-4 rounded-lg mb-6 flex items-center gap-3">
+                    <XCircle className="h-5 w-5"/>
                     <div>
                         <p className="font-semibold">Kunde inte skapa mappstruktur</p>
                         <p className="text-sm">{error}</p>
@@ -39,35 +40,34 @@ export default function Step_Welcome({ userName, onProceed, onSkip, onShowSecuri
             )}
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <button 
+                {/* Använder nu den standardiserade Button-komponenten */}
+                <Button 
                     onClick={handleProceedClick} 
                     disabled={isLoading} 
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 bg-cyan-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-cyan-700 transition-transform transform hover:scale-105 disabled:bg-gray-600 disabled:cursor-not-allowed disabled:scale-100 shadow-lg"
+                    size="lg" // Standardiserad storlek
+                    className="w-full sm:w-auto shadow-lg"
                 >
                     {isLoading ? (
                         <>
-                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
+                            <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5" />
                             Ansluter...
                         </>
                     ) : (
                         <>
-                            Anslut Google Konto & Skapa Struktur <FiArrowRight />
+                            Anslut Google Konto & Skapa Struktur <ArrowRight className="ml-2 h-5 w-5" />
                         </>
                     )}
-                </button>
+                </Button>
             </div>
 
-            <div className="mt-6 text-sm text-gray-400">
-                <button onClick={onShowSecurity} className="flex items-center justify-center gap-1 mx-auto hover:text-cyan-400 transition-colors">
-                    <FiInfo /> Varför behöver ni åtkomst?
-                </button>
+            <div className="mt-6 text-sm text-muted-foreground">
+                <Button onClick={onShowSecurity} variant="link" className="flex items-center justify-center gap-1 mx-auto">
+                    <Info className="h-4 w-4" /> Varför behöver ni åtkomst?
+                </Button>
                 <p className="mt-4">eller</p>
-                <button onClick={onSkip} className="mt-2 hover:text-cyan-400 transition-colors">
+                <Button onClick={onSkip} variant="link" className="mt-2">
                     hoppa över detta och fortsätt till dashboarden.
-                </button>
+                </Button>
             </div>
         </div>
     );

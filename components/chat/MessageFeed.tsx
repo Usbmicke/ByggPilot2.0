@@ -4,51 +4,58 @@
 import { useEffect, useRef } from 'react';
 import type { Message } from '@ai-sdk/react';
 import ReactMarkdown from 'react-markdown';
-import MessageSkeleton from '@/components/messages/MessageSkeleton'; // <-- NYTT
+import MessageSkeleton from '@/components/messages/MessageSkeleton';
+import { cn } from '@/lib/utils'; // Importerar cn för enklare klasshantering
 
 // =================================================================================
-// MESSAGEFEED V2.0 - SKELETON & TOOL-VISUALISERING
-// BESKRIVNING: Denna version kan nu visa en laddnings-skeleton när ett nytt
-// meddelande genereras. Den kan också rendera meddelanden med rollen 'tool'
-// för att visa när AI:n använder ett verktyg.
-// Slutför Steg C.1 och förbereder för Steg C.2.
+// MESSAGEFEED V2.1 - FÖRBÄTTRAD DESIGN & TEMASTYLING
+// BESKRIVNING: Denna version byter ut hårdkodade färger mot temabaserade
+// klasser från shadcn/ui (primary, muted) för ett konsekvent och rent utseende.
 // =================================================================================
 
 interface MessageFeedProps {
     messages: Message[];
-    isLoading: boolean; // <-- NYTT: Tar emot laddningsstatus
+    isLoading: boolean;
 }
 
 const MessageFeed = ({ messages, isLoading }: MessageFeedProps) => {
-    const feedRef = useRef<HTMLDivElement>(null);
+    const feedEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        // Scrolla ner automatiskt när nya meddelanden dyker upp
-        feedRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        // Scrolla ner automatiskt för att visa det senaste meddelandet
+        feedEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isLoading]);
 
-    const getBubbleStyle = (role: Message['role']) => {
-        const baseStyle = 'max-w-2xl p-4 rounded-xl shadow-md text-base leading-relaxed';
+    // Funktion för att hämta korrekt styling baserat på meddelanderoll
+    const getBubbleClasses = (role: Message['role']) => {
+        const baseClasses = 'max-w-2xl p-4 rounded-lg shadow-sm text-base leading-relaxed break-words';
+
         switch (role) {
             case 'user':
-                return `${baseStyle} bg-accent-blue text-white ml-auto`;
+                // Användarens meddelanden: Primärfärg, högerjusterad
+                return cn(baseClasses, 'bg-primary text-primary-foreground ml-auto');
+            
             case 'assistant':
-                return `${baseStyle} bg-background-tertiary border border-border-primary text-gray-200`;
-            // Stil för verktygsanrop (Steg C.2)
+                // Assistentens meddelanden: Muted bakgrund, vänsterjusterad
+                return cn(baseClasses, 'bg-muted text-muted-foreground');
+            
             case 'tool':
-                return `${baseStyle} bg-gray-700 border border-gray-600 text-gray-400 text-sm italic text-center mx-auto`;
+                 // Verktygsanrop: Subtil, centrerad och informativ stil
+                return cn(baseClasses, 'bg-muted/50 text-muted-foreground text-sm italic text-center mx-auto');
+            
             default:
-                return `${baseStyle} bg-background-tertiary border border-border-primary text-gray-200`;
+                return cn(baseClasses, 'bg-muted text-muted-foreground');
         }
     };
 
     return (
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            <div ref={feedRef} className="space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+            <div className="space-y-6">
                 {messages.map((msg) => (
                     <div key={msg.id} className="flex flex-col">
-                        <div className={getBubbleStyle(msg.role)}>
-                            <div className="prose prose-invert prose-p:my-0 prose-headings:my-2">
+                        <div className={getBubbleClasses(msg.role)}>
+                             {/* Använder prose för snygg markdown-rendering */}
+                            <div className="prose prose-invert prose-p:my-0 prose-headings:my-2 max-w-none">
                                 <ReactMarkdown>
                                     {msg.content}
                                 </ReactMarkdown>
@@ -56,8 +63,12 @@ const MessageFeed = ({ messages, isLoading }: MessageFeedProps) => {
                         </div>
                     </div>
                 ))}
-                {/* Visa skeleton när AI:n genererar ett svar */}
+                
+                {/* Visa en skeleton-loader när AI:n skriver ett svar */}
                 {isLoading && <MessageSkeleton />}
+                
+                {/* Tom div för att säkerställa att auto-scroll fungerar korrekt */}
+                <div ref={feedEndRef} />
             </div>
         </div>
     );

@@ -1,11 +1,19 @@
+
 'use client';
+
 import React, { useState, useTransition } from 'react';
-import { updateCompanyProfile } from '@/app/actions/onboardingActions';
+import { completeOnboarding } from '@/app/actions/onboardingActions';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Loader2 } from 'lucide-react';
 
 // =================================================================================
-// GULDSTANDARD: ONBOARDING STEG 1 - FÖRETAGSPROFIL
-// Implementerar UI och logik för det första steget i onboarding-flödet.
-// Använder Server Action för att spara data och hanterar state för formuläret.
+// ONBOARDING STEG 1 V2.0 - REFAKTORERAD (GULDSTANDARD)
+// BESKRIVNING: Denna version är helt omskriven för att:
+// 1. Anropa den nya, centraliserade `completeOnboarding` server action.
+// 2. Använda standardiserade shadcn/ui-komponenter (Input, Button, Label).
+// Detta löser `is not a function`-buggen och moderniserar UI-koden.
 // =================================================================================
 
 interface Step1ProfileProps {
@@ -37,47 +45,50 @@ export default function Step1_Profile({ onCompleted }: Step1ProfileProps) {
         }
 
         startTransition(async () => {
-            const result = await updateCompanyProfile(formData);
+            // ANROPAR DEN NYA, KORREKTA FUNKTIONEN
+            const result = await completeOnboarding(1, formData);
             if (result.success) {
                 onCompleted();
             } else {
-                setError(result.error || 'Ett okänt fel uppstod.');
+                setError(result.error || 'Ett okänt fel uppstod vid sparande av profil.');
             }
         });
     };
 
     return (
-        <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-            {/* Vänster sida (Motivation) */}
-            <div className="text-center md:text-left">
-                <h1 className="text-4xl font-bold text-white mb-4">Professionella dokument, automatiskt.</h1>
-                <p className="text-lg text-gray-300">
-                    Informationen du fyller i här används för att automatiskt skapa snygga, korrekta offerter, fakturor och projektunderlag med er logotyp. Fyll i en gång, spara tid för alltid.
+        <div className="w-full max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center">
+            {/* Vänster sida (Information & Motivation) */}
+            <div className="text-center md:text-left animate-fade-in-right">
+                <h1 className="text-4xl font-bold text-foreground mb-4">Berätta om ditt företag</h1>
+                <p className="text-lg text-muted-foreground">
+                    Allt börjar med ditt företagsnamn. Denna information används för att skapa din personliga mappstruktur i Google Drive och kommer att synas på dina framtida offerter och fakturor.
                 </p>
-                {/* Här kan en framtida animation/grafik placeras */}
+                <p className="text-muted-foreground mt-4">
+                    Du kan lägga till organisationsnummer och adress senare om du vill.
+                </p>
             </div>
 
-            {/* Höger sida (Interaktion) */}
-            <div className="bg-gray-800 p-8 rounded-xl shadow-2xl">
+            {/* Höger sida (Formulär) */}
+            <div className="bg-card border rounded-xl shadow-lg p-8 animate-fade-in-left">
                 <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                    <div>
-                        <label htmlFor="companyName" className="block text-sm font-medium text-gray-300 mb-2">Företagsnamn</label>
-                        <input type="text" name="companyName" id="companyName" value={formData.companyName} onChange={handleInputChange} className="w-full bg-gray-700 border-gray-600 rounded-md p-3 text-white focus:ring-2 focus:ring-blue-500" required />
+                    <div className="grid w-full items-center gap-1.5">
+                        <Label htmlFor="companyName">Företagsnamn *</Label>
+                        <Input type="text" name="companyName" id="companyName" value={formData.companyName} onChange={handleInputChange} required />
                     </div>
-                    <div>
-                        <label htmlFor="orgNumber" className="block text-sm font-medium text-gray-300 mb-2">Organisationsnummer</label>
-                        <input type="text" name="orgNumber" id="orgNumber" value={formData.orgNumber} onChange={handleInputChange} className="w-full bg-gray-700 border-gray-600 rounded-md p-3 text-white focus:ring-2 focus:ring-blue-500" />
+                    <div className="grid w-full items-center gap-1.5">
+                        <Label htmlFor="orgNumber">Organisationsnummer</Label>
+                        <Input type="text" name="orgNumber" id="orgNumber" value={formData.orgNumber} onChange={handleInputChange} />
                     </div>
-                    <div>
-                        <label htmlFor="address" className="block text-sm font-medium text-gray-300 mb-2">Adress</label>
-                        <input type="text" name="address" id="address" value={formData.address} onChange={handleInputChange} className="w-full bg-gray-700 border-gray-600 rounded-md p-3 text-white focus:ring-2 focus:ring-blue-500" />
+                    <div className="grid w-full items-center gap-1.5">
+                        <Label htmlFor="address">Adress</Label>
+                        <Input type="text" name="address" id="address" value={formData.address} onChange={handleInputChange} />
                     </div>
                     
-                    {error && <p className="text-red-500 text-sm">{error}</p>}
+                    {error && <p className="text-sm font-medium text-destructive">{error}</p>}
                     
-                    <button type="submit" disabled={isPending} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 disabled:opacity-50">
-                        {isPending ? 'Sparar...' : 'Nästa: Automatisera er projektstruktur'}
-                    </button>
+                    <Button type="submit" disabled={isPending || !formData.companyName} size="lg" className="mt-4 w-full">
+                        {isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sparar...</> : 'Nästa'}
+                    </Button>
                 </form>
             </div>
         </div>
