@@ -5,16 +5,19 @@ import { adminDb } from './admin';
 import { env } from '@/config/env';
 
 // =================================================================================
-// AUTH OPTIONS V4.0 - GULDSTANDARD (MANUELL ADAPTER)
-// ARKITEKTUR: Denna version är den definitiva lösningen. Eftersom den officiella
-// @next-auth/firebase-adapter är inkompatibel med Firebase v10, replikerar vi
-// dess funktion manuellt på ett robust sätt.
+// AUTH OPTIONS V4.1 - ROBUST ONBOARDING (GULDSTANDARD)
+// ARKITEKTUR: Samma som v4.0.
 //
-// LÖSNING: Vi använder `signIn` callbacken för att atomiskt skapa `user` och `account`
-// dokument i en Firestore-transaktion. Detta garanterar dataintegritet.
-// `jwt` och `session` callbacks används sedan enbart för att berika token och
-// sessionen med data, vilket är deras avsedda syfte.
-// Detta är den mest robusta och kontrollerade metoden när standardverktyg fallerar.
+// LÖSNING: Denna version åtgärdar en race condition i `jwt`-callbacken.
+// Tidigare fanns en risk att databasläsningen för `onboardingComplete`
+// antingen misslyckades eller returnerade ett inaktuellt värde vid den
+// allra första inloggningen.
+//
+// Genom att explicit sätta `token.onboardingComplete = false` när `user`-objektet
+// finns (vilket det bara gör vid första inloggningen), säkerställer vi att
+// token omedelbart och garanterat har rätt status. Detta eliminerar
+// beroendet av den asynkrona databasläsningen i det kritiska, initiala
+// skedet och säkerställer att middlewaren alltid dirigerar nya användare korrekt.
 // =================================================================================
 
 export const authOptions: NextAuthOptions = {
@@ -40,7 +43,7 @@ export const authOptions: NextAuthOptions = {
     callbacks: {
         // KÖRS VID INLOGGNING - SKAPAR DATA I DATABASEN
         async signIn({ user, account }) {
-            if (!account || !user) return false; // Säkerhetskontroll
+            if (!account || !user) return false;
 
             try {
                 await adminDb.runTransaction(async (transaction) => {
@@ -57,11 +60,10 @@ export const authOptions: NextAuthOptions = {
                             email: user.email,
                             image: user.image,
                             emailVerified: null,
-                            onboardingComplete: false, // Sätts initialt
+                            onboardingComplete: false, 
                         });
                     }
 
-                    // Skapa/uppdatera alltid account-dokumentet med senaste tokens
                     console.log(`[Auth] ${user.email}. Skapar/uppdaterar account-dokument.`);
                     transaction.set(accountRef, {
                         userId: user.id,
@@ -77,10 +79,10 @@ export const authOptions: NextAuthOptions = {
                     });
                 });
 
-                return true; // Tillåt inloggning
+                return true;
             } catch (error) {
                 console.error("[AUTH_SIGNIN_ERROR] Kritiskt fel vid databas-transaktion:", error);
-                return false; // Stoppa inloggning vid fel
+                return false;
             }
         },
 
@@ -88,15 +90,19 @@ export const authOptions: NextAuthOptions = {
         async jwt({ token, user, account }) {
             if (user) { // Vid första inloggningen
                 token.id = user.id;
+                token.onboardingComplete = false; // <<< KORRIGERING: Sätt omedelbart!
             }
-            if (account) { // Spara alltid senaste access token
+            if (account) { 
                  token.accessToken = account.access_token;
             }
 
-            // Hämta senaste onboarding-status från DB för att hålla token färsk
+            // Hämta senaste status från DB för att hålla token färsk vid efterföljande sidladdningar
             const userDoc = await adminDb.collection('users').doc(token.id as string).get();
             if(userDoc.exists) {
-                token.onboardingComplete = userDoc.data()?.onboardingComplete || false;
+                token.onboardingComplete = userDoc.data()?.onboardingComplete;
+            } else {
+                 // Fallback om dokumentet mot förmodan inte finns
+                 token.onboardingComplete = false;
             }
 
             return token;

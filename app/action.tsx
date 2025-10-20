@@ -1,21 +1,24 @@
-
 'use server';
 
 import { createAI, createStreamableValue, getMutableAIState } from 'ai/rsc';
-import { openai } from '@ai-sdk/openai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google'; 
 import { ReactNode } from 'react';
 import { z } from 'zod';
 import AtaForm from '@/components/forms/AtaForm';
+import { env } from '@/config/env';
 
 // =================================================================================
-// AI ACTION V1.0 - GULDSTANDARD
-// BESKRIVNING: Denna fil definierar kärnan i AI-funktionaliteten. Den använder
-// createAI för att sätta upp AI-kontexten. `submit` är huvud-action som anropas
-// från klienten. Den använder OpenAIs `generateObject` med "Tool Use" för att
-// förstå användarens avsikt och anropa rätt verktyg (t.ex. `createAta`).
-// Zod används för strikt validering av indata. UI-komponenter (som AtaForm)
-// streamas tillbaka till klienten för en dynamisk upplevelse.
+// AI ACTION V2.0 - GULDSTANDARD (GOOGLE GEMINI)
+// BESKRIVNING: Denna version är helt omskriven för att använda Google Gemini
+// istället för OpenAI. Vi importerar `createGoogle` och instansierar en klient
+// med den korrekta API-nyckeln från `.env.local`. Modellen är ändrad till en
+// passande Gemini-modell. Detta följer Guldstandarden för en ren Google-arkitektur.
 // =================================================================================
+
+// Instansiera Google Genetive AI-klienten
+const google = createGoogleGenerativeAI({
+  apiKey: env.GEMINI_API_KEY, 
+});
 
 // Definiera schemat för en ÄTA med Zod för validering
 const ataSchema = z.object({
@@ -36,9 +39,9 @@ async function submit(input: string): Promise<any> {
     { role: 'user', content: input },
   ]);
 
-  // Anropa OpenAI för att generera ett objekt baserat på användarens input och de verktyg vi har
-  const { tool, ...rest } = await openai.generateObject({
-    model: 'gpt-4-turbo-preview',
+  // Anropa Google Gemini för att generera ett objekt baserat på användarens input och de verktyg vi har
+  const { tool, ...rest } = await google.generateObject({
+    model: 'models/gemini-1.5-pro-latest', // Korrekt modell för Google Gemini
     prompt: input,
     schema: z.object({
         tool: z.enum(['createAta', 'createClient', 'createProject', 'startQuoteEngine']),
@@ -56,7 +59,6 @@ async function submit(input: string): Promise<any> {
       break;
     }
     default: {
-      // Om inget verktyg matchar, hantera det som en vanlig chattkonversation (framtida implementation)
       streamable.done('Jag förstår inte det kommandot än.');
        aiState.done([
             ...aiState.get(),

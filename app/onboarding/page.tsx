@@ -1,5 +1,5 @@
 
-import OnboardingFlow from "@/app/components/onboarding/OnboardingFlow";
+import OnboardingFlow from "@/components/onboarding/OnboardingFlow";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
 import { redirect } from "next/navigation";
