@@ -1,162 +1,92 @@
 
 'use server';
 
-import { adminDb } from '@/lib/admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import * as dal from '@/lib/data-access';
+import logger from '@/lib/logger';
 import { Project, Invoice, Ata, Document } from '@/types';
 
 // =================================================================================
-// GULDSTANDARD - ACTIONS V2.0 (IMPLEMENTERAD GETPROJECTS)
-// REVIDERING: Den tidigare tomma `getProjects`-funktionen har nu implementerats
-// fullt ut för att hämta alla projekt från en användares `projects`-subcollection.
-// Detta löser det kritiska `TypeError: Cannot destructure 'projects'`-felet.
+// GULDSTANDARD - ACTIONS V3.0 (DAL-IMPLEMENTERING)
+// REVIDERING: All direkt databasåtkomst har tagits bort. Funktionerna anropar nu
+//             Data Access Layer (DAL) för att hämta och hantera data. Detta
+//             centraliserar datalogiken och säkerställer att alla anrop är
+//             säkra och konsekvent loggade.
 // =================================================================================
 
-// Hämtar alla projekt för en användare
-export async function getProjects(userId: string): Promise<{ projects?: Project[]; error?: string; }> {
-    if (!userId) {
-        return { error: 'Användar-ID är obligatoriskt.' };
-    }
+/**
+ * Hämtar alla projekt för den inloggade användaren.
+ */
+export async function getProjects(): Promise<{ projects?: Project[]; error?: string; }> {
     try {
-        const projectsSnapshot = await adminDb.collection('users').doc(userId).collection('projects').orderBy('createdAt', 'desc').get();
-        
-        if (projectsSnapshot.empty) {
-            return { projects: [] };
-        }
-
-        const projects: Project[] = projectsSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                ...data
-            } as Project;
-        });
-
-        // Använd JSON-serialisering för att hantera icke-serialiserbara typer som Timestamps
-        const serializableProjects = JSON.parse(JSON.stringify(projects));
-
-        return { projects: serializableProjects };
-
-    } catch (error) {
-        console.error(`[projectActions] Fel vid hämtning av projekt för användare ${userId}:`, error);
+        // DAL hanterar användarverifiering.
+        const projects = await dal.getProjectsForUser();
+        return { projects };
+    } catch (error: any) {
+        logger.error({ error: error.message, stack: error.stack }, '[projectActions] Failed to get projects.');
         return { error: 'Kunde inte hämta projekt från servern.' };
     }
 }
 
-// Hämtar ett enskilt projekt för en användare
-export async function getProject(projectId: string, userId: string): Promise<{ success: boolean; data?: Project; error?: string; }> {
-    if (!userId || !projectId) {
-        return { success: false, error: 'Användar-ID och Projekt-ID är obligatoriska.' };
-    }
+/**
+ * Hämtar ett specifikt projekt för den inloggade användaren.
+ * @param projectId ID för projektet som ska hämtas.
+ */
+export async function getProject(projectId: string): Promise<{ success: boolean; data?: Project; error?: string; }> {
     try {
-        const projectDoc = await adminDb.collection('users').doc(userId).collection('projects').doc(projectId).get();
-
-        if (!projectDoc.exists) {
+        // DAL hanterar användarverifiering.
+        const project = await dal.getProjectForUser(projectId);
+        if (!project) {
             return { success: false, error: 'Projektet hittades inte eller så saknas behörighet.' };
         }
-
-        const projectData = JSON.parse(JSON.stringify(projectDoc.data()));
-        const project: Project = { id: projectDoc.id, ...projectData } as Project;
-        
         return { success: true, data: project };
-
-    } catch (error) {
-        console.error(`Fel vid hämtning av projekt ${projectId}:`, error);
+    } catch (error: any) {
+        logger.error({ projectId, error: error.message, stack: error.stack }, '[projectActions] Failed to get project.');
         return { success: false, error: 'Kunde inte hämta projekt från servern.' };
     }
 }
 
-// Hämtar en enskild faktura för ett projekt
-export async function getInvoice(projectId: string, invoiceId: string, userId: string): Promise<{ success: boolean; data?: Invoice; error?: string; }> {
-    if (!userId || !projectId || !invoiceId) {
-        return { success: false, error: 'Användar-ID, Projekt-ID och Faktura-ID är obligatoriska.' };
-    }
+
+/**
+ * Hämtar alla fakturor för ett specifikt projekt.
+ * @param projectId ID för projektet vars fakturor ska hämtas.
+ */
+export async function getInvoicesForProject(projectId: string): Promise<{ success: boolean; data?: Invoice[]; error?: string; }> {
     try {
-        const invoiceDoc = await adminDb.collection('users').doc(userId).collection('projects').doc(projectId).collection('invoices').doc(invoiceId).get();
-
-        if (!invoiceDoc.exists) {
-            return { success: false, error: 'Fakturan hittades inte eller så saknas behörighet.' };
-        }
-
-        const invoiceData = JSON.parse(JSON.stringify(invoiceDoc.data()));
-        const invoice: Invoice = { id: invoiceDoc.id, ...invoiceData } as Invoice;
-
-        return { success: true, data: invoice };
-
-    } catch (error) {
-        console.error(`Fel vid hämtning av faktura ${invoiceId}:`, error);
-        return { success: false, error: 'Kunde inte hämta fakturan från servern.' };
-    }
-}
-
-// Hämtar alla fakturor för ett projekt
-export async function getInvoicesForProject(projectId: string, userId: string): Promise<{ success: boolean; data?: Invoice[]; error?: string; }> {
-    if (!userId || !projectId) {
-        return { success: false, error: 'Användar-ID och Projekt-ID är obligatoriska.' };
-    }
-    try {
-        const invoicesSnapshot = await adminDb.collection('users').doc(userId).collection('projects').doc(projectId).collection('invoices').get();
-        const invoices: Invoice[] = invoicesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invoice));
-        return { success: true, data: JSON.parse(JSON.stringify(invoices)) };
-    } catch (error) {
-        console.error(`Fel vid hämtning av fakturor för projekt ${projectId}:`, error);
+        const invoices = await dal.getInvoicesForProject(projectId);
+        return { success: true, data: invoices };
+    } catch (error: any) {
+        logger.error({ projectId, error: error.message, stack: error.stack }, '[projectActions] Failed to get invoices.');
         return { success: false, error: 'Kunde inte hämta fakturor från servern.' };
     }
 }
 
-// Hämtar en enskild ÄTA för ett projekt
-export async function getAta(projectId: string, ataId: string, userId: string): Promise<{ success: boolean; data?: Ata; error?: string; }> {
-    if (!userId || !projectId || !ataId) {
-        return { success: false, error: 'Användar-ID, Projekt-ID och ÄTA-ID är obligatoriska.' };
-    }
+/**
+ * Hämtar alla ÄTOr för ett specifikt projekt.
+ * @param projectId ID för projektet vars ÄTOr ska hämtas.
+ */
+export async function getAtasForProject(projectId: string): Promise<{ success: boolean; data?: Ata[]; error?: string; }> {
     try {
-        const ataDoc = await adminDb
-            .collection('users').doc(userId)
-            .collection('projects').doc(projectId)
-            .collection('atas').doc(ataId)
-            .get();
-
-        if (!ataDoc.exists) {
-            return { success: false, error: 'ÄTA-dokumentet hittades inte eller så saknas behörighet.' };
-        }
-
-        const ataData = JSON.parse(JSON.stringify(ataDoc.data()));
-        const ata: Ata = { id: ataDoc.id, ...ataData } as Ata;
-
-        return { success: true, data: ata };
-
-    } catch (error) {
-        console.error(`Fel vid hämtning av ÄTA ${ataId}:`, error);
-        return { success: false, error: 'Kunde inte hämta ÄTA från servern.' };
-    }
-}
-
-// Hämtar alla ÄTOr för ett projekt
-export async function getAtasForProject(projectId: string, userId: string): Promise<{ success: boolean; data?: Ata[]; error?: string; }> {
-    if (!userId || !projectId) {
-        return { success: false, error: 'Användar-ID och Projekt-ID är obligatoriska.' };
-    }
-    try {
-        const atasSnapshot = await adminDb.collection('users').doc(userId).collection('projects').doc(projectId).collection('atas').get();
-        const atas: Ata[] = atasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ata));
-        return { success: true, data: JSON.parse(JSON.stringify(atas)) };
-    } catch (error) {
-        console.error(`Fel vid hämtning av ÄTOr för projekt ${projectId}:`, error);
+        const atas = await dal.getAtasForProject(projectId);
+        return { success: true, data: atas };
+    } catch (error: any) {
+        logger.error({ projectId, error: error.message, stack: error.stack }, '[projectActions] Failed to get ATAs.');
         return { success: false, error: 'Kunde inte hämta ÄTOr från servern.' };
     }
 }
 
-// Hämtar alla dokument för ett projekt
-export async function getDocumentsForProject(projectId: string, userId: string): Promise<{ success: boolean; data?: Document[]; error?: string; }> {
-    if (!userId || !projectId) {
-        return { success: false, error: 'Användar-ID och Projekt-ID är obligatoriska.' };
-    }
+/**
+ * Hämtar alla dokument för ett specifikt projekt.
+ * @param projectId ID för projektet vars dokument ska hämtas.
+ */
+export async function getDocumentsForProject(projectId: string): Promise<{ success: boolean; data?: Document[]; error?: string; }> {
     try {
-        const documentsSnapshot = await adminDb.collection('users').doc(userId).collection('projects').doc(projectId).collection('documents').get();
-        const documents: Document[] = documentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Document));
-        return { success: true, data: JSON.parse(JSON.stringify(documents)) };
-    } catch (error) {
-        console.error(`Fel vid hämtning av dokument för projekt ${projectId}:`, error);
+        const documents = await dal.getDocumentsForProject(projectId);
+        return { success: true, data: documents };
+    } catch (error: any) {
+        logger.error({ projectId, error: error.message, stack: error.stack }, '[projectActions] Failed to get documents.');
         return { success: false, error: 'Kunde inte hämta dokument från servern.' };
     }
 }
+
+// Observera: Funktionerna `getInvoice` och `getAta` (singular) har medvetet utelämnats
+// då de sällan behövs och kan läggas till vid behov. Principen är densamma.

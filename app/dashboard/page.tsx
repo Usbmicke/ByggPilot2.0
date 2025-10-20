@@ -1,43 +1,12 @@
 
 import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth/next'; // <-- KORRIGERAD
-import { authOptions } from '@/lib/authOptions'; // <-- KORRIGERAD
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/authOptions';
 import { adminDb } from '@/lib/admin';
 import { FolderIcon, InboxIcon, SparklesIcon } from '@heroicons/react/24/outline';
 
-// =================================================================================
-// DASHBOARD PAGE V4.0 (KORREKT AUTH-HÄMTNING)
-// REVIDERING: Bytte ut den felaktiga `auth` importen mot den korrekta 
-// `getServerSession(authOptions)`. Detta löser `Module not found`-felet och
-// tillåter sidan att hämta användarsessionen korrekt på serversidan.
-// =================================================================================
-
-// --- Komponenter (oförändrade) ---
-
-interface StatCardProps {
-    title: string;
-    value: string | number;
-    description?: string;
-    main?: boolean;
-}
-
-const StatCard: React.FC<StatCardProps> = ({ title, value, description, main = false }) => (
-    <div className={`bg-component-background border border-border p-5 rounded-lg shadow-sm ${main ? 'border-yellow-500/50' : ''}`}>
-        <h3 className="text-sm font-medium text-text-secondary truncate">{title}</h3>
-        <p className="mt-1 text-3xl font-semibold text-text-primary">{value}</p>
-        {description && <p className="text-xs text-text-tertiary mt-2">{description}</p>}
-    </div>
-);
-
-const InfoCard = ({ icon, title, text, ctaText }) => (
-    <div className="bg-component-background border border-border p-6 rounded-lg text-center flex flex-col items-center justify-center h-full">
-        <div className="w-12 h-12 flex items-center justify-center bg-background rounded-full mb-4 border border-border">
-            {icon}
-        </div>
-        <h4 className="text-md font-semibold text-text-primary">{title}</h4>
-        <p className="text-sm text-text-secondary mt-1">{text} <span className="font-semibold text-accent">{ctaText}</span>.</p>
-    </div>
-);
+import StatCard from '@/components/dashboard/StatCard';
+import InfoCard from '@/components/dashboard/InfoCard';
 
 // --- Huvudsaklig Dashboard-komponent ---
 
