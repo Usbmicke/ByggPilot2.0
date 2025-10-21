@@ -4,16 +4,16 @@
 import React, { useState } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
-import GuidedTour from '@/components/tour/GuidedTour';
-import FloatingChat from '@/components/chat/FloatingChat';
+import BottomChatPanel from '@/components/chat/BottomChatPanel';
 
 // =================================================================================
-// DASHBOARD LAYOUT (v2.2 - BAKGRUNDSFIX)
-// Beskrivning: Huvudlayout för dashboarden.
-// v2.2: Bytt ut den hårdkodade `bg-gray-900` (som upplevs som blå) mot den
-//       semantiska temafärgen `bg-background-primary`. Detta säkerställer
-//       att bakgrunden respekterar temat i tailwind.config.ts och blir
-//       genuint neutralgrå.
+// DASHBOARD LAYOUT (v8.0 - "OPERATION PREMIUM CHATT" STEG 2)
+// Beskrivning: Den centrala layouten, nu med state-hantering för premium-chatten.
+// v8.0:
+//    - LYFT STATE: Äger nu `isChatOpen` state för att kunna orkestrera avancerade
+//      interaktioner som t.ex. en fokus-overlay.
+//    - PROP-DELNING: Skickar ner `isChatOpen` och `setIsChatOpen` till 
+//      `BottomChatPanel` och en overlay-komponent.
 // =================================================================================
 
 export default function DashboardLayout({
@@ -22,25 +22,32 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false); // LYFT STATE
 
   return (
-    // FIX: Ersatt `bg-gray-900` med `bg-background-primary`
-    <div className="min-h-screen bg-background-primary text-white">
+    <div className="min-h-screen bg-background-primary text-white flex">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
-      <div className="md:pl-64 flex flex-col flex-1">
+      <div className="md:pl-64 flex flex-col flex-1 relative">
         <Header onMenuClick={() => setSidebarOpen(true)} />
         
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 mt-16">
+        {/* ---- FOKUS-OVERLAY (syns bara när chatten är öppen) ---- */}
+        {isChatOpen && (
+          <div 
+            onClick={() => setIsChatOpen(false)} 
+            className="absolute inset-0 z-10 bg-black/50 backdrop-blur-sm transition-opacity duration-300 animate-fadeIn"
+          />
+        )}
+
+        <main className={`flex-1 p-4 sm:p-6 lg:p-8 mt-16`}>
             {children}
         </main>
 
+        <BottomChatPanel 
+          isOpen={isChatOpen} 
+          setIsOpen={setIsChatOpen} 
+        />
       </div>
-
-      {/* ---- Persistent, Flytande Chatt ---- */}
-      <FloatingChat />
-
-      <GuidedTour />
     </div>
   );
 }

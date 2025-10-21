@@ -1,13 +1,22 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import { CogIcon, UserCircleIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
-import { User } from '@/types';
 import Popover from '@/components/shared/Popover';
+
+// =================================================================================
+// USER MENU (v2.0 - SÄKER IMPLEMENTATION)
+// Beskrivning: En robust version av användarmenyn som korrekt hanterar `next-auth`.
+// v2.0:
+//    - KORREKT HOOK: Använder nu `useSession` för att hämta autentiseringsstatus.
+//    - LADDNINGS-STATE: Visar en skeleton-loader medan sessionen valideras.
+//    - GUARD CLAUSE: Renderar menyn BARA om sessionen är `authenticated`.
+//    - FELHANTERING: Undviker `undefined`-kraschen genom att kontrollera `session.user`.
+// =================================================================================
 
 const getInitials = (name: string | null | undefined) => {
   if (!name) return '??';
@@ -15,32 +24,27 @@ const getInitials = (name: string | null | undefined) => {
 };
 
 const wipPopoverContent = (
-  <div className="text-sm text-text-secondary">
-    Denna funktion är under utveckling.
-  </div>
+  <div className="text-sm text-text-secondary">Denna funktion är under utveckling.</div>
 );
 
-interface UserMenuProps {
-  user: User;
-}
-
-const UserMenu: React.FC<UserMenuProps> = ({ user }) => {
-  const [isClient, setIsClient] = useState(false);
-
-  // Denna effekt körs bara på klienten, efter den initiala renderingen.
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+export default function UserMenu() {
+  const { data: session, status } = useSession();
 
   const handleLogout = () => {
     signOut({ callbackUrl: '/' });
   };
 
-  // Rendera ingenting på servern för att undvika hydration-fel.
-  // Komponenten dyker upp på klienten när isClient blir true.
-  if (!isClient) {
+  // 1. Visa en skeleton-loader medan sessionen laddas
+  if (status === 'loading') {
+    return <div className="h-10 w-10 rounded-full bg-gray-700 animate-pulse"></div>;
+  }
+
+  // 2. Renderar ingenting om användaren inte är inloggad
+  if (status !== 'authenticated' || !session?.user) {
     return null;
   }
+
+  const { user } = session;
 
   return (
     <div className="relative group">
@@ -54,14 +58,14 @@ const UserMenu: React.FC<UserMenuProps> = ({ user }) => {
             className="rounded-full" 
           />
         ) : (
-          getInitials(user.name)
+          <span>{getInitials(user.name)}</span>
         )}
       </div>
       
       <div className="absolute right-0 w-56 bg-background-secondary border border-border-primary rounded-md shadow-lg z-50 hidden group-hover:block transition-all duration-300 origin-top-right animate-in fade-in-0 zoom-in-95 pt-2">
         <div className="px-4 py-3 border-b border-border-primary">
           <p className="text-sm font-semibold text-text-primary truncate">{user.name || "Användare"}</p>
-          <p className="text-xs text-text-secondary truncate">{user.email}</p>
+          <p className="text-xs text-text-secondary truncate">{user.email || "Ingen e-post"}</p>
         </div>
         <div className="py-1.5">
           <Link href="/settings" className="flex items-center gap-3 px-4 py-2 text-sm text-text-secondary hover:bg-background-tertiary hover:text-text-primary">
@@ -88,5 +92,3 @@ const UserMenu: React.FC<UserMenuProps> = ({ user }) => {
     </div>
   );
 };
-
-export default UserMenu;

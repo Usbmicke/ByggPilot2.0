@@ -1,57 +1,50 @@
 
 'use client';
 
-import React from 'react';
-import { useSession } from 'next-auth/react';
-import { Bars3Icon } from '@heroicons/react/24/outline';
-
-// Importera de nya, dekonstruerade komponenterna
-import GlobalSearchBar from '@/components/layout/GlobalSearchBar';
-import NotificationBell from '@/components/layout/NotificationBell';
+import { Menu, Bell } from 'lucide-react'; // ÅTERSTÄLLT: Använder Bell för notiser
+import { Button } from '@/components/ui/button';
 import UserMenu from '@/components/layout/UserMenu';
-import Clock from '@/components/layout/Clock';
-import CreateNewButton from '@/components/layout/CreateNewButton'; // Importera knappen
+
+// =================================================================================
+// HEADER (v4.0 - "OPERATION RÄTT CHATT")
+// Beskrivning: En version som återställer aviseringsklockan och tar bort all chattlogik.
+// Headern ska INTE längre ansvara för att öppna någon chatt.
+// =================================================================================
 
 interface HeaderProps {
-  onMenuClick?: () => void;
+  onMenuClick: () => void;
+  // onChatClick är medvetet borttagen
 }
 
-const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
-  const { data: session } = useSession();
-
+export default function Header({ onMenuClick }: HeaderProps) {
   return (
-    <header className="fixed top-0 left-0 md:left-64 right-0 bg-component-background border-b border-border p-4 z-20">
-      <div className="flex items-center justify-between gap-4">
+    <header className="fixed top-0 left-0 md:left-64 right-0 z-30 bg-background-primary/80 backdrop-blur-sm border-b border-border h-16 flex items-center justify-between px-4">
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden"
+          onClick={onMenuClick}
+        >
+          <Menu className="h-6 w-6" />
+        </Button>
+        <h1 className="text-lg font-semibold">Översikt</h1>
+      </div>
+      
+      <div className="flex items-center gap-4">
+        {/* ---- AVISERINGSKLOCKA (ÅTERSTÄLLD) ---- */}
+        <Button
+          variant="ghost"
+          size="icon"
+          // onClick för notispanel kan läggas till här i framtiden
+          className="text-text-secondary hover:text-text-primary"
+        >
+          <Bell className="h-5 w-5" />
+          <span className="sr-only">Visa notiser</span>
+        </Button>
         
-        {/* Vänstra Sektionen: Hamburgermeny och Sökfält */}
-        <div className="flex items-center gap-4 flex-1">
-          <button 
-            onClick={onMenuClick}
-            className="md:hidden text-text-secondary hover:text-text-primary"
-          >
-            <Bars3Icon className="h-6 w-6" />
-          </button>
-
-          <div className="hidden md:block w-full max-w-lg">
-            <GlobalSearchBar />
-          </div>
-        </div>
-
-        {/* Mellersta Sektionen: "Skapa nytt"-knappen */}
-        <div className="flex-shrink-0">
-            <CreateNewButton />
-        </div>
-
-        {/* Högra Sektionen: Klocka, Notiser och Användarmeny */}
-        <div className="flex items-center gap-2 md:gap-4">
-          <Clock />
-          <NotificationBell />
-          {session?.user && <UserMenu user={session.user} />}
-        </div>
-
+        <UserMenu />
       </div>
     </header>
   );
-};
-
-export default Header;
+}
