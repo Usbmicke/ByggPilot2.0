@@ -4,12 +4,10 @@ import { SessionProvider } from 'next-auth/react';
 import { UIProvider } from '@/contexts/UIContext';
 import { Toaster } from 'react-hot-toast';
 import CookieBanner from '@/components/CookieBanner';
-import TanstackProvider from '@/components/providers/TanstackProvider';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
-      <TanstackProvider>
         <UIProvider>
             <Toaster 
               position="bottom-right" 
@@ -25,7 +23,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             {children}
             <CookieBanner />
         </UIProvider>
-      </TanstackProvider>
     </SessionProvider>
   );
 }

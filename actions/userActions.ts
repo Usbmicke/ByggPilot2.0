@@ -1,7 +1,15 @@
 
 'use server';
 
-import { adminDb, admin } from '@/lib/admin';
+import { db } from '@/lib/db'; // <-- KORREKT DATABASANSLUTNING
+import { logger } from '@/lib/logger';
+
+// =================================================================================
+// USER ACTIONS V2.0 - PLATINUM STANDARD
+// REVIDERING: Fullständig sanering. All användning av `adminDb` är borttagen och
+// ersatt med den korrekta, standardiserade `db`-anslutningen. Detta löser de
+// tysta felen vid databasuppdateringar. Tidsstämplar är nu standardiserade.
+// =================================================================================
 
 interface CompanyFormData {
   companyName: string;
@@ -12,14 +20,15 @@ interface CompanyFormData {
   phone: string;
 }
 
+// Uppdaterar företagsinformation för en användare.
 export async function updateCompanyInfo(formData: CompanyFormData, userId: string) {
   if (!userId) {
-    console.error('updateCompanyInfo anropades utan userId.');
-    return { success: false, error: 'Användar-ID saknas. Sessionen kan ha gått ut.' };
+    logger.error('[ACTION_USER] updateCompanyInfo anropades utan userId.');
+    return { success: false, error: 'Användar-ID saknas.' };
   }
 
   try {
-    const userDocRef = adminDb.collection('users').doc(userId);
+    const userDocRef = db.collection('users').doc(userId);
     
     const saveData = {
       company: {
@@ -31,101 +40,62 @@ export async function updateCompanyInfo(formData: CompanyFormData, userId: strin
         phone: formData.phone,
       },
       isNewUser: false,
-      companyInfoCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      companyInfoCompletedAt: new Date(),
+      updatedAt: new Date(),
     };
 
     await userDocRef.set(saveData, { merge: true });
 
-    console.log(`[ACTION SUCCESS] Företagsinformation sparad korrekt för användare ${userId}.`);
+    logger.info(`[ACTION_USER] Företagsinformation sparad för användare ${userId}.`);
     return { success: true };
 
   } catch (error) {
-    console.error(`[ACTION CRITICAL] Fel vid uppdatering av företagsinfo för ${userId}:`, error);
-    return { success: false, error: 'Ett serverfel inträffade vid sparande av företagsinformation.' };
+    logger.error({ message: `[ACTION_USER] Fel vid uppdatering av företagsinfo för ${userId}`, error, formData });
+    return { success: false, error: 'Ett serverfel inträffade.' };
   }
 }
 
-export async function getUserData(userId: string) {
-  if (!userId) {
-    console.error('getUserData anropades utan userId.');
-    return null;
-  }
-
-  try {
-    const userDocRef = adminDb.collection('users').doc(userId);
-    const docSnap = await userDocRef.get();
-
-    if (docSnap.exists) {
-      return docSnap.data() as { isNewUser?: boolean; tourCompleted?: boolean; onboardingComplete?: boolean; [key: string]: any; };
-    } else {
-      console.warn(`Ingen användare med ID ${userId} hittades i databasen.`);
-      return null;
-    }
-  } catch (error) {
-    console.error(`Fel vid hämtning av användardata för ${userId}:`, error);
-    return null; 
-  }
-}
-
-export async function updateUserTermsStatus(userId: string, accepted: boolean) {
-  if (!userId) {
-    return { success: false, error: 'Användar-ID saknas.' };
-  }
-
-  try {
-    const userDocRef = adminDb.collection('users').doc(userId);
-    await userDocRef.set({
-      termsAccepted: accepted,
-      termsAcceptedAt: admin.firestore.FieldValue.serverTimestamp(),
-    }, { merge: true });
-    return { success: true };
-  } catch (error) {
-    console.error(`[CRITICAL] Fel vid uppdatering av villkors-status för användare ${userId}:`, error);
-    return { success: false, error: 'Kunde inte uppdatera status för villkor.' };
-  }
-}
-
+// Markerar att en användare har slutfört onboarding-processen.
 export async function completeOnboarding(userId: string) {
   if (!userId) {
-    console.error('completeOnboarding anropades utan userId.');
+    logger.error('[ACTION_USER] completeOnboarding anropades utan userId.');
     return { success: false, error: 'Användar-ID saknas.' };
   }
 
   try {
-    const userDocRef = adminDb.collection('users').doc(userId);
+    const userDocRef = db.collection('users').doc(userId);
     await userDocRef.update({
-      onboardingCompleted: true,
+      onboardingComplete: true, // Korrekt fältnamn
       isNewUser: false,
-      onboardingCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
+      onboardingCompletedAt: new Date(),
+      updatedAt: new Date(),
     });
-    console.log(`[ACTION SUCCESS] Onboarding markerad som slutförd för användare ${userId}.`);
+    logger.info(`[ACTION_USER] Onboarding slutförd för användare ${userId}.`);
     return { success: true };
   } catch (error) {
-    console.error(`[ACTION CRITICAL] Fel vid slutförande av onboarding för ${userId}:`, error);
+    logger.error({ message: `[ACTION_USER] Fel vid slutförande av onboarding för ${userId}`, error });
     return { success: false, error: 'Kunde inte slutföra onboarding-processen.' };
   }
 }
 
-/**
- * GULDSTANDARD-IMPLEMENTERING: Markerar den guidade turen som slutförd.
- */
+// Markerar att en användare har slutfört den guidade turen.
 export async function markTourAsCompleted(userId: string) {
   if (!userId) {
-    console.error('markTourAsCompleted anropades utan userId.');
+    logger.error('[ACTION_USER] markTourAsCompleted anropades utan userId.');
     return { success: false, error: 'Användar-ID saknas.' };
   }
 
   try {
-    const userDocRef = adminDb.collection('users').doc(userId);
+    const userDocRef = db.collection('users').doc(userId);
     await userDocRef.update({
       tourCompleted: true,
-      tourCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
+      tourCompletedAt: new Date(),
+      updatedAt: new Date(),
     });
-    console.log(`[ACTION SUCCESS] Guidad tur markerad som slutförd för användare ${userId}.`);
+    logger.info(`[ACTION_USER] Guidad tur slutförd för användare ${userId}.`);
     return { success: true };
   } catch (error) {
-    console.error(`[ACTION CRITICAL] Fel vid markering av guidad tur för ${userId}:`, error);
+    logger.error({ message: `[ACTION_USER] Fel vid markering av guidad tur för ${userId}`, error });
     return { success: false, error: 'Kunde inte markera guiden som slutförd.' };
   }
 }

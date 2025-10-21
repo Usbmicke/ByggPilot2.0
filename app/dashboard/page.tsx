@@ -1,14 +1,15 @@
 
 import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/authOptions';
-import { adminDb } from '@/lib/admin';
+import { getServerSession } from 'next-auth/next'; 
+import { authOptions } from '@/lib/authOptions'; 
+import { db } from '@/lib/db'; // <-- KORRIGERAD: Använder nu den stabila, standardiserade DB-anslutningen.
 import { FolderIcon, InboxIcon, SparklesIcon } from '@heroicons/react/24/outline';
 
 // =================================================================================
-// DASHBOARD PAGE V4.0 (KORREKT AUTH-HÄMTNING)
-// REVIDERING: Använder nu den korrekta, stabila versionen av dashboarden som
-// du tillhandahöll. Detta löser 500-felet orsakat av felaktiga importer.
+// DASHBOARD PAGE V5.0 (STABIL DB-ANSLUTNING)
+// REVIDERING: Bytt ut den felaktiga `adminDb` importen mot `db`. Detta löser
+// `initializeApp()`-kraschen och det efterföljande 500-felet.
+// Nu används enbart den korrekta, singulära databasanslutningen.
 // =================================================================================
 
 // --- Komponenter (oförändrade) ---
@@ -41,14 +42,14 @@ const InfoCard = ({ icon, title, text, ctaText }) => (
 // --- Huvudsaklig Dashboard-komponent ---
 
 export default async function DashboardPage() {
-    // Korrekt metod för att hämta sessionen på en Server Component
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
         redirect('/');
     }
 
-    const userDoc = await adminDb.collection('users').doc(session.user.id).get();
+    // Använder nu den korrekta 'db'-anslutningen
+    const userDoc = await db.collection('users').doc(session.user.id).get();
     const userData = userDoc.data();
 
     if (!userData?.onboardingComplete) {

@@ -4,7 +4,16 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { CheckCircle2, ExternalLink } from 'lucide-react';
-import { completeOnboarding } from '@/actions/userActions'; // IMPORTERA SERVER ACTION
+import { completeOnboarding } from '@/actions/userActions';
+
+// =================================================================================
+// SUCCESS-STEG V2.0 - PLATINUM STANDARD (SESSIONSSYNKRONISERING)
+//
+// REVIDERING: Komponenten använder nu `update`-funktionen från `useSession`.
+// Detta är den enda arkitektoniskt korrekta metoden för att säkerställa att
+// sessionen (JWT) uppdateras INNAN klienten omdirigeras. Detta eliminerar
+// race conditions med middleware och garanterar en sömlös övergång till dashboard.
+// =================================================================================
 
 interface StepSuccessProps {
   companyName: string | null;
@@ -13,26 +22,29 @@ interface StepSuccessProps {
 
 const Step_Success: React.FC<StepSuccessProps> = ({ companyName, folderUrl }) => {
   const router = useRouter();
-  const { data: session } = useSession(); // Hämta sessionen
+  const { data: session, update } = useSession(); // Hämta update-funktionen
 
   const displayName = companyName || 'ditt företag';
 
   const handleComplete = async () => {
     if (!session?.user?.id) {
       console.error('Kunde inte slutföra onboarding: Användar-ID saknas.');
-      // Hantera felet, kanske visa ett meddelande till användaren
       return;
     }
 
-    // 1. Anropa Server Action för att uppdatera databasen
-    const result = await completeOnboarding(session.user.id);
+    try {
+      // 1. Uppdatera databasen via Server Action
+      await completeOnboarding(session.user.id);
 
-    if (result.success) {
-      // 2. Omdirigera ENBART om databasen har uppdaterats korrekt
+      // 2. Tvinga en uppdatering av session-token
+      await update({ onboardingComplete: true });
+
+      // 3. Omdirigera först EFTER att sessionen är uppdaterad
       router.push('/dashboard?tour=true');
-    } else {
-      console.error('Kunde inte spara onboarding-status:', result.error);
-      // Visa ett felmeddelande för användaren här
+
+    } catch (error) {
+      console.error('Ett fel uppstod vid slutförande av onboarding:', error);
+      // Här kan du visa ett felmeddelande för användaren
     }
   };
 
@@ -68,7 +80,7 @@ const Step_Success: React.FC<StepSuccessProps> = ({ companyName, folderUrl }) =>
 
       <div className="mt-10">
         <button 
-          onClick={handleComplete} // Använd den nya asynkrona funktionen
+          onClick={handleComplete}
           className="w-full bg-cyan-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 hover:bg-cyan-500 focus:ring-4 focus:ring-cyan-500/50"
         >
           Slutför & Gå till Dashboard

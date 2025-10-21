@@ -1,26 +1,23 @@
 
 import type { NextAuthOptions, Account, User as NextAuthUser } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
-import { env } from '@/config/env';
 import { logger } from '@/lib/logger';
 import { findOrCreateUser, getUserById } from '@/lib/data-access/user';
 import { saveOrUpdateAccount } from '@/lib/data-access/account';
 import { User } from '@/models/user';
 
 // =================================================================================
-// AUTH OPTIONS V8.0 - PLATINUM STANDARD (RACE-CONDITION-FREE)
-//
-// ARKITEKTUR: Eliminerar race condition genom att `findOrCreateUser` nu
-// returnerar den fullständiga användarprofilen. Denna profil fästs sedan
-// på NextAuths `user`-objekt och läses direkt i `jwt`-callbacken. Detta
-// garanterar en enda sanningskälla och en 100% pålitlig token.
+// AUTH OPTIONS V9.0 - PLATINUM STANDARD (DIREKT ENV-ÅTKOMST)
+// REVIDERING: All referens till den mellanliggande, sköra `env`-filen är borttagen.
+// Konfigurationen läser nu miljövariabler direkt från `process.env`, vilket är
+// Next.js inbyggda, robusta och standardiserade metod. Detta garanterar stabilitet.
 // =================================================================================
 
 export const authOptions: NextAuthOptions = {
     providers: [
         GoogleProvider({
-            clientId: env.GOOGLE_CLIENT_ID,
-            clientSecret: env.GOOGLE_CLIENT_SECRET,
+            clientId: process.env.GOOGLE_CLIENT_ID!,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
             authorization: {
                 params: {
                     prompt: "consent",
@@ -44,7 +41,6 @@ export const authOptions: NextAuthOptions = {
                 const userProfile = await findOrCreateUser(user);
                 await saveOrUpdateAccount({ ...account, userId: user.id });
 
-                // Fäst den fullständiga profilen på user-objektet för JWT-callbacken
                 (user as any).profile = userProfile;
 
                 return true;
@@ -55,7 +51,6 @@ export const authOptions: NextAuthOptions = {
         },
 
         async jwt({ token, user, account, trigger, session }) {
-            // Vid första inloggningen, använd den profil vi fäste i `signIn`
             if (user && (user as any).profile) {
                 const profile = (user as any).profile as User;
                 token.id = profile.id;
@@ -63,7 +58,6 @@ export const authOptions: NextAuthOptions = {
                 token.accessToken = account?.access_token;
             }
 
-            // Om sessionen uppdateras manuellt (t.ex. efter onboarding)
             if (trigger === "update" && session?.onboardingComplete) {
                  token.onboardingComplete = session.onboardingComplete;
             }
@@ -81,7 +75,7 @@ export const authOptions: NextAuthOptions = {
         },
     },
 
-    secret: env.NEXTAUTH_SECRET,
+    secret: process.env.NEXTAUTH_SECRET!,
     pages: {
         signIn: '/',
         error: '/',

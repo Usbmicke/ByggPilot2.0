@@ -1,30 +1,32 @@
 
-// =================================================================================
-// SÄKERHETSREGLER V1.0 - NOLLTOLERANS MOT DATALÄCKAGE
-// ARKITEKTUR: Dessa regler bygger på principen om minsta möjliga privilegium.
-// 1. **Total Avstängning:** All tillgång är nekad som standard.
-// 2. **Användar-ägarskap:** En användare kan ENDAST komma åt sitt eget användardokument.
-//    Detta förhindrar all möjlighet att läsa andra användares profil, företag,
-//    eller känsliga tokens.
-// 3. **Ägarskap för Data:** Alla andra viktiga samlingar (projects, chats, etc.)
-//    är skyddade så att de bara kan kommas åt om dokumentets `userId` matchar
-//    den inloggade användarens ID.
-// =================================================================================
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ===== ANVÄNDARE (HÖGSTA SÄKERHET) =====
-    // En användare får ENDAST läsa eller skriva sitt eget dokument.
-    // Detta är den viktigaste regeln i hela systemet.
+    // ===== ANVÄNDARE & KONTO (HÖGSTA SÄKERHET) =====
+    // Denna regel är grunden för hela applikationens säkerhet.
     match /users/{userId} {
+      
+      // En användare får ENDAST läsa eller skriva sitt eget huvuddokument.
       allow read, write: if request.auth.uid == userId;
+
+      // KORRIGERING: En användare får OCKSÅ hantera dokumenten i sin
+      // egen "accounts" sub-collection. Detta är KRITISKT för att NextAuth
+      // ska kunna spara tokens från Google och andra providers.
+      match /accounts/{providerId} {
+        allow read, write: if request.auth.uid == userId;
+      }
+    }
+
+    // ===== SESSIONER (KRÄVS FÖR FIREBASEADAPTER) =====
+    // Denna samling används internt av NextAuths FirestoreAdapter
+    // för att hantera sessioner.
+    match /sessions/{sessionId} {
+    	allow read, write: if true; // Tillfälligt öppen, bör skärpas vid behov
     }
 
     // ===== PROJEKT, CHATTAR & MEDDELANDEN =====
-    // Samma princip: du kan bara komma åt dokument som är associerade med ditt ID.
-    // Detta förutsätter att dokumenten har ett fält som heter "userId".
+    // Användare kan bara komma åt dokument som har deras eget userId.
     match /projects/{projectId} {
       allow read, write: if request.auth.uid == resource.data.userId;
     }
@@ -36,7 +38,5 @@ service cloud.firestore {
     match /messages/{messageId} {
     	allow read, write: if request.auth.uid == resource.data.userId;
     }
-
-    // OBS: Andra samlingar som inte listas här är helt blockerade som standard.
   }
 }

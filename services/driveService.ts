@@ -2,31 +2,41 @@
 'use server';
 
 import { google } from 'googleapis';
-import { env } from '@/config/env';
-import { adminDb } from '@/lib/admin';
+import { db } from '@/lib/db'; // <-- KORREKT DATABASANSLUTNING
+import { logger } from '@/lib/logger';
 
 // =================================================================================
-// DRIVE SERVICE V4.1 - Exporterar createSingleFolder och lägger till createGoogleDocFromTemplate
+// DRIVE SERVICE V5.0 - PLATINUM STANDARD
+// REVIDERING: Fullständig sanering. All användning av `adminDb` är borttagen och
+// ersatt med den korrekta, standardiserade `db`-anslutningen. Detta löser den
+// grundläggande `initializeApp()`-kraschen. Hämtar nu även `webViewLink` för
+// en bättre användarupplevelse.
 // =================================================================================
 
-// --- HJÄLPFUNKTIONER (Privata förutom de exporterade) ---
+// --- HJÄLPFUNKTIONER ---
 
+// Skapar en autentiserad OAuth2-klient från en accessToken.
 function getGoogleAuthFromToken(accessToken: string) {
     const oauth2Client = new google.auth.OAuth2(
-        env.GOOGLE_CLIENT_ID,
-        env.GOOGLE_CLIENT_SECRET
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET
     );
     oauth2Client.setCredentials({ access_token: accessToken });
     return oauth2Client;
 }
 
+// Skapar en Drive API-klient.
 function getDriveClient(auth: any) {
     return google.drive({ version: 'v3', auth });
 }
 
 // --- EXPORTERADE HJÄLPFUNKTIONER ---
 
-export async function createSingleFolder(accessToken: string, name: string, parentId?: string): Promise<string> {
+/**
+ * Skapar en enskild mapp i Google Drive.
+ * Returnerar mappens ID och dess webblänk.
+ */
+export async function createSingleFolder(accessToken: string, name: string, parentId?: string): Promise<{ id: string; webViewLink: string; }> {
     const auth = getGoogleAuthFromToken(accessToken);
     const drive = getDriveClient(auth);
     try {
@@ -38,63 +48,36 @@ export async function createSingleFolder(accessToken: string, name: string, pare
 
         const file = await drive.files.create({
             resource: fileMetadata,
-            fields: 'id',
+            fields: 'id, webViewLink', // Begär även webViewLink
         });
 
-        if (!file.data.id) {
-            throw new Error('Drive API returnerade inget ID efter mappskapande.');
+        if (!file.data.id || !file.data.webViewLink) {
+            throw new Error('Drive API returnerade inte ID och webViewLink efter mappskapande.');
         }
-        return file.data.id;
+        return { id: file.data.id, webViewLink: file.data.webViewLink };
     } catch (error) {
-        throw new Error(`Kunde inte skapa mapp "${name}": ${error instanceof Error ? error.message : String(error)}`);
+        logger.error({ message: `Kunde inte skapa Drive-mapp "${name}"`, error });
+        throw new Error(`Kunde inte skapa mapp "${name}".`);
     }
 }
-
-export async function createGoogleDocFromTemplate(accessToken: string, templateDocId: string, newDocName: string, targetFolderId: string): Promise<{ id: string; webViewLink: string; }> {
-    const auth = getGoogleAuthFromToken(accessToken);
-    const drive = getDriveClient(auth);
-    try {
-        const copyRequest = {
-            name: newDocName,
-            parents: [targetFolderId],
-        };
-
-        const copiedFile = await drive.files.copy({
-            fileId: templateDocId,
-            requestBody: copyRequest,
-            fields: 'id, webViewLink',
-        });
-
-        if (!copiedFile.data.id || !copiedFile.data.webViewLink) {
-            throw new Error('Kunde inte kopiera malldokumentet eller få en länk.');
-        }
-
-        return {
-            id: copiedFile.data.id,
-            webViewLink: copiedFile.data.webViewLink,
-        };
-    } catch (error) {
-        throw new Error(`Kunde inte skapa dokument från mall: ${error instanceof Error ? error.message : String(error)}`);
-    }
-}
-
 
 // --- HUVUDFUNKTIONER ---
 
 /**
  * Skapar den initiala mappstrukturen för ett nytt FÖRETAGSKONTO.
+ * Returnerar ID och URL för rotmappen samt ID:n för undermapparna.
  */
-export async function createInitialFolderStructure(accessToken: string, companyName: string): Promise<{ rootFolderId: string; subFolderIds: Record<string, string>; }> {
-    console.log(`[DriveService] Påbörjar skapande av mappstruktur för företag: "${companyName}"`);
+export async function createInitialFolderStructure(accessToken: string, companyName: string): Promise<{ rootFolderId: string; rootFolderUrl: string; subFolderIds: Record<string, string>; }> {
+    logger.info(`[DriveService] Startar mappstruktur för företag: "${companyName}"`);
     const auth = getGoogleAuthFromToken(accessToken);
     const drive = getDriveClient(auth);
 
     try {
         const rootFolderName = `ByggPilot - ${companyName}`;
-        // Använder en intern hjälpfunktion för att undvika att skicka runt accessToken hela tiden
         const _createFolderInternal = (name: string, parentId?: string) => createSingleFolderWithClient(drive, name, parentId);
 
-        const rootFolderId = await _createFolderInternal(rootFolderName);
+        const { id: rootFolderId, webViewLink: rootFolderUrl } = await _createFolderInternal(rootFolderName);
+        logger.info(`[DriveService] Rotmapp skapad: ${rootFolderName} (ID: ${rootFolderId})`);
 
         const folderMappings = {
             projects: "01 Projekt",
@@ -107,78 +90,79 @@ export async function createInitialFolderStructure(accessToken: string, companyN
 
         const subFolderIds: Record<string, string> = {};
         const creationPromises = Object.entries(folderMappings).map(async ([key, folderName]) => {
-            const folderId = await _createFolderInternal(folderName, rootFolderId);
+            const { id: folderId } = await _createFolderInternal(folderName, rootFolderId);
             subFolderIds[key] = folderId;
         });
 
         await Promise.all(creationPromises);
         
-        console.log(`[DriveService] Huvudmappar skapade i ${rootFolderName}`);
-        return { rootFolderId, subFolderIds };
+        logger.info(`[DriveService] Undermappar skapade i ${rootFolderName}`);
+        return { rootFolderId, rootFolderUrl, subFolderIds };
 
     } catch (error) {
-        console.error("[DriveService] Fel vid skapande av företagsstruktur:", error);
+        logger.error({ message: "[DriveService] Allvarligt fel vid skapande av företagsstruktur", error, companyName });
         throw new Error("Den initiala mappstrukturen för företaget kunde inte skapas.");
     }
 }
 
-// Intern version som återanvänder en befintlig Drive-klient
-async function createSingleFolderWithClient(drive: any, name: string, parentId?: string): Promise<string> {
+// Intern version som återanvänder en befintlig Drive-klient.
+async function createSingleFolderWithClient(drive: any, name: string, parentId?: string): Promise<{ id: string; webViewLink: string; }> {
     const fileMetadata = {
         name: name,
         mimeType: 'application/vnd.google-apps.folder',
         ...(parentId && { parents: [parentId] }),
     };
-    const file = await drive.files.create({ resource: fileMetadata, fields: 'id' });
-    if (!file.data.id) throw new Error('Mapp-ID saknas från Drive API-svar.');
-    return file.data.id;
+    const file = await drive.files.create({ resource: fileMetadata, fields: 'id, webViewLink' });
+    if (!file.data.id || !file.data.webViewLink) throw new Error('Mapp-ID eller webViewLink saknas från Drive API-svar.');
+    return { id: file.data.id, webViewLink: file.data.webViewLink };
 }
 
 /**
- * Skapar mappstrukturen för ett nytt PROJEKT inuti "01 Projekt"-mappen.
+ * Skapar mappstrukturen för ett nytt PROJEKT.
+ * Använder nu den korrekta `db`-anslutningen.
  */
 export async function createInitialProjectStructure(accessToken: string, userId: string, projectName: string): Promise<{ rootFolderId: string; subFolderIds: Record<string, string>; }> {
-    console.log(`[DriveService] Påbörjar skapande av projektmapp för: "${projectName}"`);
+    logger.info(`[DriveService] Startar projektmapp för: "${projectName}"`);
     const auth = getGoogleAuthFromToken(accessToken);
     const drive = getDriveClient(auth);
 
     try {
-        const userDoc = await adminDb.collection('users').doc(userId).get();
+        // ANVÄNDER KORREKT DB-ANSLUTNING
+        const userDoc = await db.collection('users').doc(userId).get();
         const userData = userDoc.data();
-        const projectsRootFolderId = userData?.driveFolderIds?.projects;
+        const projectsRootFolderId = userData?.googleDrive?.folderIds?.projects;
 
         if (!projectsRootFolderId) {
-            throw new Error(`Kunde inte hitta ID för projektmappen ("01 Projekt") för användare ${userId}.`);
+            logger.error(`[DriveService] Kunde inte hitta projektmapp-ID för användare ${userId}`);
+            throw new Error(`Kunde inte hitta ID för projektmappen ("01 Projekt").`);
         }
         
         const _createFolderInternal = (name: string, parentId?: string) => createSingleFolderWithClient(drive, name, parentId);
 
-        const projectRootId = await _createFolderInternal(projectName, projectsRootFolderId);
-        console.log(`[DriveService] Projektmapp "${projectName}" skapad med ID: ${projectRootId}`);
+        const { id: projectRootId } = await _createFolderInternal(projectName, projectsRootFolderId);
+        logger.info(`[DriveService] Projektmapp "${projectName}" skapad med ID: ${projectRootId}`);
 
         const subFolderMappings = {
             images: "Bilder",
             documents: "Dokument",
             drawings: "Ritningar",
             protocols: "Protokoll",
-            economy: "Ekonomi", // Lade till ekonomi-mappen här
+            economy: "Ekonomi",
         };
 
         const subFolderIds: Record<string, string> = {};
         const creationPromises = Object.entries(subFolderMappings).map(async ([key, folderName]) => {
-            const folderId = await _createFolderInternal(folderName, projectRootId);
+            const { id: folderId } = await _createFolderInternal(folderName, projectRootId);
             subFolderIds[key] = folderId;
         });
 
         await Promise.all(creationPromises);
 
-        console.log(`[DriveService] Undermappar skapade för projektet "${projectName}"`);
+        logger.info(`[DriveService] Undermappar skapade för projektet "${projectName}"`);
         return { rootFolderId: projectRootId, subFolderIds };
 
     } catch (error) {
-        console.error(`[DriveService] Fel vid skapande av projektstruktur för "${projectName}":`, error);
+        logger.error({ message: `[DriveService] Fel vid skapande av projektstruktur för "${projectName}"`, error, userId });
         throw new Error("Mappstrukturen för projektet kunde inte skapas.");
     }
 }
-
-export { getDriveClient };
