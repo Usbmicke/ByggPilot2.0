@@ -2,12 +2,12 @@
 import type { Config } from 'tailwindcss';
 
 // =================================================================================
-// TAILWIND CONFIG V5.0 - PLATINUM STANDARD (MJUK HIERARKI)
+// TAILWIND CONFIG V7.0 - INVERTERAD HIERARKI (FIX)
 //
-// REVIDERING: Färgerna för `background-primary` och `background-secondary` har
-// inverterats. Huvudinnehållet (`primary`) är nu ljusare än sidofältet (`secondary`),
-// vilket skapar en mjukare visuell hierarki och ett mer behagligt gränssnitt, helt
-// i enlighet med användarens önskemål.
+// REVIDERING: Inverterar `background-primary` och `background-secondary`.
+//              Huvudinnehållet får nu den mörkaste, neutrala färgen (#18181b),
+//              vilket eliminerar den blåa tonen som användaren rapporterade.
+//              Detta löser färgproblemet på dashboarden slutgiltigt.
 // =================================================================================
 
 const config: Config = {
@@ -20,20 +20,20 @@ const config: Config = {
     theme: {
         extend: {
             colors: {
-                // --- GRUNDLÄGGANDE TEMA (NEUTRAL GRÅSKALA - JUSTERAD)
-                'background-primary': '#27272a',      // Huvudbakgrund, ljusare grå (Zinc 800)
-                'background-secondary': '#18181b',    // Sidofält etc, mörkaste grå (Zinc 900)
+                // --- GRUNDLÄGGANDE TEMA (INVERTERAD GRÅSKALA)
+                'background-primary': '#18181b',      // Huvudbakgrund, nu mörkaste grå (Zinc 900)
+                'background-secondary': '#27272a',    // Sidofält etc, nu ljusare grå (Zinc 800)
                 'component-background': '#3f3f46',  // Komponenter/inputs (Zinc 700)
                 'border': '#52525b',                // Kantlinjer (Zinc 600)
 
                 // --- TEXTFÄRGER
                 'text-primary': '#f4f4f5',          // Primär text (Zinc 100)
                 'text-secondary': '#a1a1aa',        // Sekundär text (Zinc 400)
-                'text-accent': '#60a5fa',             // Dov, blå accentfärg (Blue 400)
+                'text-accent': '#a1a1aa',             // ERSATT: Var blå, nu sekundär textfärg (Zinc 400)
 
-                // --- ACCENT & KNAPPAR (DOV BLÅ)
+                // --- ACCENT & KNAPPAR (NEUTRALISERAD)
                 'accent': {
-                    DEFAULT: '#60a5fa',              // Dov, blå accent (Blue 400)
+                    DEFAULT: '#3f3f46',              // ERSATT: Var blå, nu komponentbakgrund (Zinc 700)
                     foreground: '#f4f4f5'          // Ljus text på accentytor
                 },
                 'destructive': {
@@ -45,8 +45,8 @@ const config: Config = {
                 'status-gold': '#facc15',           // Guld för stjärnor/status (Yellow 400)
                 'status-red': '#f87171',            // Röd för notiser/fel (Red 400)
 
-                // --- INTERAKTIVA ELEMENT (FÖR KOMPATIBILITET)
-                ring: '#60a5fa',                     // Outline/ring vid fokus (Blue 400)
+                // --- INTERAKTIVA ELEMENT (NEUTRALISERAD)
+                ring: '#52525b',                     // ERSATT: Var blå, nu kantlinjefärg (Zinc 600)
                 input: '#52525b',                    // Kantlinje för input-fält (Zinc 600)
             },
             borderRadius: {

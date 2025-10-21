@@ -1,43 +1,27 @@
 
-import ChatWindow from '@/components/chat/ChatWindow';
-import { getChatMessages, getUserStatus } from '@/lib/data-access';
-import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/authOptions';
+import { getChatMessages } from '@/lib/data-access';
+import ChatPageClient from './page.client';
 
 // =================================================================================
-// SPECIFIK CHATT-SIDA (v1.0 - Guldstandard)
-// Denna serverkomponent hämtar historiken för en specifik chatt
-// och skickar den till den "dumma" ChatWindow-komponenten.
+// BEFINTLIG CHATT-SIDA (Serverkomponent) (v3.0 - Platinum Standard)
+//
+// Beskrivning: Denna serverkomponent ansvarar för att hämta den initiala
+// chatt-historiken för en specifik chatt på ett säkert sätt.
+// Den skickar sedan ner datan till klientkomponenten.
+//
+// Säkerhetsnotering: `getChatMessages` använder sessionen på serversidan
+// för att verifiera att användaren äger chatten. `chatId` från URL:en är säker
+// att använda här.
 // =================================================================================
 
 interface ChatPageProps {
-    params: {
-        chatId: string;
-    };
+  params: {
+    chatId: string;
+  };
 }
 
-export default async function SpecificChatPage({ params }: ChatPageProps) {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-        redirect('/api/auth/signin');
-    }
+export default async function ExistingChatPage({ params }: ChatPageProps) {
+  const initialMessages = await getChatMessages(params.chatId);
 
-    // Kolla om användaren har slutfört onboarding
-    const { onboardingComplete } = await getUserStatus(session.user.id);
-    if (!onboardingComplete) {
-        redirect('/onboarding');
-    }
-
-    // Hämta meddelandehistoriken för denna chatt från DAL
-    const initialMessages = await getChatMessages(session.user.id, params.chatId);
-
-    return (
-        <main className="h-screen bg-gray-900">
-            <ChatWindow 
-                initialMessages={initialMessages}
-                chatId={params.chatId}
-            />
-        </main>
-    );
+  return <ChatPageClient chatId={params.chatId} initialMessages={initialMessages} />;
 }

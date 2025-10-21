@@ -1,56 +1,19 @@
 
-'use client';
-
-import React from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { buttonVariants } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { MessageSquareText } from 'lucide-react';
+import { getUserChats } from '@/lib/data-access';
+import ChatHistoryClient from './ChatHistoryClient';
 
 // =================================================================================
-// CHAT HISTORY V2.0 - AKTIV LÄNK-STYLING
-// REVIDERING: Använder nu `usePathname` för att dynamiskt styla den aktiva
-// chatt-länken. Detta ger användaren tydlig visuell feedback om vilken
-// konversation som för närvarande visas.
+// CHAT HISTORY (Serverkomponent) (v1.0 - Platinum Standard)
+//
+// Beskrivning: Denna serverkomponent hämtar den fullständiga listan över
+// användarens chattar på ett säkert sätt. Datan skickas sedan ner till
+// en klientkomponent för rendering.
 // =================================================================================
 
-interface ChatHistoryProps {
-    history: Array<{ id: string; title: string }>;
+export default async function ChatHistory() {
+    // Hämta chattar på serversidan för snabb och säker dataladdning.
+    // Felhantering sker automatiskt i datalagret.
+    const chats = await getUserChats();
+
+    return <ChatHistoryClient chats={chats} />;
 }
-
-const ChatHistory = ({ history }: ChatHistoryProps) => {
-    const pathname = usePathname();
-
-    if (history.length === 0) {
-        return (
-            <div className="text-center text-sm text-muted-foreground mt-8">
-                <p>Ingen historik än.</p>
-                <p>Starta en ny chatt!</p>
-            </div>
-        );
-    }
-
-    return (
-        <nav className="space-y-1">
-            {history.map((chat) => {
-                const isActive = pathname === `/chat/${chat.id}`;
-                return (
-                    <Link
-                        key={chat.id}
-                        href={`/chat/${chat.id}`}
-                        className={cn(
-                            buttonVariants({ variant: isActive ? 'secondary' : 'ghost', size: 'sm' }),
-                            'w-full justify-start truncate'
-                        )}
-                    >
-                        <MessageSquareText className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span className="truncate">{chat.title}</span>
-                    </Link>
-                );
-            })}
-        </nav>
-    );
-};
-
-export default ChatHistory;

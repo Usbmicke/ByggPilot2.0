@@ -5,13 +5,42 @@ import * as dal from './data-access';
 import { ProjectStatus } from '@/types';
 
 // =================================================================================
-// VERKTYGS-BIBLIOTEK FÖR BYGGPILOT CO-PILOT (v2.1 - Guldstandard)
-// Denna fil definierar AI:ns handlingsförmåga.
-// Varje verktyg anropar Data Access Layer (DAL) och förlitar sig på DAL 
-// för all databasinteraktion och sessionsvalidering.
+// VERKTYGS-BIBLIOTEK FÖR BYGGPILOT CO-PILOT (v2.2 - Guldstandard)
+// v2.2 Uppdatering: Lade till `getProjectDetails` för att hämta specifik projektdata.
 // =================================================================================
 
 export const tools = {
+  getProjectDetails: tool({
+    description: 'Hämtar detaljerad information om ett specifikt projekt. Använd detta när användaren frågar om ett visst projekt med dess ID.',
+    parameters: z.object({
+      projectId: z.string().describe('ID för projektet som ska hämtas.'),
+    }),
+    execute: async ({ projectId }) => {
+      // DAL hanterar sessionsvalidering, databashämtning och felhantering.
+      const project = await dal.getProjectForUser(projectId);
+
+      if (!project) {
+        return {
+          success: false,
+          message: `Kunde inte hitta något projekt med ID ${projectId}.`,
+        };
+      }
+
+      return {
+        success: true,
+        message: `Hämtade detaljer för projektet "${project.name}".`,
+        project: {
+            id: project.id,
+            name: project.name,
+            status: project.status,
+            customerName: project.customerName,
+            totalInvoiced: project.totalInvoiced || 0,
+            createdAt: project.createdAt,
+        }
+      };
+    },
+  }),
+
   createProject: tool({
     description: 'Skapar ett nytt projekt. Fråga alltid efter kund och namn. Status sätts automatiskt till "Ej påbörjat".',
     parameters: z.object({
@@ -20,12 +49,11 @@ export const tools = {
       customerName: z.string().describe('Namnet på kunden som projektet tillhör.'),
     }),
     execute: async ({ name, customerId, customerName }) => {
-        // DAL hanterar sessionsvalidering, databasskrivning och felhantering.
         const newProject = await dal.createProject({ 
             name,
             customerId,
             customerName,
-            status: ProjectStatus.NotStarted, // Korrekt status enligt Guldstandard
+            status: ProjectStatus.NotStarted,
         });
 
         return { 
@@ -40,7 +68,6 @@ export const tools = {
       description: 'Hämtar en lista på alla befintliga kunder i systemet. Använd detta för att hjälpa användaren att välja en kund när ett nytt projekt ska skapas.',
       parameters: z.object({}),
       execute: async () => {
-          // DAL hanterar sessionsvalidering.
           const customers = await dal.getCustomersForUser(); 
           if (customers.length === 0) {
               return {

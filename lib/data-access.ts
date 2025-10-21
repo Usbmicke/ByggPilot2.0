@@ -7,7 +7,8 @@ import { Project, Invoice, Ata, Document, Chat, Message, Customer, Task, TimeEnt
 import { v4 as uuidv4 } from 'uuid';
 
 // =================================================================================
-// DATA ACCESS LAYER (DAL) - GULDSTANDARD V4.7
+// DATA ACCESS LAYER (DAL) - GULDSTANDARD V4.8
+// v4.8 Update: Added getUserChats to retrieve all chats for a user.
 // =================================================================================
 
 // --- SESSION & SECURITY ---
@@ -207,6 +208,29 @@ export async function createTask(taskData: { text: string; projectId: string; })
 
 
 // --- CHAT FUNCTIONS ---
+
+export async function getUserChats(): Promise<Chat[]> {
+    const traceId = uuidv4();
+    const userId = await verifyUserSession(traceId);
+
+    try {
+        const chatsSnapshot = await adminDb.collection('users').doc(userId).collection('chats')
+            .orderBy('createdAt', 'desc')
+            .get();
+
+        if (chatsSnapshot.empty) {
+            return [];
+        }
+
+        const chats = chatsSnapshot.docs.map(doc => doc.data() as Chat);
+        logger.info({ traceId, userId, chatCount: chats.length }, "DAL: User chats retrieved successfully.");
+        return JSON.parse(JSON.stringify(chats));
+
+    } catch (error) {
+        logger.error({ traceId, userId, error }, "DAL: Failed to get user chats.");
+        throw new Error("Could not fetch user chats.");
+    }
+}
 
 export async function createChat(firstUserMessage: any): Promise<string> {
     const traceId = uuidv4();
@@ -546,4 +570,22 @@ export async function archiveCustomer(customerId: string): Promise<void> {
         logger.error({ traceId, userId, customerId, error }, "DAL: Failed to archive customer.");
         throw new Error("Could not archive customer.");
     }
+}
+
+// --- USER STATUS ---
+export async function getUserStatus() {
+    const traceId = uuidv4();
+    const userId = await verifyUserSession(traceId);
+
+    const userDocRef = adminDb.collection('users').doc(userId);
+    const userDoc = await userDocRef.get();
+
+    if (!userDoc.exists) {
+        throw new Error('User not found in Firestore.');
+    }
+
+    const userData = userDoc.data();
+    return {
+        onboardingComplete: userData?.onboardingComplete || false,
+    };
 }

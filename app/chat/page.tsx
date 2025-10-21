@@ -1,33 +1,14 @@
 
-import ChatInterface from '@/components/chat/ChatInterface';
-import { getUserStatus } from '@/lib/data-access';
-import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/authOptions';
+import ChatPageClient from './page.client';
 
 // =================================================================================
-// NY CHATT-SIDA (v2.0 - Moderniserad)
-// Denna sida renderar det nya ChatInterface.
-// Den förlitar sig på den uppdaterade useChatHandler-hooken som använder AI SDK v3.
+// NY CHATT-SIDA (Serverkomponent) (v3.0 - Platinum Standard)
+//
+// Beskrivning: Denna serverkomponent är extremt tunn. Dess enda ansvar
+// är att rendera klientkomponenten som innehåller all interaktiv logik.
+// All sessions- och datalogik hanteras nu i layouten och klient-hooken.
 // =================================================================================
 
-export default async function NewChatPage() {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-        redirect('/api/auth/signin');
-    }
-
-    // Kolla om användaren har slutfört onboarding
-    // Notera: Denna logik kan flyttas till middleware för en renare lösning
-    const { onboardingComplete } = await getUserStatus(session.user.id);
-    if (!onboardingComplete) {
-        redirect('/onboarding');
-    }
-
-    return (
-        <main className="h-screen bg-background-primary">
-            {/* ChatInterface kräver inte längre initiala props */}
-            <ChatInterface />
-        </main>
-    );
+export default function NewChatPage() {
+  return <ChatPageClient />;
 }

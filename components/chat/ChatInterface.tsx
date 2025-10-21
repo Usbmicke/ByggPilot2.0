@@ -1,47 +1,44 @@
 
 'use client';
 
-import MessageFeed from '@/components/chat/MessageFeed';
-import ChatInputWrapper from '@/components/chat/ChatInputWrapper';
-import { useChatHandler } from '@/hooks/use-chat-handler';
+import { useChatLogic } from '@/hooks/use-chat';
+import ChatMessages from './ChatMessages';
+import ChatInput from './ChatInput';
 import { CoreMessage } from 'ai';
 
 // =================================================================================
-// CHATT-FÖNSTER (v2.1 - Förbättrad Layout)
-// Denna komponent är nu en "dum" presentationskomponent.
-// Den använder den rena useChatHandler-hooken för all sin logik.
+// CHAT-GRÄNSSNITT (v1.3 - Prop-förmedling)
+//
+// Beskrivning: Tar nu emot `onNewChat` och skickar den vidare till `useChatLogic`.
 // =================================================================================
 
 interface ChatInterfaceProps {
-    initialMessages: CoreMessage[];
-    chatId: string | null;
+  chatId: string | null;
+  initialMessages?: CoreMessage[];
+  onNewChat: (chatId: string) => void; // TA EMOT FUNKTIONEN
 }
 
-const ChatInterface = ({ initialMessages, chatId }: ChatInterfaceProps) => {
-    const {
-        messages,
-        input,
-        handleInputChange,
-        handleSubmit,
-        isLoading,
-    } = useChatHandler(initialMessages, chatId);
+export default function ChatInterface({ chatId, initialMessages, onNewChat }: ChatInterfaceProps) {
+  const { 
+    messages, 
+    input, 
+    handleInputChange, 
+    handleSubmit, 
+    isLoading 
+  } = useChatLogic(chatId, { 
+      initialMessages, 
+      onNewChat // SKICKA VIDARE TILL HOOKEN
+  });
 
-    return (
-        <div className="relative flex flex-col h-full bg-card text-card-foreground rounded-lg overflow-hidden">
-            {/* MessageFeed tar nu upp allt tillgängligt utrymme och är scrollbart */}
-            <div className="flex-1 overflow-y-auto">
-                <MessageFeed messages={messages} isLoading={isLoading} />
-            </div>
-            
-            {/* Input-fältet är alltid förankrat i botten */}
-            <ChatInputWrapper
-                input={input}
-                handleInputChange={handleInputChange}
-                handleSubmit={handleSubmit}
-                isLoading={isLoading}
-            />
-        </div>
-    );
-};
-
-export default ChatInterface;
+  return (
+    <div className="flex flex-col h-full bg-gray-800">
+      <ChatMessages messages={messages} isLoading={isLoading} />
+      <ChatInput 
+        input={input} 
+        handleInputChange={handleInputChange} 
+        handleSubmit={handleSubmit} 
+        isLoading={isLoading} 
+      />
+    </div>
+  );
+}

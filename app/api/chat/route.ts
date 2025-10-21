@@ -1,117 +1,75 @@
 
-import { NextResponse } from "next/server";
-import { CoreMessage, streamText, tool, ToolCallPart, experimental_StreamData, StreamingTextResponse } from "ai";
-import { google } from "@ai-sdk/google";
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/authOptions';
-import * as dal from '@/lib/data-access';
+import { CoreMessage, streamText } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { auth } from '@/auth';
+import { getChatMessages, addMessageToChat, createChat } from '@/lib/data-access';
+import { masterPrompt } from '@/lib/prompts/master-prompt';
 import { tools } from '@/lib/tools';
-import logger from "@/lib/logger";
-import { z } from "zod";
-import { v4 as uuidv4 } from 'uuid';
-import { promises as fs } from 'fs';
-import path from 'path';
+import { StreamingTextResponse } from 'ai';
 
-const ChatRequestSchema = z.object({
-    chatId: z.string().nullable(),
-    messages: z.array(z.any()),
+// =================================================================================
+// CHAT-ORKESTRERARE (v1.1 - Korrekt Header)
+//
+// Beskrivning: Korrigerar API-svaret till att använda den AI SDK-kompatibla
+//              `X-Vercel-AI-Data`-headern. Detta låser upp frontend och tillåter
+//              konversationen att fortsätta.
+// =================================================================================
+
+export const runtime = 'edge';
+
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
-/**
- * Laddar dynamiskt Guldstandard-systemprompten från filsystemet.
- * Detta säkerställer att AI:n alltid har de senaste instruktionerna.
- */
-async function getSystemPrompt(): Promise<CoreMessage> {
-    const promptPath = path.join(process.cwd(), 'lib', 'prompts', 'v13-tools.txt');
-    try {
-        const promptContent = await fs.readFile(promptPath, 'utf-8');
-        logger.info("System prompt v13-tools.txt loaded successfully.");
-        return {
-            role: 'system',
-            content: promptContent,
-        };
-    } catch (error) {
-        logger.error({ error }, "CRITICAL: Failed to read system prompt file v13-tools.txt. Falling back to default.");
-        return {
-            role: 'system',
-            content: 'Du är ByggPilot Co-Pilot, en expertassistent. Varning: Huvudsystemprompten kunde inte laddas, funktionaliteten är begränsad.'
-        };
-    }
-}
-
 export async function POST(req: Request) {
-    const traceId = uuidv4();
-    const requestLogger = logger.child({ traceId });
-    const data = new experimental_StreamData();
-
-    try {
-        // Sessionen valideras nu helt inom DAL, men vi gör en initial kontroll här.
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
-        const rawBody = await req.json();
-        const validationResult = ChatRequestSchema.safeParse(rawBody);
-        if (!validationResult.success) {
-            return NextResponse.json({ error: validationResult.error.flatten() }, { status: 400 });
-        }
-        let { chatId, messages } = validationResult.data;
-        let isNewChat = !chatId;
-
-        if (isNewChat) {
-            const firstUserMessage = messages.find(m => m.role === 'user');
-            if (firstUserMessage) {
-                // Anropar den nya, säkra DAL-funktionen utan userId
-                chatId = await dal.createChat(firstUserMessage);
-                requestLogger.info({ newChatId: chatId }, "Ny chatt skapad i DAL.");
-                data.append({ chatId: chatId }); // Skicka nya chatId till klienten
-            }
-        } else {
-            const lastMessage = messages[messages.length - 1];
-            if (lastMessage && lastMessage.role === 'user') {
-                // Anropar den nya, säkra DAL-funktionen utan userId
-                await dal.addMessageToChat(chatId!, lastMessage);
-            }
-        }
-
-        const systemPrompt = await getSystemPrompt();
-        // Anropar den nya, säkra DAL-funktionen utan userId
-        const history = chatId ? await dal.getChatMessages(chatId) : messages;
-        const allMessages: CoreMessage[] = [systemPrompt, ...history];
-
-        const result = await streamText({
-            model: google("models/gemini-1.5-flash-latest"),
-            messages: allMessages,
-            tools,
-            onFinish: async ({ text, toolCalls, toolResults }) => {
-                 const assistantResponse = {
-                    role: 'assistant' as const,
-                    content: text || ''
-                };
-                 if (toolCalls && toolCalls.length > 0) {
-                    (assistantResponse.content as any) = toolCalls;
-                }
-                
-                requestLogger.info({ chatId }, "Stream avslutad, sparar assistentens svar.");
-                // Anropar den nya, säkra DAL-funktionen utan userId
-                if (chatId) {
-                    await dal.addMessageToChat(chatId, assistantResponse);
-                }
-                data.close();
-            },
-        });
-        
-        return new StreamingTextResponse(result.toAIStream(), {}, data);
-
-    } catch (error: any) {
-        requestLogger.error({ error: error.message, stack: error.stack }, "Kritiskt fel i chatt-API:et.");
-        data.close();
-        // Om felet kommer från DAL:s session-verifiering, sätt rätt status.
-        const status = error.message === 'Unauthorized' ? 401 : 500;
-        return NextResponse.json(
-            { error: "Ett internt serverfel uppstod." },
-            { status }
-        );
+  try {
+    const session = await auth();
+    if (!session || !session.user || !session.user.id) {
+      return new Response('Unauthorized', { status: 401 });
     }
+    const userId = session.user.id;
+
+    const { messages, chatId: existingChatId } = await req.json();
+    const lastUserMessage = messages[messages.length - 1]?.content;
+
+    if (!lastUserMessage) {
+        return new Response('Bad Request: No user message found.', { status: 400 });
+    }
+
+    const history = existingChatId ? await getChatMessages(existingChatId) : [];
+    const historyAsCoreMessages: CoreMessage[] = history.map(msg => ({
+      role: msg.role as 'user' | 'assistant',
+      content: msg.content,
+    }));
+
+    const chatId = existingChatId ?? await createChat(userId, lastUserMessage);
+    
+    await addMessageToChat(chatId, { role: 'user', content: lastUserMessage });
+
+    const result = await streamText({
+      model: openai.chat('gpt-4-turbo'),
+      system: masterPrompt,
+      messages: [...historyAsCoreMessages, ...messages],
+      tools: tools,
+    });
+
+    const stream = result.toAIStream({
+      async onFinal(completion) {
+        await addMessageToChat(chatId, { role: 'assistant', content: completion });
+      },
+    });
+
+    // KORREKT IMPLEMENTATION: Skicka med chatId i rätt header och format.
+    const customData = { chatId: chatId };
+    return new StreamingTextResponse(stream, {
+        headers: {
+            'X-Vercel-AI-Data': JSON.stringify(customData),
+        }
+    });
+
+  } catch (error) {
+    console.error('[Chat API Error]', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return new Response(`Error: ${errorMessage}`, { status: 500 });
+  }
 }
