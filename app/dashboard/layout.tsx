@@ -13,12 +13,8 @@ export default function DashboardLayout({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // All session-based redirection logic has been removed from this component.
-  // The middleware (`middleware.ts`) is now the single source of truth for routing,
-  // ensuring this layout only renders for authenticated and onboarded users.
-
   return (
-    <div className="min-h-screen bg-background text-text-primary">
+    <div className="min-h-screen bg-background-primary text-text-primary">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <div className="md:pl-64 flex flex-col flex-1">
