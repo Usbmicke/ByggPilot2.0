@@ -1,14 +1,14 @@
 
-import ChatWindow from '@/components/chat/ChatWindow';
+import ChatInterface from '@/components/chat/ChatInterface';
 import { getUserStatus } from '@/lib/data-access';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 
 // =================================================================================
-// NY CHATT-SIDA (v1.0 - Guldstandard)
-// Denna sida renderar ett tomt chatt-fönster.
-// useChatHandler kommer att skapa en ny chatt-session vid första meddelandet.
+// NY CHATT-SIDA (v2.0 - Moderniserad)
+// Denna sida renderar det nya ChatInterface.
+// Den förlitar sig på den uppdaterade useChatHandler-hooken som använder AI SDK v3.
 // =================================================================================
 
 export default async function NewChatPage() {
@@ -18,17 +18,16 @@ export default async function NewChatPage() {
     }
 
     // Kolla om användaren har slutfört onboarding
+    // Notera: Denna logik kan flyttas till middleware för en renare lösning
     const { onboardingComplete } = await getUserStatus(session.user.id);
     if (!onboardingComplete) {
         redirect('/onboarding');
     }
 
     return (
-        <main className="h-screen bg-gray-900">
-            <ChatWindow 
-                initialMessages={[]}
-                chatId={null}
-            />
+        <main className="h-screen bg-background-primary">
+            {/* ChatInterface kräver inte längre initiala props */}
+            <ChatInterface />
         </main>
     );
 }
