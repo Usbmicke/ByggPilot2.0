@@ -1,25 +1,27 @@
 
-import { PrismaClient } from '@prisma/client';
+import admin from 'firebase-admin';
+import { env } from '@/config/env';
 
 // =================================================================================
-// PRISMA KLIENT (v1.0 - Återskapad)
+// DATABAS-KÄRNA V2.0 (FIREBASE)
 //
-// Denna fil instansierar Prisma-klienten, som är vår primära databasanslutning.
-// Den har återskapats för att lösa ett kritiskt "Module not found"-fel.
-// Caching av klienten i en global variabel förhindrar att nya anslutningar
-// skapas vid varje hot-reload i utvecklingsmiljön.
+// ARKITEKTUR: Detta är den nya, centrala punkten för all databasinteraktion.
+// Den gamla Prisma-klienten har tagits bort och ersatts med Firebase Admin SDK.
+//
+// LÖSNING: Vi säkerställer att vi bara initialiserar en instans av appen
+// (singleton pattern) för att undvika fel och optimera prestanda. Vi exporterar
+// sedan en referens till Firestore-databasen (`db`) och själva admin-objektet
+// för andra Firebase-tjänster (t.ex. Auth, Storage).
 // =================================================================================
 
-declare global {
-  // eslint-disable-next-line no-var
-  var prisma: PrismaClient | undefined;
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(env.FIREBASE_SERVICE_ACCOUNT_JSON),
+  });
 }
 
-export const db = globalThis.prisma || new PrismaClient({
-  // Logga databasfrågor om LOG_LEVEL är satt till 'debug'
-  log: process.env.LOG_LEVEL === 'debug' ? ['query', 'info', 'warn', 'error'] : ['warn', 'error'],
-});
+const db = admin.firestore();
+const adminAuth = admin.auth();
 
-if (process.env.NODE_ENV !== 'production') {
-  globalThis.prisma = db;
-}
+export { db, admin, adminAuth };
+

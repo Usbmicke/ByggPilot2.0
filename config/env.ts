@@ -1,21 +1,12 @@
 
 import { z } from 'zod';
 
-// =================================================================================
-// MILJÖVARIABEL-VALIDERING V7.0 (REALISTISKT SCHEMA)
-// BESKRIVNING: Detta är den slutgiltiga, korrekta versionen. Den tidigare, 
-// överdrivet strikta schemat för servicekontot har ersatts med ett realistiskt 
-// schema som BARA validerar de tre fält som Firebase Admin SDK faktiskt kräver.
-// Detta löser den grundläggande kraschen vid serverstart.
-// =================================================================================
-
-// REALISTISKT SCHEMA: Validerar endast de absolut nödvändiga fälten.
 const serviceAccountJsonSchema = z.object({
   type: z.literal('service_account'),
   project_id: z.string().min(1, 'project_id saknas i JSON.'),
   private_key: z.string().min(1, 'private_key saknas i JSON.'),
   client_email: z.string().email('client_email är ogiltig i JSON.'),
-}).passthrough(); // VIKTIGT: Ignorerar alla andra fält som kan finnas i JSON-objektet.
+}).passthrough();
 
 const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().min(1, 'GOOGLE_CLIENT_ID får inte vara tom.'),

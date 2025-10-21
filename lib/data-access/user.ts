@@ -2,68 +2,74 @@
 import { db } from '@/lib/db';
 import type { User as NextAuthUser } from 'next-auth';
 import { logger } from '@/lib/logger';
+import { User } from '@/models/user';
 
-// =================================================================================
-// DATA ACCESS: USER
-//
-// Funktioner för att interagera med User-modellen i databasen.
-// Denna fil är en del av Data Access Layer (DAL) och ska vara den enda
-// platsen där User-tabellen direkt anropas.
-// =================================================================================
+const usersCollection = db.collection('users');
 
 /**
- * Hittar en befintlig användare eller skapar en ny om den inte finns.
- * Används primärt vid inloggning.
- * @param {NextAuthUser} user - Användarobjektet från NextAuth.
- * @returns {Promise<void>} Ett löfte som resolverar när operationen är klar.
- * @throws Kastar ett fel om databasoperationen misslyckas.
+ * Hittar en befintlig användare eller skapar en ny i Firestore.
+ * VIKTIGT: Returnerar nu den fullständiga användarprofilen för att
+ * undvika race conditions i NextAuth-callbacks.
  */
-export const findOrCreateUser = async (user: NextAuthUser): Promise<void> => {
+export const findOrCreateUser = async (user: NextAuthUser): Promise<User> => {
     if (!user || !user.id || !user.email) {
         logger.error({ message: '[DAL_USER] Ogiltigt användarobjekt vid findOrCreateUser.', user });
         throw new Error('Ogiltigt användarobjekt för findOrCreateUser.');
     }
 
     try {
-        await db.user.upsert({
-            where: { id: user.id },
-            update: {
+        const userRef = usersCollection.doc(user.id);
+        const userSnapshot = await userRef.get();
+
+        if (userSnapshot.exists) {
+            const existingUser = userSnapshot.data() as User;
+            logger.info(`[DAL_USER] Användare hittad: ${user.id}`);
+            // Uppdatera med senaste info från Google i bakgrunden (behöver inte vänta på detta)
+            userRef.update({
                 name: user.name,
                 email: user.email,
                 image: user.image,
-            },
-            create: {
+            });
+            return existingUser;
+
+        } else {
+            const newUser: User = {
                 id: user.id,
-                email: user.email,
+                email: user.email!,
                 name: user.name,
                 image: user.image,
-                onboardingComplete: false, // Standardvärde för nya användare
-            },
-        });
-         logger.info(`[DAL_USER] Upsert lyckades för användare: ${user.id}`);
+                onboardingComplete: false,
+                createdAt: new Date(),
+            };
+            await userRef.set(newUser);
+            logger.info(`[DAL_USER] Ny användare skapad: ${user.id}`);
+            return newUser;
+        }
     } catch (error) {
-        logger.error({ message: `[DAL_USER] Databasfel vid upsert för användare: ${user.id}`, error, user });
-        throw error; // Kasta vidare felet för att hanteras högre upp
+        logger.error({ message: `[DAL_USER] Databasfel vid findOrCreateUser för ${user.id}`, error });
+        throw error;
     }
 };
 
 /**
- * Hämtar en specifik användare baserat på deras ID.
- * @param {string} id - Användarens unika ID.
- * @returns {Promise<any | null>} Användarobjektet eller null om det inte hittas.
- * @throws Kastar ett fel om databasoperationen misslyckas.
+ * Hämtar en specifik användare från Firestore baserat på ID.
  */
-export const getUserById = async (id: string): Promise<any | null> => {
+export const getUserById = async (id: string): Promise<User | null> => {
     if (!id) {
         logger.warn('[DAL_USER] försök att hämta användare med tomt ID.');
         return null;
     }
 
     try {
-        const user = await db.user.findUnique({
-            where: { id },
-        });
-        return user;
+        const userRef = usersCollection.doc(id);
+        const doc = await userRef.get();
+
+        if (!doc.exists) {
+            logger.warn(`[DAL_USER] Användare med id ${id} hittades inte i Firestore.`);
+            return null;
+        }
+
+        return doc.data() as User;
     } catch (error) {
         logger.error({ message: `[DAL_USER] Databasfel vid hämtning av användare: ${id}`, error });
         throw error;

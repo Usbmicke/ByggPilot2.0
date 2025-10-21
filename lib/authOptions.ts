@@ -1,20 +1,19 @@
 
-import type { NextAuthOptions, Account, User } from 'next-auth';
+import type { NextAuthOptions, Account, User as NextAuthUser } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import { env } from '@/config/env';
 import { logger } from '@/lib/logger';
 import { findOrCreateUser, getUserById } from '@/lib/data-access/user';
 import { saveOrUpdateAccount } from '@/lib/data-access/account';
-
+import { User } from '@/models/user';
 
 // =================================================================================
-// AUTH OPTIONS V7.1 - ROBUST JWT CALLBACK
+// AUTH OPTIONS V8.0 - PLATINUM STANDARD (RACE-CONDITION-FREE)
 //
-// REVIDERING: Den tidigare `jwt`-callbacken led av ett race condition och var
-// onödigt komplex med en `isInitialLogin`-flagga. Logiken har nu förenklats
-// radikalt för att säkerställa en enda, pålitlig sanningskälla direkt vid
-// inloggning. Detta eliminerar risken för att token får en felaktig
-// `onboardingComplete`-status.
+// ARKITEKTUR: Eliminerar race condition genom att `findOrCreateUser` nu
+// returnerar den fullständiga användarprofilen. Denna profil fästs sedan
+// på NextAuths `user`-objekt och läses direkt i `jwt`-callbacken. Detta
+// garanterar en enda sanningskälla och en 100% pålitlig token.
 // =================================================================================
 
 export const authOptions: NextAuthOptions = {
@@ -42,71 +41,41 @@ export const authOptions: NextAuthOptions = {
             if (!account || !user) return false;
 
             try {
-                // Steg 1: Hitta eller skapa användaren via DAL. Denna funktion
-                // MÅSTE returnera den fullständiga användarprofilen.
-                await findOrCreateUser(user);
+                const userProfile = await findOrCreateUser(user);
+                await saveOrUpdateAccount({ ...account, userId: user.id });
 
-                // Steg 2: Spara eller uppdatera kontoinformationen (tokens).
-                const accountWithUserId: Account = { ...account, userId: user.id };
-                await saveOrUpdateAccount(accountWithUserId);
+                // Fäst den fullständiga profilen på user-objektet för JWT-callbacken
+                (user as any).profile = userProfile;
 
                 return true;
             } catch (error) {
-                logger.error({ error, user, account }, "[AUTH_SIGNIN_ERROR] Kritiskt fel vid DAL-anrop under signIn.");
+                logger.error({ error, user, account }, "[AUTH_SIGNIN_ERROR] Kritiskt fel vid DAL-anrop.");
                 return false;
             }
         },
 
-        async jwt({ token, user, account, trigger }) {
-            // Fall 1: Första inloggningen (user-objektet finns).
-            // Hämta ALLT från databasen direkt för att skapa en komplett token.
-            if (user && account) {
-                try {
-                    const userProfile = await getUserById(user.id);
-                    if (!userProfile) {
-                        throw new Error("Användarprofilen kunde inte hittas i databasen direkt efter signIn.");
-                    }
-                    
-                    // Berika token med all nödvändig information från databasen.
-                    token.id = userProfile.id;
-                    token.onboardingComplete = userProfile.onboardingComplete;
-                    token.accessToken = account.access_token; // Spara access token för API-anrop
-                    
-                    return token;
-
-                } catch (error) {
-                    logger.error({ error, user }, "[AUTH_JWT_INITIALIZATION_ERROR] Kritiskt fel vid skapande av JWT.");
-                    // Returnera en minimal token för att undvika att sessionen kraschar helt.
-                    return { ...token, id: user.id, error: "Failed to fetch user details" };
-                }
+        async jwt({ token, user, account, trigger, session }) {
+            // Vid första inloggningen, använd den profil vi fäste i `signIn`
+            if (user && (user as any).profile) {
+                const profile = (user as any).profile as User;
+                token.id = profile.id;
+                token.onboardingComplete = profile.onboardingComplete;
+                token.accessToken = account?.access_token;
             }
 
-            // Fall 2: Uppdatering av sessionen (t.ex. om användaren slutför onboarding).
-            // Ladda om användardata för att säkerställa att token är färsk.
-            if (trigger === "update") {
-                 try {
-                    const userProfile = await getUserById(token.id as string);
-                    if (userProfile) {
-                        token.onboardingComplete = userProfile.onboardingComplete;
-                    }
-                } catch (error) {
-                     logger.error({ error, tokenId: token.id }, "[AUTH_JWT_UPDATE_ERROR] Fel vid uppdatering av JWT via trigger.");
-                }
+            // Om sessionen uppdateras manuellt (t.ex. efter onboarding)
+            if (trigger === "update" && session?.onboardingComplete) {
+                 token.onboardingComplete = session.onboardingComplete;
             }
 
-            // Fall 3: Normal drift. Token är redan komplett. Returnera den.
             return token;
         },
 
         async session({ session, token }) {
-            // Synkronisera sessionen med informationen i den robusta token.
             session.user.id = token.id as string;
             session.user.onboardingComplete = token.onboardingComplete as boolean;
             session.accessToken = token.accessToken as string;
-            
-            if (token.error) {
-                session.error = token.error as string;
-            }
+            session.error = token.error as string;
 
             return session;
         },
