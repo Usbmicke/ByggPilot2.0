@@ -4,7 +4,7 @@
 import React, { useState, useTransition } from 'react';
 import { BuildingOffice2Icon, UserIcon, ArrowLeftIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { createCustomer } from '@/app/actions/customerActions';
-import { useModal } from '@/app/context/ModalContext';
+import { useModal } from '@/app/contexts/ModalContext';
 import { IdentityLookupStep } from './steps/IdentityLookupStep';
 import { Customer } from '@/app/types';
 

@@ -1,193 +1,22 @@
 
-import { Message } from 'ai';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { getMemory, saveToMemory } from '@/app/services/memoryService';
-import { createProject, getProjects } from '@/app/actions/projectActions';
-import { createCustomer, getCustomers } from '@/app/actions/customerActions';
-import { createTimeEntry, getTimeEntries } from '@/app/actions/timeEntryActions'; // GULDSTANDARD: Importera de nya tid-åtgärderna
+import { NextRequest, NextResponse } from 'next/server';
 import { createProjectFolderStructure } from '@/app/actions/driveActions';
 
-const tools = {
-  saveToMemory: {
-    name: "saveToMemory",
-    description: "Sparar en specifik bit text till det långsiktiga minnet.",
-    parameters: { 
-      type: "OBJECT",
-      properties: {
-        textToSave: { type: "STRING", description: "Texten som ska sparas i minnet." }
-      },
-      required: ['textToSave']
-    }
-  },
-  createProjectFolderStructure: {
-    name: "createProjectFolderStructure",
-    description: "Skapar den initiala mappstrukturen i användarens Google Drive.",
-    parameters: { type: "OBJECT", properties: {}, required: [] }
-  },
-  getProjects: {
-    name: "getProjects",
-    description: "Hämtar en lista över alla projekt för den aktuella användaren.",
-    parameters: { type: "OBJECT", properties: {}, required: [] }
-  },
-  createProject: {
-    name: "createProject",
-    description: "Skapar ett nytt projekt.",
-    parameters: { 
-      type: "OBJECT",
-      properties: {
-        name: { type: "STRING", description: "Projektets namn" },
-        customerId: { type: "STRING", description: "ID för kunden som projektet tillhör" },
-        status: { type: "STRING", enum: ['active', 'completed', 'paused'], description: "Projektets status" }
-      },
-      required: ['name', 'customerId']
-    }
-  },
-  createCustomer: {
-    name: "createCustomer",
-    description: "Skapar en ny kund.",
-    parameters: {
-      type: "OBJECT",
-      properties: {
-        name: { type: "STRING", description: "Fullständigt namn på kunden." },
-        email: { type: "STRING", description: "Kundens e-postadress." },
-        phone: { type: "STRING", description: "Kundens telefonnummer." },
-        address: { type: "STRING", description: "Kundens postadress." },
-        orgNumber: { type: "STRING", description: "Organisationsnummer (om det är ett företag)." },
-      },
-      required: ['name']
-    }
-  },
-  getCustomers: {
-    name: "getCustomers",
-    description: "Hämtar en lista över alla kunder för den aktuella användaren.",
-    parameters: { type: "OBJECT", properties: {}, required: [] }
-  },
-  // GULDSTANDARD: Lägg till de nya verktygen för tidrapportering
-  createTimeEntry: {
-    name: "createTimeEntry",
-    description: "Skapar en ny tidrapport för ett specifikt projekt.",
-    parameters: {
-      type: "OBJECT",
-      properties: {
-        projectId: { type: "STRING", description: "ID för projektet tidrapporten tillhör." },
-        date: { type: "STRING", description: "Datum för arbetet (YYYY-MM-DD)." },
-        hours: { type: "NUMBER", description: "Antal arbetade timmar." },
-        description: { type: "STRING", description: "En kort beskrivning av arbetet som utförts." },
-      },
-      required: ['projectId', 'date', 'hours', 'description']
-    }
-  },
-  getTimeEntries: {
-    name: "getTimeEntries",
-    description: "Hämtar alla tidrapporter för ett specifikt projekt.",
-    parameters: {
-      type: "OBJECT",
-      properties: {
-        projectId: { type: "STRING", description: "ID för projektet vars tidrapporter ska hämtas." }
-      },
-      required: ['projectId']
-    }
-  }
-};
+export async function POST(req: NextRequest) {
+    const { action } = await req.json();
 
-export async function POST(req: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user || !session.user.uid) {
-      return new Response(JSON.stringify({ error: "Autentisering krävs. Sessionen är ogiltig." }), { status: 401, headers: { 'Content-Type': 'application/json' } });
-    }
-    
-    const { messages } = await req.json();
-    const latestUserMessage = messages[messages.length - 1]?.content || '';
-    const memoryContent = await getMemory();
-    
-    const systemPrompt = `Du är ByggPilot, en AI-assistent för ett byggföretag. Svara alltid på svenska.
-Följande är ditt permanenta minne, sparat från tidigare konversationer i en fil. Använd det som din primära kunskapskälla för att ge personliga och kontextuella svar.
-
---- PERMANENT MINNE ---
-${memoryContent}
---- SLUT PÅ MINNE ---
-
-Använd de tillgängliga verktygen för att svara på användarens begäran.`;
-
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-1.5-flash-latest', 
-      systemInstruction: systemPrompt,
-      tools: [{ functionDeclarations: Object.values(tools) }]
-    });
-
-    const chat = model.startChat({ history: messages.map((msg: Message) => ({ role: msg.role === 'assistant' ? 'model' : msg.role, parts: [{ text: msg.content }] })) });
-    const result = await chat.sendMessageStream(latestUserMessage);
-    
-    const stream = new ReadableStream({
-      async pull(controller) {
-        for await (const chunk of result.stream) {
-          if (chunk.functionCalls) {
-            const calls = chunk.functionCalls;
-            const toolResponses = [];
-
-            for (const call of calls) {
-              const { name, args } = call;
-              let responsePayload: any;
-
-              try {
-                if (name === 'saveToMemory') {
-                  responsePayload = await saveToMemory(args.textToSave as string);
-                } else if (name === 'createProjectFolderStructure') {
-                  responsePayload = await createProjectFolderStructure();
-                } else if (name === 'createProject') {
-                  responsePayload = await createProject(args as any);
-                } else if (name === 'getProjects') {
-                  responsePayload = await getProjects();
-                } else if (name === 'createCustomer') {
-                  responsePayload = await createCustomer(args as any);
-                } else if (name === 'getCustomers') {
-                  responsePayload = await getCustomers();
-                // GULDSTANDARD: Lägg till anropen för de nya tid-verktygen
-                } else if (name === 'createTimeEntry') {
-                  responsePayload = await createTimeEntry(args as any);
-                } else if (name === 'getTimeEntries') {
-                  responsePayload = await getTimeEntries(args.projectId as string);
-                } else {
-                  responsePayload = { success: false, error: `Verktyget '${name}' hittades inte.` };
-                }
-              } catch (e: any) {
-                responsePayload = { success: false, error: e.message };
-              }
-              
-              toolResponses.push({ name, response: responsePayload });
+    if (action === 'createProjectFolderStructure') {
+        try {
+            const result = await createProjectFolderStructure();
+            if (result.success) {
+                return NextResponse.json({ message: "Mappstruktur har skapats framgångsrikt i Google Drive." });
+            } else {
+                return NextResponse.json({ error: result.error }, { status: 500 });
             }
-            
-            const result2 = await chat.sendMessageStream(JSON.stringify({ tool_responses: toolResponses }));
-            for await (const chunk2 of result2.stream) {
-                if (chunk2.text) {
-                  controller.enqueue(new TextEncoder().encode(chunk2.text));
-                }
-            }
-
-          } else if (chunk.text) {
-            controller.enqueue(new TextEncoder().encode(chunk.text));
-          }
+        } catch (error) {
+            return NextResponse.json({ error: 'Internt serverfel' }, { status: 500 });
         }
-        controller.close();
-      }
-    });
+    }
 
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'X-Content-Type-Options': 'nosniff',
-      }
-    });
-
-  } catch (error: any) {
-    console.error('[CHAT_API_ROUTE_ERROR]', error);
-    return new Response(JSON.stringify({ error: error.message || "An unknown error occurred" }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+    return NextResponse.json({ error: 'Okänd åtgärd' }, { status: 400 });
 }

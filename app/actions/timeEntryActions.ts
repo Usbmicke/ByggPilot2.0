@@ -3,9 +3,9 @@
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { db } from '@/app/services/firestoreService';
+import { db } from '@/app/lib/firebase/firestore';
 import { collection, addDoc, getDocs, query, where, serverTimestamp, doc, getDoc } from 'firebase/firestore';
-import { TimeEntry } from '@/app/types';
+import { TimeEntry } from '@/app/types/index';
 
 /**
  * Verifies that the currently authenticated user owns a specific project.

@@ -4,10 +4,10 @@
 import React, { useState, useTransition } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { CheckCircleIcon, InformationCircleIcon, ArrowRightIcon, ShieldCheckIcon, DocumentPlusIcon } from '@heroicons/react/24/solid';
+import { CheckCircleIcon, ArrowRightIcon, ShieldCheckIcon, DocumentPlusIcon } from '@heroicons/react/24/solid';
 import CompanyNameInput from '@/components/onboarding/CompanyNameInput';
+import { saveCompanyName, createDriveStructure } from '@/app/onboarding/actions';
 
-// Typdefinition med det nya 'terms'-steget
 type OnboardingStep = 'companyInfo' | 'welcome' | 'terms' | 'security' | 'creating' | 'success';
 
 const LoadingSpinner = () => (
@@ -32,25 +32,17 @@ export function GuidedOnboarding() {
     const handleCompanyInfoSubmit = async (companyName: string) => {
         setError(null);
         startTransition(async () => {
-            try {
-                const response = await fetch('/api/user/setup', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ companyName }),
-                });
-                if (!response.ok) {
-                    const result = await response.json();
-                    throw new Error(result.message || 'Kunde inte spara företagsinformation.');
-                }
+            const result = await saveCompanyName(companyName);
+            if (result.success) {
                 await update({ companyName });
                 setStep('welcome');
-            } catch (err: any) {
-                setError(err.message);
+            } else {
+                setError('Kunde inte spara företagsinformation.');
             }
         });
     };
 
-    const handleCreateStructure = async () => {
+    const handleCreateStructure = () => {
         if (!hasAgreed) {
             setError("Du måste godkänna villkoren för att fortsätta.");
             return;
@@ -58,21 +50,17 @@ export function GuidedOnboarding() {
         setStep('creating');
         setError(null);
         startTransition(async () => {
-            try {
-                const response = await fetch('/api/onboarding/create-drive-structure', { method: 'POST' });
-                if (!response.ok) {
-                    const result = await response.json();
-                    throw new Error(result.message || 'Något gick fel.');
-                }
+            const result = await createDriveStructure();
+            if (result.success) {
                 setStep('success');
-            } catch (err: any) {
-                setError(err.message);
-                setStep('terms');
+            } else {
+                setError(result.error || 'Något gick fel vid skapande av mappstruktur.');
+                setStep('terms'); 
             }
         });
     };
 
-    const completeOnboarding = async () => {
+    const completeOnboarding = () => {
         startTransition(async () => {
             try {
                 await update({ onboardingComplete: true });

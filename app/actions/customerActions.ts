@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from '@/app/lib/firebase-admin';
-import { Customer, customerSchema } from '@/app/types';
+import { Customer, customerSchema } from '@/app/types/index';
 import { revalidatePath } from 'next/cache';
 
 // ... (befintlig createCustomer-funktion)
