@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { Customer } from '@/app/types';
+import { Customer } from '@/app/types/index';
 import { IconUser, IconMail } from '@/app/constants'; // Återanvänder ikoner
 
 interface CustomersViewProps {

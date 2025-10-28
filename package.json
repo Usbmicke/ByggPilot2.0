@@ -17,6 +17,7 @@
     "@pinecone-database/pinecone": "^6.1.2",
     "@prisma/client": "^6.18.0",
     "@radix-ui/react-popover": "^1.1.15",
+    "@react-pdf/renderer": "^4.3.1",
     "ai": "latest",
     "chart.js": "^4.5.0",
     "firebase": "^10.12.2",

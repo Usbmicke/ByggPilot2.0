@@ -2,11 +2,43 @@
 'use server';
 
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/app/lib/authOptions';
 import { db } from '@/app/lib/firebase/firestore';
 import { collection, addDoc, getDocs, query, serverTimestamp, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { createProjectFolderStructure } from './driveActions';
-import { Project, File } from '@/app/types/index';
+import { Project, File } from '@/app/types';
+import { projectSchema, type ProjectFormData } from '@/lib/schemas/project';
+
+export async function createProject(formData: ProjectFormData) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return { status: 'error', message: 'Autentisering krävs.' };
+  }
+  const userId = session.user.id;
+
+  const validation = projectSchema.safeParse(formData);
+  if (!validation.success) {
+    return { status: 'error', message: 'Ogiltig data.' };
+  }
+
+  try {
+    const newProjectRef = await addDoc(collection(db, `users/${userId}/projects`), {
+      ...validation.data,
+      userId,
+      createdAt: serverTimestamp(),
+      status: 'Pågående',
+    });
+
+    // Asynkront skapa mappstrukturen utan att blockera svaret
+    createProjectFolderStructure(newProjectRef.id, validation.data.projectName).catch(console.error);
+
+    return { status: 'success', message: 'Projekt skapat!' };
+  } catch (error) {
+    console.error('Fel vid skapande av projekt:', error);
+    return { status: 'error', message: 'Ett serverfel uppstod.' };
+  }
+}
+
 
 // ... (befintliga project actions) ...
 
@@ -17,10 +49,10 @@ import { Project, File } from '@/app/types/index';
  */
 export async function addFileToProject(projectId: string, fileData: Omit<File, 'id'>) {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.uid) {
+    if (!session?.user?.id) { // Korrigerat från uid till id
         return { success: false, error: 'Autentisering krävs.' };
     }
-    const userId = session.user.uid;
+    const userId = session.user.id; // Korrigerat från uid till id
 
     try {
         // Steg 1: Verifiera ägarskap av projektet

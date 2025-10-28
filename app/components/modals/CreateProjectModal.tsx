@@ -6,8 +6,8 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { getCustomers } from '@/app/actions/customerActions';
 import { createProject } from '@/app/actions/projectActions';
-import { useModal } from '@/app/context/ModalContext';
-import { projectSchema, type ProjectFormData } from '@/app/lib/schemas/project';
+import { useModal } from '@/app/contexts/ModalContext';
+import { projectSchema, type ProjectFormData } from '@/lib/schemas/project';
 
 const CreateProjectModal = () => {
   const [customers, setCustomers] = useState<{ id: string; name: string; }[]>([]);

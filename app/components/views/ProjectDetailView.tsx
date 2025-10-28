@@ -2,7 +2,8 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { FolderIcon, DocumentIcon, ArrowUturnLeftIcon } from '@heroicons/react/24/outline';
-import AtaList from '@/app/components/ata/AtaList'; // STEG 3: Importera AtaList
+// ARKITEKTURKORRIGERING: Korrekt, relativ sökväg till den nyligen extraherade komponenten.
+import AtaList from '../ata/AtaList'; 
 
 interface DriveFile {
   id: string;
@@ -12,9 +13,8 @@ interface DriveFile {
   webViewLink: string;
 }
 
-// STEG 1: Justera props
 interface ProjectDetailViewProps {
-  projectId: string; // <-- LÄGG TILL projectId
+  projectId: string; 
   projectName: string;
   folderId: string;
   onBack: () => void;
@@ -31,6 +31,51 @@ const getFileIcon = (mimeType: string) => {
         return <DocumentIcon className="w-6 h-6 text-green-400" />;
     }
     return <DocumentIcon className="w-6 h-6 text-gray-400" />;
+}
+
+// Denna komponent behöver nu hämta sin egen ÄTA-data.
+const ProjectAtaSection = ({ projectId }: { projectId: string }) => {
+    const [atas, setAtas] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchAtas = async () => {
+            if (!projectId) return;
+            setIsLoading(true);
+            try {
+                const response = await fetch(`/api/projects/${projectId}/atas/list`);
+                if (!response.ok) {
+                    throw new Error('Något gick fel vid hämtning av ÄTA-poster.');
+                }
+                const data = await response.json();
+                setAtas(data.atas || []);
+            } catch (err: any) {
+                setError(err.message);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchAtas();
+    }, [projectId]);
+
+    return (
+        <div className="mt-8">
+             <div className="bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden">
+                 <div className="p-4 border-b border-gray-700">
+                    <h3 className="text-lg font-semibold">ÄTA-arbeten</h3>
+                </div>
+                {isLoading ? (
+                    <div className="p-4 text-center text-gray-400">Laddar ÄTA...</div>
+                ) : error ? (
+                     <div className="p-4 text-center text-red-400">Fel: {error}</div>
+                ) : (
+                    <AtaList atas={atas} projectId={projectId} />
+                )}
+            </div>
+        </div>
+    );
 }
 
 const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projectId, projectName, folderId, onBack }) => {
@@ -68,12 +113,12 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projectId, projec
             <h1 className="text-3xl font-bold text-white truncate">{projectName}</h1>
         </div>
 
-        {/* Google Drive-fillistan (befintlig kod) */}
+        {/* Google Drive-fillistan */}
         <div className="bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden">
              <div className="p-4 border-b border-gray-700">
                 <h3 className="text-lg font-semibold">Projektfiler (Google Drive)</h3>
             </div>
-            <div className="grid grid-cols-12 gap-4 p-4 border-b border-gray-700 text-gray-400 font-bold text-sm">
+            <div className="hidden md:grid grid-cols-12 gap-4 p-4 border-b border-gray-700 text-gray-400 font-bold text-sm">
                 <div className="col-span-6">Namn</div>
                 <div className="col-span-3">Typ</div>
                 <div className="col-span-3">Senast ändrad</div>
@@ -100,8 +145,8 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projectId, projec
             ))}
         </div>
 
-        {/* STEG 3: Rendera AtaList-komponenten */}
-        <AtaList projectId={projectId} />
+        {/* ÄTA-sektionen, nu med egen datahämtning */}
+        <ProjectAtaSection projectId={projectId} />
 
     </div>
   );

@@ -2,9 +2,9 @@
 'use server';
 
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/app/lib/authOptions';
 import { db } from '@/app/lib/firebase/firestore';
-import { collection, query, where, getDocs, limit, addDoc, serverTimestamp, writeBatch, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, addDoc, serverTimestamp, writeBatch, doc, updateDoc, getDoc } from 'firebase/firestore';
 
 /**
  * GULDSTANDARD ACTION: `getActiveTimer`
@@ -12,10 +12,10 @@ import { collection, query, where, getDocs, limit, addDoc, serverTimestamp, writ
  */
 export async function getActiveTimer() {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.uid) {
+    if (!session?.user?.id) {
         return { success: false, error: 'Autentisering krävs.' };
     }
-    const userId = session.user.uid;
+    const userId = session.user.id;
 
     try {
         const timelogsRef = collection(db, 'users', userId, 'timelogs');
@@ -49,10 +49,10 @@ export async function getActiveTimer() {
  */
 export async function startTimer(projectId: string) {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.uid) {
+    if (!session?.user?.id) {
         return { success: false, error: 'Autentisering krävs.' };
     }
-    const userId = session.user.uid;
+    const userId = session.user.id;
 
     try {
         const timelogsRef = collection(db, 'users', userId, 'timelogs');
@@ -96,10 +96,10 @@ export async function startTimer(projectId: string) {
  */
 export async function stopTimer() {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.uid) {
+    if (!session?.user?.id) {
         return { success: false, error: 'Autentisering krävs.' };
     }
-    const userId = session.user.uid;
+    const userId = session.user.id;
 
     try {
         const timelogsRef = collection(db, 'users', userId, 'timelogs');

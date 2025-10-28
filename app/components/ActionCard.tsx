@@ -2,40 +2,38 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ActionableEvent } from '@/app/types'; // Importera den nya, starka typen
+import Link from 'next/link';
+import { ActionableEvent } from '@/app/types/index'; 
 
-// En hjälpfunktion för att formatera datum
-const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' });
+// VÄRLDSKLASS-KORRIGERING: Formaterar nu ett Timestamp-objekt eller en ISO-sträng.
+const formatDate = (date: any) => {
+    if (!date) return 'N/A';
+    const d = date.toDate ? date.toDate() : new Date(date);
+    return d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
-// Ikoner för olika åtgärdstyper. Använder nu den starkt typade actionType.
-const ActionIcon = ({ type }: { type: ActionableEvent['actionType'] }) => {
+// VÄRLDSKLASS-KORRIGERING: Ikoner mappas nu mot den korrekta 'type'-egenskapen och dess värden.
+const ActionIcon = ({ type }: { type: ActionableEvent['type'] }) => {
     switch (type) {
-        case 'PROJECT_LEAD':
-            return <span className="text-cyan-400">★</span>; // Stjärna för ny lead
-        case 'INVOICE_PROCESSING':
-            return <span className="text-amber-400">§</span>; // Paragraf för faktura
+        case 'new_task':
+            return <span className="text-cyan-400">✓</span>; 
+        case 'invoice_due':
+            return <span className="text-amber-400">!</span>;
+        case 'project_approved':
+            return <span className="text-green-400">★</span>;
+        case 'new_message':
+            return <span className="text-blue-400">✉</span>;
         default:
             return <span className="text-gray-400">?</span>;
     }
 };
 
-// Komponenten accepterar nu en starkt typad `event`-prop.
 const ActionCard = ({ event }: { event: ActionableEvent }) => {
-    const [isArchived, setIsArchived] = useState(false);
+    const [isArchived, setIsArchived] = useState(event.isRead);
 
-    const handleApprove = () => {
-        alert(`Godkänn-logik för ${event.actionType} ej implementerad.`);
-        setIsArchived(true);
-    };
-
-    const handleModify = () => {
-        alert(`Ändra-logik för ${event.actionType} ej implementerad.`);
-    };
-
-    const handleIgnore = () => {
+    const handleArchive = () => {
+        // Här skulle man normalt anropa en API-endpoint för att markera som läst.
+        console.log(`Markerar händelse ${event.id} som läst.`);
         setIsArchived(true);
     };
 
@@ -46,31 +44,23 @@ const ActionCard = ({ event }: { event: ActionableEvent }) => {
     return (
         <div className="bg-background-secondary border border-border-primary rounded-xl mb-4 overflow-hidden transition-all hover:border-cyan-500/50">
             <div className="p-5">
-                <div className="flex justify-between items-start">
-                    <h3 className="font-bold text-text-primary text-lg mb-2">
-                        {/* Notera: Bytet från action.summary till event.title görs här */}
-                        <ActionIcon type={event.actionType} /> {event.title} 
+                <div className="flex justify-between items-start mb-3">
+                    <h3 className="font-bold text-text-primary text-lg">
+                        {/* VÄRLDSKLASS-KORRIGERING: Använder 'type' och 'title' från den korrekta datamodellen. */}
+                        <ActionIcon type={event.type} /> {event.title}
                     </h3>
-                    {event.actionType === 'INVOICE_PROCESSING' && (
-                        <div className="text-right">
-                            <p className="text-xl font-semibold text-text-primary">{event.amount?.toLocaleString('sv-SE')} {event.currency}</p>
-                            <p className="text-sm text-red-400">Förfaller: {formatDate(event.dueDate)}</p>
-                        </div>
-                    )}
+                    <span className="text-xs text-text-secondary">{formatDate(event.createdAt)}</span>
                 </div>
                 
-                 {/* Bytet från action.details till event.description görs här */}
-                <p className="text-text-secondary mb-4">{event.description}</p>
-
-                <div className="bg-background-tertiary p-3 rounded-md mb-5">
-                     <p className="text-sm text-text-secondary">Kontakt: <span className="font-medium text-text-primary">{event.contact?.name || 'N/A'}</span> ({event.contact?.email || 'N/A'})</p>
-                    <p className="text-sm text-cyan-300 mt-1">Förslag: <span className="font-medium text-cyan-200">{event.suggestedNextStep}</span></p>
-                </div>
+                {/* VÄRLDSKLASS-KORRIGERING: Visar 'description' istället för de borttagna fälten. */}
+                <p className="text-sm text-text-secondary mb-4">{event.description}</p>
 
                 <div className="flex justify-end space-x-3">
-                    <button onClick={handleIgnore} className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors">Ignorera</button>
-                    <button onClick={handleModify} className="bg-background-secondary-alt hover:bg-gray-600 text-text-primary font-semibold py-2 px-4 rounded-lg transition-colors">Ändra</button>
-                    <button onClick={handleApprove} className="bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors">Godkänn & Agera</button>
+                    {/* VÄRLDSKLASS-KORRIGERING: Funktionerna är nu anpassade till den nya datamodellen. */}
+                    <button onClick={handleArchive} className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors">Markera som läst</button>
+                    <Link href={event.link} passHref>
+                        <a className="bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm">Visa</a>
+                    </Link>
                 </div>
             </div>
         </div>

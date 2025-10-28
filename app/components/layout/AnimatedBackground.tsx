@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 
 const AnimatedBackground = () => {
-    const [particles, setParticles] = useState([]);
+    const [particles, setParticles] = useState<React.ReactNode[]>([]);
 
     useEffect(() => {
         const newParticles = Array.from({ length: 50 }).map((_, i) => {

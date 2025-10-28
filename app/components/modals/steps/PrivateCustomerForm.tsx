@@ -8,9 +8,9 @@ interface PrivateCustomerData {
     email?: string;
     phone?: string;
     address?: {
-        street: string;
-        zipCode: string;
-        city: string;
+        street?: string;
+        zipCode?: string;
+        city?: string;
     };
 }
 
@@ -27,9 +27,9 @@ export function PrivateCustomerForm({ onSave, isSaving }: PrivateCustomerFormPro
         const { name, value } = e.target;
         if (name.includes('.')) {
             const [parent, child] = name.split('.');
-            setFormData(prev => ({ 
-                ...prev, 
-                [parent]: { ...prev[parent as keyof typeof prev], [child]: value } 
+            setFormData(prev => ({
+                ...prev,
+                [parent]: { ...(prev[parent as keyof typeof prev] || {}), [child]: value }
             }));
         } else {
             setFormData(prev => ({ ...prev, [name]: value }));
@@ -53,10 +53,10 @@ export function PrivateCustomerForm({ onSave, isSaving }: PrivateCustomerFormPro
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             <h2 className="text-2xl font-bold text-white mb-6">Registrera Privatkund</h2>
-            
+
             {/* Grundläggande Information */}
             <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg">
-                <h3 class="text-lg font-semibold text-cyan-300 mb-4">Kontaktuppgifter</h3>
+                <h3 className="text-lg font-semibold text-cyan-300 mb-4">Kontaktuppgifter</h3>
                 <div className="space-y-4">
                      <div>
                         <label htmlFor="fullName" className="block text-sm font-medium text-gray-300 mb-1">Fullständigt namn *</label>
@@ -78,7 +78,7 @@ export function PrivateCustomerForm({ onSave, isSaving }: PrivateCustomerFormPro
 
             {/* Adressinformation (valfritt) */}
             <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg">
-                <h3 class="text-lg font-semibold text-cyan-300 mb-4">Adress (valfritt)</h3>
+                <h3 className="text-lg font-semibold text-cyan-300 mb-4">Adress (valfritt)</h3>
                 <div className="space-y-4">
                     <div>
                         <label htmlFor="address.street" className="block text-sm font-medium text-gray-300 mb-1">Gatuadress</label>

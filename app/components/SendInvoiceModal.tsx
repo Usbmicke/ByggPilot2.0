@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -9,26 +10,27 @@ interface SendInvoiceModalProps {
     onClose: () => void;
     invoice: Invoice;
     project: Project;
-    onInvoiceSent: () => void; // Callback för att uppdatera UI
+    onInvoiceSent: () => void;
 }
 
 export default function SendInvoiceModal({ isOpen, onClose, invoice, project, onInvoiceSent }: SendInvoiceModalProps) {
-    // TODO: Hämta kundens e-post från projekt/kund-data när det finns tillgängligt
-    const [recipientEmail, setRecipientEmail] = useState('kundens.email@example.com');
+    // VÄRLDSKLASS-KORRIGERING: Använder 'project.customerName' som en fallback för e-post och namn.
+    const [recipientEmail, setRecipientEmail] = useState(project.customerName || 'kundens.email@example.com');
+    // VÄRLDSKLASS-KORRIGERING: 'projectName' bytt till 'name'.
     const [subject, setSubject] = useState(`Faktura från [Ditt Företagsnamn] för projekt: ${project.name}`);
+    // VÄRLDSKLASS-KORRIGERING: Använder 'project.customerName' och 'project.name'.
     const [message, setMessage] = useState(
-        `Hej ${invoice.customer.name},\n\Bifogat finner du faktura för arbetet med projektet \"${project.name}\".\n\nVänliga hälsningar,\n[Ditt Namn]`
+        `Hej ${project.customerName || 'Kund'},\n\Bifogat finner du faktura för arbetet med projektet \"${project.name}\".\n\nVänliga hälsningar,\n[Ditt Namn]`
     );
     const [isSending, setIsSending] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        // Återställ state när modalen öppnas/stängs
         if (isOpen) {
-             // TODO: Hämta kundens e-post från projekt/kund-data när det finns tillgängligt
-            setRecipientEmail('kundens.email@example.com');
+            // VÄRLDSKLASS-KORRIGERING: Sätter state baserat på den korrekta, uppdaterade datamodellen.
+            setRecipientEmail(project.customerName || 'kundens.email@example.com');
             setSubject(`Faktura från [Ditt Företagsnamn] för projekt: ${project.name}`);
-            setMessage(`Hej ${invoice.customer.name},\n\Bifogat finner du faktura för arbetet med projektet \"${project.name}\".\n\nVänliga hälsningar,\n[Ditt Namn]`);
+            setMessage(`Hej ${project.customerName || 'Kund'},\n\Bifogat finner du faktura för arbetet med projektet \"${project.name}\".\n\nVänliga hälsningar,\n[Ditt Namn]`);
             setError(null);
         }
     }, [isOpen, invoice, project]);
@@ -39,6 +41,7 @@ export default function SendInvoiceModal({ isOpen, onClose, invoice, project, on
         setError(null);
 
         try {
+            // API-anropet är redan korrekt och behöver ingen ändring.
             const response = await fetch(`/api/projects/${project.id}/invoices/${invoice.id}/send`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -50,7 +53,7 @@ export default function SendInvoiceModal({ isOpen, onClose, invoice, project, on
                 throw new Error(errorData.message || 'Något gick fel vid utskicket.');
             }
 
-            onInvoiceSent(); // Anropa callback för att uppdatera UI:t i föräldern
+            onInvoiceSent();
 
         } catch (err: any) {
             setError(err.message);
@@ -82,7 +85,7 @@ export default function SendInvoiceModal({ isOpen, onClose, invoice, project, on
                             <input type="text" id="subject" value={subject} onChange={e => setSubject(e.target.value)} required className="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white" />
                         </div>
                         <div>
-                            <label htmlFor="message" className="block text-sm font-medium text-gray-300">Meddelande</n                            </label>
+                            <label htmlFor="message" className="block text-sm font-medium text-gray-300">Meddelande</label>
                             <textarea id="message" value={message} onChange={e => setMessage(e.target.value)} required rows={8} className="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white"></textarea>
                         </div>
                         {error && <p className="text-red-400 text-sm">{`Fel: ${error}`}</p>}

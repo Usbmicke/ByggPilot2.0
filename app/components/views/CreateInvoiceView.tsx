@@ -58,12 +58,12 @@ const CreateInvoiceView: React.FC<CreateInvoiceViewProps> = ({ projects }) => {
     
     const selectedProject = projects.find(p => p.id === projectId);
 
-    const invoiceData: Omit<Invoice, 'id' | 'status' | 'totalAmount'> = {
+    const invoiceData: Omit<Invoice, 'id' | 'status' | 'totalAmount' | 'createdAt'> = {
       projectId,
-      customerName: selectedProject?.customerName || 'Okänd Kund',
+      customer: { type: 'Company', name: selectedProject?.clientName || 'Okänd Kund'},
       issueDate: new Date().toISOString(),
       dueDate: new Date(new Date().setDate(new Date().getDate() + 30)).toISOString(), // 30 dagar betalningstid
-      lines: finalInvoiceLines,
+      invoiceLines: finalInvoiceLines,
     };
 
     try {
@@ -94,7 +94,7 @@ const CreateInvoiceView: React.FC<CreateInvoiceViewProps> = ({ projects }) => {
             required
           >
             <option value="" disabled>Välj ett projekt...</option>
-            {projects.map(p => <option key={p.id} value={p.id}>{p.name} - {p.customerName}</option>)}
+            {projects.map(p => <option key={p.id} value={p.id}>{p.projectName} - {p.clientName}</option>)}
           </select>
         </div>
 

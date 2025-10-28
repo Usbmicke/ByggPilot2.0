@@ -5,7 +5,7 @@ import React from 'react';
 import { useEvents } from '@/app/hooks/useApi';
 import { PROACTIVE_TIP_EVENT } from '@/app/constants/globalContent';
 import ActionCard from '@/app/components/ActionCard';
-import { Event, ActionableEvent } from '@/app/types';
+import { Event, ActionableEvent } from '@/app/types/index';
 
 /**
  * Konverterar en generisk Event till en ActionableEvent genom att berika den

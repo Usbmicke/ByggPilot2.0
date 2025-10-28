@@ -5,11 +5,11 @@ import { google } from 'googleapis';
 import { getServerSession } from "next-auth/next"
 
 // Importerar den konfigurerade NextAuth-handlern
-import { handler } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/app/lib/authOptions";
 
 export async function GET(request: Request) {
   // 1. Säkerställ att användaren är inloggad
-  const session = await getServerSession(handler);
+  const session = await getServerSession(authOptions);
   if (!session || !session.accessToken) {
     return new NextResponse('Unauthorized', { status: 401 });
   }

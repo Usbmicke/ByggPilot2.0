@@ -5,7 +5,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { CheckCircle2, ExternalLink } from 'lucide-react';
-import { completeOnboarding } from '@/actions/userActions'; // IMPORTERA SERVER ACTION
+import { completeOnboarding } from '@/app/onboarding/actions'; // IMPORTERA SERVER ACTION
 
 interface StepSuccessProps {
   companyName: string | null;
@@ -26,7 +26,7 @@ const Step_Success: React.FC<StepSuccessProps> = ({ companyName, folderUrl }) =>
     }
 
     // 1. Anropa Server Action för att uppdatera databasen
-    const result = await completeOnboarding(session.user.id);
+    const result = await completeOnboarding(session.user.id, true); // Passing true for onboardingComplete
 
     if (result.success) {
       // 2. Omdirigera ENBART om databasen har uppdaterats korrekt

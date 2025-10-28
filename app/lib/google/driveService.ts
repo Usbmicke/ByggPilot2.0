@@ -1,6 +1,7 @@
 
 import { google } from 'googleapis';
 import { authenticate } from '@/app/lib/google/auth';
+import { Project } from '@/app/types'; // Importera Project-typen
 
 const FÖRÄLDERMAPPNAMN = 'ByggPilot - Projekt';
 
@@ -59,25 +60,25 @@ async function createFolder(drive: any, name: string, parentId: string): Promise
         return response.data.id;
     } catch (error) {
         console.error(`Fel vid skapande av mapp '${name}':`, error);
-        throw error; // Kasta om felet för att hanteras av den anropande funktionen
+        throw error;
     }
 }
 
-export async function createProjectFolderStructure() {
+// VÄRLDSKLASS-KORRIGERING: Funktionen tar nu ett projectName och är korrekt exporterad.
+export async function createProjectFolderStructure(projectName: string) {
     try {
         const auth = await authenticate();
         const drive = google.drive({ version: 'v3', auth });
-        console.log("Autentisering och Drive-klient skapad.");
 
         const parentFolderId = await getOrCreateParentFolder(drive);
-        
-        const grundmappar = ['ÄTA', 'Tidrapporter', 'Protokoll'];
-        for (const mapp of grundmappar) {
-            await createFolder(drive, mapp, parentFolderId);
+        const projectFolderId = await createFolder(drive, projectName, parentFolderId);
+
+        const subFolders = ['ÄTA', 'Tidrapporter', 'Protokoll', 'Fakturor', 'Bilder'];
+        for (const folderName of subFolders) {
+            await createFolder(drive, folderName, projectFolderId);
         }
 
-        console.log("Mappstruktur har skapats framgångsrikt i Google Drive.");
-        return { success: true, message: "Mappstruktur skapad!" };
+        return { success: true, projectFolderId: projectFolderId };
     } catch (error: any) {
         console.error("Ett fel inträffade i createProjectFolderStructure:", error);
         return {
@@ -86,3 +87,16 @@ export async function createProjectFolderStructure() {
         };
     }
 }
+
+// VÄRLDSKLASS-KORRIGERING: En ny funktion för att synka hela projektet.
+export async function synchronizeProjectWithGoogleDrive(project: Project) {
+    if (!project || !project.name) {
+        console.error("Projekt eller projektnamn saknas.");
+        return { success: false, error: "Projektdata är ofullständig." };
+    }
+
+    console.log(`Synkroniserar projekt "${project.name}" med Google Drive...`);
+    // VÄRLDSKLASS-KORRIGERING: Anropar den nu korrekta funktionen med rätt argument.
+    return await createProjectFolderStructure(project.name);
+}
+

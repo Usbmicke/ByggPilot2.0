@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Project, ProjectStatus } from '@/app/types/project';
+import { Project, ProjectStatus } from '@/app/types'; // Korrigerad import
 import { ArchiveBoxIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 interface EditProjectModalProps {
@@ -15,7 +15,7 @@ interface EditProjectModalProps {
 export default function EditProjectModal({ isOpen, onClose, project, onProjectUpdated }: EditProjectModalProps) {
   const [projectName, setProjectName] = useState(project.projectName);
   const [clientName, setClientName] = useState(project.clientName);
-  const [hourlyRate, setHourlyRate] = useState(project.hourlyRate.toString());
+  // hourlyRate borttagen från state tills vidare
   const [status, setStatus] = useState<ProjectStatus>(project.status);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +23,7 @@ export default function EditProjectModal({ isOpen, onClose, project, onProjectUp
   useEffect(() => {
     setProjectName(project.projectName);
     setClientName(project.clientName);
-    setHourlyRate(project.hourlyRate.toString());
+    // hourlyRate borttagen härifrån
     setStatus(project.status);
   }, [project]);
 
@@ -31,12 +31,7 @@ export default function EditProjectModal({ isOpen, onClose, project, onProjectUp
     setIsLoading(true);
     setError(null);
 
-    const rate = parseFloat(hourlyRate);
-    if (isNaN(rate) || rate <= 0) {
-      setError('Ange ett giltigt timpris.');
-      setIsLoading(false);
-      return;
-    }
+    // Logik för hourlyRate borttagen tills vidare
 
     try {
       const response = await fetch(`/api/projects/update`, {
@@ -46,7 +41,7 @@ export default function EditProjectModal({ isOpen, onClose, project, onProjectUp
           projectId: project.id,
           projectName,
           clientName,
-          hourlyRate: rate,
+          // hourlyRate borttagen härifrån
           status: newStatus || status, // Use newStatus if provided (for archiving)
         }),
       });
@@ -93,10 +88,7 @@ export default function EditProjectModal({ isOpen, onClose, project, onProjectUp
             <input id="edit-clientName" type="text" value={clientName} onChange={(e) => setClientName(e.target.value)} required className="w-full bg-gray-700 p-2 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="edit-hourlyRate" className="block text-sm font-medium text-gray-300 mb-2">Timpris (kr/tim)</label>
-              <input id="edit-hourlyRate" type="number" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} required className="w-full bg-gray-700 p-2 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
-            </div>
+            {/* Timpris-input borttagen tills vidare */}
             <div>
               <label htmlFor="edit-status" className="block text-sm font-medium text-gray-300 mb-2">Status</label>
               <select id="edit-status" value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus)} className="w-full bg-gray-700 p-2 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
