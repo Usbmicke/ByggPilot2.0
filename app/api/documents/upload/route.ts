@@ -1,65 +1,66 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/app/lib/auth';
-import { getProject } from '@/app/services/projectService';
-import { createFileInDrive } from '@/app/services/driveService';
-import { addFileToProject } from '@/app/services/firestoreService';
+import { google } from 'googleapis';
+import { Readable } from 'stream';
+import { authenticate } from '@/app/lib/google/auth';
+import { findFolderIdByName } from '@/app/lib/google/driveService'; // Justerad sökväg
+
+async function buffer(readable: Readable): Promise<Buffer> {
+    const chunks = [];
+    for await (const chunk of readable) {
+        chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+    }
+    return Buffer.concat(chunks);
+}
+
+async function getDriveService() {
+    const auth = await authenticate();
+    return google.drive({ version: 'v3', auth });
+}
+
 
 export async function POST(req: NextRequest) {
-    const session = await auth();
-    const userId = session?.user?.id;
-
-    if (!userId) {
-        return NextResponse.json({ message: 'Autentisering krävs' }, { status: 401 });
-    }
-
     try {
         const formData = await req.formData();
         const file = formData.get('file') as File | null;
-        const projectId = formData.get('projectId') as string | null;
+        const documentType = formData.get('documentType') as string;
 
-        if (!file || !projectId) {
-            return NextResponse.json({ message: 'Fil och projekt-ID krävs' }, { status: 400 });
+        if (!file) {
+            return NextResponse.json({ error: 'Ingen fil har laddats upp' }, { status: 400 });
         }
 
-        // 1. Verifiera att användaren äger projektet
-        const project = await getProject(projectId, userId);
-        if (!project) {
-            return NextResponse.json({ message: 'Åtkomst nekad till projektet' }, { status: 403 });
+        const drive = await getDriveService();
+        const parentFolderId = await findFolderIdByName(drive, 'ByggPilot - Projekt');
+
+        if (!parentFolderId) {
+            return NextResponse.json({ error: 'Huvudmappen kunde inte hittas i Google Drive' }, { status: 500 });
         }
 
-        // 2. Ladda upp filen till Google Drive
-        const driveFolderId = project.driveFolderId;
-        if (!driveFolderId) {
-             return NextResponse.json({ message: 'Projektets molnmapp kunde inte hittas.' }, { status: 500 });
+        const documentFolderId = await findFolderIdByName(drive, documentType);
+
+        if (!documentFolderId) {
+             return NextResponse.json({ error: `Mappen för '${documentType}' kunde inte hittas.` }, { status: 500 });
         }
 
-        const fileBuffer = Buffer.from(await file.arrayBuffer());
-        const driveFile = await createFileInDrive(file.name, file.type, driveFolderId, fileBuffer);
-
-        if (!driveFile || !driveFile.id) {
-            throw new Error('Misslyckades med att ladda upp filen till Google Drive');
-        }
-
-        // 3. Skapa en filreferens i Firestore
         const fileMetadata = {
-            id: driveFile.id, // Google Drive file ID
             name: file.name,
-            mimeType: file.type,
-            size: file.size,
-            uploadedAt: new Date().toISOString(),
-            driveWebViewLink: driveFile.webViewLink,
-            driveIconLink: driveFile.iconLink,
+            parents: [documentFolderId]
         };
 
-        await addFileToProject(projectId, fileMetadata);
+        const media = {
+            mimeType: file.type,
+            body: Readable.from(Buffer.from(await file.arrayBuffer()))
+        };
 
-        // 4. Returnera ett framgångsrikt svar
-        return NextResponse.json({ message: 'Filen har laddats upp!', file: fileMetadata }, { status: 201 });
+        await drive.files.create({
+            requestBody: fileMetadata,
+            media: media,
+            fields: 'id'
+        });
 
-    } catch (error) {
-        console.error('Fel vid filuppladdning:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Ett okänt serverfel inträffade';
-        return NextResponse.json({ message: errorMessage }, { status: 500 });
+        return NextResponse.json({ success: true, message: "Filen har laddats upp till Google Drive." });
+    } catch (error: any) {
+        console.error("Fel vid uppladdning till Drive:", error);
+        return NextResponse.json({ error: `Serverfel: ${error.message}` }, { status: 500 });
     }
 }

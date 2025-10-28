@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { ChatMessage } from '@/app/types';
+import { ChatMessage } from '@/types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { PaperClipIcon } from '@heroicons/react/24/solid';

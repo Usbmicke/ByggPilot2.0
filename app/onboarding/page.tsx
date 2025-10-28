@@ -4,8 +4,8 @@
 import React from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { GuidedOnboarding } from '@/app/components/onboarding/GuidedOnboarding';
-import { OnboardingAnimation } from '@/app/components/onboarding/OnboardingAnimation';
+import { GuidedOnboarding } from '@/components/onboarding/GuidedOnboarding';
+import { OnboardingAnimation } from '@/components/onboarding/OnboardingAnimation';
 
 /**
  * GULDSTANDARD ONBOARDING

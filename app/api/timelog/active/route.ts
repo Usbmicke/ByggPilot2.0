@@ -1,40 +1,21 @@
 
-import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from '@clerk/nextjs/server';
-import { firestore } from '@/app/lib/firebase/firestore';
+import { NextResponse } from 'next/server';
+import { getActiveTimer } from '@/app/actions/timelogActions';
 
-// GET: Hämta den för närvarande aktiva timern för en användare
-export async function GET(req: NextRequest) {
-  const { userId } = getAuth(req);
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export async function GET(req: Request) {
   try {
-    const runningTimerQuery = await firestore.collection('timelogs')
-      .where('userId', '==', userId)
-      .where('status', '==', 'running')
-      .limit(1)
-      .get();
+    const result = await getActiveTimer();
 
-    if (runningTimerQuery.isEmpty) {
-      // Helt normalt, ingen timer är igång. Returnera null.
-      return NextResponse.json({ activeTimer: null });
+    if (!result.success) {
+      // Om autentisering misslyckas, vilket är det troligaste felet här från actionen
+      return NextResponse.json({ error: result.error }, { status: 401 });
     }
 
-    const timerDoc = runningTimerQuery.docs[0];
-    const timerData = timerDoc.data();
-
-    const activeTimer = {
-      logId: timerDoc.id,
-      projectId: timerData.projectId,
-      startTime: timerData.startTime.toMillis(), // Skicka som millisekunder
-    };
-
-    return NextResponse.json({ activeTimer });
+    // Returnerar antingen den aktiva timern eller null
+    return NextResponse.json({ activeTimer: result.data });
 
   } catch (error) {
-    console.error("Error fetching active timelog:", error);
+    console.error("Error in active timer API route:", error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -7,10 +7,10 @@ import { NextRequest, NextResponse } from "next/server";
  * för att hämta live-data. För demonstrationsändamål simulerar vi detta anrop.
  * 
  * @param request NextRequest-objektet (används ej här, men krävs av Next.js).
- * @param params Objekt som innehåller dynamiska route-parametrar, i detta fall `orgnr`.
+ * @param context Objekt som innehåller dynamiska route-parametrar, i detta fall `orgnr`.
  */
-export async function GET(request: NextRequest, { params }: { params: { orgnr: string } }) {
-    const { orgnr } = params;
+export async function GET(request: NextRequest, context: { params: { orgnr: string } }) {
+    const { orgnr } = context.params;
 
     // Validering: Kontrollera att ett organisationsnummer har angetts
     if (!orgnr) {

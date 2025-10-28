@@ -4,19 +4,10 @@
 import React, { useState, useEffect, useTransition } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { getCustomers } from '@/app/actions/customerActions'; // KORRIGERAD IMPORT
+import { getCustomers } from '@/app/actions/customerActions';
 import { createProject } from '@/app/actions/projectActions';
 import { useModal } from '@/app/context/ModalContext';
-
-const projectSchema = z.object({
-  projectName: z.string().min(3, "Projektnamnet måste vara minst 3 tecken långt."),
-  customerId: z.string().min(1, "Du måste välja en kund."),
-  projectType: z.enum(['ROT', 'FTG', 'Annat']),
-  description: z.string().optional(),
-});
-
-type ProjectFormData = z.infer<typeof projectSchema>;
+import { projectSchema, type ProjectFormData } from '@/app/lib/schemas/project';
 
 const CreateProjectModal = () => {
   const [customers, setCustomers] = useState<{ id: string; name: string; }[]>([]);

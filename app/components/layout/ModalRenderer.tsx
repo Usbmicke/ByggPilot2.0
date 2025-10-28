@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { useModal } from '@/app/context/ModalContext';
+import { useModal } from '@/app/contexts/ModalContext';
 
 // Importera de faktiska modal-komponenterna
 import CreateOfferModal from '@/app/components/modals/CreateOfferModal';

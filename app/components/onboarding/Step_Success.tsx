@@ -5,7 +5,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { CheckCircle2, ExternalLink } from 'lucide-react';
-import { completeOnboarding } from '@/app/actions/userActions'; // IMPORTERA SERVER ACTION
+import { completeOnboarding } from '@/actions/userActions'; // IMPORTERA SERVER ACTION
 
 interface StepSuccessProps {
   companyName: string | null;

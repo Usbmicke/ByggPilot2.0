@@ -1,61 +1,16 @@
 
 import { google } from 'googleapis';
-import { JWT } from 'google-auth-library';
+import { useSession } from 'next-auth/react';
 
-const SERVICE_ACCOUNT_KEY = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+export function useGoogleClient() {
+    const { data: session } = useSession();
 
-if (!SERVICE_ACCOUNT_KEY) {
-    throw new Error('GOOGLE_SERVICE_ACCOUNT_KEY is not set in environment variables');
-}
-
-// Parse the key, ensuring that the private_key field is correctly formatted
-const serviceAccount = JSON.parse(Buffer.from(SERVICE_ACCOUNT_KEY, 'base64').toString('utf8'));
-
-const SCOPES = [
-    'https://www.googleapis.com/auth/drive.file',
-    'https://www.googleapis.com/auth/documents',
-];
-
-/**
- * A singleton instance of the Google Auth JWT client.
- * This prevents re-creating the client on every API call.
- */
-let jwtClient: JWT;
-
-function getJwtClient() {
-    if (!jwtClient) {
-        jwtClient = new google.auth.JWT(
-            serviceAccount.client_email,
-            undefined,
-            serviceAccount.private_key.replace(/\\n/g, '\n'), // Replace escaped newlines
-            SCOPES
-        );
+    if (!session || !session.accessToken) {
+        return null;
     }
-    return jwtClient;
-}
 
-/**
- * A singleton instance of the Google Drive API client.
- */
-let driveClient: ReturnType<typeof google.drive> | undefined;
+    const oauth2Client = new google.auth.OAuth2();
+    oauth2Client.setCredentials({ access_token: session.accessToken });
 
-export function getDriveClient() {
-    if (!driveClient) {
-        const auth = getJwtClient();
-        driveClient = google.drive({ version: 'v3', auth });
-    }
-    return driveClient;
-}
-
-/**
- * A singleton instance of the Google Docs API client.
- */
-let docsClient: ReturnType<typeof google.docs> | undefined;
-
-export function getDocsClient() {
-    if (!docsClient) {
-        const auth = getJwtClient();
-        docsClient = google.docs({ version: 'v1', auth });
-    }
-    return docsClient;
+    return oauth2Client;
 }

@@ -1,142 +1,79 @@
 
+import { z } from 'zod';
+
 // ========================================================================
-//  KÄRNTYPER FÖR PROJEKT & KUNDER
+//  KÄRNTYPER FÖR PROJEKT, KUNDER, ETC.
 // ========================================================================
 
-export interface Customer {
-  id: string;
-  userId: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  isCompany: boolean;
-  createdAt: string; // ISO 8601 date string
-  archivedAt: string | null; // ISO 8601 date string
-}
+export const customerSchema = z.object({
+  name: z.string().min(1, "Kundnamn är obligatoriskt"),
+  email: z.string().email("Ogiltig e-postadress").optional().or(z.literal(''))
+});
 
-export enum ProjectStatus {
-  NotStarted = 'Ej påbörjat',
-  InProgress = 'Pågående',
-  OnHold = 'Pausat',
-  Completed = 'Slutfört',
-}
+export type ProjectStatus = 'Offert' | 'Pågående' | 'Avslutad' | 'Fakturerat' | 'Arkiverat' | 'Varning' | 'Positiv';
 
 export interface Project {
-  id: string;
-  userId: string;
-  name: string;
-  customerId: string;
-  customerName: string; // Denormaliserad för enkel visning
-  address: string | null;
-  status: ProjectStatus;
-  progress: number | null; // Procent, 0-100
-  createdAt: string; // ISO 8601 date string
-  lastActivity: string; // ISO 8601 date string
-  deadline: string | null; // ISO 8601 date string
-  archivedAt: string | null; // ISO 8601 date string
+  id: string; // Unikt ID för projektet
+  userId: string; // ID för användaren som äger projektet
+  projectNumber: string; // Formaterat projektnummer, t.ex. P2023-001
+  projectName: string; // Projektnamn, t.ex. "Renovering Villa Larsson"
+  clientName: string; // Kundens namn
+  status: ProjectStatus; // Projektets nuvarande status
 }
 
-export enum TaskStatus {
-  Todo = 'Att göra',
-  InProgress = 'Pågående',
-  Done = 'Klar',
+export interface TimeEntry {
+    id: string;
+    projectId: string;
+    date: string; // ISO 8601-format: "YYYY-MM-DD"
+    hours: number;
+    description: string;
+    // userId?: string; // Om du behöver spåra vem som rapporterade
 }
 
-export interface Task {
-  id: string;
-  projectId: string;
-  name: string;
-  description: string | null;
-  status: TaskStatus;
-  createdAt: string; // ISO 8601 date string
-  completedAt: string | null; // ISO 8601 date string
+export type CalculationCategory = 'Material' | 'Arbete' | 'Underentreprenör' | 'Övrigt';
+
+export interface CalculationItem {
+    id: string; 
+    description: string; 
+    quantity: number; 
+    unit: string; 
+    unitPrice: number; 
+    category: CalculationCategory; 
 }
 
-// ========================================================================
-//  TYPER FÖR FAKTURERING (Baserat på firestoreService.ts)
-// ========================================================================
-
-export enum InvoiceStatus {
-  Draft = 'Utkast',
-  Sent = 'Skickad',
-  Paid = 'Betald',
-  Overdue = 'Förfallen',
+export interface Calculation {
+    items: CalculationItem[];
+    profitMarginPercentage: number; 
 }
 
-export interface InvoiceLine {
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  total: number;
+export interface Material {
+    id: string; // Unikt ID
+    name: string; // Artikelnamn, t.ex. "Trall 28x120 Imp."
+    supplier: string; // Leverantör, t.ex. "Beijer Bygg"
+    price: number; // Inköpspris
+    unit: string; // Enhet, t.ex. "lpm", "st", "m2"
 }
-
-export interface Invoice {
-  id: string;
-  projectId: string;
-  invoiceNumber: string;
-  status: InvoiceStatus;
-  issueDate: string; // ISO 8601
-  dueDate: string; // ISO 8601
-  lines: InvoiceLine[];
-  subtotal: number;
-  vat: number; // Momsbelopp
-  total: number;
-  customerInfo: { // Denormaliserad kundinfo
-    name: string;
-    address: string;
-    orgNr?: string;
-  };
-}
-
-// ========================================================================
-//  TYPER FÖR DOKUMENT & KOMMUNIKATION (Baserat på firestoreService.ts)
-// ========================================================================
-
-export interface Document {
-  id: string;
-  name: string;
-  url: string; // Länk till fil i Google Cloud Storage e.d.
-  type: string; // t.ex. 'Ritning', 'Besiktningsprotokoll'
-  createdAt: string; // ISO 8601
-  size: number; // i bytes
-}
-
-export interface Message {
-  id: string;
-  timestamp: string; // ISO 8601
-  sender: 'user' | 'ai' | 'system';
-  text: string;
-}
-
-// ========================================================================
-//  ANVÄNDARE & EVENT-SYSTEM
-// ========================================================================
 
 export interface User {
     id: string;
     name?: string | null;
     email?: string | null;
     image?: string | null;
+    // Framtida fält kan inkludera roller, etc.
+    // role?: 'admin' | 'user'; 
 }
 
-export interface Event {
-  id: string;
-  date: string; 
-  type: string; 
-  title: string;
-  description: string;
-  iconName?: string;
-  color?: string;
-}
+// ========================================================================
+//  TYPER FÖR CHAT & ANVÄNDARGRÄNSSNITT
+// ========================================================================
 
-export interface ActionableEvent extends Event {
-  actionType: 'PROJECT_LEAD' | 'INVOICE_PROCESSING' | 'UNKNOWN';
-  suggestedNextStep: string;
-  amount?: number;
-  currency?: string;
-  dueDate?: string | null;
-  contact?: {
-    name?: string | null;
-    email?: string | null;
-  };
+export type ChatRole = 'user' | 'assistant' | 'system';
+
+export interface ChatMessage {
+    role: ChatRole;
+    content: string;
+    attachment?: {
+        name: string;
+        content: string; // Base64-kodad data-URL
+    };
 }
