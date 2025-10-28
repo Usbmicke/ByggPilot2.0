@@ -84,9 +84,9 @@ export function PropertyLookupStep({ onPropertySelect }: PropertyLookupStepProps
                             </div>
                         </div>
                         <div className="space-y-3 text-sm">
-                           <div className="flex justify-between items-center"><span class="text-gray-400">Postort:</span><span class="font-semibold text-white">{propertyData.adress.postort}</span></div>
-                           <div className="flex justify-between items-center"><span class="text-gray-400">Tomtyta:</span><span class="font-semibold text-white">{propertyData.tomtyta} m²</span></div>
-                           <div className="flex justify-between items-center"><span class="text-gray-400">Taxeringsvärde:</span><span class="font-semibold text-white">{propertyData.taxeringsvärde.toLocaleString('sv-SE')} kr</span></div>
+                           <div className="flex justify-between items-center"><span className="text-gray-400">Postort:</span><span className="font-semibold text-white">{propertyData.adress.postort}</span></div>
+                           <div className="flex justify-between items-center"><span className="text-gray-400">Tomtyta:</span><span className="font-semibold text-white">{propertyData.tomtyta} m²</span></div>
+                           <div className="flex justify-between items-center"><span className="text-gray-400">Taxeringsvärde:</span><span className="font-semibold text-white">{propertyData.taxeringsvärde.toLocaleString('sv-SE')} kr</span></div>
                         </div>
                     </div>
                     <div className="mt-6 text-right">

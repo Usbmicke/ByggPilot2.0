@@ -51,7 +51,7 @@ const CreateOfferModal = () => {
             
             <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg text-center">
                 <BuildingStorefrontIcon className="h-12 w-12 mx-auto text-gray-500 mb-4" />
-                <h3 class="text-lg font-semibold text-yellow-400 mb-2">Nästa Steg: Offert-generator</h3>
+                <h3 className="text-lg font-semibold text-yellow-400 mb-2">Nästa Steg: Offert-generator</h3>
                 <p className="text-gray-400">Här kommer vi att bygga själva offert-generatorn, där du kan lägga till arbetsmoment, material och se en sammanställning. Fastighetsdatan vi just hämtade kommer att vara tillgänglig här för ROT-avdrag och andra beräkningar.</p>
             </div>
         </div>

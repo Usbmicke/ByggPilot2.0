@@ -2,19 +2,20 @@
 
 import React, { useState, useEffect } from 'react';
 import { useUI } from '@/app/contexts/UIContext';
-import { UserProfile } from '@/app/types/user';
+import { User } from '@/app/types/index';
+import { useSession } from 'next-auth/react';
 
 const CompanyVisionModal: React.FC = () => {
-  const { closeModal, modalPayload } = useUI();
+  const { closeModal } = useUI();
+  const { data: session } = useSession();
   const [vision, setVision] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const userProfile = modalPayload as UserProfile;
+  const userProfile = session?.user as User;
 
   useEffect(() => {
-    // Ladda befintlig vision om den finns när modalen öppnas
     if (userProfile?.companyVision) {
       setVision(userProfile.companyVision);
     }
@@ -43,7 +44,7 @@ const CompanyVisionModal: React.FC = () => {
       setSuccess(true);
       setTimeout(() => {
         closeModal();
-      }, 1500); // Stäng modalen automatiskt efter en kort fördröjning
+      }, 1500);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ett okänt fel uppstod.');

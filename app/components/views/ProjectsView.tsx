@@ -1,16 +1,17 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 import { Project } from '@/app/types';
-import NewProjectModal from '@/app/components/NewProjectModal';
+// ARKITEKTURKORRIGERING: Importerar useModal för att interagera med den globala modal-kontexten.
+import { useModal } from '@/app/contexts/ModalContext';
 
 // --- Sub-komponent för en projektrad --- 
 const ProjectRow = ({ project }: { project: Project }) => {
   const router = useRouter();
 
-  // Navigera till den specifika projektsidan vid klick.
   const handleRowClick = () => {
     router.push(`/projects/${project.id}`);
   };
@@ -20,8 +21,8 @@ const ProjectRow = ({ project }: { project: Project }) => {
       className="grid grid-cols-12 gap-4 items-center p-4 border-b border-gray-700 hover:bg-gray-800 transition-colors duration-150 cursor-pointer"
       onClick={handleRowClick}
     >
-      <div className="col-span-4 font-medium text-white truncate">{project.name}</div>
-      <div className="col-span-3 text-gray-400 truncate">{project.customerName || 'N/A'}</div> 
+      <div className="col-span-4 font-medium text-white truncate">{project.projectName}</div>
+      <div className="col-span-3 text-gray-400 truncate">{project.clientName || 'N/A'}</div> 
       <div className="col-span-2 text-gray-400">{project.lastActivity ? new Date(project.lastActivity).toLocaleDateString('sv-SE') : '-'}</div>
       <div className="col-span-2 flex items-center">
         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${project.status === 'Pågående' ? 'bg-green-500/20 text-green-300' : project.status === 'Anbud' ? 'bg-yellow-500/20 text-yellow-300' : 'bg-gray-500/20 text-gray-300'}`}>
@@ -38,13 +39,13 @@ export default function ProjectsView() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // ARKITEKTURKORRIGERING: isModalOpen och onProjectCreated tas bort, hanteras nu av ModalContext.
+  const { showModal } = useModal();
 
   useEffect(() => {
     const fetchProjects = async () => {
       setLoading(true);
       try {
-        // Anropa den nya API-endpointen för att lista projekt
         const response = await fetch('/api/projects'); 
         if (!response.ok) {
           const errorData = await response.json();
@@ -60,11 +61,8 @@ export default function ProjectsView() {
     };
     
     fetchProjects();
+    // Uppdateringsberoendet är tomt. revalidatePath() från servern kommer att trigga en ny hämtning.
   }, []);
-
-  const handleProjectCreated = (newProject: Project) => {
-    setProjects(currentProjects => [newProject, ...currentProjects]);
-  };
 
   return (
     <div className="p-4 md:p-8">
@@ -75,7 +73,8 @@ export default function ProjectsView() {
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input type="text" placeholder="Sök projekt..." className="bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 sm:w-40 md:w-auto" />
           </div>
-          <button onClick={() => setIsModalOpen(true)} className="bg-cyan-500 text-white font-semibold py-2 px-3 md:px-4 rounded-lg flex items-center gap-2 hover:bg-cyan-600 transition-colors duration-300">
+          {/* ARKITEKTURKORRIGERING: Knappen anropar nu showModal med modal-typen. */}
+          <button onClick={() => showModal('createProject')} className="bg-cyan-500 text-white font-semibold py-2 px-3 md:px-4 rounded-lg flex items-center gap-2 hover:bg-cyan-600 transition-colors duration-300">
             <PlusIcon className="w-5 h-5" />
             <span className="hidden sm:inline">Nytt Projekt</span>
           </button>
@@ -103,17 +102,12 @@ export default function ProjectsView() {
         {!loading && !error && projects.length === 0 && (
             <div className="p-8 text-center text-gray-400">
                 <h3 className="text-lg font-semibold text-white">Inga projekt hittades</h3>
-                <p className="mt-2">Klicka på "Nytt Projekt" för att skapa ditt första projekt.</p>
+                <p className="mt-2">Klicka på \"Nytt Projekt\" för att skapa ditt första projekt.</p>
             </div>
         )}
 
       </div>
-      {/* Modal för att skapa nytt projekt */}
-      <NewProjectModal 
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onProjectCreated={handleProjectCreated}
-      />
+      {/* ARKITEKTURKORRIGERING: Modal-komponenten renderas nu av en global ModalRenderer, inte direkt här. */}
     </div>
   );
 }

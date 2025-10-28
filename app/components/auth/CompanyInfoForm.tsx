@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import { useForm, SubmitHandler, UseFormRegister, FieldError } from 'react-hook-form';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 import { updateCompanyInfo } from '@/app/actions/userActions';
@@ -16,8 +16,16 @@ interface IFormInput {
   phone: string;
 }
 
-// Input-komponenten är oförändrad, men inkluderad för fullständighet.
-const Input = ({ label, id, type = 'text', register, error, disabled }) => (
+interface InputProps {
+    label: string;
+    id: keyof IFormInput;
+    type?: string;
+    register: UseFormRegister<IFormInput>;
+    error: FieldError | undefined;
+    disabled: boolean;
+}
+
+const Input: React.FC<InputProps> = ({ label, id, type = 'text', register, error, disabled }) => (
     <div>
         <label htmlFor={id} className="block text-sm font-medium text-gray-300 mb-1">
             {label}
@@ -39,7 +47,6 @@ interface CompanyInfoFormProps {
 
 const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ onSuccess }) => {
   const { register, handleSubmit, formState: { errors } } = useForm<IFormInput>();
-  // Hämta både session-data och den kritiska update-funktionen.
   const { data: session, update } = useSession(); 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -55,11 +62,8 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ onSuccess }) => {
     if (result.success) {
       toast.success('Information sparad!');
       
-      // **DEN KRITISKA FIXEN:** Tvinga en uppdatering av klientsessionen.
-      // Detta hämtar den nya `isNewUser: false`-statusen från servern.
       await update(); 
 
-      // Körs efter att sessionen är synkroniserad, vilket förhindrar omdirigeringsloopen.
       onSuccess();
 
     } else {
@@ -68,7 +72,6 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ onSuccess }) => {
     }
   };
 
-  // JSX för formuläret är oförändrat.
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-gray-800/50 p-8 rounded-lg border border-gray-700">
         <Input label="Företagsnamn" id="companyName" register={register} error={errors.companyName} disabled={isLoading} />

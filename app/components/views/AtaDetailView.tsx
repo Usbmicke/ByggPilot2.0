@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Project } from '@/app/types/project';
-import { Ata } from '@/app/types/ata';
+import { Project } from '@/app/types/index'; // Korrigerad import
+import { Ata } from '@/app/types/index'; // Korrigerad import
 import { ArrowUturnLeftIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 
 interface AtaDetailViewProps {

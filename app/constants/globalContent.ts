@@ -1,5 +1,5 @@
 
-import { ActionableEvent } from '@/app/types';
+import { ActionableEvent } from '@/app/types/index';
 
 /**
  * Denna fil innehåller statiskt innehåll som används på flera ställen i applikationen.

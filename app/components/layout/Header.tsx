@@ -12,7 +12,7 @@ import GlobalSearchBar from '@/app/components/layout/GlobalSearchBar';
 import NotificationBell from '@/app/components/layout/NotificationBell';
 import UserMenu from '@/app/components/layout/UserMenu';
 import Clock from '@/app/components/layout/Clock';
-import { useModal } from '@/app/context/ModalContext'; // GULDSTANDARD-TILLÄGG
+import { useModal } from '@/app/contexts/ModalContext'; // GULDSTANDARD-TILLÄGG
 
 interface HeaderProps {
   onMenuClick?: () => void;

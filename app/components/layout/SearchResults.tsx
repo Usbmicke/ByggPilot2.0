@@ -22,7 +22,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ query, onResultClick }) =
 
   const lowerCaseQuery = query.toLowerCase();
 
-  const filteredProjects = projects?.filter(p => p.name.toLowerCase().includes(lowerCaseQuery)) || [];
+  const filteredProjects = projects?.filter(p => p.projectName.toLowerCase().includes(lowerCaseQuery)) || [];
   const filteredCustomers = customers?.filter(c => c.name.toLowerCase().includes(lowerCaseQuery)) || [];
 
   const hasResults = filteredProjects.length > 0 || filteredCustomers.length > 0;
@@ -44,7 +44,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({ query, onResultClick }) =
                      <Link href={`/projects/${project.id}`} legacyBehavior>
                         <a className="flex items-center gap-3 p-3 rounded-md hover:bg-background-tertiary cursor-pointer">
                            <FolderIcon className="h-5 w-5 text-text-secondary" />
-                           <span className="text-sm text-text-primary">{project.name}</span>
+                           <span className="text-sm text-text-primary">{project.projectName}</span>
                         </a>
                     </Link>
                   </li>

@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
 import { ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
-import { User } from '@/app/types';
+import { User } from '@/app/types/index';
 
 // Hjälpfunktion för att generera initialer, samlad på ett ställe.
 const getInitials = (name: string | null | undefined) => {

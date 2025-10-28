@@ -2,59 +2,66 @@
 'use server';
 
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/app/lib/authOptions';
 import { db } from '@/app/lib/firebase/firestore';
-import { collection, addDoc, getDocs, query, where, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, serverTimestamp, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { TimeEntry } from '@/app/types/index';
 
-/**
- * Verifies that the currently authenticated user owns a specific project.
- * @param userId The ID of the authenticated user.
- * @param projectId The ID of the project to verify.
- * @returns {Promise<boolean>} True if the user owns the project, false otherwise.
- */
 async function verifyProjectOwnership(userId: string, projectId: string): Promise<boolean> {
     try {
         const projectRef = doc(db, 'users', userId, 'projects', projectId);
         const projectSnap = await getDoc(projectRef);
-        return projectSnap.exists(); // If the document exists in the user's subcollection, they own it.
+        return projectSnap.exists();
     } catch (error) {
         console.error('Error verifying project ownership:', error);
         return false;
     }
 }
 
+// Definerar den förväntade indatan för att skapa en tidrapport, skild från den fullständiga TimeEntry-typen.
+export type CreateTimeEntryData = {
+    projectId: string; // Behövs för att verifiera ägarskap och hitta rätt collection
+    taskId: string;
+    startTime: Date;
+    endTime: Date;
+    description?: string;
+}
+
 /**
- * GULDSTANDARD ACTION: `createTimeEntry`
- * Skapar en ny tidrapport för ett specifikt projekt.
- * Säkerställer att användaren äger projektet innan rapporten skapas.
+ * Skapar en ny tidrapport.
+ * VÄRLDSKLASS-KORRIGERING: Helt omskriven för att matcha den korrekta TimeEntry-datamodellen.
+ * Tar emot korrekt data, validerar, och skapar ett typsäkert objekt.
  */
-export async function createTimeEntry(entryData: Omit<TimeEntry, 'id' | 'createdAt' | 'userId'>) {
+export async function createTimeEntry(entryData: CreateTimeEntryData): Promise<{ success: boolean; timeEntryId?: string; error?: string; }> {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.uid) {
+    if (!session?.user?.id) {
         return { success: false, error: 'Autentisering krävs.' };
     }
-    const userId = session.user.uid;
+    const userId = session.user.id;
 
     try {
-        // Steg 1: Validera indata
-        if (!entryData.projectId || !entryData.date || !entryData.hours) {
-            return { success: false, error: 'Projekt-ID, datum och timmar är obligatoriska.' };
+        const { projectId, taskId, startTime, endTime, description } = entryData;
+
+        if (!projectId || !taskId || !startTime || !endTime) {
+            return { success: false, error: 'Projekt-ID, Uppgifts-ID, starttid och sluttid är obligatoriska.' };
         }
 
-        // Steg 2: Verifiera ägarskap av projektet
-        const userOwnsProject = await verifyProjectOwnership(userId, entryData.projectId);
+        const userOwnsProject = await verifyProjectOwnership(userId, projectId);
         if (!userOwnsProject) {
             return { success: false, error: 'Åtkomst nekad: Du äger inte detta projekt.' };
         }
 
-        // Steg 3: Skapa tidrapporten i en sub-collection under projektet
-        const timeEntriesCollectionRef = collection(db, 'users', userId, 'projects', entryData.projectId, 'timeEntries');
-        const newDocRef = await addDoc(timeEntriesCollectionRef, {
-            ...entryData,
-            userId: userId, // Redundant but good for denormalization
-            createdAt: serverTimestamp(),
-        });
+        const timeEntriesCollectionRef = collection(db, 'users', userId, 'projects', projectId, 'timeEntries');
+        
+        const newTimeEntry: Omit<TimeEntry, 'id'> = {
+            userId,
+            taskId,
+            startTime: Timestamp.fromDate(startTime),
+            endTime: Timestamp.fromDate(endTime),
+            description: description || '',
+        };
+
+        const newDocRef = await addDoc(timeEntriesCollectionRef, newTimeEntry);
 
         return { success: true, timeEntryId: newDocRef.id };
 
@@ -65,35 +72,41 @@ export async function createTimeEntry(entryData: Omit<TimeEntry, 'id' | 'created
 }
 
 /**
- * GULDSTANDARD ACTION: `getTimeEntries`
  * Hämtar alla tidrapporter för ett specifikt projekt.
- * Säkerställer att användaren äger projektet innan rapporterna hämtas.
+ * VÄRLDSKLASS-KORRIGERING: Använder säker mappning för att garantera att returdatan 
+ * alltid matchar TimeEntry-typen.
  */
-export async function getTimeEntries(projectId: string) {
+export async function getTimeEntries(projectId: string): Promise<{ success: boolean; data?: TimeEntry[]; error?: string; }> {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.uid) {
+    if (!session?.user?.id) {
         return { success: false, error: 'Autentisering krävs.' };
     }
-    const userId = session.user.uid;
+    const userId = session.user.id;
 
     try {
-        // Steg 1: Validera indata
         if (!projectId) {
             return { success: false, error: 'Projekt-ID är obligatoriskt.' };
         }
 
-        // Steg 2: Verifiera ägarskap av projektet
         const userOwnsProject = await verifyProjectOwnership(userId, projectId);
         if (!userOwnsProject) {
             return { success: false, error: 'Åtkomst nekad: Du kan inte se tidrapporter för detta projekt.' };
         }
 
-        // Steg 3: Hämta tidrapporterna från sub-collection
         const timeEntriesCollectionRef = collection(db, 'users', userId, 'projects', projectId, 'timeEntries');
-        const q = query(timeEntriesCollectionRef, where('projectId', '==', projectId)); // Fortfarande bra att ha kvar
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await getDocs(query(timeEntriesCollectionRef));
 
-        const timeEntries = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })) as TimeEntry[];
+        const timeEntries: TimeEntry[] = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                userId: data.userId,
+                taskId: data.taskId,
+                startTime: data.startTime, // Förutsätter att detta är ett Firestore Timestamp
+                endTime: data.endTime,     // Förutsätter att detta är ett Firestore Timestamp
+                description: data.description || '',
+            };
+        });
 
         return { success: true, data: timeEntries };
 

@@ -1,10 +1,12 @@
+
 'use client';
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Bot, Settings, Info } from 'lucide-react';
-import { useChat } from '@/contexts/ChatContext';
-import { useUI } from '@/contexts/UIContext'; // STEG 4: Importera useUI
+// ARKITEKTURKORRIGERING: Korrekt, relativ sökväg till den nyskapade kontexten.
+import { useChat } from '../contexts/ChatContext'; 
+import { useUI } from '../contexts/UIContext';
 
 interface OnboardingChatProps {
   onComplete: () => void;
@@ -15,7 +17,7 @@ const SETUP_COMMAND = "*Användare har godkänt onboarding. Kör `create_google_
 const OnboardingChat: React.FC<OnboardingChatProps> = ({ onComplete }) => {
   const [isLoading, setIsLoading] = useState(false);
   const { sendMessage } = useChat();
-  const { openModal } = useUI(); // Hämta openModal-funktionen
+  const { openModal } = useUI(); 
 
   const handleSelection = async (selection: 'accept' | 'decline') => {
     if (selection === 'accept') {
@@ -25,14 +27,11 @@ const OnboardingChat: React.FC<OnboardingChatProps> = ({ onComplete }) => {
         await sendMessage(SETUP_COMMAND);
         console.log("AI command sent. Opening Company Vision modal...");
 
-        // Öppna CompanyVisionModal som nästa steg i flödet
         openModal('companyVision');
 
       } catch (error) {
         console.error("Ett fel uppstod under onboarding-processen:", error);
       } finally {
-         // onComplete anropas nu av modalen eller när användaren stänger den,
-         // för att säkerställa att ZeroState inte försvinner för tidigt.
          onComplete(); 
          setIsLoading(false); 
       }

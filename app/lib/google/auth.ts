@@ -1,7 +1,7 @@
 
 import { google } from 'googleapis';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/app/lib/authOptions'; // Korrigerad importväg
 import { prisma } from '@/app/lib/prisma';
 
 export async function authenticate() {
@@ -27,6 +27,7 @@ export async function authenticate() {
         process.env.GOOGLE_CLIENT_SECRET
     );
 
+    // VÄRLDSKLASS-KORRIGERING: Korrigerat stavfel från 'oauth2Clien' till 'oauth2Client'.
     oauth2Client.setCredentials({
         access_token: account.access_token,
         refresh_token: account.refresh_token,

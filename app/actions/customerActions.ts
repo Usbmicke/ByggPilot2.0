@@ -1,69 +1,56 @@
 
 'use server';
 
-import { db } from '@/app/lib/firebase-admin';
-import { Customer, customerSchema } from '@/app/types/index';
 import { revalidatePath } from 'next/cache';
-
-// ... (befintlig createCustomer-funktion)
+import { createCustomerInDb, getCustomersFromDb } from '../lib/dal/customer';
+// ARKITEKTURKORRIGERING: Korrekt relativ sökväg till det nyskapade schemat.
+import { customerSchema } from '../lib/schemas/customer';
 
 /**
  * GULDSTANDARD SERVER ACTION: createCustomer
- * ... (dokumentation oförändrad)
+ * Validerar kunddata mot ett Zod-schema och anropar sedan DAL för att skapa kunden.
+ * Hanterar fel och returnerar ett standardiserat svarsformat.
  */
 export async function createCustomer(customerData: any) {
   const validationResult = customerSchema.safeParse(customerData);
+
   if (!validationResult.success) {
     console.error('Zod validation failed:', validationResult.error.flatten());
     return {
-        status: 'error',
-        message: `Valideringsfel: ${JSON.stringify(validationResult.error.flatten().fieldErrors)}`
-    }
+      status: 'error',
+      message: `Valideringsfel: ${JSON.stringify(validationResult.error.flatten().fieldErrors)}`,
+    };
   }
+
   try {
-    const newCustomerRef = await db.collection('customers').add(validationResult.data);
-    revalidatePath('/dashboard/customers'); 
+    const customerId = await createCustomerInDb(validationResult.data);
+    revalidatePath('/dashboard/customers');
+
     return {
       status: 'success',
       message: 'Kunden har skapats framgångsrikt!',
-      customerId: newCustomerRef.id
+      customerId: customerId,
     };
   } catch (error) {
-    console.error('Error creating customer in Firestore:', error);
+    console.error('Error creating customer:', error);
     return {
-        status: 'error',
-        message: 'Kunde inte skapa kunden i databasen på grund av ett internt serverfel.'
-    }
+      status: 'error',
+      message: 'Kunde inte skapa kunden på grund av ett internt serverfel.',
+    };
   }
 }
 
 /**
  * GULDSTANDARD SERVER ACTION: getCustomers
- * Hämtar en lista över alla kunder från Firestore.
- * Returnerar enbart nödvändiga fält för att populera en dropdown-meny,
- * vilket minimerar datamängden som skickas till klienten.
- * Inkluderar robust felhantering.
+ * Anropar DAL för att hämta en lista över alla kunder.
+ * Minimerar logiken i server-actions och delegerar databashantering.
  */
 export async function getCustomers() {
-    try {
-        const customersSnapshot = await db.collection('customers').get();
-        
-        if (customersSnapshot.empty) {
-            return [];
-        }
-
-        // Mappa dokumenten till ett mer användbart format
-        const customers = customersSnapshot.docs.map(doc => ({
-            id: doc.id,
-            name: doc.data().companyName || doc.data().name, // Stöd för både företagsnamn och personnamn
-        }));
-
-        return customers;
-
-    } catch (error) {
-        console.error("Fel vid hämtning av kunder från Firestore:", error);
-        // Kasta felet vidare så att anropande kod kan hantera det
-        throw new Error("Kunde inte hämta kundlistan.");
-    }
+  try {
+    const customers = await getCustomersFromDb();
+    return customers;
+  } catch (error) {
+    console.error('Failed to get customers in server action:', error);
+    throw new Error('Kunde inte hämta kundlistan.');
+  }
 }
-

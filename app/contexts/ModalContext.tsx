@@ -4,7 +4,8 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 
 // Definierar de olika typerna av modaler vi kan visa
-export type ModalType = 'createOffer' | 'createCustomer' | 'createAta';
+// ARKITEKTURKORRIGERING: Lade till 'createProject' för att stödja den nya modalarkitekturen.
+export type ModalType = 'createOffer' | 'createCustomer' | 'createAta' | 'createProject';
 
 interface ModalContextType {
   showModal: (modalType: ModalType, modalProps?: any) => void;

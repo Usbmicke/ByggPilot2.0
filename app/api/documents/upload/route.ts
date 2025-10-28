@@ -6,7 +6,7 @@ import { authenticate } from '@/app/lib/google/auth';
 import { findFolderIdByName } from '@/app/lib/google/driveService'; // Justerad sökväg
 
 async function buffer(readable: Readable): Promise<Buffer> {
-    const chunks = [];
+    const chunks: Buffer[] = [];
     for await (const chunk of readable) {
         chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
     }

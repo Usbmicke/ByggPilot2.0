@@ -3,7 +3,7 @@
 
 import React, { useState, useTransition } from 'react';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
-import { Customer } from '@/app/types';
+import { Customer } from '@/app/types/index';
 
 interface IdentityLookupStepProps {
     customerType: 'company' | 'private';
@@ -78,7 +78,7 @@ export function IdentityLookupStep({ customerType, onDataSelect }: IdentityLooku
             </form>
 
             {error && <div className="mt-4 bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm">{error}</div>}
-             {customerType === 'private' && <div class="mt-4 text-yellow-400/80 text-sm">Funktion för att hämta privatpersoner är under utveckling.</div>}
+             {customerType === 'private' && <div className="mt-4 text-yellow-400/80 text-sm">Funktion för att hämta privatpersoner är under utveckling.</div>}
         </div>
     );
 }

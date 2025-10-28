@@ -1,52 +1,74 @@
 
 // Fil: app/api/time-entries/route.ts
 import { NextResponse } from 'next/server';
-import { getServerSession } from "next-auth/next";
-import { handler } from "@/app/api/auth/[...nextauth]/route";
-import { firestoreAdmin } from "@/app/lib/firebase-admin";
-import { TimeEntry } from "@/app/types/time";
+import { getTimeEntries, createTimeEntry, CreateTimeEntryData } from '@/app/actions/timeEntryActions';
 
+/**
+ * Hämtar tidrapporter för ett projekt.
+ * VÄRLDSKLASS-KORRIGERING: Använder den korrigerade och typsäkra `getTimeEntries`-action.
+ */
 export async function GET(request: Request) {
-  const session = await getServerSession(handler);
-  if (!session || !session.user || !session.user.id) {
-    return new NextResponse(JSON.stringify({ message: 'Användaren är inte auktoriserad.' }), { status: 401 });
-  }
-
   const { searchParams } = new URL(request.url);
   const projectId = searchParams.get('projectId');
 
   if (!projectId) {
-    return new NextResponse(JSON.stringify({ message: 'Projekt-ID saknas.' }), { status: 400 });
+    return NextResponse.json({ error: 'Projekt-ID saknas.' }, { status: 400 });
   }
 
   try {
-    const timeEntriesRef = firestoreAdmin.collection('time-entries');
-    const q = timeEntriesRef
-      .where('userId', '==', session.user.id)
-      .where('projectId', '==', projectId)
-      .orderBy('date', 'desc'); // Sortera med senaste först
+    const result = await getTimeEntries(projectId);
 
-    const snapshot = await q.get();
-
-    if (snapshot.empty) {
-      return NextResponse.json([], { status: 200 });
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: 401 }); // 401 om autentisering misslyckas
     }
 
-    const timeEntries = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-            id: doc.id,
-            ...data,
-            // Säkerställ att datum är i ISO-format för konsekvent hantering på klienten
-            date: data.date.toDate().toISOString(), 
-            createdAt: data.createdAt.toDate().toISOString(),
-        } as TimeEntry;
-    });
+    // Säkerställer att Timestamps konverteras till ISO-strängar för JSON-serialisering.
+    const serializableData = result.data?.map(entry => ({
+      ...entry,
+      startTime: entry.startTime.toDate().toISOString(),
+      endTime: entry.endTime.toDate().toISOString(),
+    }));
 
-    return NextResponse.json(timeEntries, { status: 200 });
+    return NextResponse.json(serializableData, { status: 200 });
 
   } catch (error) {
-    console.error('Error fetching time entries:', error);
-    return new NextResponse(JSON.stringify({ message: 'Internt serverfel vid hämtning av tidrapporter.' }), { status: 500 });
+    console.error('API-fel vid hämtning av tidrapporter:', error);
+    return NextResponse.json({ error: 'Internt serverfel vid hämtning av tidrapporter.' }, { status: 500 });
   }
+}
+
+/**
+ * Skapar en ny tidrapport.
+ * VÄRLDSKLASS-IMPLEMENTERING: En komplett och korrekt POST-metod som använder den typsäkra `createTimeEntry`-action.
+ */
+export async function POST(request: Request) {
+    try {
+        const body = await request.json();
+
+        // Validera och konvertera indata
+        const entryData: CreateTimeEntryData = {
+            projectId: body.projectId,
+            taskId: body.taskId,
+            startTime: new Date(body.startTime),
+            endTime: new Date(body.endTime),
+            description: body.description,
+        };
+
+        if (!entryData.projectId || !entryData.taskId || !entryData.startTime || !entryData.endTime) {
+            return NextResponse.json({ error: 'Nödvändig information saknas (projectId, taskId, startTime, endTime).' }, { status: 400 });
+        }
+
+        const result = await createTimeEntry(entryData);
+
+        if (!result.success) {
+            // Fångar upp både autentiseringsfel och andra serverside-fel från action.
+            return NextResponse.json({ error: result.error || 'Kunde inte skapa tidrapport.' }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true, timeEntryId: result.timeEntryId }, { status: 201 });
+
+    } catch (error) {
+        console.error('API-fel vid skapande av tidrapport:', error);
+        return NextResponse.json({ error: 'Ett internt serverfel uppstod.' }, { status: 500 });
+    }
 }

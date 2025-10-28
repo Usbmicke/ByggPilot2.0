@@ -1,17 +1,16 @@
 
 'use server';
 
-import { createProjectFolderStructure as createProjectStructure } from '@/app/lib/google/driveService';
+import { createProjectSpecificFolderStructure } from '@/app/lib/google/driveService';
 
-export async function createProjectFolderStructure() {
+export async function createProjectFolderStructure(projectId: string, projectName: string) {
     try {
-        console.log("Calling createProjectStructure from driveActions");
-        const result = await createProjectStructure();
-        console.log("Result from createProjectStructure in driveActions:", result);
+        console.log(`Calling createProjectSpecificFolderStructure for project: ${projectName}`);
+        const result = await createProjectSpecificFolderStructure(projectName);
+        console.log("Result from createProjectSpecificFolderStructure in driveActions:", result);
         return result;
     } catch (error) {
-        console.error("Error in driveActions calling createProjectStructure:", error);
-        // Denna logg är avgörande. Om den inte visas, anropas aldrig funktionen.
+        console.error("Error in driveActions calling createProjectSpecificFolderStructure:", error);
         return { success: false, error: 'Failed to call Google Drive service' };
     }
 }

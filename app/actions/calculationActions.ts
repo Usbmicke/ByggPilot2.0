@@ -1,8 +1,7 @@
-
 'use server';
 
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/app/lib/authOptions';
 import { db } from '@/app/lib/firebase/firestore';
 import { doc, getDoc } from 'firebase/firestore';
 import { Calculation } from '@/app/types/index';
@@ -14,10 +13,10 @@ import { Calculation } from '@/app/types/index';
  */
 export async function getCalculation(projectId: string) {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.uid) {
+    if (!session?.user?.id) { // Använder .id från vår anpassade session
         return { success: false, error: 'Autentisering krävs.' };
     }
-    const userId = session.user.uid;
+    const userId = session.user.id;
 
     try {
         // Steg 1: Verifiera ägarskap av projektet (implicit genom sökvägen)

@@ -6,7 +6,7 @@ import { BuildingOffice2Icon, UserIcon, ArrowLeftIcon, CheckCircleIcon } from '@
 import { createCustomer } from '@/app/actions/customerActions';
 import { useModal } from '@/app/contexts/ModalContext';
 import { IdentityLookupStep } from './steps/IdentityLookupStep';
-import { Customer } from '@/app/types';
+import { Customer } from '@/app/types/index';
 
 type Step = 'chooseType' | 'lookup' | 'manual' | 'final';
 
