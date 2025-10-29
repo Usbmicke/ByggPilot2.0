@@ -1,10 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { google } from 'googleapis';
-import { authenticate } from '@/app/lib/google/auth';
-import { findFolderIdByName } from '@/app/lib/google/driveService';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { Readable } from 'stream';
+import { createOfferFile } from '@/lib/services/googleDriveService'; // Updated import
 
 const createOfferPrompt = (details: any) => {
     return `
@@ -31,11 +28,6 @@ const createOfferPrompt = (details: any) => {
     `;
 };
 
-async function getDriveService() {
-    const auth = await authenticate();
-    return google.drive({ version: 'v3', auth });
-}
-
 export async function POST(req: NextRequest) {
     const geminiApiKey = process.env.GEMINI_API_KEY;
     if (!geminiApiKey) {
@@ -47,72 +39,38 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const { offerDetails } = body;
         
-        if (!offerDetails) {
-            return NextResponse.json({ error: 'Offertdetaljer saknas' }, { status: 400 });
+        if (!offerDetails || !offerDetails.projectName) {
+            return NextResponse.json({ error: 'Offertdetaljer, inklusive projektnamn, saknas' }, { status: 400 });
         }
 
+        // 1. Generate Offer Content with AI
         const prompt = createOfferPrompt(offerDetails);
         const genAI = new GoogleGenerativeAI(geminiApiKey);
         const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
         const generationResult = await model.generateContent(prompt);
         const offerContent = generationResult.response.text();
 
-        const drive = await getDriveService();
-        
-        let parentFolderId = await findFolderIdByName(drive, 'ByggPilot - Projekt');
-        if (!parentFolderId) {
-             return NextResponse.json({ error: "Huvudmappen 'ByggPilot - Projekt' kunde inte hittas." }, { status: 500 });
-        }
-        
-        let projectFolderId: string | null = await findFolderIdByName(drive, offerDetails.projectName);
-        if (!projectFolderId) {
-            console.log(`Projektmapp för '${offerDetails.projectName}' hittades inte, skapar ny...`);
-            const projectFolderMetadata = {
-                name: offerDetails.projectName,
-                mimeType: 'application/vnd.google-apps.folder',
-                parents: [parentFolderId]
-            };
-            const projectFolder = await drive.files.create({
-                requestBody: projectFolderMetadata,
-                fields: 'id'
-            });
-            projectFolderId = projectFolder.data.id ?? null;
-            if (!projectFolderId) {
-                throw new Error('Kunde inte skapa projektmappen i Google Drive.');
-            }
-        }
-
+        // 2. Save the generated offer to Google Drive using the dedicated service function
         const fileName = `Offert_${offerDetails.projectName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.html`;
-        const fileMetadata = {
-            name: fileName,
-            parents: [projectFolderId], // VÄRLDSKLASS-KORRIGERING: Nu är vi säkra på att detta är en string
-            mimeType: 'text/html'
-        };
         
-        const media = {
-            mimeType: 'text/html',
-            body: Readable.from(offerContent)
-        };
+        const serviceResponse = await createOfferFile(offerDetails.projectName, fileName, offerContent);
 
-        const createdFile = await drive.files.create({
-            requestBody: fileMetadata,
-            media: media,
-            fields: 'id, webViewLink'
-        });
-
-        // VÄRLDSKLASS-KORRIGERING: Korrekt hantering av response-data
-        if (!createdFile.data || !createdFile.data.webViewLink) {
-             throw new Error('Filen skapades, men en länk kunde inte genereras.');
+        if (!serviceResponse.success || !serviceResponse.webViewLink) {
+            throw new Error(serviceResponse.error || 'Ett okänt fel inträffade vid filskapandet i Google Drive.');
         }
 
         return NextResponse.json({ 
             success: true, 
             message: "Offerten har skapats med AI och sparats i Google Drive.",
-            fileLink: createdFile.data.webViewLink
+            fileLink: serviceResponse.webViewLink
         });
 
     } catch (error: any) {
         console.error("Fel vid skapande av offert:", error);
-        return NextResponse.json({ error: `Serverfel: ${error.message}` }, { status: 500 });
+        // Provide a more user-friendly error message
+        const message = error.message.includes('GEMINI') 
+            ? "Ett fel inträffade vid generering av offertinnehållet."
+            : `Serverfel: ${error.message}`;
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }

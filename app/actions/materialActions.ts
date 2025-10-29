@@ -2,8 +2,8 @@
 'use server';
 
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/lib/authOptions';
-import { db } from '@/app/lib/firebase/firestore';
+import { authOptions } from '@/lib/config/authOptions';
+import { db } from '@/lib/config/firebase-admin';
 import { collection, getDocs, doc, getDoc, Timestamp } from 'firebase/firestore';
 import { Material } from '@/app/types/index';
 

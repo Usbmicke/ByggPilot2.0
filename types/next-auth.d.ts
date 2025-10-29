@@ -1,35 +1,15 @@
 
-import NextAuth, { DefaultSession } from 'next-auth';
-import { JWT } from 'next-auth/jwt';
+import 'next-auth';
 
 declare module 'next-auth' {
   /**
-   * Returned by `useSession`, `getSession` and received as a prop on the `SessionProvider` React Context
+   * Utökar Session-interfacet för att inkludera vårt anpassade användar-ID.
+   * Detta ID kommer från Firestore-dokumentet och läggs till i JWT-token.
    */
   interface Session {
     user: {
-      /** The user's unique ID from your database */
+      /** Användarens unika Firestore-dokument-ID. */
       id: string;
-      isNewUser?: boolean;
-      termsAccepted?: boolean;
-      onboardingComplete?: boolean;
-      companyName?: string;
     } & DefaultSession['user'];
-    /** The access token for Google API calls */
-    accessToken?: string;
-  }
-}
-
-declare module 'next-auth/jwt' {
-  /** Returned by the `jwt` callback and sent to the `session` callback. */
-  interface JWT {
-    /** The user's unique ID from your database */
-    id: string;
-    isNewUser?: boolean;
-    termsAccepted?: boolean;
-    onboardingComplete?: boolean;
-    companyName?: string;
-    /** The access token for Google API calls */
-    accessToken?: string;
   }
 }

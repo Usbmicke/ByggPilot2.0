@@ -2,8 +2,8 @@
 'use server';
 
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/lib/authOptions';
-import { db } from '@/app/lib/firebase/firestore';
+import { authOptions } from '@/lib/config/authOptions';
+import { db } from '@/lib/config/firebase-admin';
 import { collection, query, where, getDocs, limit, addDoc, serverTimestamp, writeBatch, doc, updateDoc, getDoc } from 'firebase/firestore';
 
 /**
