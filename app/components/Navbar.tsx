@@ -3,6 +3,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 import LoginButtons from '@/app/components/auth/LoginButtons';
 
+// GULDSTANDARD-FIX: Importerar en alternativ, förhoppningsvis okorrupt, logotypfil.
+// Felet 'unable to decode image data' indikerar att den ursprungliga filen var trasig.
+import logo from '@/public/images/byggpilotlogga1.png';
+
 const Navbar = () => {
   return (
     <nav className="fixed top-0 left-0 w-full bg-background-secondary p-4 flex justify-between items-center z-20 border-b border-border-primary">
@@ -10,7 +14,7 @@ const Navbar = () => {
       <Link href="/" className="flex items-center">
         <div className="relative h-10 w-10 mr-2">
           <Image 
-            src="/byggpilot-logo.png" 
+            src={logo} // Använd den importerade bilden
             alt="ByggPilot-logotypen, en blå och vit hjälm" 
             fill={true}
             sizes="50px"

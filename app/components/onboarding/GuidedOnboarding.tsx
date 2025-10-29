@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { CheckCircleIcon, ArrowRightIcon, ShieldCheckIcon, DocumentPlusIcon, FolderIcon } from '@heroicons/react/24/solid';
 import CompanyNameInput from '@/components/onboarding/CompanyNameInput';
-import { completeOnboardingStep } from '@/app/onboarding/actions';
+import { completeOnboardingStep } from '@/onboarding/actions';
 
 type OnboardingStep = 'companyInfo' | 'structure' | 'success';
 type TransientView = 'welcome' | 'terms' | 'security';

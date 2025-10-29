@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Project, Invoice, InvoiceLine, RotDeduction, InvoiceCreationData, Customer } from '@/app/types';
+import { Project, Invoice, InvoiceLine, RotDeduction, InvoiceCreationData, Customer } from '@/types';
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/solid';
 
 interface InvoiceModalProps {
@@ -13,7 +13,6 @@ interface InvoiceModalProps {
   onSave: (newInvoiceData: InvoiceCreationData) => Promise<void>;
 }
 
-// VÄRLDSKLASS-KORRIGERING: 'unitPrice' används nu, enligt den centrala typen.
 const emptyLine: Omit<InvoiceLine, 'id'> = { description: '', quantity: 1, unit: 'st', unitPrice: 0 };
 
 export default function InvoiceModal({ isOpen, onClose, project, customer, onSave }: InvoiceModalProps) {
@@ -29,7 +28,6 @@ export default function InvoiceModal({ isOpen, onClose, project, customer, onSav
   const handleLineChange = (index: number, field: keyof InvoiceLine, value: string | number) => {
     const newLines = [...invoiceLines];
     const line = newLines[index] as InvoiceLine;
-    // VÄRLDSKLASS-KORRIGERING: 'unitPrice' används.
     if (field === 'quantity' || field === 'unitPrice') {
       (line as any)[field] = Number(value) || 0;
     } else {
@@ -49,7 +47,6 @@ export default function InvoiceModal({ isOpen, onClose, project, customer, onSav
         (line) => line.description && line.description.trim() !== '' && line.quantity && line.quantity > 0 && line.unitPrice && line.unitPrice > 0
     ) as InvoiceLine[];
 
-    // VÄRLDSKLASS-KORRIGERING: Skapar ett objekt som matchar InvoiceCreationData.
     const newInvoiceData: InvoiceCreationData = {
       projectId: project.id,
       customer: customer,
@@ -60,14 +57,14 @@ export default function InvoiceModal({ isOpen, onClose, project, customer, onSav
           isApplicable: applyRot,
           personNumber: applyRot ? rotData.personNumber : undefined,
           laborCost: applyRot ? rotData.laborCost || 0 : 0,
-          amount: applyRot ? (rotData.laborCost || 0) * 0.3 : 0, // Beräkna faktisk avdragssumma
+          amount: applyRot ? (rotData.laborCost || 0) * 0.3 : 0, 
       },
     };
 
     try {
       await onSave(newInvoiceData);
     } catch (error) {
-      console.error('Fel vid sparning av faktura:', error);
+      // Error logging should be handled in the parent component
     } finally {
       setIsSaving(false);
     }
@@ -88,18 +85,15 @@ export default function InvoiceModal({ isOpen, onClose, project, customer, onSav
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                   <label className="block text-sm font-medium text-gray-300">Kund</label>
-                  {/* VÄRLDSKLASS-KORRIGERING: Använder 'customer.name' */}
                   <input type="text" value={customer?.name || ''} readOnly className="mt-1 block w-full bg-gray-900 border-gray-700 rounded-md py-2 px-3 text-gray-400" />
               </div>
               <div>
                   <label className="block text-sm font-medium text-gray-300">Projekt</label>
-                  {/* VÄRLDSKLASS-KORRIGERING: Använder 'project.projectName' */}
-                  <input type="text" value={project.projectName} readOnly className="mt-1 block w-full bg-gray-900 border-gray-700 rounded-md py-2 px-3 text-gray-400" />
+                  <input type="text" value={project.name} readOnly className="mt-1 block w-full bg-gray-900 border-gray-700 rounded-md py-2 px-3 text-gray-400" />
               </div>
               {/* ... datumfält ... */}
             </div>
 
-             {/* VÄRLDSKLASS-KORRIGERING: invoiceLines renderas nu med korrekta fält */}
              {invoiceLines.map((line, index) => (
                  <div key={index} className="flex items-center gap-2">
                      <input type="text" placeholder="Beskrivning" value={line.description} onChange={(e) => handleLineChange(index, 'description', e.target.value)} className="flex-grow bg-gray-700 p-2 rounded-md" />
@@ -124,7 +118,6 @@ export default function InvoiceModal({ isOpen, onClose, project, customer, onSav
                         </div>
                         <div>
                             <label htmlFor="rot-labor" className="block text-sm font-medium text-gray-300">Total arbetskostnad (för ROT)</label>
-                             {/* VÄRLDSKLASS-KORRIGERING: Använder 'laborCost' */}
                             <input type="number" id="rot-labor" onChange={e => setRotData({...rotData, laborCost: Number(e.target.value)})} className="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white" />
                         </div>
                     </div>

@@ -1,22 +1,22 @@
+
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next'; 
 import { authOptions } from '@/lib/config/authOptions'; 
-import { db } from '@/lib/config/firebase-admin'; // <-- KORRIGERAD IMPORTVÄG
 import { FolderIcon, InboxIcon, SparklesIcon } from '@heroicons/react/24/outline';
-import { StatCard } from '@/app/components/dashboard/StatCard';
-import { InfoCard } from '@/app/components/dashboard/InfoCard';
+// KORRIGERING: Korrekta sökvägar till komponenter.
+import { StatCard } from '@/components/dashboard/StatCard';
+import { InfoCard } from '@/components/dashboard/InfoCard';
 
 export default async function DashboardPage() {
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
+        // Om ingen session finns, omdirigera till startsidan.
         redirect('/');
     }
 
-    const userDoc = await db.collection('users').doc(session.user.id).get();
-    const userData = userDoc.data();
-
-    if (!userData?.onboardingComplete) {
+    // Onboarding-logik: Rörs ej. Säkerställer att nya användare går till onboarding.
+    if (!session.user.onboardingComplete) {
         redirect('/onboarding');
     }
 
