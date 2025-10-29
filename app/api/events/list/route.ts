@@ -5,7 +5,7 @@ import { google } from 'googleapis';
 import { getServerSession } from "next-auth/next"
 
 // Importerar den konfigurerade NextAuth-handlern
-import { authOptions } from "@/app/lib/authOptions";
+import { authOptions } from "@/lib/config/authOptions";
 
 export async function GET(request: Request) {
   // 1. Säkerställ att användaren är inloggad

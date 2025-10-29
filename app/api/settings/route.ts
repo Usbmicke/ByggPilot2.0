@@ -1,8 +1,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/lib/authOptions"; // Korrigerad importväg
-import { firestoreAdmin } from "@/app/lib/firebase-admin";
+import { authOptions } from "@/lib/config/authOptions"; // Korrigerad importväg
+import { firestoreAdmin } from "@/lib/config/firebase-admin";
 
 // GET-funktion för att hämta användarinställningar
 export async function GET(request: NextRequest) {

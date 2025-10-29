@@ -2,8 +2,8 @@
 // Fil: app/api/dashboard/summary/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/lib/authOptions";
-import { firestoreAdmin } from "@/app/lib/firebase-admin";
+import { authOptions } from "@/lib/config/authOptions";
+import { firestoreAdmin } from "@/lib/config/firebase-admin";
 import { Project, ProjectStatus } from "@/app/types";
 
 async function getProjectSubCollectionSum(projectId: string, collectionName: string, sumField: string): Promise<number> {

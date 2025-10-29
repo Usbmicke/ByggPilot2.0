@@ -1,11 +1,12 @@
 
 // Fil: app/api/time-entries/route.ts
 import { NextResponse } from 'next/server';
-import { getTimeEntries, createTimeEntry, CreateTimeEntryData } from '@/app/actions/timeEntryActions';
+import { getTimeEntries, createTimeEntry } from '@/app/actions/timeEntryActions';
+import { TimeEntry } from '@/lib/types';
+import { Timestamp } from 'firebase-admin/firestore';
 
 /**
  * Hämtar tidrapporter för ett projekt.
- * VÄRLDSKLASS-KORRIGERING: Använder den korrigerade och typsäkra `getTimeEntries`-action.
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -18,16 +19,17 @@ export async function GET(request: Request) {
   try {
     const result = await getTimeEntries(projectId);
 
-    if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 401 }); // 401 om autentisering misslyckas
+    if (!result.success || !result.data) {
+      return NextResponse.json({ error: result.error }, { status: 401 });
     }
 
-    // Säkerställer att Timestamps konverteras till ISO-strängar för JSON-serialisering.
-    const serializableData = result.data?.map(entry => ({
-      ...entry,
-      startTime: entry.startTime.toDate().toISOString(),
-      endTime: entry.endTime.toDate().toISOString(),
-    }));
+    const serializableData = result.data.map(entry => {
+      const date = entry.date as Timestamp;
+      return {
+        ...entry,
+        date: date.toDate().toISOString(),
+      };
+    });
 
     return NextResponse.json(serializableData, { status: 200 });
 
@@ -39,29 +41,27 @@ export async function GET(request: Request) {
 
 /**
  * Skapar en ny tidrapport.
- * VÄRLDSKLASS-IMPLEMENTERING: En komplett och korrekt POST-metod som använder den typsäkra `createTimeEntry`-action.
  */
 export async function POST(request: Request) {
     try {
-        const body = await request.json();
+        // Defininear en typ för inkommande data, där `date` är en string.
+        type TimeEntryPayload = Omit<TimeEntry, 'id' | 'userId' | 'date'> & { date: string };
+        const body: TimeEntryPayload = await request.json();
 
-        // Validera och konvertera indata
-        const entryData: CreateTimeEntryData = {
-            projectId: body.projectId,
-            taskId: body.taskId,
-            startTime: new Date(body.startTime),
-            endTime: new Date(body.endTime),
-            description: body.description,
-        };
-
-        if (!entryData.projectId || !entryData.taskId || !entryData.startTime || !entryData.endTime) {
-            return NextResponse.json({ error: 'Nödvändig information saknas (projectId, taskId, startTime, endTime).' }, { status: 400 });
+        if (!body.projectId || !body.date || typeof body.date !== 'string' || body.hours === undefined) {
+            return NextResponse.json({ error: 'Nödvändig information saknas eller är felaktig (projectId, date, hours).' }, { status: 400 });
         }
 
-        const result = await createTimeEntry(entryData);
+        const result = await createTimeEntry({
+            projectId: body.projectId,
+            // Skapar ett Date-objekt från strängen.
+            date: new Date(body.date),
+            hours: body.hours,
+            description: body.description,
+            isBilled: body.isBilled || false,
+        });
 
         if (!result.success) {
-            // Fångar upp både autentiseringsfel och andra serverside-fel från action.
             return NextResponse.json({ error: result.error || 'Kunde inte skapa tidrapport.' }, { status: 500 });
         }
 

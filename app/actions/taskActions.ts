@@ -3,9 +3,10 @@
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/config/authOptions';
-import { db } from '@/lib/config/firebase-admin';
-import { collection, addDoc, getDocs, query, where, doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { Task } from '@/app/types/index';
+import { firestoreAdmin } from '@/lib/config/firebase-admin';
+import { type Task } from '@/lib/types';
+import { FieldValue } from 'firebase-admin/firestore';
+
 
 /**
  * Hämtar alla uppgifter för ett specifikt projekt.
@@ -19,15 +20,14 @@ export async function getTasks(projectId: string): Promise<{ success: boolean; d
     const userId = session.user.id;
 
     try {
-        const projectRef = doc(db, 'users', userId, 'projects', projectId);
-        const projectSnap = await getDoc(projectRef);
-        if (!projectSnap.exists()) {
+        const projectRef = firestoreAdmin.collection('users').doc(userId).collection('projects').doc(projectId);
+        const projectSnap = await projectRef.get();
+        if (!projectSnap.exists) {
             return { success: false, error: 'Åtkomst nekad: Du äger inte detta projekt.' };
         }
 
-        const tasksCollectionRef = collection(projectRef, 'tasks');
-        const q = query(tasksCollectionRef);
-        const querySnapshot = await getDocs(q);
+        const tasksCollectionRef = projectRef.collection('tasks');
+        const querySnapshot = await tasksCollectionRef.get();
 
         const tasks: Task[] = querySnapshot.docs.map(doc => {
             const data = doc.data();
@@ -36,8 +36,9 @@ export async function getTasks(projectId: string): Promise<{ success: boolean; d
                 projectId: projectId,
                 title: data.title || 'Namnlös uppgift',
                 description: data.description || undefined,
-                isCompleted: data.completed || false, // Korrekt mappning
-                deadline: data.deadline || undefined,
+                isCompleted: data.completed || data.isCompleted || false, // Hanterar båda fältnamnen
+                deadline: data.deadline?.toDate(),
+                createdAt: data.createdAt?.toDate(),
             };
         });
 
@@ -51,7 +52,6 @@ export async function getTasks(projectId: string): Promise<{ success: boolean; d
 
 /**
  * Skapar en ny uppgift för ett specifikt projekt.
- * VÄRLDSKLASS-KORRIGERING: Använder `isCompleted` för att matcha Task-typen.
  */
 export async function createTask(projectId: string, title: string): Promise<{ success: boolean; data?: Task; error?: string; }> {
     const session = await getServerSession(authOptions);
@@ -61,21 +61,21 @@ export async function createTask(projectId: string, title: string): Promise<{ su
     const userId = session.user.id;
 
     try {
-        const projectRef = doc(db, 'users', userId, 'projects', projectId);
-        const projectSnap = await getDoc(projectRef);
-        if (!projectSnap.exists()) {
+        const projectRef = firestoreAdmin.collection('users').doc(userId).collection('projects').doc(projectId);
+        const projectSnap = await projectRef.get();
+        if (!projectSnap.exists) {
             return { success: false, error: 'Åtkomst nekad: Du kan inte skapa uppgifter för detta projekt.' };
         }
 
-        const tasksCollectionRef = collection(projectRef, 'tasks');
+        const tasksCollectionRef = projectRef.collection('tasks');
         const newTaskData = {
             title,
             projectId,
-            isCompleted: false, // Korrekt fältnamn
-            createdAt: serverTimestamp(),
+            isCompleted: false,
+            createdAt: FieldValue.serverTimestamp(),
             userId,
         };
-        const docRef = await addDoc(tasksCollectionRef, newTaskData);
+        const docRef = await tasksCollectionRef.add(newTaskData);
 
         const returnData: Task = {
             id: docRef.id,
@@ -94,7 +94,6 @@ export async function createTask(projectId: string, title: string): Promise<{ su
 
 /**
  * Uppdaterar en befintlig uppgift.
- * VÄRLDSKLASS-KORRIGERING: Använder `isCompleted` för att matcha Task-typen.
  */
 export async function updateTask(taskId: string, projectId: string, updates: Partial<Pick<Task, 'title' | 'isCompleted'>>): Promise<{ success: boolean; error?: string; }> {
     const session = await getServerSession(authOptions);
@@ -104,15 +103,16 @@ export async function updateTask(taskId: string, projectId: string, updates: Par
     const userId = session.user.id;
 
     try {
-        const projectRef = doc(db, 'users', userId, 'projects', projectId);
-        const taskRef = doc(projectRef, 'tasks', taskId);
+        // Först, verifiera att användaren äger projektet
+        const projectRef = firestoreAdmin.collection('users').doc(userId).collection('projects').doc(projectId);
+        const projectSnap = await projectRef.get();
+        if (!projectSnap.exists) {
+            return { success: false, error: 'Åtkomst nekad.' };
+        }
 
-        // Mapper `isCompleted` till `completed` om det skickas med i updates.
-        // Detta är en tillfällig lösning för bakåtkompabilitet om klienten skickar fel data.
-        // I en ideal värld skulle klienten alltid skicka rätt fältnamn.
-        const firestoreUpdates: { [key: string]: any } = { ...updates };
-
-        await updateDoc(taskRef, firestoreUpdates);
+        // Nu, uppdatera uppgiften
+        const taskRef = projectRef.collection('tasks').doc(taskId);
+        await taskRef.update(updates);
 
         return { success: true };
 

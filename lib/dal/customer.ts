@@ -1,6 +1,6 @@
 
-import { firestoreAdmin } from '../firebase-admin';
-import { Customer } from '../../types'; // Går upp två nivåer för att nå app/types
+import { firestoreAdmin } from '@/lib/config/firebase-admin';
+import { Customer } from '@/lib/schemas/project';
 
 /**
  * Creates a new customer in the Firestore database.

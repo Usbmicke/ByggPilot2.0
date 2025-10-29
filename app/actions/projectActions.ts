@@ -2,12 +2,11 @@
 'use server';
 
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/lib/authOptions';
-import { db } from '@/app/lib/firebase/firestore';
-import { collection, addDoc, getDocs, query, serverTimestamp, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { authOptions } from '@/lib/config/authOptions';
+import { firestoreAdmin } from '@/lib/config/firebase-admin';
 import { createProjectFolderStructure } from './driveActions';
-import { Project, File } from '@/app/types';
 import { projectSchema, type ProjectFormData } from '@/lib/schemas/project';
+import { type Project, type File } from '@/lib/types';
 
 export async function createProject(formData: ProjectFormData) {
   const session = await getServerSession(authOptions);
@@ -22,10 +21,10 @@ export async function createProject(formData: ProjectFormData) {
   }
 
   try {
-    const newProjectRef = await addDoc(collection(db, `users/${userId}/projects`), {
+    const newProjectRef = await firestoreAdmin.collection(`users/${userId}/projects`).add({
       ...validation.data,
       userId,
-      createdAt: serverTimestamp(),
+      createdAt: new Date(),
       status: 'Pågående',
     });
 
@@ -56,15 +55,15 @@ export async function addFileToProject(projectId: string, fileData: Omit<File, '
 
     try {
         // Steg 1: Verifiera ägarskap av projektet
-        const projectRef = doc(db, 'users', userId, 'projects', projectId);
-        const projectSnap = await getDoc(projectRef);
-        if (!projectSnap.exists()) {
+        const projectRef = firestoreAdmin.collection('users').doc(userId).collection('projects').doc(projectId);
+        const projectSnap = await projectRef.get();
+        if (!projectSnap.exists) {
             return { success: false, error: 'Åtkomst nekad: Du äger inte detta projekt.' };
         }
 
         // Steg 2: Lägg till fil-metadatan i en sub-collection
-        const filesCollectionRef = collection(projectRef, 'files');
-        await addDoc(filesCollectionRef, fileData);
+        const filesCollectionRef = projectRef.collection('files');
+        await filesCollectionRef.add(fileData);
 
         return { success: true };
 

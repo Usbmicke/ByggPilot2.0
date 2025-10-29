@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "//TODO_SECURITY": "Firebase v10.12.2 har måttliga sårbarheter i beroendet 'undici'. Uppdatera när en säker version av Firebase är tillgänglig.",
     "dev": "kill-port 3001 && next dev --port 3001",
     "build": "next build",
     "start": "next start",
@@ -14,6 +15,7 @@
     "@headlessui/react": "^2.2.8",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^3.9.0",
+    "@nextui-org/react": "^2.6.11",
     "@pinecone-database/pinecone": "^6.1.2",
     "@prisma/client": "^6.18.0",
     "@radix-ui/react-popover": "^1.1.15",

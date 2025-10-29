@@ -1,7 +1,7 @@
 
 'use server';
 
-import { prisma } from '@/app/lib/prisma'; // NOTE: This path will need to be corrected later.
+import { prisma } from '@/lib/prisma'; // NOTE: This path will need to be corrected later.
 
 export async function getGoogleAccount(userId: string) {
     const account = await prisma.account.findFirst({

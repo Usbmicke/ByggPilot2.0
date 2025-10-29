@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/lib/authOptions';
+import { authOptions } from '@/lib/config/authOptions';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 

@@ -1,8 +1,8 @@
 
 'use server';
 
-import { firestoreAdmin } from "@/app/lib/firebase-admin";
-import { Material } from "@/app/types/index";
+import { firestoreAdmin } from "@/lib/config/firebase-admin";
+import { Material } from "@/lib/types";
 import { Timestamp } from 'firebase-admin/firestore';
 
 /**
