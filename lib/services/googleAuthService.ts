@@ -4,7 +4,7 @@
 import { google } from 'googleapis';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/config/authOptions';
-import { getGoogleAccount, updateGoogleAccountTokens } from '@/lib/dal/accounts';
+import { getAccountByUserId, updateAccount } from '@/lib/dal/accounts';
 
 export async function authenticate() {
     const session = await getServerSession(authOptions);
@@ -12,7 +12,7 @@ export async function authenticate() {
         throw new Error("Användaren är inte inloggad eller sessionen är ogiltig.");
     }
 
-    const account = await getGoogleAccount(session.user.id);
+    const account = await getAccountByUserId(session.user.id);
 
     if (!account || !account.access_token || !account.refresh_token || !account.providerAccountId) {
         console.log("Kunde inte hitta Google-konto eller så saknas tokens.");
@@ -35,10 +35,10 @@ export async function authenticate() {
         oauth2Client.setCredentials(credentials);
 
         // Uppdatera databasen med den nya access_token via DAL
-        await updateGoogleAccountTokens(account.providerAccountId, {
-            access_token: credentials.access_token,
-            refresh_token: credentials.refresh_token || account.refresh_token,
-            expires_at: credentials.expiry_date ? Math.floor(credentials.expiry_date / 1000) : account.expires_at,
+        await updateAccount(account.providerAccountId, {
+            access_token: credentials.access_token!,
+            refresh_token: credentials.refresh_token || account.refresh_token!,
+            expires_at: credentials.expiry_date ? Math.floor(credentials.expiry_date / 1000) : account.expires_at!,
         });
 
     } catch (error) {

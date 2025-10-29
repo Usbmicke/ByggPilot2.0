@@ -3,10 +3,9 @@
 // @nextui-org/react är föråldrat och bör bytas ut för att säkerställa långsiktig stabilitet och tillgång till nya funktioner.
 
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, Input } from "@nextui-org/react";
-import { useSession } from "next-auth/react"; // Korrekt import för session-hantering
+import { useSession } from "next-auth/react";
 import React, { useState } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
-import { firestore as db } from '@/lib/firebase/client';
+import { updateUserHourlyRate } from '@/lib/dal/users'; // Importerar från DAL
 
 interface SetHourlyRateModalProps {
   isOpen: boolean;
@@ -14,18 +13,14 @@ interface SetHourlyRateModalProps {
 }
 
 const SetHourlyRateModal: React.FC<SetHourlyRateModalProps> = ({ isOpen, onClose }) => {
-  const { data: session } = useSession(); // Använder useSession för att hämta användardata
-  const user = session?.user; // Hämtar användarobjektet från sessionen
+  const { data: session } = useSession();
+  const user = session?.user;
   const [hourlyRate, setHourlyRate] = useState('');
 
   const handleSave = async () => {
-    // Kontrollerar att användaren och UID finns innan vi anropar databasen
-    if (user && user.id && hourlyRate) { 
-      const userDocRef = doc(db, 'users', user.id);
+    if (user && user.id && hourlyRate) {
       try {
-        await updateDoc(userDocRef, {
-          hourlyRate: Number(hourlyRate)
-        });
+        await updateUserHourlyRate(user.id, Number(hourlyRate)); // Anropar DAL-funktionen
         console.log('Timpris sparat!');
         onClose();
       } catch (error) {
