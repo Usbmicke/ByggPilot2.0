@@ -3,6 +3,9 @@ import { AuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import { FirestoreAdapter } from "@next-auth/firebase-adapter"
 import { firestoreAdmin } from '@/lib/config/firebase-admin';
+import { logger } from '@/lib/logger';
+
+const adapter = FirestoreAdapter(firestoreAdmin);
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -19,28 +22,61 @@ export const authOptions: AuthOptions = {
       },
     }),
   ],
-  adapter: FirestoreAdapter(firestoreAdmin),
+  adapter: adapter,
   callbacks: {
     async jwt({ token, user, account }) {
-      // On initial sign-in, the account object is available.
-      // We are persisting the access_token and refresh_token to the JWT here.
-      if (account) {
+      // Initial sign-in
+      if (account && user) {
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token;
-      }
-      if (user) {
         token.id = user.id;
+        // Persist all user properties from the database to the token
+        const dbUser = await adapter.getUser(user.id);
+        if (dbUser) {
+            token.companyName = dbUser.companyName;
+            token.onboardingComplete = dbUser.onboardingComplete;
+            token.driveRootFolderId = dbUser.driveRootFolderId;
+            token.driveRootFolderUrl = dbUser.driveRootFolderUrl;
+        }
+        return token;
       }
+
+      // Subsequent requests, refresh the token with the latest data from the DB
+      // This is the crucial part that solves the redirect loop
+      if (token.id) {
+        const dbUser = await adapter.getUser(token.id as string);
+        if (dbUser) {
+            token.companyName = dbUser.companyName;
+            token.onboardingComplete = dbUser.onboardingComplete; // KORRIGERING: Typo fixad här
+            token.driveRootFolderId = dbUser.driveRootFolderId;
+            token.driveRootFolderUrl = dbUser.driveRootFolderUrl;
+        } else {
+          // If user is not found in DB, something is wrong, invalidate the session.
+          logger.warn(`User with token ID ${token.id} not found in DB during JWT refresh.`);
+          return { ...token, error: "UserNotFound" };
+        }
+      }
+      
       return token;
     },
     async session({ session, token }) {
-      // We are taking the tokens from the JWT and adding them to the session object.
-      // This makes it available to the client-side and server-side components.
-      session.accessToken = token.accessToken as string;
-      session.refreshToken = token.refreshToken as string;
+      // Pass all properties from the JWT token to the session object
+      session.accessToken = token.accessToken;
+      session.refreshToken = token.refreshToken;
+
       if (session.user) {
         session.user.id = token.id as string;
+        session.user.companyName = token.companyName as string | undefined;
+        session.user.onboardingComplete = token.onboardingComplete as boolean | undefined;
+        session.user.driveRootFolderId = token.driveRootFolderId as string | undefined;
+        session.user.driveRootFolderUrl = token.driveRootFolderUrl as string | undefined;
       }
+      
+      // Handle error case
+      if (token.error) {
+        session.error = token.error as string;
+      }
+
       return session;
     },
   },
