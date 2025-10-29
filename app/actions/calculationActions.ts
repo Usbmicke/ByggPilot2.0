@@ -2,37 +2,23 @@
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/config/authOptions';
-import { db } from '@/app/lib/firebase/firestore';
-import { doc, getDoc } from 'firebase/firestore';
+import { fetchCalculation as fetchCalculationFromDAL } from '@/lib/dal/calculations'; // Importerar från DAL med ett alias
 import { Calculation } from '@/app/types/index';
 
 /**
- * GULDSTANDARD ACTION: `getCalculation`
- * Hämtar kalkyl-data för ett specifikt projekt.
- * Säkerställer att användaren äger projektet innan data hämtas.
+ * Server Action to fetch a calculation.
+ * This action handles session validation before calling the Data Access Layer.
+ * @param {string} userId - The ID of the user.
+ * @param {string} calculationId - The ID of the calculation to fetch.
+ * @returns {Promise<Calculation | null>}
  */
-export async function getCalculation(projectId: string) {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) { // Använder .id från vår anpassade session
-        return { success: false, error: 'Autentisering krävs.' };
-    }
-    const userId = session.user.id;
+export const fetchCalculation = async (userId: string, calculationId: string): Promise<Calculation | null> => {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.id !== userId) {
+    // Autentiserings- och auktoriseringskontroll
+    throw new Error('Not authorized');
+  }
 
-    try {
-        // Steg 1: Verifiera ägarskap av projektet (implicit genom sökvägen)
-        const calcDocRef = doc(db, 'users', userId, 'projects', projectId, 'calculations', 'main');
-        const calculationDoc = await getDoc(calcDocRef);
-
-        if (!calculationDoc.exists()) {
-            return { success: false, error: 'Kalkyl-data kunde inte hittas för projektet.' };
-        }
-
-        const calculation = calculationDoc.data() as Calculation;
-
-        return { success: true, data: calculation };
-
-    } catch (error) {
-        console.error('Fel vid hämtning av kalkyl-data:', error);
-        return { success: false, error: 'Ett serverfel uppstod vid hämtning av kalkyl-data.' };
-    }
-}
+  // Anropar DAL-funktionen för att hämta datan
+  return fetchCalculationFromDAL(userId, calculationId);
+};

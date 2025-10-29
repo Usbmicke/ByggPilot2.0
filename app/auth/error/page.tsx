@@ -1,7 +1,6 @@
-'use client';
-
-import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { Suspense } from 'react';
+import ErrorDisplay from './error-display';
 
 // Enkel, centrerad layout för att matcha resten av appens känsla.
 const containerStyle: React.CSSProperties = {
@@ -29,12 +28,6 @@ const headingStyle: React.CSSProperties = {
   marginBottom: '16px',
 };
 
-const paragraphStyle: React.CSSProperties = {
-  fontSize: '16px',
-  color: '#D1D5DB', // Ljusgrå text
-  marginBottom: '24px',
-};
-
 const linkStyle: React.CSSProperties = {
   display: 'inline-block',
   padding: '12px 24px',
@@ -45,25 +38,14 @@ const linkStyle: React.CSSProperties = {
   fontWeight: '500',
 };
 
-
 export default function AuthErrorPage() {
-  const searchParams = useSearchParams();
-  const error = searchParams.get('error');
-
-  // Mappar tekniska felnamn till användarvänliga meddelanden.
-  const errorMessages: { [key: string]: string } = {
-    EmailRequired: 'Inloggning misslyckades. En giltig e-postadress från Google krävs för att kunna logga in på ByggPilot.',
-    DatabaseError: 'Ett oväntat systemfel inträffade vid inloggningen. Vårt team har meddelats. Vänligen försök igen om en liten stund.',
-    Default: 'Ett okänt fel inträffade under inloggningen. Vänligen försök igen.'
-  };
-
-  const message = error ? (errorMessages[error] || errorMessages.Default) : errorMessages.Default;
-
   return (
     <div style={containerStyle}>
         <div style={boxStyle}>
             <h1 style={headingStyle}>Oj, något gick fel</h1>
-            <p style={paragraphStyle}>{message}</p>
+            <Suspense fallback={<p>Hämtar felinformation...</p>}>
+              <ErrorDisplay />
+            </Suspense>
             <Link href="/" style={linkStyle}>
                 Tillbaka till startsidan
             </Link>

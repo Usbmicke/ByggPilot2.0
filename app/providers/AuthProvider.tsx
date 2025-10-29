@@ -3,7 +3,7 @@
 
 import { SessionProvider, useSession } from 'next-auth/react';
 import React, { useEffect, useState, useTransition } from 'react';
-import { auth as firebaseAuth } from '@/lib/firebase/client';
+import { auth as firebaseAuth } from '@/lib/config/firebase-client'; // Korrekt sökväg
 import { signInWithCustomToken, signOut } from 'firebase/auth';
 import { useRouter, usePathname } from 'next/navigation';
 
