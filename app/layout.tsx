@@ -2,7 +2,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/app/providers/AuthProvider";
+import Providers from "@/app/providers"; // Importera den korrekta provider-filen
 import { UIProvider } from "@/app/contexts/UIContext";
 import { ModalProvider } from "@/app/contexts/ModalContext";
 import ModalRenderer from "@/app/components/layout/ModalRenderer";
@@ -24,12 +24,12 @@ export default function RootLayout({
     <html lang="sv">
       <body className={`${inter.className} h-full bg-background-primary text-text-primary`}>
         <UIProvider>
-          <AuthProvider>
+          <Providers> { /* Ersatt AuthProvider med den rena SessionProvider */}
               <ModalProvider>
                 {children}
                 <ModalRenderer />
               </ModalProvider>
-          </AuthProvider>
+          </Providers>
         </UIProvider>
         <CookieBanner />
       </body>

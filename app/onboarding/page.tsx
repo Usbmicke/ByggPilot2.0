@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { GuidedOnboarding } from '@/components/onboarding/GuidedOnboarding';
@@ -19,22 +19,21 @@ export default function OnboardingPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  // Om sessionen fortfarande laddas, visa en enkel laddningsskärm.
-  if (status === 'loading') {
-    return <div className="flex min-h-screen items-center justify-center bg-gray-900 text-white"><p>Laddar session...</p></div>;
-  }
+  useEffect(() => {
+    // Om sessionen inte laddas och användaren är oautentiserad, skicka till startsidan.
+    if (status === 'unauthenticated') {
+      router.replace('/');
+    }
 
-  // Om användaren inte är autentiserad, skicka dem till startsidan.
-  if (status === 'unauthenticated') {
-    router.replace('/');
-    return null;
-  }
-
-  // Om användaren redan har slutfört onboardingen, skicka dem direkt till dashboarden.
-  // Detta förhindrar att de ser onboardingen igen.
-  if (session?.user?.onboardingComplete) {
+    // Om användaren redan har slutfört onboardingen, skicka direkt till dashboarden.
+    if (session?.user?.onboardingComplete) {
       router.replace('/dashboard');
-      return null;
+    }
+  }, [status, session, router]);
+
+  // Visa en laddningsskärm medan vi väntar på sessionen och omdirigeringslogiken.
+  if (status === 'loading' || !session || session.user.onboardingComplete) {
+    return <div className="flex min-h-screen items-center justify-center bg-gray-900 text-white"><p>Laddar...</p></div>;
   }
 
   return (
