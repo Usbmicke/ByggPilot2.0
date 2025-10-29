@@ -1,14 +1,13 @@
-
 'use client';
 
 import React, { useState, useTransition } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { CheckCircleIcon, InformationCircleIcon, ArrowRightIcon, ShieldCheckIcon, DocumentPlusIcon } from '@heroicons/react/24/solid';
+import { CheckCircleIcon, ArrowRightIcon, ShieldCheckIcon, DocumentPlusIcon } from '@heroicons/react/24/solid';
 import CompanyNameInput from '@/components/onboarding/CompanyNameInput';
+import { completeOnboardingStep } from '@/app/onboarding/actions';
 
-// Typdefinition med det nya 'terms'-steget
-type OnboardingStep = 'companyInfo' | 'welcome' | 'terms' | 'security' | 'creating' | 'success';
+type OnboardingStep = 'companyInfo' | 'welcome' | 'terms' | 'creating' | 'success';
 
 const LoadingSpinner = () => (
     <div className="flex flex-col items-center justify-center space-y-4">
@@ -29,60 +28,50 @@ export function GuidedOnboarding() {
     const [isPending, startTransition] = useTransition();
     const [hasAgreed, setHasAgreed] = useState(false);
 
-    const handleCompanyInfoSubmit = async (companyName: string) => {
+    const handleCompanyInfoSubmit = (companyName: string) => {
         setError(null);
         startTransition(async () => {
-            try {
-                const response = await fetch('/api/user/setup', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ companyName }),
-                });
-                if (!response.ok) {
-                    const result = await response.json();
-                    throw new Error(result.message || 'Kunde inte spara företagsinformation.');
-                }
-                await update({ companyName });
+            const result = await completeOnboardingStep(1, { companyName });
+            if (result.success) {
+                await update({ user: { ...session?.user, companyName: result.data.companyName } });
                 setStep('welcome');
-            } catch (err: any) {
-                setError(err.message);
+            } else {
+                setError(result.error || 'Något gick fel.');
             }
         });
     };
 
-    const handleCreateStructure = async () => {
+    const handleCreateStructure = () => {
         if (!hasAgreed) {
             setError("Du måste godkänna villkoren för att fortsätta.");
             return;
         }
-        setStep('creating');
         setError(null);
+        setStep('creating');
         startTransition(async () => {
-            try {
-                const response = await fetch('/api/onboarding/create-drive-structure', { method: 'POST' });
-                if (!response.ok) {
-                    const result = await response.json();
-                    throw new Error(result.message || 'Något gick fel.');
-                }
+            const result = await completeOnboardingStep(2, {});
+            if (result.success) {
                 setStep('success');
-            } catch (err: any) {
-                setError(err.message);
-                setStep('terms');
+            } else {
+                setError(result.error || 'Kunde inte skapa mappstrukturen.');
+                setStep('terms'); // Gå tillbaka till villkorssteget vid fel
             }
         });
     };
 
-    const completeOnboarding = async () => {
+    const handleFinalizeOnboarding = () => {
         startTransition(async () => {
-            try {
-                await update({ onboardingComplete: true });
-                router.push('/dashboard');
-            } catch (err) {
+            const result = await completeOnboardingStep(4, {});
+            if (result.success) {
+                 await update({ user: { ...session?.user, onboardingComplete: true } });
+                 router.push('/dashboard');
+            } else {
                 setError('Kunde inte slutföra onboardingen. Prova att ladda om sidan.');
             }
         });
     };
 
+    // ... resten av render-logiken är densamma ...
     const renderContent = () => {
         switch (step) {
             case 'companyInfo':
@@ -171,8 +160,8 @@ export function GuidedOnboarding() {
                            Din nya mappstruktur finns nu i Google Drive under mappen <strong className='text-cyan-300'>"ByggPilot - {session?.user?.companyName}"</strong>.
                         </p>
                         <div className="mt-8">
-                            <button onClick={completeOnboarding} className="w-full flex items-center justify-center gap-3 bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/50">
-                                Gå till Översikten <ArrowRightIcon className='h-5 w-5'/>
+                            <button onClick={handleFinalizeOnboarding} className="w-full flex items-center justify-center gap-3 bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/50">
+                                {isPending ? 'Slutför...' : 'Gå till Översikten'} <ArrowRightIcon className='h-5 w-5'/>
                             </button>
                         </div>
                     </div>
