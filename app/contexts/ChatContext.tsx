@@ -8,8 +8,7 @@ interface ChatContextType {
   messages: ChatMessage[];
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
   startNewChat: () => void;
-  // ARKITEKTURKORRIGERING: Lade till sendMessage för att matcha komponenternas behov.
-  sendMessage: (message: string) => Promise<void>; 
+  sendMessage: (message: string) => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -18,19 +17,17 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   const startNewChat = () => {
-    setMessages([]); 
+    setMessages([]);
   };
 
-  // PLATSHÅLLARE: Denna funktion kommer att implementeras fullt ut senare.
   const sendMessage = async (message: string) => {
     console.log("Skickar meddelande (platshållare):", message);
-    // Här kommer logiken för att anropa AI-backenden att finnas.
-    // För nu lägger vi bara till användarens meddelande i chatten.
+    // VÄRLDSKLASS-KORRIGERING: Använder 'timestamp' i enlighet med ChatMessage-typen.
     const userMessage: ChatMessage = {
         id: `msg-${Date.now()}`,
         role: 'user',
         content: message,
-        createdAt: new Date(),
+        timestamp: new Date(),
     };
     setMessages(prev => [...prev, userMessage]);
   };

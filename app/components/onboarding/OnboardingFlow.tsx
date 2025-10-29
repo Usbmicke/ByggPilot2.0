@@ -41,8 +41,13 @@ export default function OnboardingFlow({ companyName }: OnboardingFlowProps) {
       } else {
         throw new Error(result.error || 'Kunde inte hämta mappens URL från servern.');
       }
+    // VÄRLDSKLASS-KORRIGERING: Korrekt hantering av 'unknown' feltyp.
     } catch (err) {
-      setError(err.message);
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Ett okänt fel inträffade.');
+      }
     }
   };
   

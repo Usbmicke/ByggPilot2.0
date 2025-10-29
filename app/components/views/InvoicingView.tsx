@@ -1,30 +1,30 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Project, Invoice } from '@/app/types';
+import { Project, Invoice, InvoiceCreationData, Customer } from '@/app/types';
 import { PlusIcon, HomeModernIcon } from '@heroicons/react/24/solid';
 import InvoiceModal from '@/app/components/InvoiceModal';
 import Link from 'next/link';
+import { createInvoice } from '@/app/actions/invoiceActions'; // Importera server-åtgärden
 
 interface InvoicingViewProps {
   project: Project;
+  customer: Customer; // VÄRLDSKLASS-TILLÄGG: Kräver nu ett fullständigt customer-objekt
 }
 
-// --- Sub-komponent för en fakturarad (nu med länk) --- 
 const InvoiceRow = ({ invoice, projectId }: { invoice: Invoice, projectId: string }) => {
-    const totalAmount = invoice.invoiceLines.reduce((acc, line) => acc + (line.unitPrice * line.quantity * (1 + line.vatRate / 100)), 0);
-
     return (
       <Link href={`/projects/${projectId}/invoices/${invoice.id}`} passHref>
         <div className="grid grid-cols-12 gap-4 items-center p-4 border-b border-gray-700 last:border-b-0 hover:bg-gray-800 transition-colors duration-150 cursor-pointer">
             <div className="col-span-3 font-medium text-white truncate flex items-center gap-2">
-                <span>{invoice.id.substring(0, 8)}...</span>
-                {invoice.rotDeduction && (
+                <span>{invoice.invoiceNumber || invoice.id.substring(0, 8)}</span>
+                {invoice.rotDeduction?.isApplicable && (
                     <HomeModernIcon className="w-5 h-5 text-teal-400" title="Innehåller ROT-avdrag" />
                 )}
             </div>
             <div className="col-span-3 text-gray-400">{new Date(invoice.issueDate).toLocaleDateString('sv-SE')}</div>
-            <div className="col-span-3 text-gray-400">{totalAmount.toLocaleString('sv-SE', { style: 'currency', currency: 'SEK' })}</div>
+            <div className="col-span-3 text-gray-400">{invoice.totalAmount.toLocaleString('sv-SE', { style: 'currency', currency: 'SEK' })}</div>
             <div className="col-span-2 flex items-center">
                 <span className={`px-2 py-1 text-xs font-semibold rounded-full bg-blue-500/20 text-blue-300`}>
                     {invoice.status}
@@ -36,10 +36,7 @@ const InvoiceRow = ({ invoice, projectId }: { invoice: Invoice, projectId: strin
     );
 };
 
-/**
- * Huvudvyn för att hantera fakturering för ett projekt.
- */
-export default function InvoicingView({ project }: InvoicingViewProps) {
+export default function InvoicingView({ project, customer }: InvoicingViewProps) {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +46,7 @@ export default function InvoicingView({ project }: InvoicingViewProps) {
     const fetchInvoices = async () => {
       try {
         setLoading(true);
+        // TODO: I framtiden bör fakturor hämtas via en server-åtgärd istället för API-route
         const response = await fetch(`/api/projects/${project.id}/invoices`);
         if (!response.ok) throw new Error('Kunde inte hämta fakturor');
         const data: Invoice[] = await response.json();
@@ -62,9 +60,17 @@ export default function InvoicingView({ project }: InvoicingViewProps) {
     fetchInvoices();
   }, [project.id]);
 
-  const handleInvoiceCreated = (newInvoice: Invoice) => {
-    setInvoices(currentInvoices => [newInvoice, ...currentInvoices]);
-    setIsModalOpen(false);
+  // VÄRLDSKLASS-KORRIGERING: Funktionen matchar nu InvoiceModal:s onSave-prop.
+  // Den är asynkron och hanterar server-åtgärden createInvoice.
+  const handleCreateInvoice = async (newInvoiceData: InvoiceCreationData) => {
+    const result = await createInvoice(newInvoiceData);
+    if (result.success && result.invoice) {
+        setInvoices(currentInvoices => [result.invoice!, ...currentInvoices]);
+        setIsModalOpen(false);
+    } else {
+        // Hantera felet, t.ex. visa ett meddelande för användaren
+        setError(result.error || 'Ett okänt fel uppstod vid sparning.');
+    }
   };
 
   return (
@@ -72,7 +78,7 @@ export default function InvoicingView({ project }: InvoicingViewProps) {
         <div className="flex justify-between items-center mb-6">
             <div>
                 <h1 className="text-2xl md:text-3xl font-bold text-white">Fakturering</h1>
-                <p className="text-gray-400">Projekt: {project.name}</p>
+                <p className="text-gray-400">Projekt: {project.projectName}</p>
             </div>
             <button 
               onClick={() => setIsModalOpen(true)}
@@ -83,7 +89,7 @@ export default function InvoicingView({ project }: InvoicingViewProps) {
             </button>
         </div>
 
-        {error && <div className="p-4 text-center text-red-400">{`Fel: ${error}`}</div>}
+        {error && <div className="p-4 my-4 bg-red-900/50 border border-red-700 rounded-lg text-center text-red-300">{`Fel: ${error}`}</div>}
 
         <div className="bg-gray-800/50 border border-gray-700 rounded-xl mt-4">
             <div className="hidden md:grid grid-cols-12 gap-4 p-4 border-b border-gray-700 text-gray-400 font-bold text-sm">
@@ -112,7 +118,8 @@ export default function InvoicingView({ project }: InvoicingViewProps) {
             isOpen={isModalOpen}
             onClose={() => setIsModalOpen(false)}
             project={project}
-            onSave={handleInvoiceCreated}
+            customer={customer} // Skicka med det fullständiga customer-objektet
+            onSave={handleCreateInvoice} 
         />
     </div>
   );

@@ -14,18 +14,20 @@ interface MessageProps {
 const Message = ({ message }: MessageProps) => {
     const isUser = message.role === 'user';
 
-    // Funktion för att rendera en nedladdningslänk för bilagor
     const renderAttachment = (attachment: ChatMessage['attachment']) => {
         if (!attachment) return null;
 
+        // VÄRLDSKLASS-KORRIGERING: Använder det korrekta fältet `url` från ChatMessage-typen.
         return (
             <a 
-                href={attachment.content} // Base64-datan fungerar som en URL
+                href={attachment.url} 
                 download={attachment.name}
+                target="_blank" // Öppna i ny flik för bättre UX
+                rel="noopener noreferrer" // Säkerhetsåtgärd
                 className="flex items-center gap-2 mt-2 px-3 py-2 text-sm bg-background-tertiary rounded-lg hover:bg-border-primary transition-colors duration-200 ease-in-out"
             >
                 <PaperClipIcon className="h-5 w-5" />
-                <span>{attachment.name}</span>
+                <span>Ladda ner: {attachment.name}</span>
             </a>
         )
     }

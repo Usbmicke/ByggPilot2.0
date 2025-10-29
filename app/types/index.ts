@@ -6,33 +6,36 @@
 
 import { Timestamp } from 'firebase-admin/firestore';
 
-// -----------------------------------------
+// ----------------------------------------
 // KÄRN-ENTITETER
-// -----------------------------------------
+// ----------------------------------------
 
-/** Användarprofil i Firestore och NextAuth-session. */
 export interface UserProfile {
   id: string;
   name?: string | null;
   email?: string | null;
   image?: string | null;
-  createdAt?: Timestamp | any; // Helst Timestamp, any för flexibilitet
+  createdAt?: Timestamp | any;
   isNewUser?: boolean;
   termsAccepted?: boolean;
   onboardingComplete?: boolean;
   companyId?: string | null;
   companyName?: string | null;
+  companyVision?: string;
 }
 
-// Alias för konsekvens i komponenter
 export type User = UserProfile;
 
 /** Kund (Företag eller Privatperson). */
 export interface Customer {
   id: string;
-  customerType: 'Company' | 'PrivatePerson';
+  name: string; 
+  customerType: 'Company' | 'PrivatePerson' | 'company' | 'private' | null;
   email: string;
   phone?: string;
+  address?: string;
+  zipCode?: string;
+  city?: string;
   companyName?: string;
   orgNumber?: string;
   referencePerson?: string;
@@ -42,24 +45,25 @@ export interface Customer {
 }
 
 /** Projektstatus - en kritisk del av projekt-livscykeln. */
-export type ProjectStatus = 'Not Started' | 'In Progress' | 'On Hold' | 'Completed' | 'Archived';
+export type ProjectStatus = 'Not Started' | 'In Progress' | 'On Hold' | 'Completed' | 'Archived' | 'Anbud' | 'Pågående' | 'Arkiverat';
 
 /** Huvudprojektet som binder samman allt. */
 export interface Project {
   id: string;
-  name: string;
+  projectName: string; 
   customerId: string;
-  customerName?: string; // Denormaliserad för enkel visning
+  customerName: string; 
+  clientName?: string; 
   status: ProjectStatus;
   startDate?: Timestamp | any;
   endDate?: Timestamp | any;
   description?: string;
   totalInvoiced?: number;
   totalCost?: number;
+  lastActivity?: string | Timestamp | any;
   createdAt: Timestamp | any;
 }
 
-/** En uppgift (Task) inom ett projekt. */
 export interface Task {
   id: string;
   projectId: string;
@@ -69,18 +73,18 @@ export interface Task {
   deadline?: Timestamp | any;
 }
 
-/** Material som används i ett projekt. */
 export interface Material {
   id: string;
   projectId: string;
   name: string;
   quantity: number;
-  unit: string; // t.ex. 'st', 'm', 'kg'
+  unit: string;
   pricePerUnit: number;
+  price: number;
+  date: Timestamp | any;
   supplier?: string;
 }
 
-/** Tidrapportering för en uppgift. */
 export interface TimeEntry {
   id: string;
   taskId: string;
@@ -90,7 +94,6 @@ export interface TimeEntry {
   description?: string;
 }
 
-/** Fil kopplad till ett projekt (t.ex. ritning, avtal). */
 export interface File {
   id: string;
   projectId: string;
@@ -99,54 +102,54 @@ export interface File {
   uploadedAt: Timestamp | any;
 }
 
-/** Ändrings- och Tilläggsarbete (ÄTA). */
+export type AtaStatus = 'Pending' | 'Approved' | 'Rejected';
+
 export interface Ata {
-  id: string;
+  id:string;
   projectId: string;
   title: string;
   description: string;
-  cost: number;
+  price: number;
+  notes?: string; 
+  status: AtaStatus; 
   isApproved: boolean;
   createdAt: Timestamp | any;
 }
 
-
-// -----------------------------------------
+// ----------------------------------------
 // FAKTURERING & EKONOMI
-// -----------------------------------------
+// ----------------------------------------
 
-/** ROT-avdrag information. */
 export interface RotDeduction {
   isApplicable: boolean;
+  laborCost: number;
   amount: number;
   personNumber?: string;
 }
 
-/** En rad på en faktura. */
 export interface InvoiceLine {
   description: string;
   quantity: number;
   unit: string;
-  pricePerUnit: number;
+  unitPrice: number;
 }
 
-/** Fakturan som skickas till kund. */
 export interface Invoice {
   id: string;
   projectId: string;
   invoiceNumber: string;
   status: 'Draft' | 'Sent' | 'Paid' | 'Overdue';
-  lines: InvoiceLine[];
+  invoiceLines: InvoiceLine[];
   rotDeduction: RotDeduction;
   totalAmount: number;
+  customer: Customer;
+  issueDate: Timestamp | any;
   dueDate: Timestamp | any;
   createdAt: Timestamp | any;
 }
 
-/** Data som behövs för att skapa en ny faktura. */
-export type InvoiceCreationData = Omit<Invoice, 'id' | 'invoiceNumber' | 'status' | 'createdAt'>;
+export type InvoiceCreationData = Omit<Invoice, 'id' | 'invoiceNumber' | 'status' | 'createdAt' | 'totalAmount'>;
 
-/** Beräkning eller kalkyl för ett projekt. */
 export interface Calculation {
   id: string;
   projectId: string;
@@ -156,29 +159,36 @@ export interface Calculation {
   totalEstimatedCost: number;
 }
 
-
-// -----------------------------------------
+// ----------------------------------------
 // INTERAKTION & GRÄNSSNITT
-// -----------------------------------------
+// ----------------------------------------
 
-/** Händelser i systemet, ofta sådant som kräver en åtgärd. */
+// VÄRLDSKLASS-ARKITEKTUR: En enhetlig händelsetyp för hela systemet.
+export type EventType = 'new_task' | 'invoice_due' | 'project_approved' | 'new_message' | 'Tip' | 'log';
+
 export interface ActionableEvent {
   id: string;
-  type: 'new_task' | 'invoice_due' | 'project_approved' | 'new_message';
-  title: string;
-  description: string;
-  link: string; // Länk till relevant sida
+  type: EventType;
+  title?: string; // Valfri, eftersom en logg inte har en titel.
+  description?: string; // Valfri, används för detaljer.
+  message?: string; // Valfri, specifikt för loggmeddelanden.
+  link?: string; // Valfri, eftersom en logg inte har en länk.
   isRead: boolean;
   createdAt: Timestamp | any;
+  actionType?: string;
+  suggestedNextStep?: string;
 }
 
-// Generell händelse, kan vara en ActionableEvent eller bara en logg.
-export type Event = ActionableEvent | { id: string; type: 'log'; message: string };
+// Den gamla union-typen är nu borttagen. ActionableEvent är den enda källan till sanning.
+export type Event = ActionableEvent;
 
-/** Ett meddelande i chatten. */
 export interface ChatMessage {
   id: string;
-  senderId: string; // 'user' eller 'system'/'ai'
-  text: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  attachment?: {
+    name: string;
+    url: string;
+  }; 
   timestamp: Timestamp | any;
 }

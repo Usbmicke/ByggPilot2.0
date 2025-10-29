@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 // =====================================================================================
 // KUND-SCHEMA (ZOD)
-// Garanterar dataintegritet vid skapande och uppdatering av kunder.
+// Garanterar dataintegritet och transformerar data för att matcha Customer-typen.
 // =====================================================================================
 
 export const customerSchema = z.object({
@@ -21,15 +21,23 @@ export const customerSchema = z.object({
   lastName: z.string().optional(),
 }).refine(data => {
   if (data.customerType === 'Company' && !data.companyName) {
-    return false; // Företagsnamn är obligatoriskt för företagskunder
+    return false; 
   }
   if (data.customerType === 'PrivatePerson' && (!data.firstName || !data.lastName)) {
-    return false; // För- och efternamn är obligatoriskt för privatkunder
+    return false;
   }
   return true;
 }, {
-  // Anpassat felmeddelande om valideringen ovan misslyckas
   message: "Obligatoriska fält för vald kundtyp saknas.",
-  // Sökväg till det fält som ska visa felet, kan justeras för bättre UX
   path: ["companyName", "firstName"], 
+})
+// VÄRLDSKLASS-TRANSFORMATION: Skapar dynamiskt 'name'-fältet för att matcha Customer-typen.
+.transform((data) => {
+    const name = data.customerType === 'Company' 
+        ? data.companyName 
+        : `${data.firstName} ${data.lastName}`;
+    return {
+        ...data,
+        name: name! // Säkerställer att namnet är en sträng baserat på refine-logiken ovan.
+    };
 });

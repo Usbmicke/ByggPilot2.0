@@ -6,13 +6,16 @@ import { BuildingOffice2Icon, UserIcon, ArrowLeftIcon, CheckCircleIcon } from '@
 import { createCustomer } from '@/app/actions/customerActions';
 import { useModal } from '@/app/contexts/ModalContext';
 import { IdentityLookupStep } from './steps/IdentityLookupStep';
+// VÄRLDSKLASS-KORRIGERING: Importerar endast Customer-typen.
 import { Customer } from '@/app/types/index';
 
-type Step = 'chooseType' | 'lookup' | 'manual' | 'final';
+type Step = 'chooseType' | 'lookup' | 'final';
+// VÄRLDSKLASS-KORRIGERING: Definierar kundtypen som en sträng-union, i enlighet med Customer-interfacet.
+export type CustomerType = 'company' | 'private';
 
 const CreateCustomerModal = () => {
   const [step, setStep] = useState<Step>('chooseType');
-  const [customerType, setCustomerType] = useState<'company' | 'private' | null>(null);
+  const [customerType, setCustomerType] = useState<CustomerType | null>(null);
   const [customerData, setCustomerData] = useState<Partial<Customer>>({});
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -31,16 +34,20 @@ const CreateCustomerModal = () => {
   
   const handleSave = (data: Partial<Customer>) => {
       setError(null);
-      const finalData = { ...data, customerType };
+      const finalData: Partial<Customer> = {
+           ...data,
+           customerType: customerType,
+           name: data.name || data.companyName || `${data.firstName} ${data.lastName}` || 'Okänd Kund'
+      };
 
       startTransition(async () => {
-          const result = await createCustomer(finalData);
+          const result = await createCustomer(finalData as Customer);
           if (result.status === 'success') {
               setCustomerData(finalData);
               setStep('final');
           } else {
               setError(result.message || 'Ett okänt fel uppstod.');
-              setStep(customerType === 'company' ? 'lookup' : 'lookup'); // Alltid tillbaka till lookup
+              setStep('lookup');
           }
       });
   }
@@ -72,7 +79,7 @@ const CreateCustomerModal = () => {
                 <CheckCircleIcon className="h-20 w-20 text-green-400 mx-auto mb-5 animate-pulse" />
                 <h2 className="text-3xl font-bold text-white mb-2">Kund Skapad!</h2>
                 <p className="text-gray-300 text-lg mb-6">
-                    {customerData.companyName || customerData.name} har lagts till i ditt kundregister.
+                    {customerData.name} har lagts till i ditt kundregister.
                 </p>
                 <button onClick={hideModal} className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-8 rounded-lg transition-colors duration-200 text-lg">
                     Stäng

@@ -3,13 +3,8 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Ata } from '@/app/types'; // Antager att Ata-typen finns globalt
-import { PencilIcon, CheckCircleIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
-
-// GULDSTANDARD-KOMPONENT: AtaList
-// Denna komponent är nu extraherad för maximal återanvändbarhet.
-// Den tar emot en lista med ÄTA:er och ett projectId, och renderar enbart listan.
-// Detta gör att den kan användas i både AtaView och ProjectDetailView.
+import { Ata, AtaStatus } from '@/app/types';
+import { PencilIcon, CheckCircleIcon, ChevronRightIcon, ClockIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
 interface AtaListProps {
     atas: Ata[];
@@ -18,20 +13,21 @@ interface AtaListProps {
 
 const AtaList = ({ atas, projectId }: AtaListProps) => {
 
-    const getStatusChip = (status: Ata['status']) => {
+    // VÄRLDSKLASS-KORRIGERING: Mappar korrekta AtaStatus-värden till UI-element.
+    const getStatusChip = (status: AtaStatus) => {
         switch (status) {
-            case 'DRAFT':
-                return <div className="flex items-center gap-1.5 text-xs font-medium text-yellow-400"><PencilIcon className="h-3.5 w-3.5"/> UTKAST</div>;
-            case 'SENT':
-                return <div className="flex items-center gap-1.5 text-xs font-medium text-blue-400">SKICKAD</div>;
-            case 'APPROVED':
-                return <div className="flex items-center gap-1.5 text-xs font-medium text-green-400"><CheckCircleIcon className="h-3.5 w-3.5"/> GODKÄND</div>;
+            case 'Pending':
+                return <div className="flex items-center gap-1.5 text-xs font-medium text-yellow-400"><ClockIcon className="h-3.5 w-3.5"/> Väntar</div>;
+            case 'Approved':
+                return <div className="flex items-center gap-1.5 text-xs font-medium text-green-400"><CheckCircleIcon className="h-3.5 w-3.5"/> Godkänd</div>;
+            case 'Rejected':
+                return <div className="flex items-center gap-1.5 text-xs font-medium text-red-400"><XCircleIcon className="h-3.5 w-3.5"/> Avvisad</div>;
             default:
-                return null;
+                // Detta ska teoretiskt sett aldrig hända med TypeScript, men är bra som fallback.
+                return <div className="flex items-center gap-1.5 text-xs font-medium text-gray-400">Okänd</div>;
         }
     };
 
-    // Tom-tillstånd direkt i listan är en bra UX-praxis.
     if (atas.length === 0) {
         return (
             <div className="text-center py-10 px-6 border-t border-gray-700">

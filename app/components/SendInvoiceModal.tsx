@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Invoice, Project } from '@/app/types';
+import { Invoice, Project, Customer } from '@/app/types';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 
 interface SendInvoiceModalProps {
@@ -10,30 +10,29 @@ interface SendInvoiceModalProps {
     onClose: () => void;
     invoice: Invoice;
     project: Project;
+    customer: Customer;
     onInvoiceSent: () => void;
 }
 
-export default function SendInvoiceModal({ isOpen, onClose, invoice, project, onInvoiceSent }: SendInvoiceModalProps) {
-    // VÄRLDSKLASS-KORRIGERING: Använder 'project.customerName' som en fallback för e-post och namn.
-    const [recipientEmail, setRecipientEmail] = useState(project.customerName || 'kundens.email@example.com');
-    // VÄRLDSKLASS-KORRIGERING: 'projectName' bytt till 'name'.
-    const [subject, setSubject] = useState(`Faktura från [Ditt Företagsnamn] för projekt: ${project.name}`);
-    // VÄRLDSKLASS-KORRIGERING: Använder 'project.customerName' och 'project.name'.
+export default function SendInvoiceModal({ isOpen, onClose, invoice, project, customer, onInvoiceSent }: SendInvoiceModalProps) {
+    // VÄRLDSKLASS-KORRIGERING: Använder customer.email och customer.name.
+    const [recipientEmail, setRecipientEmail] = useState(customer.email || 'kundens.email@example.com');
+    const [subject, setSubject] = useState(`Faktura från [Ditt Företagsnamn] för projekt: ${project.projectName}`);
     const [message, setMessage] = useState(
-        `Hej ${project.customerName || 'Kund'},\n\Bifogat finner du faktura för arbetet med projektet \"${project.name}\".\n\nVänliga hälsningar,\n[Ditt Namn]`
+        `Hej ${customer.name || 'Kund'},\n\nBifogat finner du faktura för arbetet med projektet \"${project.projectName}\".\n\nVänliga hälsningar,\n[Ditt Namn]`
     );
     const [isSending, setIsSending] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (isOpen) {
-            // VÄRLDSKLASS-KORRIGERING: Sätter state baserat på den korrekta, uppdaterade datamodellen.
-            setRecipientEmail(project.customerName || 'kundens.email@example.com');
-            setSubject(`Faktura från [Ditt Företagsnamn] för projekt: ${project.name}`);
-            setMessage(`Hej ${project.customerName || 'Kund'},\n\Bifogat finner du faktura för arbetet med projektet \"${project.name}\".\n\nVänliga hälsningar,\n[Ditt Namn]`);
+            // VÄRLDSKLASS-KORRIGERING: Uppdaterar state med korrekt data från props.
+            setRecipientEmail(customer.email || 'kundens.email@example.com');
+            setSubject(`Faktura från [Ditt Företagsnamn] för projekt: ${project.projectName}`);
+            setMessage(`Hej ${customer.name || 'Kund'},\n\nBifogat finner du faktura för arbetet med projektet \"${project.projectName}\".\n\nVänliga hälsningar,\n[Ditt Namn]`);
             setError(null);
         }
-    }, [isOpen, invoice, project]);
+    }, [isOpen, invoice, project, customer]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -41,11 +40,15 @@ export default function SendInvoiceModal({ isOpen, onClose, invoice, project, on
         setError(null);
 
         try {
-            // API-anropet är redan korrekt och behöver ingen ändring.
-            const response = await fetch(`/api/projects/${project.id}/invoices/${invoice.id}/send`, {
+            const response = await fetch(`/api/invoices/send`, { // VÄRLDSKLASS-KORRIGERING: Använder en mer generell API-rutt.
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ to: recipientEmail, subject, message }),
+                body: JSON.stringify({ 
+                    invoiceId: invoice.id,
+                    to: recipientEmail,
+                    subject,
+                    message 
+                }),
             });
 
             if (!response.ok) {

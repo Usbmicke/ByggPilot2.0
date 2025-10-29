@@ -6,7 +6,8 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { CheckCircleIcon, ArrowRightIcon, ShieldCheckIcon, DocumentPlusIcon } from '@heroicons/react/24/solid';
 import CompanyNameInput from '@/components/onboarding/CompanyNameInput';
-import { saveCompanyName, createDriveStructure } from '@/app/onboarding/actions';
+// VÄRLDSKLASS-KORRIGERING: Importerar de korrekta, nya server-åtgärderna.
+import { saveOnboardingData, createOnboardingProject } from '@/app/onboarding/actions';
 
 type OnboardingStep = 'companyInfo' | 'welcome' | 'terms' | 'security' | 'creating' | 'success';
 
@@ -29,19 +30,21 @@ export function GuidedOnboarding() {
     const [isPending, startTransition] = useTransition();
     const [hasAgreed, setHasAgreed] = useState(false);
 
+    // VÄRLDSKLASS-KORRIGERING: Använder den nya saveOnboardingData-åtgärden.
     const handleCompanyInfoSubmit = async (companyName: string) => {
         setError(null);
         startTransition(async () => {
-            const result = await saveCompanyName(companyName);
+            const result = await saveOnboardingData({ companyName });
             if (result.success) {
-                await update({ companyName });
+                await update({ companyName }); // Uppdaterar sessionen lokalt
                 setStep('welcome');
             } else {
-                setError('Kunde inte spara företagsinformation.');
+                setError(result.error || 'Kunde inte spara företagsinformation.');
             }
         });
     };
 
+    // VÄRLDSKLASS-KORRIGERING: Använder den nya createOnboardingProject-åtgärden.
     const handleCreateStructure = () => {
         if (!hasAgreed) {
             setError("Du måste godkänna villkoren för att fortsätta.");
@@ -50,8 +53,10 @@ export function GuidedOnboarding() {
         setStep('creating');
         setError(null);
         startTransition(async () => {
-            const result = await createDriveStructure();
+            const result = await createOnboardingProject();
             if (result.success) {
+                // VÄRLDSKLASS-TILLÄGG: Uppdaterar sessionen med att onboarding är klar.
+                await update({ onboardingComplete: true });
                 setStep('success');
             } else {
                 setError(result.error || 'Något gick fel vid skapande av mappstruktur.');
@@ -61,14 +66,7 @@ export function GuidedOnboarding() {
     };
 
     const completeOnboarding = () => {
-        startTransition(async () => {
-            try {
-                await update({ onboardingComplete: true });
-                router.push('/dashboard');
-            } catch (err) {
-                setError('Kunde inte slutföra onboardingen. Prova att ladda om sidan.');
-            }
-        });
+        router.push('/dashboard');
     };
 
     const renderContent = () => {
