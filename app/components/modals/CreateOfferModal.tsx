@@ -17,7 +17,7 @@ interface PropertyData {
 // Stegen i offert-guiden
 type Step = 'propertyLookup' | 'defineScope' | 'confirm';
 
-const CreateOfferModal = () => {
+export const CreateOfferModal = () => {
   const [step, setStep] = useState<Step>('propertyLookup');
   const [propertyData, setPropertyData] = useState<PropertyData | null>(null);
 
@@ -69,5 +69,3 @@ const CreateOfferModal = () => {
     </div>
   );
 };
-
-export default CreateOfferModal;

@@ -4,9 +4,7 @@ import { google } from 'googleapis';
 import { logger } from '@/lib/logger';
 
 // =================================================================================
-// DRIVE ACTIONS V1.0 - REKONSTRUERAD (BASERAD PÅ HISTORISK V5.0)
-// Denna fil innehåller den beprövade logiken från den fungerande committen,
-// anpassad för den nuvarande, stabila arkitekturen.
+// DRIVE ACTIONS V1.1 - FÖRBÄTTRAD DIAGNOSTIK
 // =================================================================================
 
 // --- HJÄLPFUNKTIONER ---
@@ -69,8 +67,15 @@ export async function createInitialFolderStructure(accessToken: string, companyN
         logger.info(`[DriveActions] Undermappar skapade i ${rootFolderName}`);
         return { rootFolderId, rootFolderUrl, subFolderIds };
 
-    } catch (error) {
-        logger.error({ message: "[DriveActions] Allvarligt fel vid skapande av företagsstruktur", error, companyName });
-        throw new Error("Den initiala mappstrukturen för företaget kunde inte skapas.");
+    } catch (error: any) {
+        logger.error({ message: "[DriveActions] Allvarligt fel vid skapande av företagsstruktur", error: error, companyName });
+        
+        // MASTER PLAN-KORRIGERING: Extraherar specifikt felmeddelande från Google API.
+        let detailedError = "Den initiala mappstrukturen för företaget kunde inte skapas.";
+        if (error.errors && Array.isArray(error.errors) && error.errors.length > 0) {
+            detailedError = `Google Drive API-fel: ${error.errors[0].message}`;
+        }
+
+        throw new Error(detailedError);
     }
 }

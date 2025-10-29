@@ -3,45 +3,36 @@
 
 import React from 'react';
 import { useModal } from '@/app/contexts/ModalContext';
+import { CreateOfferModal } from '@/app/components/modals/CreateOfferModal';
 
-// Importera de faktiska modal-komponenterna
-import CreateOfferModal from '@/app/components/modals/CreateOfferModal';
-import CreateCustomerModal from '@/app/components/modals/CreateCustomerModal';
-import CreateAtaModal from '@/app/components/modals/CreateAtaModal';
-
-// En baskomponent för modalens overlay och stängningsfunktion
-const ModalShell: React.FC<{ children: React.ReactNode; onClose: () => void }> = ({ children, onClose }) => {
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex justify-center items-center" onClick={onClose}>
-      <div className="bg-background-secondary rounded-lg shadow-2xl p-8 max-w-2xl w-full" onClick={e => e.stopPropagation()}>
-        {children}
-      </div>
-    </div>
-  );
+// En mappning från modal-typ till den faktiska komponenten
+const modalComponentMap = {
+  createOffer: CreateOfferModal,
+  // Lägg till andra modaler här
+  // createCustomer: CreateCustomerModal,
+  // createAta: CreateAtaModal,
 };
 
-
-const ModalRenderer = () => {
+/**
+ * ModalRenderer är en centraliserad komponent som ansvarar för att rendera
+ * den aktiva modalen baserat på tillståndet i ModalContext.
+ * Detta är en avgörande del av arkitekturen för att hålla modal-logiken
+ * frikopplad från de sidor och komponenter som öppnar dem.
+ */
+export default function ModalRenderer() {
   const { modalType, modalProps, hideModal } = useModal();
 
   if (!modalType) {
-    return null; // Om ingen modal ska visas, rendera ingenting
+    return null; // Rendera ingenting om ingen modal ska visas
   }
 
-  const renderModal = () => {
-    switch (modalType) {
-      case 'createOffer':
-        return <CreateOfferModal {...modalProps} />;
-      case 'createCustomer':
-        return <CreateCustomerModal {...modalProps} />;
-      case 'createAta':
-        return <CreateAtaModal {...modalProps} />;
-      default:
-        return null;
-    }
-  };
+  const SpecificModal = modalComponentMap[modalType];
 
-  return <ModalShell onClose={hideModal}>{renderModal()}</ModalShell>;
+  // Säkerhetsåtgärd om en okänd modal-typ skulle anropas
+  if (!SpecificModal) {
+    console.error(`Modal type "${modalType}" has no corresponding component.`);
+    return null;
+  }
+
+  return <SpecificModal {...modalProps} onClose={hideModal} />;
 };
-
-export default ModalRenderer;

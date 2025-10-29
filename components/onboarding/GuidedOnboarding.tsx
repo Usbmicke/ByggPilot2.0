@@ -2,13 +2,22 @@
 
 import React, { useState, useTransition } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { CheckCircleIcon, ArrowRightIcon, ShieldCheckIcon, DocumentPlusIcon } from '@heroicons/react/24/solid';
+import { CheckCircleIcon, ArrowRightIcon, ShieldCheckIcon, DocumentPlusIcon, ArrowTopRightOnSquareIcon, ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 import CompanyNameInput from '@/components/onboarding/CompanyNameInput';
-// MASTER PLAN-KORRIGERING: Importerar den enda, korrekta server-åtgärden.
 import { completeOnboardingStep } from '@/app/onboarding/actions';
+import { Session } from 'next-auth';
 
 type OnboardingStep = 'companyInfo' | 'welcome' | 'terms' | 'security' | 'creating' | 'success';
+
+// --- GULDSTANDARD ARKITEKTUR-FIX ---
+// Denna funktion är nu den ENDA källan till sanning för vilket steg som ska visas.
+// Den härleder steget direkt från sessionen, vilket eliminerar all risk för race conditions.
+const determineCurrentStep = (session: Session | null): OnboardingStep => {
+    if (!session?.user) return 'companyInfo'; // Fallback
+    if (!session.user.companyName) return 'companyInfo';
+    if (!session.user.driveRootFolderId) return 'welcome'; // Om företagsnamn finns men inte Drive-mappen, börja här.
+    return 'success'; // Om allt är klart, visa framgång.
+};
 
 const LoadingSpinner = () => (
     <div className="flex flex-col items-center justify-center space-y-4">
@@ -22,59 +31,77 @@ const LoadingSpinner = () => (
 
 export function GuidedOnboarding() {
     const { data: session, update } = useSession();
-    const router = useRouter();
-    const initialStep: OnboardingStep = session?.user?.companyName ? 'welcome' : 'companyInfo';
-    const [step, setStep] = useState<OnboardingStep>(initialStep);
+    
+    // Tillfälligt internt steg för UI-flöden som inte är direkt kopplade till session-data (t.ex. 'terms' och 'security').
+    const [uiStep, setUiStep] = useState<OnboardingStep | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isPending, startTransition] = useTransition();
     const [hasAgreed, setHasAgreed] = useState(false);
 
-    // MASTER PLAN-KORRIGERING: Använder den centraliserade åtgärden för steg 1.
+    // Härled det primära steget från sessionen.
+    const mainStep = determineCurrentStep(session);
+    // Använd det tillfälliga UI-steget om det är satt, annars det primära steget.
+    const step = uiStep || mainStep;
+
     const handleCompanyInfoSubmit = async (companyName: string) => {
         setError(null);
         startTransition(async () => {
             const result = await completeOnboardingStep(1, { companyName });
             if (result.success) {
-                await update({ companyName }); // Uppdaterar sessionen lokalt
-                setStep('welcome');
+                // Uppdatera sessionen. Den nya arkitekturen kommer automatiskt att visa rätt steg efter uppdatering.
+                await update({ companyName });
+                setUiStep('welcome'); // Gå till välkomstskärmen manuellt.
             } else {
                 setError(result.error || 'Kunde inte spara företagsinformation.');
             }
         });
     };
 
-    // MASTER PLAN-KORRIGERING: Använder den centraliserade åtgärden för steg 2.
     const handleCreateStructure = () => {
         if (!hasAgreed) {
             setError("Du måste godkänna villkoren för att fortsätta.");
             return;
         }
-        setStep('creating');
+        setUiStep('creating');
         setError(null);
         startTransition(async () => {
-            const result = await completeOnboardingStep(2, {}); // Inget extra data behövs här
+            const result = await completeOnboardingStep(2, {});
             if (result.success) {
-                setStep('success'); // Gå vidare till success-skärmen
+                await update({ 
+                    driveRootFolderId: result.driveRootFolderId,
+                    driveRootFolderUrl: result.driveRootFolderUrl
+                });
+                // Låt den primära steg-logiken ta över för att visa 'success'.
+                setUiStep(null);
             } else {
                 setError(result.error || 'Något gick fel vid skapande av mappstruktur.');
-                setStep('terms'); 
+                setUiStep('terms');
             }
         });
     };
 
-    // MASTER PLAN-KORRIGERING: Slutför onboarding (steg 4) och omdirigerar.
     const handleCompleteOnboarding = () => {
         startTransition(async () => {
-            const result = await completeOnboardingStep(4, {}); // Markera onboarding som slutförd i DB
+            const result = await completeOnboardingStep(4, {});
             if (result.success) {
-                 await update({ onboardingComplete: true }); // Synka lokal session
-                 router.push('/dashboard'); // Omdirigera
+                 await update({ onboardingComplete: true });
+                 window.location.href = '/dashboard';
             } else {
                 setError("Kunde inte slutföra onboarding. Kontakta support.");
-                // Stanna kvar på success-sidan men visa ett fel.
             }
         });
     };
+
+    const ErrorDisplay = ({ message }: { message: string }) => (
+        <div className="mt-4 p-4 bg-status-red/10 border border-status-red rounded-lg flex items-center gap-3">
+            <ExclamationTriangleIcon className="h-6 w-6 text-status-red flex-shrink-0" />
+            <p className="text-sm text-status-red">{message}</p>
+        </div>
+    );
+
+    if (isPending && step !== 'creating') {
+        return <LoadingSpinner />;
+    }
 
     const renderContent = () => {
         switch (step) {
@@ -89,10 +116,10 @@ export function GuidedOnboarding() {
                            Jag är ByggPilot, din nya digitala kollega. Mitt jobb är att eliminera ditt papperskaos genom att automatisera administrationen direkt i ditt befintliga Google Workspace.
                         </p>
                         <div className="mt-8">
-                            <button onClick={() => setStep('terms')} className="w-full flex items-center justify-center gap-3 bg-accent-blue hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/50">
+                            <button onClick={() => setUiStep('terms')} className="w-full flex items-center justify-center gap-3 bg-accent-blue hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/50">
                                 Starta konfigurationen <ArrowRightIcon className='h-5 w-5'/>
                             </button>
-                            <button onClick={() => setStep('security')} className="w-full text-center mt-4 text-sm text-accent-blue hover:text-blue-400 py-2">
+                            <button onClick={() => setUiStep('security')} className="w-full text-center mt-4 text-sm text-accent-blue hover:text-blue-400 py-2">
                                 Mer om säkerheten
                             </button>
                         </div>
@@ -117,9 +144,9 @@ export function GuidedOnboarding() {
                                 </label>
                             </div>
                         </div>
-                        {error && <p className="mt-4 text-sm text-status-red">{error}</p>}
+                        {error && <ErrorDisplay message={error} />}
                         <div className="mt-8 flex flex-col sm:flex-row gap-4">
-                           <button onClick={() => setStep('welcome')} className="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors">
+                           <button onClick={() => setUiStep('welcome')} className="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors">
                                 Tillbaka
                             </button>
                             <button onClick={handleCreateStructure} disabled={!hasAgreed || isPending} className="w-full flex items-center justify-center gap-3 bg-accent-blue hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-blue-500/50">
@@ -142,10 +169,11 @@ export function GuidedOnboarding() {
                                 <li>Vi använder Googles egen säkra inloggningsteknik (OAuth 2.0).</li>
                                 <li>Du kan när som helst ta bort åtkomsten via dina Google-inställningar.</li>
                                 <li>All din data skyddas av Googles infrastruktur.</li>
+                                <li><strong class="text-accent-blue">Viktigt:</strong> Vi begär endast behörighet att hantera de filer appen själv skapar (<code class="text-xs bg-gray-700 p-1 rounded">drive.file</code>), inte hela din Drive.</li>
                             </ul>
                         </div>
                         <div className="mt-8">
-                            <button onClick={() => setStep('welcome')} className="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors">
+                            <button onClick={() => setUiStep('welcome')} className="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors">
                                 Tillbaka
                             </button>
                         </div>
@@ -158,16 +186,30 @@ export function GuidedOnboarding() {
             case 'success':
                 return (
                     <div className="animate-fade-in text-center">
-                        <CheckCircleIcon className="h-20 w-20 text-green-400 mx-auto animate-pulse" />
-                        <h1 className="mt-6 text-4xl font-bold text-text-primary">Klart!</h1>
+                        <CheckCircleIcon className="h-20 w-20 text-green-400 mx-auto" />
+                        <h1 className="mt-6 text-4xl font-bold text-text-primary">Kontoret är redo!</h1>
                         <p className="mt-4 text-lg text-text-secondary">
-                           Din nya mappstruktur finns nu i Google Drive under mappen <strong className='text-accent-blue'>"ByggPilot - {session?.user?.companyName}"</strong>.
+                           En grundläggande mappstruktur har skapats i din Google Drive för <strong className='font-bold text-accent-blue'>{session?.user?.companyName}</strong>.
                         </p>
-                        <div className="mt-8">
-                            <button onClick={handleCompleteOnboarding} disabled={isPending} className="w-full flex items-center justify-center gap-3 bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/50">
+                        <div className="mt-8 flex flex-col gap-4">
+                            {session?.user?.driveRootFolderUrl && (
+                                <a
+                                    href={session.user.driveRootFolderUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full flex items-center justify-center gap-3 bg-accent-blue hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/50"
+                                >
+                                    Öppna Google Drive-mappen <ArrowTopRightOnSquareIcon className='h-5 w-5'/>
+                                </a>
+                            )}
+                            <button 
+                                onClick={handleCompleteOnboarding} 
+                                disabled={isPending} 
+                                className="w-full flex items-center justify-center gap-3 bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors"
+                            >
                                 {isPending ? 'Slutför...' : 'Gå till Översikten'} <ArrowRightIcon className='h-5 w-5'/>
                             </button>
-                             {error && <p className="mt-4 text-sm text-status-red">{error}</p>}
+                             {error && <ErrorDisplay message={error} />}
                         </div>
                     </div>
                 );

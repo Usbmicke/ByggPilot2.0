@@ -21,7 +21,7 @@ const iconMap: { [key: string]: string } = {
     robot_face: "🤖",
 };
 
-export function OnboardingAnimation() {
+export default function OnboardingAnimation() {
     const [index, setIndex] = useState(0);
 
     useEffect(() => {

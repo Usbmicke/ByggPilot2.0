@@ -1,87 +1,111 @@
 
-import { AuthOptions } from 'next-auth';
+import { NextAuthOptions, Session, User } from 'next-auth';
+import { JWT } from 'next-auth/jwt';
 import GoogleProvider from 'next-auth/providers/google';
-import { FirestoreAdapter } from "@next-auth/firebase-adapter"
+import { FirestoreAdapter } from '@next-auth/firebase-adapter';
 import { firestoreAdmin } from '@/lib/config/firebase-admin';
+import { updateUser, getUser } from '@/lib/dal/users';
 import { logger } from '@/lib/logger';
 
-const adapter = FirestoreAdapter(firestoreAdmin);
+// Typ-utökningar för att lägga till anpassade fält
+declare module 'next-auth' {
+  interface Session {
+    user: {
+      id: string;
+      onboardingComplete?: boolean;
+      companyName?: string;
+      driveRootFolderId?: string;
+      driveRootFolderUrl?: string;
+    } & User;
+    accessToken?: string;
+    error?: string;
+  }
+}
 
-export const authOptions: AuthOptions = {
+declare module 'next-auth/jwt' {
+  interface JWT {
+    id: string;
+    onboardingComplete?: boolean;
+    companyName?: string;
+    driveRootFolderId?: string;
+    driveRootFolderUrl?: string;
+    accessToken?: string;
+    accessTokenExpires?: number;
+    refreshToken?: string;
+  }
+}
+
+export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
           prompt: 'consent',
           access_type: 'offline',
           response_type: 'code',
-          scope: 'openid email profile https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/tasks',
+          scope: process.env.GOOGLE_SCOPES,
         },
       },
     }),
   ],
-  adapter: adapter,
+  adapter: FirestoreAdapter(firestoreAdmin),
+  session: {
+    strategy: 'jwt',
+  },
   callbacks: {
-    async jwt({ token, user, account }) {
-      // Initial sign-in
+    async jwt({ token, user, account, trigger, session }) {
+      // Fall 1: Initial inloggning
       if (account && user) {
-        token.accessToken = account.access_token;
-        token.refreshToken = account.refresh_token;
+        logger.info(`[JWT Callback] Initial token creation for user ${user.id}`);
+        const dbUser = await getUser(user.id);
+
         token.id = user.id;
-        // Persist all user properties from the database to the token
-        const dbUser = await adapter.getUser(user.id);
+        token.accessToken = account.access_token;
+        token.accessTokenExpires = account.expires_at ? account.expires_at * 1000 : undefined;
+        token.refreshToken = account.refresh_token; 
+
         if (dbUser) {
-            token.companyName = dbUser.companyName;
             token.onboardingComplete = dbUser.onboardingComplete;
+            token.companyName = dbUser.companyName;
             token.driveRootFolderId = dbUser.driveRootFolderId;
             token.driveRootFolderUrl = dbUser.driveRootFolderUrl;
+        }
+
+        if (account.refresh_token) {
+          await updateUser(user.id, { refreshToken: account.refresh_token });
         }
         return token;
       }
 
-      // Subsequent requests, refresh the token with the latest data from the DB
-      // This is the crucial part that solves the redirect loop
-      if (token.id) {
-        const dbUser = await adapter.getUser(token.id as string);
-        if (dbUser) {
-            token.companyName = dbUser.companyName;
-            token.onboardingComplete = dbUser.onboardingComplete; // KORRIGERING: Typo fixad här
-            token.driveRootFolderId = dbUser.driveRootFolderId;
-            token.driveRootFolderUrl = dbUser.driveRootFolderUrl;
-        } else {
-          // If user is not found in DB, something is wrong, invalidate the session.
-          logger.warn(`User with token ID ${token.id} not found in DB during JWT refresh.`);
-          return { ...token, error: "UserNotFound" };
-        }
+      // Fall 2: Session-uppdatering från klienten
+      if (trigger === 'update' && session) {
+          logger.info(`[JWT Callback] Updating token for user ${token.id}`, session);
+          return { ...token, ...session };
       }
-      
+
       return token;
     },
-    async session({ session, token }) {
-      // Pass all properties from the JWT token to the session object
-      session.accessToken = token.accessToken;
-      session.refreshToken = token.refreshToken;
 
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.companyName = token.companyName as string | undefined;
-        session.user.onboardingComplete = token.onboardingComplete as boolean | undefined;
-        session.user.driveRootFolderId = token.driveRootFolderId as string | undefined;
-        session.user.driveRootFolderUrl = token.driveRootFolderUrl as string | undefined;
-      }
-      
-      // Handle error case
-      if (token.error) {
-        session.error = token.error as string;
-      }
+    async session({ session, token }: { session: Session; token: JWT }): Promise<Session> {
+      session.user.id = token.id;
+      session.user.onboardingComplete = token.onboardingComplete;
+      session.user.companyName = token.companyName;
+      session.user.driveRootFolderId = token.driveRootFolderId;
+      session.user.driveRootFolderUrl = token.driveRootFolderUrl;
+      session.accessToken = token.accessToken;
 
       return session;
     },
   },
-  session: {
-    strategy: 'jwt',
+  debug: process.env.NODE_ENV === 'development',
+  logger: {
+    error(code, metadata) {
+      logger.error(`[NextAuth] Error: ${code}`, metadata);
+    },
+    warn(code) {
+      logger.warn(`[NextAuth] Warning: ${code}`);
+    },
   },
-  secret: process.env.NEXTAUTH_SECRET,
 };
