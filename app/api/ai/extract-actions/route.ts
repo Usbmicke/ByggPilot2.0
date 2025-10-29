@@ -1,7 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { firestoreAdmin } from '@/app/lib/firebase-admin';
+import { firestoreAdmin } from '@/lib/config/firebase-admin';
 
 interface ClassifiedEmail {
     id: string;

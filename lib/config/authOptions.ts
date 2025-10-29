@@ -1,12 +1,10 @@
 
 import { AuthOptions, Account, Profile, Session } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
-// ARKITEKTURKORRIGERING: Använder relativa sökvägar för robusthet.
-import { admin, firestoreAdmin } from './firebase-admin'; 
+import { admin, firestoreAdmin } from '@/lib/config/firebase-admin'; 
 import { JWT } from 'next-auth/jwt';
-import { getUserById } from './dal/user';
+import { getUserById } from '@/lib/dal/user';
 
-// ... (resten av filen är oförändrad, endast import-satserna är justerade)
 
 async function updateAccountTokens(userId: string, account: Account) {
   try {
