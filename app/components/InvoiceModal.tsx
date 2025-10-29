@@ -2,39 +2,38 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Project, Invoice, InvoiceLine, RotDeduction, InvoiceCreationData } from '@/app/types';
+import { Project, Invoice, InvoiceLine, RotDeduction, InvoiceCreationData, Customer } from '@/app/types';
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/solid';
 
 interface InvoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
   project: Project;
-  // VÄRLDSKLASS-KORRIGERING: onSave förväntar sig nu InvoiceCreationData, inte hela Invoice-objektet.
+  customer: Customer;
   onSave: (newInvoiceData: InvoiceCreationData) => Promise<void>;
 }
 
-// VÄRLDSKLASS-KORRIGERING: 'unitPrice' bytt till 'pricePerUnit', 'vatRate' borttagen.
-const emptyLine: Omit<InvoiceLine, 'id'> = { description: '', quantity: 1, unit: 'st', pricePerUnit: 0 };
+// VÄRLDSKLASS-KORRIGERING: 'unitPrice' används nu, enligt den centrala typen.
+const emptyLine: Omit<InvoiceLine, 'id'> = { description: '', quantity: 1, unit: 'st', unitPrice: 0 };
 
-export default function InvoiceModal({ isOpen, onClose, project, onSave }: InvoiceModalProps) {
+export default function InvoiceModal({ isOpen, onClose, project, customer, onSave }: InvoiceModalProps) {
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState(new Date(new Date().setDate(new Date().getDate() + 30)).toISOString().split('T')[0]);
   const [invoiceLines, setInvoiceLines] = useState<Partial<InvoiceLine>[]>([emptyLine]);
   
   const [applyRot, setApplyRot] = useState(false);
-  // VÄRLDSKLASS-KORRIGERING: 'laborCost' bytt till 'amount'.
-  const [rotData, setRotData] = useState<Partial<RotDeduction>>({ isApplicable: false, amount: 0 });
+  const [rotData, setRotData] = useState<Partial<RotDeduction>>({ isApplicable: false, laborCost: 0, amount: 0 });
 
   const [isSaving, setIsSaving] = useState(false);
 
-  // VÄRLDSKLASS-KORRIGERING: 'field' är nu korrekt typad, jämförelser uppdaterade.
   const handleLineChange = (index: number, field: keyof InvoiceLine, value: string | number) => {
     const newLines = [...invoiceLines];
     const line = newLines[index] as InvoiceLine;
-    if (field === 'quantity' || field === 'pricePerUnit') {
-      line[field] = Number(value) || 0;
+    // VÄRLDSKLASS-KORRIGERING: 'unitPrice' används.
+    if (field === 'quantity' || field === 'unitPrice') {
+      (line as any)[field] = Number(value) || 0;
     } else {
-      (line[field] as string) = value as string;
+      (line as any)[field] = value as string;
     }
     setInvoiceLines(newLines);
   };
@@ -47,23 +46,21 @@ export default function InvoiceModal({ isOpen, onClose, project, onSave }: Invoi
     setIsSaving(true);
 
     const finalInvoiceLines = invoiceLines.filter(
-        (line) => line.description && line.description.trim() !== '' && line.quantity && line.quantity > 0 && line.pricePerUnit && line.pricePerUnit > 0
+        (line) => line.description && line.description.trim() !== '' && line.quantity && line.quantity > 0 && line.unitPrice && line.unitPrice > 0
     ) as InvoiceLine[];
-
-    // VÄRLDSKLASS-KORRIGERING: Beräknar totalbeloppet korrekt.
-    const totalAmount = finalInvoiceLines.reduce((acc, line) => acc + (line.quantity * line.pricePerUnit), 0);
 
     // VÄRLDSKLASS-KORRIGERING: Skapar ett objekt som matchar InvoiceCreationData.
     const newInvoiceData: InvoiceCreationData = {
       projectId: project.id,
-      lines: finalInvoiceLines,
+      customer: customer,
+      invoiceLines: finalInvoiceLines,
+      issueDate: new Date(issueDate),
       dueDate: new Date(dueDate),
-      totalAmount: totalAmount,
       rotDeduction: {
           isApplicable: applyRot,
-          // VÄRLDSKLASS-KORRIGERING: Använder korrekta fält 'personNumber' och 'amount'.
           personNumber: applyRot ? rotData.personNumber : undefined,
-          amount: applyRot ? rotData.amount || 0 : 0,
+          laborCost: applyRot ? rotData.laborCost || 0 : 0,
+          amount: applyRot ? (rotData.laborCost || 0) * 0.3 : 0, // Beräkna faktisk avdragssumma
       },
     };
 
@@ -89,19 +86,30 @@ export default function InvoiceModal({ isOpen, onClose, project, onSave }: Invoi
           
           <div className="overflow-y-auto p-5 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* VÄRLDSKLASS-KORRIGERING: 'clientName' och 'projectName' bytta till 'customerName' och 'name'. */}
               <div>
                   <label className="block text-sm font-medium text-gray-300">Kund</label>
-                  <input type="text" value={project.customerName || ''} readOnly className="mt-1 block w-full bg-gray-900 border-gray-700 rounded-md py-2 px-3 text-gray-400" />
+                  {/* VÄRLDSKLASS-KORRIGERING: Använder 'customer.name' */}
+                  <input type="text" value={customer?.name || ''} readOnly className="mt-1 block w-full bg-gray-900 border-gray-700 rounded-md py-2 px-3 text-gray-400" />
               </div>
               <div>
                   <label className="block text-sm font-medium text-gray-300">Projekt</label>
-                  <input type="text" value={project.name} readOnly className="mt-1 block w-full bg-gray-900 border-gray-700 rounded-md py-2 px-3 text-gray-400" />
+                  {/* VÄRLDSKLASS-KORRIGERING: Använder 'project.projectName' */}
+                  <input type="text" value={project.projectName} readOnly className="mt-1 block w-full bg-gray-900 border-gray-700 rounded-md py-2 px-3 text-gray-400" />
               </div>
               {/* ... datumfält ... */}
             </div>
 
-            {/* ... kod för att rendera rader (logiken är fixad i handleLineChange) ... */}
+             {/* VÄRLDSKLASS-KORRIGERING: invoiceLines renderas nu med korrekta fält */}
+             {invoiceLines.map((line, index) => (
+                 <div key={index} className="flex items-center gap-2">
+                     <input type="text" placeholder="Beskrivning" value={line.description} onChange={(e) => handleLineChange(index, 'description', e.target.value)} className="flex-grow bg-gray-700 p-2 rounded-md" />
+                     <input type="number" placeholder="Antal" value={line.quantity} onChange={(e) => handleLineChange(index, 'quantity', e.target.value)} className="w-20 bg-gray-700 p-2 rounded-md" />
+                     <input type="text" placeholder="Enhet" value={line.unit} onChange={(e) => handleLineChange(index, 'unit', e.target.value)} className="w-20 bg-gray-700 p-2 rounded-md" />
+                     <input type="number" placeholder="Pris" value={line.unitPrice} onChange={(e) => handleLineChange(index, 'unitPrice', e.target.value)} className="w-24 bg-gray-700 p-2 rounded-md" />
+                     <button type="button" onClick={() => removeLine(index)} className="p-2 text-red-500"><TrashIcon className="h-5 w-5" /></button>
+                 </div>
+             ))}
+             <button type="button" onClick={addLine} className="flex items-center gap-2 text-cyan-400"><PlusIcon className="h-5 w-5"/> Lägg till rad</button>
             
             <div className="border-t border-gray-700 pt-4">
                 <div className="flex items-center">
@@ -110,20 +118,14 @@ export default function InvoiceModal({ isOpen, onClose, project, onSave }: Invoi
                 </div>
                 {applyRot && (
                     <div className="mt-4 p-4 bg-gray-900/50 rounded-lg space-y-4 border border-gray-700">
-                        {/* VÄRLDSKLASS-KORRIGERING: 'customerPersonalId' bytt till 'personNumber'. */}
                         <div>
                             <label htmlFor="rot-pnr" className="block text-sm font-medium text-gray-300">Kundens Personnummer</label>
                             <input type="text" id="rot-pnr" placeholder="ÅÅÅÅMMDD-XXXX" onChange={e => setRotData({...rotData, personNumber: e.target.value})} className="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white" />
                         </div>
-                        {/* VÄRLDSKLASS-KORRIGERING: 'propertyId' är borttagen, fältet är inaktivt. */}
-                        <div>
-                            <label htmlFor="rot-fastighet" className="block text-sm font-medium text-gray-300">Fastighetsbeteckning</label>
-                            <input type="text" id="rot-fastighet" placeholder="Ej implementerat" disabled className="mt-1 block w-full bg-gray-900 border-gray-700 rounded-md py-2 px-3 text-gray-500" />
-                        </div>
-                        {/* VÄRLDSKLASS-KORRIGERING: 'laborCost' bytt till 'amount'. */}
                         <div>
                             <label htmlFor="rot-labor" className="block text-sm font-medium text-gray-300">Total arbetskostnad (för ROT)</label>
-                            <input type="number" id="rot-labor" onChange={e => setRotData({...rotData, amount: Number(e.target.value)})} className="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white" />
+                             {/* VÄRLDSKLASS-KORRIGERING: Använder 'laborCost' */}
+                            <input type="number" id="rot-labor" onChange={e => setRotData({...rotData, laborCost: Number(e.target.value)})} className="mt-1 block w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white" />
                         </div>
                     </div>
                 )}
@@ -132,7 +134,7 @@ export default function InvoiceModal({ isOpen, onClose, project, onSave }: Invoi
 
           <div className="p-5 border-t border-gray-700 mt-auto flex justify-end gap-4 bg-gray-800 rounded-b-xl">
               <button type="button" onClick={onClose} className="bg-gray-600 hover:bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg">Avbryt</button>
-              <button type="submit" className="bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-2 px-4 rounded-lg disabled:bg-gray-500" disabled={isSaving}>
+              <button type="submit" form="invoice-form" className="bg-cyan-500 hover:bg-cyan-600 text-white font-semibold py-2 px-4 rounded-lg disabled:bg-gray-500" disabled={isSaving}>
                   {isSaving ? 'Sparar...' : 'Spara Utkast'}
               </button>
           </div>

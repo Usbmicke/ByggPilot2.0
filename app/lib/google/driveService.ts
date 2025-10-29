@@ -1,7 +1,7 @@
 
 import { google } from 'googleapis';
 import { authenticate } from '@/app/lib/google/auth';
-import { Project } from '@/app/types'; // Importera Project-typen
+import { Project } from '@/app/types';
 
 const FÖRÄLDERMAPPNAMN = 'ByggPilot - Projekt';
 
@@ -21,9 +21,12 @@ async function getOrCreateParentFolder(drive: any): Promise<string> {
         requestBody: fileMetadata,
         fields: 'id'
     });
-    folderId = response.data.id;
-    console.log(`Skapade huvudmappen '${FÖRÄLDERMAPPNAMN}' med ID: ${folderId}`);
-    return folderId;
+    const newFolderId = response.data.id;
+    if (!newFolderId) {
+        throw new Error('Kunde inte hämta ID för den nyskapade huvudmappen.');
+    }
+    console.log(`Skapade huvudmappen '${FÖRÄLDERMAPPNAMN}' med ID: ${newFolderId}`);
+    return newFolderId;
 }
 
 export async function findFolderIdByName(drive: any, name: string): Promise<string | null> {
@@ -32,8 +35,8 @@ export async function findFolderIdByName(drive: any, name: string): Promise<stri
         fields: 'files(id, name)',
         spaces: 'drive'
     });
-    if (response.data.files.length > 0) {
-        return response.data.files[0].id;
+    if (response.data.files && response.data.files.length > 0) {
+        return response.data.files[0].id || null;
     } 
     return null;
 }
@@ -56,15 +59,18 @@ async function createFolder(drive: any, name: string, parentId: string): Promise
             requestBody: fileMetadata,
             fields: 'id'
         });
-        console.log(`Skapade mappen '${name}' med ID: ${response.data.id}`);
-        return response.data.id;
+        const folderId = response.data.id;
+        if (!folderId) {
+             throw new Error(`Kunde inte skapa mappen '${name}'. Tomt ID returnerades.`);
+        }
+        console.log(`Skapade mappen '${name}' med ID: ${folderId}`);
+        return folderId;
     } catch (error) {
         console.error(`Fel vid skapande av mapp '${name}':`, error);
         throw error;
     }
 }
 
-// VÄRLDSKLASS-KORRIGERING: Funktionen tar nu ett projectName och är korrekt exporterad.
 export async function createProjectFolderStructure(projectName: string) {
     try {
         const auth = await authenticate();
@@ -88,15 +94,13 @@ export async function createProjectFolderStructure(projectName: string) {
     }
 }
 
-// VÄRLDSKLASS-KORRIGERING: En ny funktion för att synka hela projektet.
+// VÄRLDSKLASS-KORRIGERING: Använder nu 'projectName' för att matcha Project-typen.
 export async function synchronizeProjectWithGoogleDrive(project: Project) {
-    if (!project || !project.name) {
+    if (!project || !project.projectName) {
         console.error("Projekt eller projektnamn saknas.");
         return { success: false, error: "Projektdata är ofullständig." };
     }
 
-    console.log(`Synkroniserar projekt "${project.name}" med Google Drive...`);
-    // VÄRLDSKLASS-KORRIGERING: Anropar den nu korrekta funktionen med rätt argument.
-    return await createProjectFolderStructure(project.name);
+    console.log(`Synkroniserar projekt "${project.projectName}" med Google Drive...`);
+    return await createProjectFolderStructure(project.projectName);
 }
-

@@ -2,8 +2,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Project, ProjectStatus } from '@/app/types'; // Korrigerad import
-import { ArchiveBoxIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { Project, ProjectStatus } from '@/app/types';
+import { ArchiveBoxIcon } from '@heroicons/react/24/outline';
 
 interface EditProjectModalProps {
   isOpen: boolean;
@@ -13,25 +13,22 @@ interface EditProjectModalProps {
 }
 
 export default function EditProjectModal({ isOpen, onClose, project, onProjectUpdated }: EditProjectModalProps) {
+  // VÄRLDSKLASS-KORRIGERING: Använder de korrekta fältnamnen från Project-typen
   const [projectName, setProjectName] = useState(project.projectName);
-  const [clientName, setClientName] = useState(project.clientName);
-  // hourlyRate borttagen från state tills vidare
+  const [customerName, setCustomerName] = useState(project.customerName);
   const [status, setStatus] = useState<ProjectStatus>(project.status);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setProjectName(project.projectName);
-    setClientName(project.clientName);
-    // hourlyRate borttagen härifrån
+    setCustomerName(project.customerName);
     setStatus(project.status);
   }, [project]);
 
   const handleUpdate = async (newStatus?: ProjectStatus) => {
     setIsLoading(true);
     setError(null);
-
-    // Logik för hourlyRate borttagen tills vidare
 
     try {
       const response = await fetch(`/api/projects/update`, {
@@ -40,9 +37,8 @@ export default function EditProjectModal({ isOpen, onClose, project, onProjectUp
         body: JSON.stringify({
           projectId: project.id,
           projectName,
-          clientName,
-          // hourlyRate borttagen härifrån
-          status: newStatus || status, // Use newStatus if provided (for archiving)
+          customerName, // VÄRLDSKLASS-KORRIGERING: Skickar det korrekta fältet
+          status: newStatus || status,
         }),
       });
 
@@ -67,7 +63,8 @@ export default function EditProjectModal({ isOpen, onClose, project, onProjectUp
   };
   
   const handleArchive = () => {
-    handleUpdate('Arkiverat');
+    // VÄRLDSKLASS-KORRIGERING: Använder det korrekta typ-värdet
+    handleUpdate('Archived');
   };
 
   if (!isOpen) return null;
@@ -84,19 +81,19 @@ export default function EditProjectModal({ isOpen, onClose, project, onProjectUp
             <input id="edit-projectName" type="text" value={projectName} onChange={(e) => setProjectName(e.target.value)} required className="w-full bg-gray-700 p-2 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
           </div>
           <div>
-            <label htmlFor="edit-clientName" className="block text-sm font-medium text-gray-300 mb-2">Kundnamn</label>
-            <input id="edit-clientName" type="text" value={clientName} onChange={(e) => setClientName(e.target.value)} required className="w-full bg-gray-700 p-2 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
+            <label htmlFor="edit-customerName" className="block text-sm font-medium text-gray-300 mb-2">Kundnamn</label>
+            <input id="edit-customerName" type="text" value={customerName} onChange={(e) => setCustomerName(e.target.value)} required className="w-full bg-gray-700 p-2 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-cyan-500" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Timpris-input borttagen tills vidare */}
             <div>
               <label htmlFor="edit-status" className="block text-sm font-medium text-gray-300 mb-2">Status</label>
+              {/* VÄRLDSKLASS-KORRIGERING: Matchar mot ProjectStatus-typen */}
               <select id="edit-status" value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus)} className="w-full bg-gray-700 p-2 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
-                <option value="Offert">Offert</option>
-                <option value="Pågående">Pågående</option>
-                <option value="Avslutat">Avslutat</option>
-                <option value="Fakturerat">Fakturerat</option>
-                <option value="Arkiverat">Arkiverat</option>
+                <option value="Not Started">Not Started</option>
+                <option value="In Progress">In Progress</option>
+                <option value="On Hold">On Hold</option>
+                <option value="Completed">Completed</option>
+                <option value="Archived">Archived</option>
               </select>
             </div>
           </div>

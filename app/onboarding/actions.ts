@@ -3,46 +3,68 @@
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/lib/authOptions';
-import { createProjectFolderStructure } from '@/app/actions/driveActions'; // Antag att denna funktion finns och är korrekt
+import { firestoreAdmin } from '@/app/lib/firebase-admin';
+import { createProjectFolderStructure } from '@/app/actions/driveActions';
 
-// Denna server-åtgärd anropas från en klientkomponent.
-export async function handleOnboardingCompletion() {
+// VÄRLDSKLASS-ARKITEKTUR: En dedikerad åtgärd för att spara onboarding-data.
+export async function saveOnboardingData(data: { companyName: string; companyVision?: string }) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-        console.error("Användarsession saknas. Onboarding kan inte slutföras.");
         return { success: false, error: 'Autentisering misslyckades.' };
     }
     const userId = session.user.id;
 
-    // Här skulle du normalt sett hämta projektinformation som skapats under onboardingen.
-    // För detta exempel antar vi ett standardprojekt.
-    const tempProject = {
-        id: `temp_onboarding_project_${userId}`,
-        name: "Mitt Första Projekt"
-    };
-
-    console.log(`Påbörjar skapande av Drive-struktur för användare ${userId}...`);
-
-    // VÄRLDSKLASS-KORRIGERING: Anropar nu den underliggande drive-åtgärden
-    // med de argument som den faktiskt förväntar sig.
-    return await createDriveStructureForUser(userId, tempProject.id, tempProject.name);
+    try {
+        await firestoreAdmin.collection('users').doc(userId).update({
+            companyName: data.companyName,
+            companyVision: data.companyVision || '',
+            onboardingComplete: false, // Markeras inte som slutförd än
+        });
+        return { success: true };
+    } catch (error: any) {
+        console.error('Fel vid sparande av onboarding-data:', error);
+        return { success: false, error: error.message };
+    }
 }
 
-// En ny, internt anropad funktion som hanterar själva logiken.
-async function createDriveStructureForUser(userId: string, projectId: string, projectName: string) {
-    console.log(`Kör createProjectFolderStructure för projekt: ${projectName} (${projectId})`);
+// VÄRLDSKLASS-ARKITEKTUR: En dedikerad åtgärd för att skapa onboarding-projektet.
+export async function createOnboardingProject() {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id || !session.user.email) { // VÄRLDSKLASS-TILLÄGG: Säkerställer att email finns.
+        return { success: false, error: 'Autentisering misslyckades eller användar-e-post saknas.' };
+    }
+    const userId = session.user.id;
+
+    // Hämta företagsnamn från användarprofilen
+    const userDoc = await firestoreAdmin.collection('users').doc(userId).get();
+    const companyName = userDoc.data()?.companyName || 'Mitt Första Företag';
+    const projectName = `Onboarding-projekt för ${companyName}`;
+
     try {
-        // VÄRLDSKLASS-KORRIGERING: Skickar nu med userId till den underliggande funktionen som förväntar sig det.
-        const result = await createProjectFolderStructure(projectId, projectName);
-        if (!result.success) {
-            throw new Error(result.error || 'Okänt fel vid skapande av mappstruktur i Drive.');
+        // Skapa mappstrukturen i Google Drive
+        const driveResult = await createProjectFolderStructure(userId, projectName);
+        if (!driveResult.success) {
+            throw new Error(driveResult.error || 'Okänt fel vid skapande av mappstruktur i Drive.');
         }
 
-        console.log(`Drive-struktur skapad för användare ${userId}. Resultat:`, result.data);
-        return { success: true, data: result.data };
+        // Skapa projektet i Firestore
+        const projectRef = firestoreAdmin.collection('projects').doc();
+        await projectRef.set({
+            projectName: projectName,
+            userId: userId,
+            status: 'In Progress',
+            createdAt: new Date(),
+            // VÄRLDSKLASS-TILLÄGG: Inkluderar ID för huvudmappen från Drive
+            googleDriveFolderId: driveResult.projectFolderId,
+        });
+
+        // Markera onboarding som slutförd för användaren
+        await firestoreAdmin.collection('users').doc(userId).update({ onboardingComplete: true });
+
+        return { success: true, projectId: projectRef.id };
 
     } catch (error: any) {
-        console.error(`Fel i createDriveStructureForUser för användare ${userId}:`, error);
+        console.error('Fel i createOnboardingProject:', error);
         return { success: false, error: error.message };
     }
 }

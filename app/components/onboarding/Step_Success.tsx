@@ -2,40 +2,20 @@
 'use client';
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { CheckCircle2, ExternalLink } from 'lucide-react';
-import { completeOnboarding } from '@/app/onboarding/actions'; // IMPORTERA SERVER ACTION
 
+// VÄRLDSKLASS-KORRIGERING: Definierar props korrekt
 interface StepSuccessProps {
   companyName: string | null;
   folderUrl: string | null;
+  onComplete: () => void; // Accepterar onComplete från föräldern
 }
 
-const Step_Success: React.FC<StepSuccessProps> = ({ companyName, folderUrl }) => {
-  const router = useRouter();
-  const { data: session } = useSession(); // Hämta sessionen
-
+const Step_Success: React.FC<StepSuccessProps> = ({ companyName, folderUrl, onComplete }) => {
   const displayName = companyName || 'ditt företag';
 
-  const handleComplete = async () => {
-    if (!session?.user?.id) {
-      console.error('Kunde inte slutföra onboarding: Användar-ID saknas.');
-      // Hantera felet, kanske visa ett meddelande till användaren
-      return;
-    }
-
-    // 1. Anropa Server Action för att uppdatera databasen
-    const result = await completeOnboarding(session.user.id, true); // Passing true for onboardingComplete
-
-    if (result.success) {
-      // 2. Omdirigera ENBART om databasen har uppdaterats korrekt
-      router.push('/dashboard?tour=true');
-    } else {
-      console.error('Kunde inte spara onboarding-status:', result.error);
-      // Visa ett felmeddelande för användaren här
-    }
-  };
+  // VÄRLDSKLASS-KORRIGERING: Använder den mottagna onComplete-funktionen direkt
+  // och tar bort den onödiga lokala implementeringen.
 
   return (
     <div className="bg-gray-800/50 p-8 rounded-lg border border-gray-700 text-center animate-fade-in">
@@ -69,7 +49,7 @@ const Step_Success: React.FC<StepSuccessProps> = ({ companyName, folderUrl }) =>
 
       <div className="mt-10">
         <button 
-          onClick={handleComplete} // Använd den nya asynkrona funktionen
+          onClick={onComplete} // VÄRLDSKLASS-KORRIGERING: Anropar prop från föräldern
           className="w-full bg-cyan-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all duration-300 hover:bg-cyan-500 focus:ring-4 focus:ring-cyan-500/50"
         >
           Slutför & Gå till Dashboard

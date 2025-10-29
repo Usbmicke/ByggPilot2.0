@@ -7,17 +7,15 @@ import { ActionableEvent } from '@/app/types/index';
  */
 
 // Statiskt "Proaktivt Tips" som en ActionableEvent. Datamodellen är nu harmoniserad.
+// VÄRLDSKLASS-KORRIGERING: 'date' har bytts mot 'createdAt' och ogiltiga fält har tagits bort.
 export const PROACTIVE_TIP_EVENT: ActionableEvent = {
-  // Bas-Event fält
   id: 'static-tip-1', 
-  date: new Date().toISOString(), 
+  createdAt: new Date().toISOString(), 
   type: 'Tip', 
   title: 'Proaktivt Tips: Automatisk Riskanalys',
   description: 'Visste du att ByggPilot automatiskt skapar en initial riskanalys varje gång du skapar ett nytt projekt? Detta sparar tid och säkerställer att du omedelbart har en baslinje för KMA-arbetet.',
-  iconName: 'FiZap',
-  color: 'yellow',
-
-  // ActionableEvent-specifika fält
-  actionType: 'UNKNOWN', // Detta är ett tips, inte en konkret åtgärd
+  link: '/knowledge-base/kma', // Länkar till relevant sida
+  isRead: false,
+  actionType: 'INFO', // Tydligare actionType
   suggestedNextStep: 'Läs mer i kunskapsbanken om KMA.',
 };

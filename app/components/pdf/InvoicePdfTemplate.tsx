@@ -1,10 +1,14 @@
+
 'use client';
 
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import { Invoice } from '@/app/types';
 
-// TODO: Hämta från inställningar
+// VÄRLDSKLASS-KORRIGERING: Centraliserad momssats. Denna bör i framtiden hämtas från företagsinställningar.
+const MOMS_SATS = 25;
+
+// TODO: Hämta all företagsinformation från en central datakälla (t.ex. Firestore-inställningar).
 const companyInfo = { name: 'Byggbolaget AB', address: 'Industrigatan 5', zip: '123 45', city: 'STORSTAD', phone: '08-123 456 78', email: 'kontakt@byggbolaget.se', orgnr: '556677-8899', bankgiro: '123-4567' };
 
 const styles = StyleSheet.create({
@@ -39,13 +43,13 @@ const styles = StyleSheet.create({
 
 export const InvoicePdfTemplate = ({ invoice }: { invoice: Invoice }) => {
   const subTotal = invoice.invoiceLines.reduce((acc, line) => acc + line.unitPrice * line.quantity, 0);
-  const totalVat = invoice.invoiceLines.reduce((acc, line) => acc + (line.unitPrice * line.quantity * (line.vatRate / 100)), 0);
+  // VÄRLDSKLASS-KORRIGERING: Beräkna moms baserat på den centraliserade momssatsen.
+  const totalVat = subTotal * (MOMS_SATS / 100);
   const grandTotal = subTotal + totalVat;
 
   let rotDeductionAmount = 0;
   let amountToPay = grandTotal;
-  if (invoice.rotDeduction) {
-    // ROT-avdrag är 30% av arbetskostnaden, men aldrig mer än 50 000 kr. 
+  if (invoice.rotDeduction?.isApplicable) {
     // TODO: Hämta maxbelopp (50000) från globala inställningar.
     const maxDeduction = 50000;
     const calculatedDeduction = invoice.rotDeduction.laborCost * 0.3;
@@ -56,19 +60,18 @@ export const InvoicePdfTemplate = ({ invoice }: { invoice: Invoice }) => {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* ... Header & Kundinfo ... */}
-        <View style={styles.header}>
+         <View style={styles.header}>
           <View><Text style={styles.companyName}>{companyInfo.name}</Text></View>
           <View style={styles.companyInfo}>
             <Text>{companyInfo.address}, {companyInfo.zip} {companyInfo.city}</Text>
             <Text>{companyInfo.phone} | {companyInfo.email}</Text>
           </View>
         </View>
-        <Text style={styles.invoiceInfo}>FAKTURA #{invoice.id.substring(0,8)}</Text>
+        <Text style={styles.invoiceInfo}>FAKTURA #{invoice.invoiceNumber}</Text>
         <View style={styles.customerInfo}>
             <Text>KUND:</Text>
             <Text style={{ fontWeight: 'bold' }}>{invoice.customer.name}</Text>
-            {/* TODO: Kundadress */}
+            {/* TODO: Implementera fullständig kundadress här baserat på customer-objektet */}
         </View>
         <View style={{ flexDirection: 'row', marginBottom: 20 }}>
             <View style={{ width: '50%' }}><Text>Fakturadatum: {new Date(invoice.issueDate).toLocaleDateString('sv-SE')}</Text></View>
@@ -87,9 +90,10 @@ export const InvoicePdfTemplate = ({ invoice }: { invoice: Invoice }) => {
             {invoice.invoiceLines.map((line, i) => (
                 <View key={i} style={styles.tableRow}>
                     <Text style={[styles.tableCol, styles.description]}>{line.description}</Text>
-                    <Text style={[styles.tableCol, styles.quantity]}>{line.quantity} {line.unit}</Text>
+                    <Text style={[styles.tableCol, styles.quantity]}>{`${line.quantity} ${line.unit}`}</Text>
                     <Text style={[styles.tableCol, styles.unitPrice]}>{line.unitPrice.toFixed(2)}</Text>
-                    <Text style={[styles.tableCol, styles.vat]}>{line.vatRate}%</Text>
+                    {/* VÄRLDSKLASS-KORRIGERING: Visa den standardiserade momssatsen för varje rad. */}
+                    <Text style={[styles.tableCol, styles.vat]}>{MOMS_SATS}%</Text>
                     <Text style={[styles.tableCol, styles.total]}>{(line.quantity * line.unitPrice).toFixed(2)}</Text>
                 </View>
             ))}
@@ -99,10 +103,10 @@ export const InvoicePdfTemplate = ({ invoice }: { invoice: Invoice }) => {
         <View style={styles.totalsSection}>
             <View style={styles.totalsTable}>
                 <View style={styles.totalRow}><Text style={styles.totalLabel}>Nettobelopp:</Text><Text style={styles.totalValue}>{subTotal.toFixed(2)} SEK</Text></View>
-                <View style={styles.totalRow}><Text style={styles.totalLabel}>Moms:</Text><Text style={styles.totalValue}>{totalVat.toFixed(2)} SEK</Text></View>
+                <View style={styles.totalRow}><Text style={styles.totalLabel}>Moms ({MOMS_SATS}%):</Text><Text style={styles.totalValue}>{totalVat.toFixed(2)} SEK</Text></View>
                 <View style={[styles.totalRow]}><Text style={styles.totalLabel}>Totalsumma:</Text><Text style={styles.totalValue}>{grandTotal.toFixed(2)} SEK</Text></View>
                 
-                {invoice.rotDeduction && (
+                {invoice.rotDeduction?.isApplicable && (
                   <>
                     <View style={[styles.totalRow, styles.rotSection]}>
                         <Text style={styles.totalLabel}>Beviljat ROT-avdrag:</Text>

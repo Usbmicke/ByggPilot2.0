@@ -6,7 +6,6 @@ import { findFolderIdByName } from '@/app/lib/google/driveService';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Readable } from 'stream';
 
-// Funktion för att skapa en VÄRLDSKLASS-prompt för Gemini
 const createOfferPrompt = (details: any) => {
     return `
         Du är en expert på att skriva offerter för ett svenskt byggföretag med namnet ByggPilot.
@@ -52,26 +51,20 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Offertdetaljer saknas' }, { status: 400 });
         }
 
-        // --- VÄRLDSKLASS AI-IMPLEMENTATION STARTAR HÄR ---
         const prompt = createOfferPrompt(offerDetails);
-        
         const genAI = new GoogleGenerativeAI(geminiApiKey);
         const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-        
         const generationResult = await model.generateContent(prompt);
         const offerContent = generationResult.response.text();
-        // --- VÄRLDSKLASS AI-IMPLEMENTATION SLUTAR HÄR ---
 
         const drive = await getDriveService();
         
-        // Hitta eller skapa huvudmappen "ByggPilot - Projekt"
         let parentFolderId = await findFolderIdByName(drive, 'ByggPilot - Projekt');
         if (!parentFolderId) {
              return NextResponse.json({ error: "Huvudmappen 'ByggPilot - Projekt' kunde inte hittas." }, { status: 500 });
         }
         
-        // Hitta eller skapa undermappen för projektet
-        let projectFolderId = await findFolderIdByName(drive, offerDetails.projectName);
+        let projectFolderId: string | null = await findFolderIdByName(drive, offerDetails.projectName);
         if (!projectFolderId) {
             console.log(`Projektmapp för '${offerDetails.projectName}' hittades inte, skapar ny...`);
             const projectFolderMetadata = {
@@ -83,13 +76,16 @@ export async function POST(req: NextRequest) {
                 requestBody: projectFolderMetadata,
                 fields: 'id'
             });
-            projectFolderId = projectFolder.data.id;
+            projectFolderId = projectFolder.data.id ?? null;
+            if (!projectFolderId) {
+                throw new Error('Kunde inte skapa projektmappen i Google Drive.');
+            }
         }
 
         const fileName = `Offert_${offerDetails.projectName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.html`;
         const fileMetadata = {
             name: fileName,
-            parents: [projectFolderId], // Spara i projektets mapp
+            parents: [projectFolderId], // VÄRLDSKLASS-KORRIGERING: Nu är vi säkra på att detta är en string
             mimeType: 'text/html'
         };
         
@@ -103,6 +99,11 @@ export async function POST(req: NextRequest) {
             media: media,
             fields: 'id, webViewLink'
         });
+
+        // VÄRLDSKLASS-KORRIGERING: Korrekt hantering av response-data
+        if (!createdFile.data || !createdFile.data.webViewLink) {
+             throw new Error('Filen skapades, men en länk kunde inte genereras.');
+        }
 
         return NextResponse.json({ 
             success: true, 

@@ -23,7 +23,6 @@ export async function GET(request: Request) {
 
   try {
     const userId = session.user.id;
-    // VÄRLDSKLASS-FIX: Använder admin-SDK, query mot toppnivå-collectionen, filtrera på userId.
     const projectsRef = firestoreAdmin.collectionGroup('projects').where('userId', '==', userId);
     const projectsSnapshot = await projectsRef.get();
     
@@ -35,14 +34,14 @@ export async function GET(request: Request) {
         }, { status: 200 });
     }
 
-    // Säkerställer att datan matchar Project-typen.
     const projects: Project[] = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
 
     const totalProjects = projects.length;
-    // VÄRLDSKLASS-KORRIGERING: Använder sträng-literal då ProjectStatus är en 'type', inte en 'enum'.
-    const ongoingProjects = projects.filter(p => p.status === 'InProgress').length;
     
-    // Pausad logik för fakturering kvarstår, returnerar 0.
+    // VÄRLDSKLASS-KORRIGERING: Korrigerat stavfel från 'InProgress' till 'In Progress'
+    const statusFilter: ProjectStatus = 'In Progress';
+    const ongoingProjects = projects.filter(p => p.status === statusFilter).length;
+    
     const totalInvoicedValue = 0;
 
     return NextResponse.json({

@@ -4,9 +4,9 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Bot, Settings, Info } from 'lucide-react';
-// ARKITEKTURKORRIGERING: Korrekt, relativ sökväg till den nyskapade kontexten.
-import { useChat } from '../contexts/ChatContext'; 
-import { useUI } from '../contexts/UIContext';
+// VÄRLDSKLASS-KORRIGERING: Korrekta sökvägar till kontext-filerna.
+import { useChat } from '@/app/contexts/ChatContext'; 
+import { useUI } from '@/app/contexts/UIContext';
 
 interface OnboardingChatProps {
   onComplete: () => void;
