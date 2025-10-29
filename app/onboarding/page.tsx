@@ -1,9 +1,9 @@
 
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+// GULDSTANDARD-FIX: Importerar komponenterna korrekt som namngivna exporter.
 import { GuidedOnboarding } from '@/components/onboarding/GuidedOnboarding';
 import { OnboardingAnimation } from '@/components/onboarding/OnboardingAnimation';
 
@@ -11,28 +11,13 @@ import { OnboardingAnimation } from '@/components/onboarding/OnboardingAnimation
  * GULDSTANDARD ONBOARDING
  * Denna sida representerar den första interaktionen en ny användare har med ByggPilot.
  * Den är designad för att vara vacker, förtroendeingivande och värdeskapande från första sekund.
- * 
- * Vänster sida: En dynamisk och inspirerande animation som subtilt visar kraften i ByggPilot.
- * Höger sida: En lugn, guidad resa som tar användaren i handen, bygger förtroende och levererar omedelbart värde.
  */
 export default function OnboardingPage() {
   const { data: session, status } = useSession();
-  const router = useRouter();
 
-  useEffect(() => {
-    // Om sessionen inte laddas och användaren är oautentiserad, skicka till startsidan.
-    if (status === 'unauthenticated') {
-      router.replace('/');
-    }
-
-    // Om användaren redan har slutfört onboardingen, skicka direkt till dashboarden.
-    if (session?.user?.onboardingComplete) {
-      router.replace('/dashboard');
-    }
-  }, [status, session, router]);
-
-  // Visa en laddningsskärm medan vi väntar på sessionen och omdirigeringslogiken.
-  if (status === 'loading' || !session || session.user.onboardingComplete) {
+  // Visa en laddningsskärm medan vi väntar på att sessionen ska initieras.
+  // All omdirigeringslogik hanteras nu centralt av middleware.ts.
+  if (status === 'loading' || !session) {
     return <div className="flex min-h-screen items-center justify-center bg-gray-900 text-white"><p>Laddar...</p></div>;
   }
 

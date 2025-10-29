@@ -25,7 +25,7 @@ interface SidebarProps {
  * användarprofilen renderas av en dedikerad underkomponent.
  * KNAPPEN '+ Skapa Offert' har bytts ut mot '+ Skapa Nytt' enligt Kungstandard.
  */
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { openModal } = useUI(); // Hämta funktionen för att öppna modalen
@@ -102,4 +102,3 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   );
 };
 
-export default Sidebar;

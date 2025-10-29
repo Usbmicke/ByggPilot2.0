@@ -1,13 +1,15 @@
+
 'use client';
 
-import React, { useState, useTransition } from 'react';
+import React, { useState, useTransition, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { CheckCircleIcon, ArrowRightIcon, ShieldCheckIcon, DocumentPlusIcon } from '@heroicons/react/24/solid';
+import { CheckCircleIcon, ArrowRightIcon, ShieldCheckIcon, DocumentPlusIcon, FolderIcon } from '@heroicons/react/24/solid';
 import CompanyNameInput from '@/components/onboarding/CompanyNameInput';
 import { completeOnboardingStep } from '@/app/onboarding/actions';
 
-type OnboardingStep = 'companyInfo' | 'welcome' | 'terms' | 'creating' | 'success';
+type OnboardingStep = 'companyInfo' | 'structure' | 'success';
+type TransientView = 'welcome' | 'terms' | 'security';
 
 const LoadingSpinner = () => (
     <div className="flex flex-col items-center justify-center space-y-4">
@@ -15,15 +17,15 @@ const LoadingSpinner = () => (
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
-        <p className="text-lg text-gray-300 animate-pulse">Jag bygger ditt digitala kontor...</p>
+        <p className="text-lg text-gray-300 animate-pulse">Arbetar...</p>
     </div>
 );
 
-export function GuidedOnboarding() {
+export default function GuidedOnboarding() {
     const { data: session, update } = useSession();
     const router = useRouter();
-    const initialStep: OnboardingStep = session?.user?.companyName ? 'welcome' : 'companyInfo';
-    const [step, setStep] = useState<OnboardingStep>(initialStep);
+    
+    const [view, setView] = useState<TransientView>('welcome');
     const [error, setError] = useState<string | null>(null);
     const [isPending, startTransition] = useTransition();
     const [hasAgreed, setHasAgreed] = useState(false);
@@ -32,9 +34,8 @@ export function GuidedOnboarding() {
         setError(null);
         startTransition(async () => {
             const result = await completeOnboardingStep(1, { companyName });
-            if (result.success) {
-                await update({ user: { ...session?.user, companyName: result.data.companyName } });
-                setStep('welcome');
+            if (result.success && result.data) {
+                await update({ user: { companyName: result.data.companyName } });
             } else {
                 setError(result.error || 'Något gick fel.');
             }
@@ -42,19 +43,19 @@ export function GuidedOnboarding() {
     };
 
     const handleCreateStructure = () => {
-        if (!hasAgreed) {
-            setError("Du måste godkänna villkoren för att fortsätta.");
-            return;
-        }
+        if (!hasAgreed) return;
         setError(null);
-        setStep('creating');
         startTransition(async () => {
             const result = await completeOnboardingStep(2, {});
             if (result.success) {
-                setStep('success');
+                await update({ 
+                    user: { 
+                        driveRootFolderId: result.driveRootFolderId,
+                        driveRootFolderUrl: result.driveRootFolderUrl 
+                    }
+                });
             } else {
                 setError(result.error || 'Kunde inte skapa mappstrukturen.');
-                setStep('terms'); // Gå tillbaka till villkorssteget vid fel
             }
         });
     };
@@ -63,117 +64,68 @@ export function GuidedOnboarding() {
         startTransition(async () => {
             const result = await completeOnboardingStep(4, {});
             if (result.success) {
-                 await update({ user: { ...session?.user, onboardingComplete: true } });
-                 router.push('/dashboard');
+                await update({ user: { onboardingComplete: true }});
+                router.push('/dashboard');
             } else {
                 setError('Kunde inte slutföra onboardingen. Prova att ladda om sidan.');
             }
         });
     };
-
-    // ... resten av render-logiken är densamma ...
+    
     const renderContent = () => {
-        switch (step) {
+        if (!session?.user) return <LoadingSpinner />;
+        if (isPending) return <LoadingSpinner />;
+
+        const onboardingStep = session.user.onboardingComplete ? 'success' : (!session.user.companyName ? 'companyInfo' : (!session.user.driveRootFolderId ? 'structure' : 'success'));
+
+        switch (onboardingStep) {
             case 'companyInfo':
                 return <CompanyNameInput onSubmit={handleCompanyInfoSubmit} error={error} isPending={isPending} />;
 
-            case 'welcome':
-                return (
-                    <div className="animate-fade-in">
-                        <h1 className="text-4xl font-bold text-white">Välkommen ombord, {session?.user?.name?.split(' ')[0] || ''}!</h1>
-                        <p className="mt-4 text-lg text-gray-300">
-                           Jag är ByggPilot, din nya digitala kollega. Mitt jobb är att eliminera ditt papperskaos genom att automatisera administrationen direkt i ditt befintliga Google Workspace.
-                        </p>
-                        <div className="mt-8">
-                            <button onClick={() => setStep('terms')} className="w-full flex items-center justify-center gap-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-cyan-500/50">
-                                Starta konfigurationen <ArrowRightIcon className='h-5 w-5'/>
-                            </button>
-                            <button onClick={() => setStep('security')} className="w-full text-center mt-4 text-sm text-cyan-400 hover:text-cyan-300 py-2">
-                                Mer om säkerheten
-                            </button>
-                        </div>
-                    </div>
-                );
-            
-            case 'terms':
-                return (
-                    <div className="animate-fade-in">
-                        <div className="flex items-center gap-3">
-                            <DocumentPlusIcon className="h-10 w-10 text-cyan-400" />
-                            <h2 className="text-3xl font-bold text-white">Skapa mappstruktur</h2>
-                        </div>
-                         <p className="mt-4 text-gray-300">
-                           Som ett första steg skapar jag en standardiserad mappstruktur i din Google Drive för <strong className='font-bold text-cyan-300'>{session?.user?.companyName}</strong>. Detta lägger grunden för automatiserad dokumenthantering. Ingen data raderas.
-                        </p>
-                        <div className="mt-6 p-4 bg-gray-800/50 rounded-lg border border-gray-700 space-y-4">
-                            <div className="flex items-start">
-                                <input id="agree" name="agree" type="checkbox" checked={hasAgreed} onChange={() => setHasAgreed(!hasAgreed)} className="h-6 w-6 mt-1 bg-gray-700 border-gray-500 rounded text-cyan-600 focus:ring-cyan-500 cursor-pointer" />
-                                <label htmlFor="agree" className="ml-3 block text-sm text-gray-300">
-                                    Jag förstår att ByggPilot kommer att skapa en ny mapp, <strong className="font-semibold">"ByggPilot - {session?.user?.companyName}"</strong>, med undermappar i min anslutna Google Drive.
-                                </label>
-                            </div>
-                        </div>
-                        {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
-                        <div className="mt-8 flex flex-col sm:flex-row gap-4">
-                           <button onClick={() => setStep('welcome')} className="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors">
-                                Tillbaka
-                            </button>
-                            <button onClick={handleCreateStructure} disabled={!hasAgreed || isPending} className="w-full flex items-center justify-center gap-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-cyan-500/50">
-                                {isPending ? 'Skapar...' : 'Ja, skapa struktur'}
-                            </button>
-                        </div>
-                    </div>
-                )
-
-            case 'security':
-                 return (
-                    <div className="animate-fade-in">
-                        <div className="flex items-center gap-3">
-                           <ShieldCheckIcon className="h-10 w-10 text-cyan-400"/>
-                           <h2 className="text-3xl font-bold text-white">Säkerhet & Transparens</h2>
-                        </div>
-                        <div className="mt-4 space-y-4 text-gray-300">
-                            <p><strong>Dina data är dina.</strong> Allt stannar säkert i ditt eget Google Drive. ByggPilot lagrar inga filer.</p>
-                            <ul className="list-disc list-inside space-y-2 pl-2 text-sm">
-                                <li>Vi använder Googles egen säkra inloggningsteknik (OAuth 2.0).</li>
-                                <li>Du kan när som helst ta bort åtkomsten via dina Google-inställningar.</li>
-                                <li>All din data skyddas av Googles infrastruktur.</li>
-                            </ul>
-                        </div>
-                        <div className="mt-8">
-                            <button onClick={() => setStep('welcome')} className="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors">
-                                Tillbaka
-                            </button>
-                        </div>
-                    </div>
-                )
-
-            case 'creating':
-                return <LoadingSpinner />;
+            case 'structure':
+                switch (view) {
+                    case 'welcome': return (
+                        <div className="animate-fade-in"><h1 className="text-4xl font-bold">Välkommen, {session.user.name?.split(' ')[0]}!</h1><p className="mt-4 text-lg text-gray-300">Jag är ByggPilot. Låt oss sätta upp ditt konto.</p><div className="mt-8"><button onClick={() => setView('terms')} className="w-full flex items-center justify-center gap-3 bg-cyan-600 text-white font-bold py-3 px-6 rounded-lg">Starta konfiguration</button></div></div>
+                    );
+                    case 'terms': return (
+                        <div className="animate-fade-in"><div className="flex items-center gap-3"><DocumentPlusIcon className="h-10 w-10 text-cyan-400"/><h2 className="text-3xl font-bold">Skapa mappstruktur</h2></div><p className="mt-4 text-gray-300">Jag skapar en mappstruktur i din Drive för <strong className='font-bold'>{session.user.companyName}</strong>.</p><div className="mt-6"><div className="flex items-start"><input id="agree" type="checkbox" checked={hasAgreed} onChange={() => setHasAgreed(!hasAgreed)} className="h-6 w-6 rounded" /><label htmlFor="agree" className="ml-3 text-sm">Jag förstår att en ny mapp skapas.</label></div></div>{error && <p className="mt-4 text-sm text-red-400">{error}</p>}<div className="mt-8 flex gap-4"><button onClick={() => setView('welcome')} className="w-full bg-gray-600 font-bold py-3 px-6 rounded-lg">Tillbaka</button><button onClick={handleCreateStructure} disabled={!hasAgreed || isPending} className="w-full bg-cyan-600 font-bold py-3 px-6 rounded-lg disabled:opacity-50">Ja, skapa struktur</button></div></div>
+                    );
+                    default: setView('welcome'); return null;
+                }
 
             case 'success':
                 return (
                     <div className="animate-fade-in text-center">
-                        <CheckCircleIcon className="h-20 w-20 text-green-400 mx-auto animate-pulse" />
-                        <h1 className="mt-6 text-4xl font-bold text-white">Klart!</h1>
-                        <p className="mt-4 text-lg text-gray-300">
-                           Din nya mappstruktur finns nu i Google Drive under mappen <strong className='text-cyan-300'>"ByggPilot - {session?.user?.companyName}"</strong>.
-                        </p>
+                        <CheckCircleIcon className="h-20 w-20 text-green-400 mx-auto" />
+                        <h1 className="mt-6 text-4xl font-bold">Mappstruktur Skapad!</h1>
+                        <p className="mt-4 text-lg text-gray-300">Din grundinstallation är klar. Du hittar din nya mapp i Google Drive.</p>
+                        
+                        {/* DEN AVGÖRANDE, KORRIGERADE LÄNKEN */}
+                        {session.user.driveRootFolderUrl && (
+                            <div className="mt-6">
+                                <a href={session.user.driveRootFolderUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-3 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+                                    <FolderIcon className="h-6 w-6" />
+                                    Öppna "ByggPilot - {session.user.companyName}"
+                                </a>
+                            </div>
+                        )}
+
                         <div className="mt-8">
-                            <button onClick={handleFinalizeOnboarding} className="w-full flex items-center justify-center gap-3 bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/50">
-                                {isPending ? 'Slutför...' : 'Gå till Översikten'} <ArrowRightIcon className='h-5 w-5'/>
-                            </button>
+                            <button onClick={handleFinalizeOnboarding} disabled={isPending} className="w-full flex items-center justify-center gap-3 bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg">{isPending ? 'Slutför...' : 'Gå till Översikten'} <ArrowRightIcon className='h-5 w-5'/></button>
                         </div>
                     </div>
                 );
+
+            default:
+                return <LoadingSpinner />;
         }
-    }
+    };
 
     return (
-        <div className="w-full h-full flex flex-col justify-center p-8 md:p-12 bg-gray-900/80 backdrop-blur-sm">
+        <div className="w-full h-full flex flex-col justify-center p-8 bg-gray-900/80 backdrop-blur-sm">
             <div className="max-w-md mx-auto w-full">
-                 {renderContent()}
+                {renderContent()}
             </div>
         </div>
-    )
+    );
 }
