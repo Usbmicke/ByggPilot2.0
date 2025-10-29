@@ -1,50 +1,52 @@
 
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/lib/authOptions";
-import { createMaterialInDb } from "@/app/lib/dal/material";
-import { Material } from "@/app/types/index";
+import { authOptions } from "@/lib/config/authOptions";
+import { createMaterialInDb } from "@/lib/dal/material";
+import { Material } from "@/lib/types";
 
 /**
  * GULDSTANDARD API-ROUTE: POST /api/materials/create
- * Hanterar skapandet av ett nytt material genom att validera input och
- * anropa DAL-funktionen `createMaterialInDb`.
+ * Skapar ett nytt material för ett projekt.
  */
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user || !session.user.id) {
-    return new NextResponse(JSON.stringify({ message: 'Användaren är inte auktoriserad.' }), { status: 401 });
+  if (!session?.user?.id) {
+    return new NextResponse(JSON.stringify({ error: "Autentisering krävs." }), { status: 401 });
   }
   const userId = session.user.id;
 
   try {
-    const body = await request.json();
-    const { projectId, name, pricePerUnit, quantity, unit, supplier } = body;
+    // Invänta och typa request-kroppen direkt.
+    // Notera: projectId finns här, men är inte en del av Omit-typen för createMaterialInDb.
+    const materialRequestData: Omit<Material, 'id'> & { projectId: string } = await req.json();
 
-    if (!projectId || !name || pricePerUnit === undefined || quantity === undefined || !unit) {
-        return new NextResponse(JSON.stringify({ message: 'Nödvändig information saknas (projectId, name, pricePerUnit, quantity, unit).' }), { status: 400 });
+    const { projectId, ...materialData } = materialRequestData;
+
+    if (!projectId) {
+      return new NextResponse(JSON.stringify({ error: "Projekt-ID saknas." }), { status: 400 });
     }
 
-    // Bygg upp material-data-objektet för DAL-funktionen
-    const materialData: Omit<Material, 'id' | 'price' | 'date' | 'projectId'> = {
-        name,
-        quantity,
-        pricePerUnit,
-        unit,
-        supplier
-    };
-
-    // Anropa DAL-funktionen för att skapa materialet i databasen
+    // **KORRIGERING:** Skicka med alla tre nödvändiga argument.
     const newMaterial = await createMaterialInDb(userId, projectId, materialData);
 
-    return NextResponse.json(newMaterial, { status: 201 });
-
-  } catch (error: any) {
-    console.error('API Error - create material:', error);
-    // Skicka ett mer informativt felmeddelande till klienten vid behov
-    if (error.message.includes('Projektet hittades inte')) {
-        return new NextResponse(JSON.stringify({ message: error.message }), { status: 404 });
+    if (!newMaterial) {
+        // Detta block nås teoretiskt inte eftersom createMaterialInDb skulle kasta ett fel.
+        // Men det är bra praxis att ha en fallback.
+        return new NextResponse(JSON.stringify({ error: "Kunde inte skapa material." }), { status: 500 });
     }
-    return new NextResponse(JSON.stringify({ message: 'Internt serverfel.' }), { status: 500 });
+
+    return new NextResponse(JSON.stringify(newMaterial), { 
+      status: 201,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+  } catch (error) {
+    // Fångar fel som kastas från DAL-skiktet, t.ex. om projektet inte finns.
+    console.error("[API-FEL] POST /api/materials/create:", error);
+    const errorMessage = error instanceof Error ? error.message : "Ett serverfel inträffade.";
+    return new NextResponse(JSON.stringify({ error: errorMessage }), { status: 500 });
   }
 }

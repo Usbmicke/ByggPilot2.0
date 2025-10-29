@@ -2,8 +2,8 @@
 'use server';
 
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/lib/authOptions';
-import { firestoreAdmin } from '@/app/lib/firebase-admin';
+import { authOptions } from '@/lib/config/authOptions';
+import { firestoreAdmin } from '@/lib/config/firebase-admin';
 import { createProjectFolderStructure } from '@/app/actions/driveActions';
 
 // VÄRLDSKLASS-ARKITEKTUR: En dedikerad åtgärd för att spara onboarding-data.

@@ -3,9 +3,9 @@
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/config/authOptions';
-import { db } from '@/lib/config/firebase-admin';
-import { collection, getDocs, doc, getDoc, Timestamp } from 'firebase/firestore';
-import { Material } from '@/app/types/index';
+import { firestoreAdmin } from '@/lib/config/firebase-admin'; 
+import { Timestamp } from 'firebase-admin/firestore';
+import { type Material } from '@/lib/types';
 
 /**
  * GULDSTANDARD ACTION: `getMaterialCosts`
@@ -21,14 +21,17 @@ export async function getMaterialCosts(projectId: string): Promise<{ success: bo
     const userId = session.user.id;
 
     try {
-        const projectRef = doc(db, 'users', userId, 'projects', projectId);
-        const projectSnap = await getDoc(projectRef);
-        if (!projectSnap.exists()) {
+        
+        const projectRef = firestoreAdmin.collection('users').doc(userId).collection('projects').doc(projectId);
+        const projectSnap = await projectRef.get();
+
+        if (!projectSnap.exists) {
             return { success: false, error: 'Åtkomst nekad.' };
         }
 
-        const materialCostsCollectionRef = collection(projectRef, 'material-costs');
-        const querySnapshot = await getDocs(materialCostsCollectionRef);
+        
+        const materialCostsCollectionRef = projectRef.collection('material-costs');
+        const querySnapshot = await materialCostsCollectionRef.get();
 
         const materialCosts: Material[] = querySnapshot.docs.map(doc => {
             const data = doc.data();
@@ -42,9 +45,9 @@ export async function getMaterialCosts(projectId: string): Promise<{ success: bo
                 quantity: quantity,
                 unit: data.unit || 'st',
                 pricePerUnit: pricePerUnit,
-                // VÄRLDSKLASS-KORRIGERING: Beräkna totalpris
+                
                 price: quantity * pricePerUnit,
-                // VÄRLDSKLASS-KORRIGERING: Lägg till ett datum. Använder Firestore Timestamp.
+                
                 date: data.date || Timestamp.now(), 
                 supplier: data.supplier || undefined,
             };

@@ -1,7 +1,7 @@
 'use server';
 
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/lib/authOptions';
+import { authOptions } from '@/lib/config/authOptions';
 import { db } from '@/app/lib/firebase/firestore';
 import { doc, getDoc } from 'firebase/firestore';
 import { Calculation } from '@/app/types/index';

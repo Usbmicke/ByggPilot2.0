@@ -1,6 +1,6 @@
 
-import { firestoreAdmin } from '../firebase-admin';
-import { UserProfile } from '../../types'; // Går upp två nivåer för att nå app/types
+import { firestoreAdmin } from '@/lib/config/firebase-admin';
+import { UserProfile } from '@/app/types';
 
 /**
  * Fetches a user's complete profile from Firestore by their ID.

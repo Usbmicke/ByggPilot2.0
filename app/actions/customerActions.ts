@@ -2,9 +2,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createCustomerInDb, getCustomersFromDb } from '../lib/dal/customer';
+import { createCustomerInDb, getCustomersFromDb } from '@/lib/dal/customer';
 // ARKITEKTURKORRIGERING: Korrekt relativ sökväg till det nyskapade schemat.
-import { customerSchema } from '../lib/schemas/customer';
+import { customerSchema } from '@/lib/schemas/project';
 
 /**
  * GULDSTANDARD SERVER ACTION: createCustomer

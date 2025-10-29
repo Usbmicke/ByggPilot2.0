@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/config/authOptions";
 import { firestoreAdmin } from "@/lib/config/firebase-admin";
-import { encrypt } from "@/lib/utils/encryption";
+import { encrypt } from "@/lib/encryption";
 import { google } from 'googleapis';
 
 const getOAuth2Client = () => {

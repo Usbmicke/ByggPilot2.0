@@ -14,6 +14,7 @@ export const customerSchema = z.object({
   name: z.string().min(1, "Kundnamn är obligatoriskt"),
   email: z.string().email("Ogiltig e-postadress").optional().or(z.literal('')),
   companyName: z.string().optional(),
+  customerType: z.enum(['Company', 'Private']),
 });
 
 export type Customer = z.infer<typeof customerSchema>;
