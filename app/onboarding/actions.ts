@@ -1,70 +1,85 @@
+"use server";
 
-'use server';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/config/authOptions";
+import { createInitialFolderStructure } from "@/app/actions/driveActions";
+import { FirestoreAdapter } from "@next-auth/firebase-adapter";
+import { firestoreAdmin } from "@/lib/config/firebase-admin";
+import { logger } from "@/lib/logger";
 
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/config/authOptions';
-import { firestoreAdmin } from '@/lib/config/firebase-admin';
-import { createProjectFolderStructure } from '@/app/actions/driveActions';
+const adapter = FirestoreAdapter(firestoreAdmin);
 
-// VÄRLDSKLASS-ARKITEKTUR: En dedikerad åtgärd för att spara onboarding-data.
-export async function saveOnboardingData(data: { companyName: string; companyVision?: string }) {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-        return { success: false, error: 'Autentisering misslyckades.' };
+async function getUserFromDb(userId: string) {
+    const user = await adapter.getUser(userId);
+    if (!user) {
+        throw new Error("User not found in database.");
     }
-    const userId = session.user.id;
-
-    try {
-        await firestoreAdmin.collection('users').doc(userId).update({
-            companyName: data.companyName,
-            companyVision: data.companyVision || '',
-            onboardingComplete: false, // Markeras inte som slutförd än
-        });
-        return { success: true };
-    } catch (error: any) {
-        console.error('Fel vid sparande av onboarding-data:', error);
-        return { success: false, error: error.message };
-    }
+    return user;
 }
 
-// VÄRLDSKLASS-ARKITEKTUR: En dedikerad åtgärd för att skapa onboarding-projektet.
-export async function createOnboardingProject() {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !session.user.email) { // VÄRLDSKLASS-TILLÄGG: Säkerställer att email finns.
-        return { success: false, error: 'Autentisering misslyckades eller användar-e-post saknas.' };
-    }
-    const userId = session.user.id;
+async function updateUserInDb(userId: string, data: any) {
+    // This is a simplified example. You'd likely have a more specific method
+    // on your adapter or DAL to update only specific fields.
+    const user = await getUserFromDb(userId);
+    const updatedUser = { ...user, ...data };
+    // The adapter doesn't have a partial update method, so we read and then overwrite.
+    // In a real scenario, you'd add a dedicated updateUser method to your DAL.
+    await adapter.updateUser(updatedUser);
+    return updatedUser;
+}
 
-    // Hämta företagsnamn från användarprofilen
-    const userDoc = await firestoreAdmin.collection('users').doc(userId).get();
-    const companyName = userDoc.data()?.companyName || 'Mitt Första Företag';
-    const projectName = `Onboarding-projekt för ${companyName}`;
+export async function completeOnboardingStep(step: number, data: any) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id || !session.accessToken) {
+    logger.error("[Onboarding Action] Access Denied: Invalid session.", { step });
+    return { success: false, error: "Access Denied: Invalid session." };
+  }
 
-    try {
-        // Skapa mappstrukturen i Google Drive
-        const driveResult = await createProjectFolderStructure(userId, projectName);
-        if (!driveResult.success) {
-            throw new Error(driveResult.error || 'Okänt fel vid skapande av mappstruktur i Drive.');
+  const userId = session.user.id;
+
+  try {
+    switch (step) {
+      case 1: // Save Company Profile
+        logger.info(`[Onboarding Step 1] Updating company profile for user ${userId}`);
+        const { companyName } = data;
+        if (!companyName || typeof companyName !== 'string') {
+          return { success: false, error: "Invalid company name." };
         }
+        await updateUserInDb(userId, { companyName });
+        return { success: true, data: { companyName } };
 
-        // Skapa projektet i Firestore
-        const projectRef = firestoreAdmin.collection('projects').doc();
-        await projectRef.set({
-            projectName: projectName,
-            userId: userId,
-            status: 'In Progress',
-            createdAt: new Date(),
-            // VÄRLDSKLASS-TILLÄGG: Inkluderar ID för huvudmappen från Drive
-            googleDriveFolderId: driveResult.projectFolderId,
+      case 2: // Create Drive Structure
+        logger.info(`[Onboarding Step 2] Creating Drive structure for user ${userId}`);
+        const user = await getUserFromDb(userId);
+        const name = user.companyName;
+        if (!name) {
+             return { success: false, error: "Company name not set." };
+        }
+        const { rootFolderId, rootFolderUrl } = await createInitialFolderStructure(session.accessToken, name);
+        await updateUserInDb(userId, { 
+            driveRootFolderId: rootFolderId,
+            driveRootFolderUrl: rootFolderUrl,
         });
+        logger.info(`[Onboarding Step 2] Drive structure created. Root folder ID: ${rootFolderId}`);
+        return { success: true, data: { rootFolderId } };
 
-        // Markera onboarding som slutförd för användaren
-        await firestoreAdmin.collection('users').doc(userId).update({ onboardingComplete: true });
+      case 4: // Mark Onboarding Complete
+        logger.info(`[Onboarding Step 4] Marking onboarding as complete for user ${userId}`);
+        await updateUserInDb(userId, { onboardingComplete: true });
+        return { success: true };
 
-        return { success: true, projectId: projectRef.id };
-
-    } catch (error: any) {
-        console.error('Fel i createOnboardingProject:', error);
-        return { success: false, error: error.message };
+      default:
+        logger.warn("[Onboarding Action] Invalid step called.", { userId, step });
+        return { success: false, error: "Invalid step." };
     }
+  } catch (e) {
+    const error = e as Error;
+    logger.error({
+      message: `[Onboarding Action] Error at step ${step}`,
+      userId: userId,
+      error: error.message,
+      stack: error.stack,
+    });
+    return { success: false, error: error.message };
+  }
 }
