@@ -35,9 +35,15 @@ export default withAuth(
     return NextResponse.next();
   },
   {
+    // AVGÖRANDE FIX: Detta block isolerar middleware från server-koden.
+    // Genom att specificera sidorna här, behöver withAuth inte längre ladda
+    // hela authOptions-objektet (som innehåller den problematiska firebase-admin).
+    pages: {
+      signIn: '/api/auth/signin', // Talar om var inloggningsprocessen startar.
+    },
     callbacks: {
       // Körs innan middleware-funktionen. Säkerställer att ett giltigt token finns.
-      // Om inte, omdirigeras användaren till inloggningssidan (hanteras av withAuth).
+      // Om inte, omdirigeras användaren till 'signIn'-sidan ovan.
       authorized: ({ token }) => !!token,
     },
   }

@@ -2,7 +2,7 @@
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/config/authOptions';
-import { createInitialFolderStructure } from '@/app/actions/driveActions';
+import { createInitialFolderStructure } from '@/actions/driveActions';
 import { updateUser, getUser } from '@/lib/dal/users'; // Korrekt DAL-import
 import { logger } from '@/lib/logger';
 

@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Material } from '@/app/types/index';
+import { Material } from '@/types';
 import { DocumentMagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 interface MaterialCostListProps {

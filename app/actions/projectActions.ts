@@ -6,7 +6,8 @@ import { authOptions } from '@/lib/config/authOptions';
 import { firestoreAdmin } from '@/lib/config/firebase-admin';
 import { createProjectFolderStructure } from './driveActions';
 import { projectSchema, type ProjectFormData } from '@/lib/schemas/project';
-import { type Project, type File } from '@/lib/types';
+import { type Project, type File } from '@/types'; // Standardiserad import
+import { logger } from '@/lib/logger'; // Importera logger
 
 export async function createProject(formData: ProjectFormData) {
   const session = await getServerSession(authOptions);
@@ -29,11 +30,13 @@ export async function createProject(formData: ProjectFormData) {
     });
 
     // Asynkront skapa mappstrukturen utan att blockera svaret
-    createProjectFolderStructure(newProjectRef.id, validation.data.projectName).catch(console.error);
+    createProjectFolderStructure(newProjectRef.id, validation.data.projectName).catch(error => 
+        logger.error('Failed to create project folder structure asynchronously', { projectId: newProjectRef.id, error })
+    );
 
     return { status: 'success', message: 'Projekt skapat!' };
   } catch (error) {
-    console.error('Fel vid skapande av projekt:', error);
+    logger.error('Error creating project', { userId, error });
     return { status: 'error', message: 'Ett serverfel uppstod.' };
   }
 }
@@ -48,10 +51,10 @@ export async function createProject(formData: ProjectFormData) {
  */
 export async function addFileToProject(projectId: string, fileData: Omit<File, 'id'>) {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) { // Korrigerat från uid till id
+    if (!session?.user?.id) {
         return { success: false, error: 'Autentisering krävs.' };
     }
-    const userId = session.user.id; // Korrigerat från uid till id
+    const userId = session.user.id;
 
     try {
         // Steg 1: Verifiera ägarskap av projektet
@@ -68,7 +71,7 @@ export async function addFileToProject(projectId: string, fileData: Omit<File, '
         return { success: true };
 
     } catch (error) {
-        console.error('Fel vid tillägg av fil till projekt:', error);
+        logger.error('Error adding file to project', { userId, projectId, error });
         return { success: false, error: 'Ett serverfel uppstod när filen skulle läggas till i projektet.' };
     }
 }
