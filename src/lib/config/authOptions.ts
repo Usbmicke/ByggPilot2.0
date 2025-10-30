@@ -6,12 +6,10 @@ import { firestoreAdmin } from '@/lib/config/firebase-admin';
 import { logger } from '@/lib/logger';
 
 /**
- * AuthOptions v10 - Slutgiltig Korrigering
- * Denna version återinför den kritiska, saknade logiken i JWT-callbacken.
- * Felet var att `if (trigger === 'update')` saknades, vilket gjorde att
- * servern ignorerade klientens begäran om att uppdatera sessionen. Med denna
- * logik på plats kommer `updateSession()` att fungera som avsett, och 
- * kapplöpningstillståndet (race condition) elimineras fullständigt.
+ * AuthOptions v11 - Utökade Scopes
+ * Denna version expanderar applikationens behörigheter för att inkludera
+ * samtliga Google-tjänster som krävs för full funktionalitet enligt master plan.
+ * Ingreppet är kirurgiskt och påverkar endast 'scope'-parametern.
  */
 export const authOptions: NextAuthOptions = {
   adapter: FirestoreAdapter(firestoreAdmin),
@@ -24,7 +22,7 @@ export const authOptions: NextAuthOptions = {
           prompt: 'consent',
           access_type: 'offline',
           response_type: 'code',
-          scope: 'openid https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/drive'
+          scope: 'openid https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/contacts.readonly https://www.googleapis.com/auth/tasks'
         }
       }
     }),

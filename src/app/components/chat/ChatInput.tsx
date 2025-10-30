@@ -1,21 +1,15 @@
 
 'use client';
 
-import React, { useRef, FormEvent, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
-    PaperAirplaneIcon,
+    ArrowUpIcon,
+    StopCircleIcon,
     ChevronUpIcon,
-    StopCircleIcon
-} from '@heroicons/react/24/outline';
-import {
-    MicrophoneIcon as MicSolid
+    MicrophoneIcon
 } from '@heroicons/react/24/solid';
-import {
-    MicrophoneIcon as MicOutline
-} from '@heroicons/react/24/outline';
 import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
 
-// KVALITETSREVISION: ChatInput är nu en "controlled component"
 interface ChatInputProps {
     value: string;
     onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
@@ -25,9 +19,10 @@ interface ChatInputProps {
     setIsExpanded: (isExpanded: boolean) => void;
     isLoading: boolean;
     stop: () => void;
+    // Prop för att skicka formuläret, kopplad till den överordnade komponenten
+    onSubmit: (e: React.FormEvent<HTMLFormElement>) => void; 
 }
 
-// KVALITETSREVISION: Tar bort hårdkodade förslagstexter. 
 const ChatInput = ({
     value,
     onChange,
@@ -36,7 +31,8 @@ const ChatInput = ({
     isExpanded,
     setIsExpanded,
     isLoading,
-    stop
+    stop,
+    onSubmit
 }: ChatInputProps) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -51,6 +47,7 @@ const ChatInput = ({
         if (isListening) {
             stopListening();
         } else {
+            // Rensa textområdet innan ny inspelning startar för en renare upplevelse
             const syntheticEvent = { target: { value: '' } } as React.ChangeEvent<HTMLTextAreaElement>;
             onChange(syntheticEvent);
             startListening();
@@ -58,43 +55,38 @@ const ChatInput = ({
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        // Skicka med Enter, men tillåt ny rad med Shift+Enter
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            if (textareaRef.current?.form) {
-                // Säkerställer att formuläret skickas, vilket triggar useChat-hooken
+            if (textareaRef.current?.form && !isChatDisabled && value.trim()) {
                 textareaRef.current.form.requestSubmit();
             }
         }
     };
 
+    // Justerar automatiskt höjden på textarean baserat på innehållet
     useEffect(() => {
         if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+            textareaRef.current.style.height = 'auto'; // Återställ för att krympa korrekt
+            const scrollHeight = textareaRef.current.scrollHeight;
+            textareaRef.current.style.height = `${scrollHeight}px`;
         }
     }, [value]);
 
-    // KVALITETSREVISION: Använder en statisk och mer informativ platshållare.
-    const placeholderText = "Starta ett projekt, sök information, eller ställ en fråga...";
+    const placeholderText = "Ställ en fråga till ByggPilot AI...";
 
+    // --- RENDER-METOD --- 
     return (
-        <div className="relative">
-            <div className="flex items-end gap-2">
-                {voiceError && <div className="text-red-500 text-xs mb-2 absolute -top-6">{voiceError}</div>}
-
-                {!isExpanded && (
-                    <button type="button" onClick={() => setIsExpanded(true)} className="p-2 self-end">
-                        <ChevronUpIcon className="h-6 w-6" />
-                    </button>
-                )}
+        <form onSubmit={onSubmit} className="relative">
+            {/* Behållare som ger den rundade, premium-känslan */}
+            <div className="relative flex items-end w-full p-2 bg-zinc-800/80 backdrop-blur-md border border-zinc-700/80 rounded-2xl shadow-2xl shadow-black/30">
                 
-                <button type="button" onClick={handleMicClick} disabled={isChatDisabled} className="p-2 self-end disabled:opacity-50">
-                    {isListening ?
-                        <MicSolid className="h-6 w-6 text-red-500 animate-pulse" /> :
-                        <MicOutline className="h-6 w-6" />
-                    }
+                {/* Mikrofonknapp - Vänster sida */}
+                <button type="button" onClick={handleMicClick} disabled={isChatDisabled} className="p-2 flex-shrink-0 text-gray-400 hover:text-white disabled:opacity-50 transition-colors rounded-full">
+                    <MicrophoneIcon className={`h-6 w-6 ${isListening ? 'text-red-500 animate-pulse' : ''}`} />
                 </button>
 
+                {/* Textarea för input - Växer och är central */}
                 <textarea
                     ref={textareaRef}
                     rows={1}
@@ -102,22 +94,32 @@ const ChatInput = ({
                     onChange={onChange}
                     onKeyDown={handleKeyDown}
                     onFocus={onFocus}
-                    placeholder={isChatDisabled ? "Logga in för att chatta..." : (isListening ? "Lyssnar..." : placeholderText)}
-                    className="flex-1 bg-border-primary/70 rounded-lg px-4 py-2.5 resize-none max-h-48"
+                    placeholder={isChatDisabled ? "Logga in för att chatta" : (isListening ? "Lyssnar..." : placeholderText)}
+                    className="flex-1 bg-transparent px-3 py-2 resize-none max-h-48 text-base text-gray-200 placeholder:text-gray-500 focus:outline-none"
                     disabled={isChatDisabled}
                 />
 
-                {isLoading ? (
-                    <button type="button" onClick={stop} className="p-2 text-red-500 self-end">
-                        <StopCircleIcon className="h-6 w-6" />
-                    </button>
-                ) : (
-                    <button type="submit" disabled={!value.trim() || isChatDisabled} className="p-2 bg-accent-blue text-white rounded-full self-end disabled:bg-border-primary">
-                        <PaperAirplaneIcon className="h-6 w-6" />
-                    </button>
-                )}
+                {/* Skicka / Stopp-knapp - Höger sida */}
+                <div className="flex-shrink-0">
+                    {isLoading ? (
+                        <button type="button" onClick={stop} className="p-3 text-red-500 bg-zinc-700/50 rounded-full hover:bg-zinc-700 transition-colors">
+                            <StopCircleIcon className="h-6 w-6" />
+                        </button>
+                    ) : (
+                        <button 
+                          type="submit" 
+                          disabled={!value.trim() || isChatDisabled} 
+                          className="p-3 bg-cyan-600 text-white rounded-full transition-all duration-300 transform hover:scale-105 hover:bg-cyan-700 active:scale-95 disabled:bg-zinc-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:scale-100"
+                        >
+                            <ArrowUpIcon className="h-6 w-6" />
+                        </button>
+                    )}
+                </div>
             </div>
-        </div>
+
+            {/* Felmeddelande för röstigenkänning - Visas ovanför rutan vid behov */}
+            {voiceError && <p className="text-red-500 text-sm text-center mt-2 absolute -bottom-7 w-full">{voiceError}</p>}
+        </form>
     );
 };
 
