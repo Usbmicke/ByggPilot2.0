@@ -18,10 +18,26 @@ export default function IntegritetspolicyPage() {
               Vi samlar in information för att kunna tillhandahålla och förbättra vår tjänst. Insamlingen sker på följande sätt:
             </p>
             <ul>
-              <li><strong>Information från ditt Google-konto:</strong> När du registrerar dig med Google hämtar vi grundläggande profilinformation såsom din e-postadress och ditt namn. Detta används för att skapa ditt ByggPilot-konto och för att kunna kommunicera med dig. Vi har inte tillgång till ditt Google-lösenord.</li>
-              <li><strong>Information du skapar i tjänsten:</strong> All data du matar in, såsom projektinformation, kundnamn, tidrapporter, offerter och checklistor, sparas i vår säkra databas (Google Firebase/Firestore). Denna data är din och behandlas som konfidentiell.</li>
+              <li><strong>Grundläggande Kontoinformation:</strong> När du registrerar dig med Google hämtar vi din e-postadress och ditt namn. Detta används för att skapa och administrera ditt ByggPilot-konto och för att kunna kommunicera med dig. Vi har aldrig tillgång till ditt Google-lösenord.</li>
+              <li><strong>Information du skapar i tjänsten:</strong> All data du matar in, såsom projektinformation, kundnamn, tidrapporter, offerter och checklistor, sparas i vår säkra databas. Denna data är din och behandlas som konfidentiell.</li>
               <li><strong>Användningsdata:</strong> Vi kan samla in anonymiserad data om hur du interagerar med tjänsten för att identifiera problem, förbättra användarflöden och utveckla nya funktioner.</li>
             </ul>
+
+            <h3 className="text-xl font-semibold text-white mt-6">1.1. Åtkomst till Google-tjänster</h3>
+            <p>
+              För att ByggPilot ska kunna fungera som din digitala kollega och automatisera dina arbetsflöden, begär vi din tillåtelse att få åtkomst till specifika delar av ditt Google-konto. Denna åtkomst är fundamental för tjänstens kärnfunktioner. Nedan specificerar vi exakt vilken åtkomst vi begär och varför:
+            </p>
+            <ul className="space-y-3">
+                <li><strong>Google Drive (läsa, skapa, redigera):</strong> För att automatiskt kunna skapa projektmappar, spara offerter som PDF-filer och hantera dina projektdokument.</li>
+                <li><strong>Google Calendar (läsa, skapa, redigera):</strong> För att kunna boka in kundmöten, planera projektdeadlines och synkronisera din ByggPilot-planering med din befintliga kalender.</li>
+                <li><strong>Gmail (läsa, skriva och skicka):</strong> För att kunna läsa inkommande kundförfrågningar, automatiskt skapa utkast till offertsvar och skicka e-post för din räkning, direkt från ByggPilot.</li>
+                <li><strong>Google Tasks (läsa, skapa, redigera):</strong> För att omvandla information från e-post och dokument till konkreta "att-göra"-punkter.</li>
+                <li><strong>Google Sheets & Docs (läsa, skapa, redigera):</strong> För att kunna skapa, läsa och redigera rapporter, sammanställningar och andra projektdokument.</li>
+                <li><strong>Google Contacts (endast läsa):</strong> För att snabbt kunna hämta kundinformation (namn, e-post, telefon) när du skapar nya projekt, vilket minimerar manuell datainmatning.</li>
+            </ul>
+            <p className="border-l-4 border-yellow-500 pl-4 bg-yellow-400/10 py-3 mt-4">
+              <strong>Din Kontroll:</strong> Denna åtkomst används uteslutande för att utföra de uppgifter du initierar i ByggPilot. Du kan när som helst granska och återkalla dessa behörigheter via <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">ditt Google-kontos säkerhetsinställningar</a>.
+            </p>
 
             <h2 className="text-2xl font-semibold text-white">2. Hur vi använder din data</h2>
             <p>
@@ -38,12 +54,12 @@ export default function IntegritetspolicyPage() {
 
             <h2 className="text-2xl font-semibold text-white">3. Datalagring och Säkerhet</h2>
             <p>
-              All din data lagras på Google Cloud Platform (specifikt Firebase och Firestore), vilket är en branschledande och säker molninfrastruktur. Vi förlitar oss på Googles robusta säkerhetsåtgärder för att skydda din information.
+              All din data lagras på Google Cloud Platform, vilket är en branschledande och säker molninfrastruktur. Vi förlitar oss på Googles robusta säkerhetsåtgärder för att skydda din information.
             </p>
 
             <h2 className="text-2xl font-semibold text-white">4. Cookies</h2>
             <p>
-              Vi använder cookies för att hantera din inloggningssession och för att förstå hur vår webbplats används. En cookie är en liten textfil som sparas i din webbläsare. Vår cookie-användning är begränsad till vad som är nödvändigt för tjänstens grundläggande funktionalitet och för analys (via t.ex. Google Analytics).
+              Vi använder cookies för att hantera din inloggningssession och för att förstå hur vår webbplats används. Vår cookie-användning är begränsad till vad som är nödvändigt för tjänstens grundläggande funktionalitet.
             </p>
             
             <h2 className="text-2xl font-semibold text-white">5. Dina Rättigheter</h2>

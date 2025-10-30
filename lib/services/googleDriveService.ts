@@ -1,20 +1,21 @@
 
 import { google } from 'googleapis';
-import { authenticate } from '@/lib/services/googleAuthService';
-import { Project } from '@/app/types';
-import { Readable } from 'stream';
-
-const FÖRÄLDERMAPPNAMN = 'ByggPilot - Projekt';
+import { authenticate } from '@/lib/services/googleAuthService'; // Moderniserad för att använda central autentisering
+import { logger } from '@/lib/logger';
 
 // Helper to get an authenticated drive service instance
 async function getDriveService() {
     const auth = await authenticate();
+    if (!auth) {
+        throw new Error('Google Drive Service: Kunde inte autentisera.');
+    }
     return google.drive({ version: 'v3', auth });
 }
 
-// Reusable and robust function to find or create a folder
+// Reusable and robust function to find or create a folder, nu med förbättrad loggning.
 async function getOrCreateFolder(drive: any, name: string, parentId?: string): Promise<string> {
-    let query = `mimeType='application/vnd.google-apps.folder' and name='${name}' and trashed=false`;
+    const escapedName = name.replace(/'/g, "\\'");
+    let query = `mimeType='application/vnd.google-apps.folder' and name='${escapedName}' and trashed=false`;
     if (parentId) {
         query += ` and '${parentId}' in parents`;
     }
@@ -27,11 +28,11 @@ async function getOrCreateFolder(drive: any, name: string, parentId?: string): P
     });
 
     if (response.data.files && response.data.files.length > 0 && response.data.files[0].id) {
-        console.log(`Hittade befintlig mapp '${name}' med ID: ${response.data.files[0].id}`);
+        logger.info(`[DriveService] Hittade befintlig mapp '${name}' med ID: ${response.data.files[0].id}`);
         return response.data.files[0].id;
     }
 
-    console.log(`Mapp '${name}' hittades inte, skapar ny...`);
+    logger.info(`[DriveService] Mapp '${name}' hittades inte, skapar ny...`);
     const fileMetadata: any = {
         name: name,
         mimeType: 'application/vnd.google-apps.folder',
@@ -47,124 +48,79 @@ async function getOrCreateFolder(drive: any, name: string, parentId?: string): P
 
     const newFolderId = createResponse.data.id;
     if (!newFolderId) {
+        logger.error(`[DriveService] Kunde inte skapa eller hitta ID för mappen '${name}'.`);
         throw new Error(`Kunde inte skapa eller hitta ID för mappen '${name}'.`);
     }
-    console.log(`Skapade mappen '${name}' med ID: ${newFolderId}`);
+    logger.info(`[DriveService] Skapade mappen '${name}' med ID: ${newFolderId}`);
     return newFolderId;
 }
 
-export async function createProjectFolderStructure(projectName: string) {
+/**
+ * GULDSTANDARD-FUNKTION: Skapar den fullständiga, korrekta mappstrukturen för en ny användare.
+ * Denna funktion är hjärtat i onboarding-processen för Google Drive.
+ *
+ * @param companyName Företagsnamnet för den nya användaren.
+ * @returns Ett objekt med ID och URL till den nyskapade, företagsspecifika rotmappen.
+ */
+export async function createOnboardingFolderStructure(companyName: string) {
+    if (!companyName || typeof companyName !== 'string' || companyName.trim().length === 0) {
+        throw new Error('Företagsnamn är ogiltigt eller saknas.');
+    }
+    
+    const drive = await getDriveService();
+    const rootFolderName = `ByggPilot - ${companyName.trim()}`;
+    logger.info(`[DriveService] Påbörjar skapande av mappstruktur för: ${rootFolderName}`);
+
     try {
-        const drive = await getDriveService();
-        const parentFolderId = await getOrCreateFolder(drive, FÖRÄLDERMAPPNAMN);
-        const projectFolderId = await getOrCreateFolder(drive, projectName, parentFolderId);
-
-        const subFolders = ['ÄTA', 'Tidrapporter', 'Protokoll', 'Fakturor', 'Bilder', 'Offerter'];
-        for (const folderName of subFolders) {
-            await getOrCreateFolder(drive, folderName, projectFolderId);
-        }
-
-        return { success: true, projectFolderId: projectFolderId };
-    } catch (error: any) {
-        console.error("[driveService] Fel vid skapande av projektstruktur:", error);
-        return {
-            success: false,
-            error: `Internt serverfel: ${error.message}`
-        };
-    }
-}
-
-export async function synchronizeProjectWithGoogleDrive(project: Project) {
-    if (!project || !project.projectName) {
-        console.error("Projekt eller projektnamn saknas.");
-        return { success: false, error: "Projektdata är ofullständig." };
-    }
-
-    console.log(`Synkroniserar projekt "${project.projectName}" med Google Drive...`);
-    return await createProjectFolderStructure(project.projectName);
-}
-
-export async function createOfferFile(projectName: string, fileName: string, htmlContent: string) {
-     try {
-        const drive = await getDriveService();
-        const parentFolderId = await getOrCreateFolder(drive, FÖRÄLDERMAPPNAMN);
-        const projectFolderId = await getOrCreateFolder(drive, projectName, parentFolderId);
-        const offerFolderId = await getOrCreateFolder(drive, 'Offerter', projectFolderId);
-
-        const fileMetadata = {
-            name: fileName,
-            parents: [offerFolderId],
-            mimeType: 'text/html'
-        };
-        
-        const media = {
-            mimeType: 'text/html',
-            body: Readable.from(htmlContent)
-        };
-
-        const createdFile = await drive.files.create({
-            requestBody: fileMetadata,
-            media: media,
-            fields: 'id, webViewLink'
+        const rootFolder = await drive.files.create({
+            requestBody: {
+                name: rootFolderName,
+                mimeType: 'application/vnd.google-apps.folder',
+            },
+            fields: 'id, webViewLink',
         });
 
-        if (!createdFile.data || !createdFile.data.webViewLink) {
-             throw new Error('Filen skapades, men en länk kunde inte genereras.');
+        const rootFolderId = rootFolder.data.id;
+        const rootFolderUrl = rootFolder.data.webViewLink;
+
+        if (!rootFolderId || !rootFolderUrl) {
+            throw new Error('Misslyckades med att skapa rotmappen eller få dess URL.');
         }
+
+        logger.info(`[DriveService] Rotmapp '${rootFolderName}' skapad med ID: ${rootFolderId}`);
+
+        const subFolders = [
+            '01 Projekt', 
+            '02 Kunder', 
+            '03 Offerter', 
+            '04 Fakturor', 
+            '05 Dokumentmallar', 
+            '06 Leverantörsfakturor'
+        ];
+
+        // Skapa alla undermappar parallellt för maximal prestanda.
+        const creationPromises = subFolders.map(folderName => 
+            drive.files.create({
+                requestBody: {
+                    name: folderName,
+                    mimeType: 'application/vnd.google-apps.folder',
+                    parents: [rootFolderId],
+                },
+            })
+        );
+        await Promise.all(creationPromises);
+        
+        logger.info(`[DriveService] Undermappar skapade för '${rootFolderName}'.`);
 
         return { 
             success: true, 
-            webViewLink: createdFile.data.webViewLink 
+            parentFolderId: rootFolderId,
+            parentFolderUrl: rootFolderUrl
         };
 
     } catch (error: any) {
-        console.error("[driveService] Fel vid skapande av offer-fil:", error);
-        return {
-            success: false,
-            error: error.message
-        };
+        logger.error(`[DriveService] Kritiskt fel vid skapande av onboarding-mappstruktur för '${companyName}':`, error);
+        // Kasta om felet så att den anropande Server Action kan hantera det.
+        throw new Error(`Misslyckades med att skapa mappstruktur i Google Drive: ${error.message}`);
     }
 }
-
-export async function uploadFileToProjectFolder(projectName: string, folderName: string, file: File) {
-    try {
-        const drive = await getDriveService();
-        const parentFolderId = await getOrCreateFolder(drive, FÖRÄLDERMAPPNAMN);
-        const projectFolderId = await getOrCreateFolder(drive, projectName, parentFolderId);
-        const destinationFolderId = await getOrCreateFolder(drive, folderName, projectFolderId);
-
-        const fileMetadata = {
-            name: file.name,
-            parents: [destinationFolderId]
-        };
-
-        const media = {
-            mimeType: file.type,
-            body: Readable.from(Buffer.from(await file.arrayBuffer()))
-        };
-
-        const createdFile = await drive.files.create({
-            requestBody: fileMetadata,
-            media: media,
-            fields: 'id, webViewLink'
-        });
-        
-        if (!createdFile.data || !createdFile.data.id) {
-            throw new Error('Misslyckades med att skapa filen i Google Drive.');
-        }
-
-        return { 
-            success: true, 
-            fileId: createdFile.data.id, 
-            webViewLink: createdFile.data.webViewLink 
-        };
-
-    } catch (error: any) {
-        console.error(`[driveService] Fel vid uppladdning av fil till '${projectName}/${folderName}':`, error);
-        return {
-            success: false,
-            error: error.message
-        };
-    }
-}
-

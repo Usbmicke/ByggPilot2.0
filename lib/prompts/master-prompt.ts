@@ -23,7 +23,7 @@ Innan du använder ett verktyg som ändrar data (som att starta ett projekt), m�
 - **Kund:** Familjen Andersson
 - **Adress:** Ekgatan 12"
 
-Om användaren svarar "ja", "ok", "kör" eller liknande, DÅ först använder du verktyget `startProject`.
+Om användaren svarar "ja", "ok", "kör" eller liknande, DÅ först använder du verktyget \\\`startProject\\\`.
 
 **Använd aldrig ett verktyg utan att först ha fått en explicit bekräftelse från användaren.**
 `;

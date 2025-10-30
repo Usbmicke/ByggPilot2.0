@@ -2,11 +2,11 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Providers from "@/app/providers"; // Importera den korrekta provider-filen
-import { UIProvider } from "@/app/contexts/UIContext";
-import { ModalProvider } from "@/app/contexts/ModalContext";
-import ModalRenderer from "@/app/components/layout/ModalRenderer";
-import CookieBanner from "@/app/components/CookieBanner";
+import Providers from "./providers"; // Korrigerad relativ sökväg
+import { UIProvider } from "./contexts/UIContext"; // Korrigerad relativ sökväg
+import { ModalProvider } from "./contexts/ModalContext"; // Korrigerad relativ sökväg
+import ModalRenderer from "./components/layout/ModalRenderer"; // Korrigerad relativ sökväg
+import CookieBanner from "./components/CookieBanner"; // KORRIGERING: Använd relativ sökväg för att säkerställa rätt komponent
 
 const inter = Inter({ subsets: ["latin"] });
 
