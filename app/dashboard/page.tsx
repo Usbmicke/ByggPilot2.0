@@ -3,9 +3,9 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/config/authOptions';
 import { getProjectStats, getActiveProjects } from '@/lib/dal/projects'; // PLATSHÅLLARE: DAL-funktioner
-import { StatCard } from '@/components/dashboard/StatCard';
-import { ProjectCard } from '@/components/dashboard/ProjectCard'; // PLATSHÅLLARE: Komponent för projektkort
-import { CreateNewButton } from '@/components/dashboard/CreateNewButton'; // PLATSHÅLLARE: Knapp för "Skapa Nytt"
+import { StatCard } from '@/app/components/dashboard/StatCard';
+import { ProjectCard } from '@/app/components/dashboard/ProjectCard'; // PLATSHÅLLARE: Komponent för projektkort
+import { CreateNewButton } from '@/app/components/dashboard/CreateNewButton'; // PLATSHÅLLARE: Knapp för "Skapa Nytt"
 
 // FAS 1: Huvudsidan byggs som en ren async Server Component
 export default async function DashboardPage() {

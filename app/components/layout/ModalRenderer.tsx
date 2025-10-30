@@ -9,30 +9,28 @@ import { CreateOfferModal } from '@/app/components/modals/CreateOfferModal';
 const modalComponentMap = {
   createOffer: CreateOfferModal,
   // Lägg till andra modaler här
+  // editProject: EditProjectModal,
   // createCustomer: CreateCustomerModal,
-  // createAta: CreateAtaModal,
 };
 
-/**
- * ModalRenderer är en centraliserad komponent som ansvarar för att rendera
- * den aktiva modalen baserat på tillståndet i ModalContext.
- * Detta är en avgörande del av arkitekturen för att hålla modal-logiken
- * frikopplad från de sidor och komponenter som öppnar dem.
- */
-export default function ModalRenderer() {
-  const { modalType, modalProps, hideModal } = useModal();
+const ModalRenderer: React.FC = () => {
+  const { modalType, modalProps, isOpen, closeModal } = useModal();
 
-  if (!modalType) {
-    return null; // Rendera ingenting om ingen modal ska visas
-  }
-
-  const SpecificModal = modalComponentMap[modalType];
-
-  // Säkerhetsåtgärd om en okänd modal-typ skulle anropas
-  if (!SpecificModal) {
-    console.error(`Modal type "${modalType}" has no corresponding component.`);
+  if (!isOpen || !modalType) {
     return null;
   }
 
-  return <SpecificModal {...modalProps} onClose={hideModal} />;
+  const ModalComponent = modalComponentMap[modalType];
+
+  if (!ModalComponent) {
+    // Om modal-typen inte finns i mappningen, rendera inget
+    // och logga ett fel för utvecklingsändamål.
+    console.error(`Modal type "${modalType}" not found in modalComponentMap.`);
+    return null;
+  }
+
+  // @ts-ignore
+  return <ModalComponent {...modalProps} isOpen={isOpen} onClose={closeModal} />;
 };
+
+export default ModalRenderer;

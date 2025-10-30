@@ -9,27 +9,14 @@ const LoginButtons = () => {
   };
 
   return (
-    <div className="flex flex-col items-center w-full mt-8">
-      {/* ---- Uppdaterad Google-knapp ---- */}
+    <div className="flex items-center space-x-4">
       <button
         onClick={handleGoogleSignIn}
-        className="flex items-center justify-center w-full max-w-xs px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-150"
-        aria-label="Logga in med Google"
+        className="flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
       >
-        <GoogleIcon />
+        <GoogleIcon className="-ml-1 mr-2 h-5 w-5" />
         Logga in med Google
       </button>
-      
-      {/* 
-        Här kan man i framtiden lägga till andra inloggningsmetoder, 
-        t.ex. med e-post och lösenord, BankID, etc.
-
-        <div className="my-4 text-center text-gray-500">eller</div>
-
-        <button className="...andra inloggningsknappar...">
-          Logga in med BankID
-        </button>
-      */}
     </div>
   );
 };

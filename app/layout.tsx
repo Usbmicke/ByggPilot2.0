@@ -21,17 +21,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="sv">
-      <body className={`${inter.className} h-full bg-background-primary text-text-primary`}>
-        <UIProvider>
-          <Providers> { /* Ersatt AuthProvider med den rena SessionProvider */}
-              <ModalProvider>
-                {children}
-                <ModalRenderer />
-              </ModalProvider>
-          </Providers>
-        </UIProvider>
-        <CookieBanner />
+    <html lang="en">
+      <body className={inter.className}>
+        <Providers>
+          <UIProvider>
+            <ModalProvider>
+              {children}
+              <ModalRenderer />
+              <CookieBanner />
+            </ModalProvider>
+          </UIProvider>
+        </Providers>
       </body>
     </html>
   );
