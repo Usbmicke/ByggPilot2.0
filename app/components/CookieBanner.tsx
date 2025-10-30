@@ -52,12 +52,12 @@ export default function CookieBanner() {
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900/80 backdrop-blur-sm border-t border-gray-700">
       <div className="container mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
         <p className="text-sm text-gray-300">
-          Vi använder cookies för att säkerställa att du får den bästa upplevelsen på ByggPilot. Genom att fortsätta använda sidan godkänner du vår användning av cookies. 
-          <a href="/integritetspolicy#cookies" className="text-blue-400 hover:underline ml-1">Läs mer här</a>.
+          Vi använder cookies för att säkerställa att du får den bästa upplevelsen på ByggPilot. Genom att fortsätta använda sidan godkänner du vår användning av cookies.{' '}
+          <a href="/integritetspolicy#cookies" className="font-semibold text-gray-200 hover:underline">Läs mer här</a>.
         </p>
         <button 
           onClick={handleAccept}
-          className="bg-blue-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-blue-500 transition-colors duration-300 flex-shrink-0"
+          className="bg-gray-700 text-white font-semibold py-2 px-6 rounded-md hover:bg-gray-600 transition-colors duration-300 flex-shrink-0"
         >
           Jag förstår
         </button>
