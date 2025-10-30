@@ -1,6 +1,6 @@
 
 import { firestoreAdmin } from '@/lib/config/firebase-admin';
-import { FirestoreAdapter } from '@next-auth/firebase-adapter';
+import { FirestoreAdapter } from '@auth/firebase-adapter';
 import { AdapterUser } from 'next-auth/adapters';
 
 const adapter = FirestoreAdapter(firestoreAdmin);

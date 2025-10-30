@@ -2,8 +2,6 @@
 import { NextAuthOptions, Session, User } from 'next-auth';
 import { JWT } from 'next-auth/jwt';
 import GoogleProvider from 'next-auth/providers/google';
-import { FirestoreAdapter } from '@next-auth/firebase-adapter';
-import { firestoreAdmin } from '@/lib/config/firebase-admin';
 import { updateUser, getUser } from '@/lib/dal/users';
 import { logger } from '@/lib/logger';
 
@@ -89,13 +87,17 @@ export const authOptions: NextAuthOptions = {
             https://www.googleapis.com/auth/userinfo.profile
             https://www.googleapis.com/auth/userinfo.email
             https://www.googleapis.com/auth/drive
-            // ... (övriga scopes) ...
+            https://www.googleapis.com/auth/tasks
+            https://www.googleapis.com/auth/documents
+            https://www.googleapis.com/auth/spreadsheets
+            https://www.googleapis.com/auth/gmail.readonly
+            https://www.googleapis.com/auth/gmail.send
+            https://www.googleapis.com/auth/calendar
           `.trim().replace(/\s+/g, ' ')
         },
       },
     }),
   ],
-  adapter: FirestoreAdapter(firestoreAdmin),
   session: {
     strategy: 'jwt',
   },
@@ -124,7 +126,7 @@ export const authOptions: NextAuthOptions = {
             token.onboardingComplete = dbUser.onboardingComplete;
             token.companyName = dbUser.companyName;
             token.driveRootFolderId = dbUser.driveRootFolderId;
-            token.driveRootFolderUrl = db.driveRootFolderUrl;
+            token.driveRootFolderUrl = dbUser.driveRootFolderUrl;
         }
         
         if (account.refresh_token) {

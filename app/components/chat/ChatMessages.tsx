@@ -2,73 +2,58 @@
 'use client';
 
 import { CoreMessage } from 'ai';
-import { MemoizedReactMarkdown } from '@/components/markdown';
-import { CodeBlock } from '@/components/ui/codeblock';
+
 import { UserIcon, CogIcon } from '@heroicons/react/24/solid';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 
 // FAS 2: Bygger komponenten för att rendera chatt-meddelanden
 export function ChatMessages({ messages, isLoading }: { messages: CoreMessage[], isLoading: boolean }) {
-    if (!messages.length) {
-        return (
-            <div className="flex h-full items-center justify-center">
-                <p className="text-text-secondary">Chatthistorik kommer att visas här.</p>
-            </div>
-        );
-    }
-
+  if (!messages.length) {
     return (
-        <div className="space-y-6">
-            {messages.map((m, index) => (
-                <div key={index} className={`flex items-start gap-3`}>
-                    {m.role === 'user' ? (
-                        <div className="h-8 w-8 rounded-full bg-accent-blue flex items-center justify-center text-white flex-shrink-0">
-                            <UserIcon className="h-5 w-5" />
-                        </div>
-                    ) : (
-                        <div className="h-8 w-8 rounded-full bg-background-tertiary flex items-center justify-center text-white flex-shrink-0">
-                            <CogIcon className="h-5 w-5" />
-                        </div>
-                    )}
-                    <div className="flex-1 pt-1">
-                        <MemoizedReactMarkdown
-                            className="prose prose-invert prose-p:leading-relaxed prose-pre:p-0 break-words"
-                            remarkPlugins={[remarkGfm, remarkMath]}
-                            components={{
-                                p({ children }) {
-                                    return <p className="mb-2 last:mb-0">{children}</p>;
-                                },
-                                code({ node, inline, className, children, ...props }) {
-                                    const match = /language-(\w+)/.exec(className || '');
-                                    if (inline) {
-                                        return <code className={className} {...props}>{children}</code>;
-                                    }
-                                    return (
-                                        <CodeBlock
-                                            key={Math.random()}
-                                            language={(match && match[1]) || ''}
-                                            value={String(children).replace(/\n$/, '')}
-                                            {...props}
-                                        />
-                                    );
-                                }
-                            }}
-                        >
-                            {m.content as string}
-                        </MemoizedReactMarkdown>
-                    </div>
-                </div>
-            ))}
-
-            {isLoading && (
-                <div className="flex items-start gap-3">
-                     <div className="h-8 w-8 rounded-full bg-background-tertiary flex items-center justify-center text-white flex-shrink-0 animate-pulse">
-                        <CogIcon className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1 pt-1 text-text-secondary animate-pulse">AI tänker...</div>
-                </div>
-            )}
+      <div className="flex-1 flex flex-col items-center justify-center p-4">
+        <div className="text-center">
+          <CogIcon className="mx-auto h-12 w-12 text-gray-400" />
+          <h2 className="mt-2 text-lg font-medium text-text-primary">Välkommen till ByggPilot AI</h2>
+          <p className="mt-1 text-sm text-text-secondary">Ställ en fråga för att komma igång.</p>
         </div>
+      </div>
     );
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {messages.map((m, index) => (
+        <div key={index} className={`flex items-start gap-4 ${m.role === 'user' ? 'justify-end' : ''}`}>
+          {m.role === 'assistant' && (
+            <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary-500 flex items-center justify-center text-white">
+              <CogIcon className="h-5 w-5" />
+            </div>
+          )}
+          <div className={`rounded-lg px-4 py-2 max-w-lg break-words ${m.role === 'user' ? 'bg-primary-500 text-white' : 'bg-background-secondary'}`}>
+           <p> {m.content as string} </p>
+          </div>
+          {m.role === 'user' && (
+            <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
+              <UserIcon className="h-5 w-5 text-gray-600" />
+            </div>
+          )}
+        </div>
+      ))}
+      {isLoading && (
+        <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary-500 flex items-center justify-center text-white">
+              <CogIcon className="h-5 w-5" />
+            </div>
+            <div className="rounded-lg px-4 py-2 max-w-lg break-words bg-background-secondary">
+              <div className="animate-pulse flex space-x-2">
+                  <div className="h-2 w-2 bg-primary-400 rounded-full"></div>
+                  <div className="h-2 w-2 bg-primary-400 rounded-full"></div>
+                  <div className="h-2 w-2 bg-primary-400 rounded-full"></div>
+              </div>
+            </div>
+        </div>
+      )}
+    </div>
+  );
 }
