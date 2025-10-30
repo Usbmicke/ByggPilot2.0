@@ -1,19 +1,21 @@
 
 import Image from "next/image";
-import LoginButtons from "./components/auth/LoginButtons";
+import LoginButtons from "./components/auth/LoginButtons"; // KORRIGERING: Återställer till den fungerande relativa sökvägen.
 
 export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background-primary">
       <div className="text-center px-4">
-        <div className="mb-8">
+        <div className="mb-8 inline-block">
           <Image 
             src="/images/byggpilotlogga1.png" 
             alt="ByggPilot Logotyp" 
             width={200} 
-            height={53} 
-            priority 
-            style={{ margin: '0 auto', height: 'auto' }} // KORRIGERING: Bibehåll proportioner
+            height={53}
+            priority
+            // KORRIGERING: Lägger till style-attributet som Next.js-varningen rekommenderar
+            // för att bibehålla bildens proportioner när CSS påverkar den.
+            style={{ height: 'auto' }}
           />
         </div>
         <h1 className="text-5xl font-bold text-text-primary">ByggPilot</h1>
