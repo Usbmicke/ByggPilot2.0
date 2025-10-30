@@ -1,16 +1,31 @@
 
 import React from 'react';
+import { twMerge } from 'tailwind-merge';
 
-const StatCard = ({ icon, title, value }) => (
-  <div className="bg-background-secondary p-5 rounded-xl shadow-lg flex items-center gap-5 hover:shadow-primary-500/10 transition-shadow duration-300">
-    <div className={`p-4 rounded-lg bg-gray-800`}>  {/* Mörkare bakgrund för ikonen */}
-      {icon}
+interface StatCardProps {
+  icon: React.ReactNode;
+  title: string;
+  value: string | number;
+  className?: string;
+}
+
+// StatCard: Enkel, mörk och anpassningsbar för att visa nyckeltal.
+const StatCard: React.FC<StatCardProps> = ({ icon, title, value, className }) => {
+  return (
+    <div className={twMerge("bg-zinc-800/70 p-4 rounded-lg flex items-center gap-4 border border-zinc-700/80", className)}>
+      
+      {/* Ikonen renderas direkt, utan den extra boxen. */}
+      <div className="flex-shrink-0">
+        {icon}
+      </div>
+      
+      {/* Textinnehåll med korrekt typografi från designen */}
+      <div>
+        <p className="text-sm text-gray-400 font-medium">{title}</p>
+        <p className="text-2xl font-bold text-white tracking-tight">{value}</p>
+      </div>
     </div>
-    <div>
-      <p className="text-md text-text-secondary font-medium">{title}</p>
-      <p className="text-3xl font-bold text-text-primary tracking-tight">{value}</p>
-    </div>
-  </div>
-);
+  );
+};
 
 export default StatCard;
