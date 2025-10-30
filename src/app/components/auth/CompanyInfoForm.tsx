@@ -7,6 +7,8 @@ import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 import { updateCompanyInfo } from '@/app/actions/userActions';
 
+// useRouter är borttagen eftersom den inte längre behövs.
+
 interface IFormInput {
   companyName: string;
   orgNumber: string;
@@ -41,11 +43,7 @@ const Input: React.FC<InputProps> = ({ label, id, type = 'text', register, error
     </div>
 );
 
-interface CompanyInfoFormProps {
-    onSuccess: () => void;
-}
-
-const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ onSuccess }) => {
+const CompanyInfoForm: React.FC = () => {
   const { register, handleSubmit, formState: { errors } } = useForm<IFormInput>();
   const { data: session, update } = useSession(); 
   const [isLoading, setIsLoading] = useState(false);
@@ -60,11 +58,14 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ onSuccess }) => {
     const result = await updateCompanyInfo(data, session.user.id);
 
     if (result.success) {
-      toast.success('Information sparad!');
+      toast.success('Information sparad! Omdirigerar...');
       
+      // Uppdatera sessionen och vänta på att det slutförs.
       await update(); 
 
-      onSuccess();
+      // Använd en hård omladdning för att undvika race conditions.
+      // Detta säkerställer att servern ser den uppdaterade sessionen vid nästa sidladdning.
+      window.location.href = '/dashboard';
 
     } else {
       toast.error(result.error || 'Ett okänt fel uppstod.');
@@ -91,7 +92,7 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({ onSuccess }) => {
                 disabled={isLoading || !session}
                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-transform hover:scale-105 disabled:bg-gray-500 disabled:cursor-not-allowed"
             >
-                {isLoading ? 'Sparar...' : 'Spara och fortsätt'}
+                {isLoading ? 'Sparar...' : 'Slutför registrering'}
             </button>
         </div>
     </form>

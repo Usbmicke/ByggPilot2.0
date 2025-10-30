@@ -1,33 +1,40 @@
 
-// import Header from "@/components/layout/Header"; // FAS 2 KORRIGERING
-// import Sidebar from "@/components/layout/Sidebar"; // FAS 2 KORRIGERING
-// import ModalRenderer from "@/components/layout/ModalRenderer"; // FAS 2 KORRIGERING
-// import { ChatCoPilot } from '@/components/chat/ChatCoPilot'; // FAS 2 NYTT
+import Header from "../components/layout/Header";
+import Sidebar from "../components/layout/Sidebar";
+import { ChatCoPilot } from '../components/chat/ChatCoPilot';
+import { UIProvider } from "../contexts/UIContext";
 
-// Denna layout appliceras på alla sidor under /dashboard/*
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="h-screen flex flex-col bg-background-primary text-text-primary overflow-hidden">
-      {/* <ModalRenderer /> */}
-      
-      <div className="flex flex-1 overflow-hidden">
-        {/* <Sidebar /> */}
+    <UIProvider>
+      <div className="h-screen flex bg-background-primary text-text-primary">
+        {/* Sidofältet: All positionering och bredd styrs härifrån */}
+        <div className="w-72 flex-shrink-0">
+          <Sidebar />
+        </div>
 
-        <main className="flex-1 flex flex-col overflow-y-auto">
-          {/* <Header /> */}
+        {/* Huvudområde */}
+        <div className="flex-1 flex flex-col overflow-y-auto">
           
-          <div className="flex-1 p-4 sm:p-6 lg:p-8 relative"> {/* Position relative för att co-pilot ska kunna flyta över */} 
-            {children}
-          </div>
-        </main>
-      </div>
+          {/* Header som ligger överst */}
+          <Header />
 
-      {/* FAS 2: Integrera den nya, persistenta chatt-komponenten */}
-      {/* <ChatCoPilot /> */}
-    </div>
+          {/* Innehåll och Chatt-container. `relative` är nyckeln för att chatten ska fungera. */}
+          <div className="flex-1 relative">
+            <main className="absolute inset-0 overflow-y-auto p-6 md:p-8">
+              {children}
+            </main>
+            
+            {/* Chatten positioneras `absolute` inuti denna container */}
+            <ChatCoPilot />
+          </div>
+
+        </div>
+      </div>
+    </UIProvider>
   );
 }

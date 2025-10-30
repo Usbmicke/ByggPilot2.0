@@ -3,47 +3,70 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { HomeIcon } from '@heroicons/react/24/outline';
+import { signOut, useSession } from 'next-auth/react';
+import { PlusIcon, Cog6ToothIcon, ArrowLeftOnRectangleIcon } from '@heroicons/react/24/outline';
 
-// Importera centraliserad data och kontext med korrekta sökvägar
-import { primaryNavigation } from '@/app/constants/navigation';
-import SidebarUserProfile from '@/app/components/layout/SidebarUserProfile';
-import { useUI } from '@/app/contexts/UIContext';
+import { primaryNavigation } from '../../constants/navigation';
+import SidebarUserProfile from './SidebarUserProfile';
+import { useModal } from '../../contexts/ModalContext';
+
+// Denna komponent är nu en ren presentationskomponent.
+// All logik för bredd och positionering hanteras av dess förälder (DashboardLayout.tsx).
 
 const Sidebar: React.FC = () => {
   const pathname = usePathname();
-  const { isSidebarOpen, toggleSidebar } = useUI();
+  const { data: session } = useSession();
+  const { openModal } = useModal();
 
   return (
-    <aside className={`bg-background-secondary text-text-primary flex flex-col transition-width duration-300 ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
-        <div className="flex items-center justify-between p-4 border-b border-border-color h-16">
-            <Link href="/dashboard">
-                {/* Korrekt sökväg till logotypen i public-mappen */}
-                {isSidebarOpen && <Image src="/images/byggpilotlogga1.png" alt="ByggPilot Logotyp" width={140} height={35} priority />}
-            </Link>
-            <button onClick={toggleSidebar} className="p-2 rounded-md hover:bg-background-tertiary">
-                <HomeIcon className="h-6 w-6" />
-            </button>
-        </div>
+    <div className="h-full bg-background-secondary text-text-primary flex flex-col p-4 border-r border-border-color">
+      
+      {/* ---- TOP SECTION: Navigation Links ---- */}
+      <nav className="flex-1 space-y-1.5">
+        {primaryNavigation.map((item) => (
+          <Link
+            key={item.name}
+            href={item.href}
+            className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors font-medium 
+                        ${pathname.startsWith(item.href)
+                          ? 'bg-gray-800 text-white' // Mörkare bakgrund för aktiv länk
+                          : 'text-text-secondary hover:bg-gray-800/60 hover:text-text-primary'}`}>
+            <item.icon className={`h-6 w-6 transition-colors ${pathname.startsWith(item.href) ? 'text-white' : 'text-gray-400 group-hover:text-white'}`} />
+            <span>{item.name}</span>
+          </Link>
+        ))}
+      </nav>
 
-        <nav className="flex-1 space-y-2 p-2">
-            {primaryNavigation.map((item) => (
-                <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`flex items-center p-3 rounded-lg transition-colors ${pathname === item.href ? 'bg-primary-500 text-white' : 'hover:bg-background-tertiary'}`}>
-                    <item.icon className={`h-6 w-6 ${isSidebarOpen ? 'mr-3' : 'mx-auto'}`} />
-                    {isSidebarOpen && <span className="font-medium">{item.name}</span>}
-                </Link>
-            ))}
-        </nav>
+      {/* ---- MIDDLE SECTION: Create New Button ---- */}
+      <div className="my-4">
+        <button 
+          onClick={() => openModal('createProject')}
+          className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border-2 border-dashed border-gray-600 text-text-secondary font-medium hover:bg-gray-800/60 hover:text-text-primary hover:border-solid hover:border-gray-500 transition-all duration-200"
+        >
+          <PlusIcon className="h-5 w-5" />
+          <span>Skapa Nytt</span>
+        </button>
+      </div>
 
-        <div className="border-t border-border-color p-2">
-            <SidebarUserProfile isSidebarOpen={isSidebarOpen} />
+      {/* ---- BOTTOM SECTION: Profile, Settings, Logout ---- */}
+      {/* mt-auto tvingar denna sektion till botten av flex-containern */}
+      <div className="mt-auto">
+        <div className="border-t border-border-color pt-4 space-y-2">
+          {session?.user && <SidebarUserProfile user={session.user} />}
+
+          <Link href="/dashboard/settings" className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors font-medium text-text-secondary hover:bg-gray-800/60 hover:text-text-primary`}>
+              <Cog6ToothIcon className="h-6 w-6 text-gray-400 group-hover:text-white transition-colors" />
+              <span>Inställningar</span>
+          </Link>
+
+          <button onClick={() => signOut({ callbackUrl: '/' })} className={`group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors font-medium text-text-secondary hover:bg-gray-800/60 hover:text-text-primary`}>
+              <ArrowLeftOnRectangleIcon className="h-6 w-6 text-gray-400 group-hover:text-white transition-colors" />
+              <span>Logga ut</span>
+          </button>
         </div>
-    </aside>
+      </div>
+    </div>
   );
 };
 
