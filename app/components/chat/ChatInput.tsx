@@ -1,11 +1,9 @@
 
 'use client';
 
-import React, { useState, useRef, FormEvent, useEffect } from 'react';
+import React, { useRef, FormEvent, useEffect } from 'react';
 import {
-    PaperClipIcon,
     PaperAirplaneIcon,
-    XCircleIcon,
     ChevronUpIcon,
     StopCircleIcon
 } from '@heroicons/react/24/outline';
@@ -15,10 +13,12 @@ import {
 import {
     MicrophoneIcon as MicOutline
 } from '@heroicons/react/24/outline';
-import { useVoiceRecognition } from '@/app/hooks/useVoiceRecognition';
+import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
 
+// KVALITETSREVISION: ChatInput är nu en "controlled component"
 interface ChatInputProps {
-    onSendMessage: (content: string, file?: File) => void;
+    value: string;
+    onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
     isChatDisabled: boolean;
     onFocus: () => void;
     isExpanded: boolean;
@@ -27,118 +27,70 @@ interface ChatInputProps {
     stop: () => void;
 }
 
-// --- FÖRBÄTTRADE FÖRSLAG VÄRLDSKLASS ---
-const promptSuggestions = [
-    "Starta projekt för [Kund] på [Adress], sätt status \"aktiv\".",
-    "Vilka projekt är pausade? Sammanfatta status och nästa steg för varje.",
-    "Sök i minnet efter monteringsanvisningar för fönstermodell \"TX-25\".",
-    "Lär dig: Vår nya kontakt hos [Leverantör] är [Namn], [telefon/epost].",
-    "Skapa en detaljerad checklista för en slutbesiktning av ett kök.",
-    "Generera ett utkast för ett e-postmeddelande till kund om en kommande faktura.",
-    "Identifiera alla kunder i [Stad] och lista deras senaste projekt.",
-    "Baserat på projekt [Projektnamn], identifiera potentiella risker och föreslå en åtgärdsplan.",
-    "Sammanfatta garantivillkoren vi har för utomhusmålning."
-];
-
-const ChatInput = ({ onSendMessage, isChatDisabled, onFocus, isExpanded, setIsExpanded, isLoading, stop }: ChatInputProps) => {
-    const [input, setInput] = useState('');
-    const [file, setFile] = useState<File | undefined>();
-    const [placeholder, setPlaceholder] = useState(promptSuggestions[0]);
+// KVALITETSREVISION: Tar bort hårdkodade förslagstexter. 
+const ChatInput = ({
+    value,
+    onChange,
+    isChatDisabled,
+    onFocus,
+    isExpanded,
+    setIsExpanded,
+    isLoading,
+    stop
+}: ChatInputProps) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const { isListening, error: voiceError, startListening, stopListening } = useVoiceRecognition((transcript) => {
-        setInput(prev => prev + transcript);
+        const syntheticEvent = {
+            target: { value: value + transcript }
+        } as React.ChangeEvent<HTMLTextAreaElement>;
+        onChange(syntheticEvent);
     });
 
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setPlaceholder(p => promptSuggestions[(promptSuggestions.indexOf(p) + 1) % promptSuggestions.length]);
-        }, 4500); // Ökad tid för att läsa de mer avancerade förslagen
-        return () => clearInterval(interval);
-    }, []);
-
-    const handleAttachmentClick = () => fileInputRef.current?.click();
     const handleMicClick = () => {
         if (isListening) {
             stopListening();
         } else {
-            setInput('');
+            const syntheticEvent = { target: { value: '' } } as React.ChangeEvent<HTMLTextAreaElement>;
+            onChange(syntheticEvent);
             startListening();
         }
-    };
-    
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (event.target.files && event.target.files[0]) {
-            setFile(event.target.files[0]);
-        } else {
-            setFile(undefined);
-        }
-    };
-
-    const removeFile = () => {
-        setFile(undefined);
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
-    };
-
-    const handleSendMessage = async (e?: FormEvent<HTMLFormElement>) => {
-        if (e) e.preventDefault();
-        if (isListening) stopListening();
-        
-        const content = input.trim();
-        if (!content && !file) return;
-        
-        onSendMessage(content, file);
-        setInput('');
-        removeFile();
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            handleSendMessage();
+            if (textareaRef.current?.form) {
+                // Säkerställer att formuläret skickas, vilket triggar useChat-hooken
+                textareaRef.current.form.requestSubmit();
+            }
         }
     };
-    
+
     useEffect(() => {
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
             textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
         }
-    }, [input]);
+    }, [value]);
+
+    // KVALITETSREVISION: Använder en statisk och mer informativ platshållare.
+    const placeholderText = "Starta ett projekt, sök information, eller ställ en fråga...";
 
     return (
         <div className="relative">
-             {file && (
-                <div className="absolute bottom-full left-0 right-0 mb-2 flex justify-start">
-                    <div className="flex items-center gap-2 bg-background-tertiary px-3 py-1.5 rounded-lg text-sm">
-                        <PaperClipIcon className="h-4 w-4"/>
-                        <span>{file.name}</span>
-                        <button onClick={removeFile} type="button" className="text-gray-500 hover:text-white">
-                            <XCircleIcon className="h-5 w-5" />
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            <form onSubmit={handleSendMessage} className="flex items-end gap-2">
+            <div className="flex items-end gap-2">
                 {voiceError && <div className="text-red-500 text-xs mb-2 absolute -top-6">{voiceError}</div>}
-                
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
 
                 {!isExpanded && (
                     <button type="button" onClick={() => setIsExpanded(true)} className="p-2 self-end">
                         <ChevronUpIcon className="h-6 w-6" />
                     </button>
                 )}
-
-                <button type="button" onClick={handleAttachmentClick} disabled={isChatDisabled} className="p-2 self-end disabled:opacity-50"><PaperClipIcon className="h-6 w-6" /></button>
                 
                 <button type="button" onClick={handleMicClick} disabled={isChatDisabled} className="p-2 self-end disabled:opacity-50">
-                    {isListening ? 
-                        <MicSolid className="h-6 w-6 text-red-500 animate-pulse" /> : 
+                    {isListening ?
+                        <MicSolid className="h-6 w-6 text-red-500 animate-pulse" /> :
                         <MicOutline className="h-6 w-6" />
                     }
                 </button>
@@ -146,25 +98,25 @@ const ChatInput = ({ onSendMessage, isChatDisabled, onFocus, isExpanded, setIsEx
                 <textarea
                     ref={textareaRef}
                     rows={1}
-                    value={input}
-                    onChange={e => setInput(e.target.value)}
+                    value={value}
+                    onChange={onChange}
                     onKeyDown={handleKeyDown}
                     onFocus={onFocus}
-                    placeholder={isChatDisabled ? "Logga in..." : (isListening ? "Lyssnar..." : placeholder)}
+                    placeholder={isChatDisabled ? "Logga in för att chatta..." : (isListening ? "Lyssnar..." : placeholderText)}
                     className="flex-1 bg-border-primary/70 rounded-lg px-4 py-2.5 resize-none max-h-48"
                     disabled={isChatDisabled}
                 />
-                
+
                 {isLoading ? (
                     <button type="button" onClick={stop} className="p-2 text-red-500 self-end">
                         <StopCircleIcon className="h-6 w-6" />
                     </button>
                 ) : (
-                    <button type="submit" disabled={(!input.trim() && !file) || isChatDisabled} className="p-2 bg-accent-blue text-white rounded-full self-end disabled:bg-border-primary">
+                    <button type="submit" disabled={!value.trim() || isChatDisabled} className="p-2 bg-accent-blue text-white rounded-full self-end disabled:bg-border-primary">
                         <PaperAirplaneIcon className="h-6 w-6" />
                     </button>
                 )}
-            </form>
+            </div>
         </div>
     );
 };

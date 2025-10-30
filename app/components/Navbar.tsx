@@ -1,7 +1,8 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import LoginButtons from '@/app/components/auth/LoginButtons';
+// FAS 0 KORRIGERING: Korrigerad importväg. Borttagning av det felaktiga '/app'-prefixet.
+import LoginButtons from '@/components/auth/LoginButtons';
 
 // GULDSTANDARD-FIX: Importerar en alternativ, förhoppningsvis okorrupt, logotypfil.
 // Felet 'unable to decode image data' indikerar att den ursprungliga filen var trasig.
