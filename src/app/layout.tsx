@@ -1,38 +1,29 @@
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+import React from 'react';
 
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-import Providers from "./providers"; // Korrigerad relativ sökväg
-import { UIProvider } from "./contexts/UIContext"; // Korrigerad relativ sökväg
-import { ModalProvider } from "./contexts/ModalContext"; // Korrigerad relativ sökväg
-import ModalRenderer from "./components/layout/ModalRenderer"; // Korrigerad relativ sökväg
-import CookieBanner from "./components/CookieBanner"; // KORRIGERING: Använd relativ sökväg för att säkerställa rätt komponent
-
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: "ByggPilot - Din Digitala Kollega",
-  description: "AI-assistent för byggbranschen som automatiserar administration och arbetsflöden.",
+  title: 'ByggPilot - AI Automation',
+  description: 'AI för hantverkare. På riktigt. Automatisera KMA, säkra din ekonomi och stoppa byggfelen innan de ens sker.',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  // FIX: React.ReactNode type requires 'React' to be in scope.
+  children: React.ReactNode
+}) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <Providers>
-          <UIProvider>
-            <ModalProvider>
-              {children}
-              <ModalRenderer />
-              <CookieBanner />
-            </ModalProvider>
-          </UIProvider>
-        </Providers>
+    <html lang="sv">
+      <body className={`${inter.className} antialiased`}>
+        {children}
+        <audio id="background-audio" loop>
+          <source src="https://aistudio-app-assets.google.com/dev/serve/249852a4-b997-4253-b0f3-a3d8b8a5423c" type="audio/mpeg" />
+        </audio>
       </body>
     </html>
-  );
+  )
 }

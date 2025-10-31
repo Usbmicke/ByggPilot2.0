@@ -21,11 +21,13 @@
     "@pinecone-database/pinecone": "^6.1.2",
     "@radix-ui/react-popover": "^1.1.15",
     "@react-pdf/renderer": "^4.3.1",
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.18.0",
     "ai": "latest",
     "chart.js": "^4.5.0",
     "firebase": "^10.12.2",
     "firebase-admin": "^13.5.0",
-    "framer-motion": "^12.23.13",
+    "framer-motion": "^12.23.24",
     "google-auth-library": "^10.3.0",
     "googleapis": "^159.0.0",
     "handlebars": "^4.7.8",
@@ -43,6 +45,7 @@
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
     "swr": "^2.3.6",
+    "three": "^0.180.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
