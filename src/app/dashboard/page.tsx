@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BriefcaseIcon, FolderOpenIcon, BanknotesIcon } from '@heroicons/react/24/outline';
 import StatCard from '../components/dashboard/StatCard';
@@ -13,19 +12,19 @@ import Link from 'next/link';
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
-  const userId = session?.user?.id || 'placeholder-user-id'; 
+  // Hämtar användarnamnet dynamiskt från sessionen, med en fallback.
   const userName = session?.user?.name || "Användare";
 
   // Hämtar endast den statistik som behövs för översikten.
-  const stats = await getDashboardStats(userId);
+  const stats = await getDashboardStats(session?.user?.id);
 
   return (
     <div className="space-y-8 animate-fadeIn">
       
-      {/* ---- Välkomstsektion ---- */}
+      {/* ---- Välkomstsektion (KORRIGERAD) ---- */}
       <div>
-        <h1 className="text-4xl font-bold tracking-tight text-text-primary">Välkommen tillbaka,</h1>
-        <h2 className="text-4xl font-bold tracking-tight text-cyan-400">{userName}!</h2>
+        {/* Hela hälsningen är nu i ett element för konsekvent styling */}
+        <h1 className="text-4xl font-bold tracking-tight text-text-primary">Välkommen tillbaka, {userName}!</h1>
         <p className="mt-3 text-lg text-text-secondary">Här är en snabb översikt över din verksamhet.</p>
       </div>
 

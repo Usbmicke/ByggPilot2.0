@@ -2,8 +2,7 @@
 import { google } from 'googleapis';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/config/authOptions';
-// GULDSTANDARD-KORRIGERING: Importerar nu den korrekta funktionen från vår DAL.
-import { getAccountByUserId, updateUser } from '@/lib/dal/users'; 
+import { getAccountByUserId, updateUser } from '@/lib/data-access'; // <-- KORRIGERAD IMPORT
 import { logger } from '@/lib/logger';
 
 export async function authenticate() {
@@ -14,7 +13,6 @@ export async function authenticate() {
     }
 
     const userId = session.user.id;
-    // KORRIGERING: Använder nu den nya, korrekta funktionen för att hämta kontot.
     const account = await getAccountByUserId(userId);
 
     if (!account || !(account as any).access_token || !(account as any).refresh_token) {
@@ -33,7 +31,6 @@ export async function authenticate() {
         expiry_date: (account as any).expires_at ? (account as any).expires_at * 1000 : null,
     });
 
-    // ... (Logiken för att uppdatera token förblir densamma)
     if ((account as any).expires_at && new Date().getTime() > ((account as any).expires_at - 5 * 60) * 1000) {
         logger.info(`[AuthService] Access token för användare ${userId} är på väg att gå ut. Förnyar...`);
         try {
