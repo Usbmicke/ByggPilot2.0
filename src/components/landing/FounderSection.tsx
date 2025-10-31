@@ -1,5 +1,6 @@
 import React from 'react';
 import AnimatedSection from './AnimatedSection';
+import Image from 'next/image'; // Importerad
 
 const FounderSection: React.FC = () => {
     return (
@@ -9,9 +10,15 @@ const FounderSection: React.FC = () => {
                     <div className="group bg-neutral-900 border border-neutral-800 rounded-2xl p-8 md:p-12 lg:p-16 transition-all duration-300 ease-in-out hover:border-neutral-700/80 hover:shadow-2xl">
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-12 items-center">
                             <div className="lg:col-span-1 flex justify-center">
-                                {/* Placeholder for founder's image */}
-                                <div className="w-48 h-48 lg:w-64 lg:h-64 rounded-full bg-neutral-800 border-2 border-neutral-700 flex items-center justify-center transition-all duration-300 ease-in-out group-hover:border-sky-400/50 group-hover:scale-105">
-                                     <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-neutral-600"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                {/* Ersatt platshållare med grundarens bild */}
+                                <div className="w-48 h-48 lg:w-64 lg:h-64 rounded-full overflow-hidden bg-neutral-800 border-2 border-neutral-700 flex items-center justify-center transition-all duration-300 ease-in-out group-hover:border-sky-400/50 group-hover:scale-105">
+                                    <Image 
+                                        src="/images/micke.jpg" 
+                                        alt="Michael, grundare av ByggPilot" 
+                                        width={256} 
+                                        height={256} 
+                                        className="object-cover w-full h-full"
+                                    />
                                 </div>
                             </div>
                             <div className="lg:col-span-2 text-center lg:text-left">

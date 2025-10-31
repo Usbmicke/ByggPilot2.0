@@ -3,13 +3,18 @@
 import React, { useState, useEffect } from 'react';
 import LoginButtons from '@/app/components/auth/LoginButtons';
 import Link from 'next/link';
+import Image from 'next/image'; // Importerad
 
 const ByggPilotLogo: React.FC = () => (
   <Link href="/" className="flex items-center space-x-2.5">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="10" stroke="#E5E7EB" strokeWidth="1.5"/>
-      <path d="M12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22" stroke="#E5E7EB" strokeWidth="1.5" strokeLinecap="round"/>
-    </svg>
+    {/* Ersatt SVG med Bild-komponent för logotypen */}
+    <Image 
+      src="/images/byggpilotlogga1.png" 
+      alt="ByggPilot Logotyp" 
+      width={24} 
+      height={24} 
+      className="rounded-full" // Behåller rundningen som en stil-detalj
+    />
     <span className="text-xl font-medium text-neutral-100">ByggPilot</span>
   </Link>
 );
