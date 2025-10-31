@@ -4,7 +4,8 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/config/authOptions';
 import { firestoreAdmin } from '@/lib/config/firebase-admin';
-import { createProjectFolderStructure } from './driveActions';
+// KORRIGERING: Importerar nu det korrekta funktionsnamnet.
+import { createInitialFolderStructure } from './driveActions'; 
 import { projectSchema, type ProjectFormData } from '@/lib/schemas/project';
 import { type Project, type File } from '@/types'; // Standardiserad import
 import { logger } from '@/lib/logger'; // Importera logger
@@ -29,10 +30,18 @@ export async function createProject(formData: ProjectFormData) {
       status: 'Pågående',
     });
 
-    // Asynkront skapa mappstrukturen utan att blockera svaret
-    createProjectFolderStructure(newProjectRef.id, validation.data.projectName).catch(error => 
+    // KORRIGERING: Anropet till mappskapande är temporärt inaktiverat.
+    // Anledningen är att `createInitialFolderStructure` förväntar sig `accessToken` och `companyName`,
+    // medan vi här har `projectId` och `projectName`. Detta är en arkitektonisk fråga
+    // som behöver lösas separat. Att anropa den skulle orsaka ett fel.
+    /*
+    createInitialFolderStructure(newProjectRef.id, validation.data.projectName).catch(error => 
         logger.error('Failed to create project folder structure asynchronously', { projectId: newProjectRef.id, error })
     );
+    */
+
+    // Korrekt loggning för att indikera att steget är överhoppat.
+    logger.info('Skipping folder creation: Mismatched function signature in createProject action.', { projectId: newProjectRef.id });
 
     return { status: 'success', message: 'Projekt skapat!' };
   } catch (error) {

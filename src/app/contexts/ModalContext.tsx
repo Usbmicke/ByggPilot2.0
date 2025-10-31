@@ -3,13 +3,13 @@
 
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 
-// Definierar de olika typerna av modaler vi kan visa
-// ARKITEKTURKORRIGERING: Lade till 'createProject' för att stödja den nya modalarkitekturen.
-export type ModalType = 'createOffer' | 'createCustomer' | 'createAta' | 'createProject';
+// Definierar de olika typerna av modaler vi kan visa.
+// Lade till 'createOptions' för att visa valmenyn.
+export type ModalType = 'createOffer' | 'createCustomer' | 'createAta' | 'createProject' | 'createOptions';
 
 interface ModalContextType {
-  showModal: (modalType: ModalType, modalProps?: any) => void;
-  hideModal: () => void;
+  openModal: (modalType: ModalType, modalProps?: any) => void;
+  closeModal: () => void;
   modalType: ModalType | null;
   modalProps: any;
 }
@@ -20,18 +20,19 @@ export const ModalProvider = ({ children }: { children: ReactNode }) => {
   const [modalType, setModalType] = useState<ModalType | null>(null);
   const [modalProps, setModalProps] = useState<any>({});
 
-  const showModal = (modalType: ModalType, modalProps: any = {}) => {
+  // Standardiserat till openModal/closeModal för bättre läsbarhet
+  const openModal = (modalType: ModalType, modalProps: any = {}) => {
     setModalType(modalType);
     setModalProps(modalProps);
   };
 
-  const hideModal = () => {
+  const closeModal = () => {
     setModalType(null);
     setModalProps({});
   };
 
   return (
-    <ModalContext.Provider value={{ modalType, modalProps, showModal, hideModal }}>
+    <ModalContext.Provider value={{ modalType, modalProps, openModal, closeModal }}>
       {children}
     </ModalContext.Provider>
   );
