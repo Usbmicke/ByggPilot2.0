@@ -1,28 +1,43 @@
 
 import { firestoreAdmin as db } from '@/lib/config/firebase-admin';
 import { logger } from '@/lib/logger';
+import { UserSchema } from './types'; // <-- STEG 2: IMPORTERAR RITNINGEN
 
 // =================================================================================
-// DATA ACCESS LAYER (DAL) - V1.1
+// DATA ACCESS LAYER (DAL) - V2.0 (Armerad)
 // =================================================================================
-// Denna fil hanterar all direkt interaktion med Firestore-databasen.
-// Version 1.1 återinför den saknade `getAccountByUserId`-funktionen.
+// Denna version är armerad med Zod-validering för att garantera dataintegritet.
 
 const usersRef = db.collection('users');
-const accountsRef = db.collection('accounts'); // <-- NY REFERENS
+const accountsRef = db.collection('accounts');
 
 /**
- * Uppdaterar data för en användare i 'users'-collection.
+ * Uppdaterar data för en användare. All data valideras nu mot UserSchema
+ * innan den skrivs till databasen.
  */
 export async function updateUser(userId: string, data: Record<string, any>): Promise<boolean> {
     if (!userId) {
         logger.error('[DAL] updateUser: Försök att uppdatera användare utan userId.');
         throw new Error('Användar-ID saknas.');
     }
+
+    // STEG 2: VALIDERINGSVAKT
+    // .partial() tillåter att endast en delmängd av fälten skickas in för uppdatering.
+    const validationResult = UserSchema.partial().safeParse(data);
+
+    if (!validationResult.success) {
+        logger.error(
+            `[DAL] updateUser: Valideringsfel för användare '${userId}'. Datan matchar inte UserSchema.`, 
+            { errors: validationResult.error.flatten() }
+        );
+        throw new Error('Datavalideringen misslyckades. Ogiltig data skickades till databasen.');
+    }
+
     try {
         const userDocRef = usersRef.doc(userId);
-        await userDocRef.update(data);
-        logger.info(`[DAL] updateUser: Användare '${userId}' uppdaterades med data:`, data);
+        // Använder validationResult.data för att säkerställa att endast validerad data används.
+        await userDocRef.update(validationResult.data);
+        logger.info(`[DAL] updateUser: Användare '${userId}' uppdaterades framgångsrikt med validerad data.`);
         return true;
     } catch (error) {
         logger.error(`[DAL] updateUser: Kritiskt fel vid uppdatering av användare '${userId}':`, { error, data });
@@ -52,8 +67,7 @@ export async function getUser(userId: string): Promise<Record<string, any> | nul
 }
 
 /**
- * ÅTERSTÄLLD: Hämtar ett kontodokument från 'accounts'-collection baserat på userId.
- * Denna funktion är kritisk för Google Authentication Service.
+ * Hämtar ett kontodokument från 'accounts'-collection baserat på userId.
  */
 export async function getAccountByUserId(userId: string): Promise<Record<string, any> | null> {
     if (!userId) {
@@ -73,4 +87,3 @@ export async function getAccountByUserId(userId: string): Promise<Record<string,
         throw new Error('Kunde inte hämta kontodata.');
     }
 }
-
