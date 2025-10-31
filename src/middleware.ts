@@ -1,67 +1,61 @@
 
-import { NextResponse, type NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
-import { logger } from '@/lib/logger';
+import { getToken } from "next-auth/jwt";
+import { NextRequest, NextResponse } from "next/server";
 
-const ROUTES = {
-  DASHBOARD: '/dashboard',
-  ONBOARDING: '/onboarding',
-  LOGIN: '/auth/login', 
-};
+// =================================================================================
+// MIDDLEWARE V2.0 - INTELLIGENT DIRIGERING
+// =================================================================================
+// Denna middleware styr trafiken baserat på användarens onboarding-status.
 
 export async function middleware(req: NextRequest) {
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const { pathname } = req.nextUrl;
-  const secret = process.env.NEXTAUTH_SECRET;
 
-  if (!secret) {
-    logger.error('[Middleware] NEXTAUTH_SECRET är inte definierad.');
-    return new Response('Internal Server Error: NEXTAUTH_SECRET is not set.', { status: 500 });
+  const hasCompletedOnboarding = token?.hasCompletedOnboarding as boolean | undefined;
+  const isAuthenticated = !!token;
+
+  // Om användaren är på inloggningssidan
+  if (pathname.startsWith('/login')) {
+    // Om de redan är inloggade och har slutfört onboarding, skicka till dashboard
+    if (isAuthenticated && hasCompletedOnboarding) {
+      return NextResponse.redirect(new URL('/dashboard', req.url));
+    }
+    // Om de är inloggade men INTE slutfört onboarding, skicka till onboarding
+    if (isAuthenticated && !hasCompletedOnboarding) {
+        return NextResponse.redirect(new URL('/onboarding', req.url));
+    }
+    // Annars, låt dem vara kvar på inloggningssidan
+    return NextResponse.next();
   }
 
-  const token = await getToken({ req, secret });
+  // Om användaren INTE är autentiserad, omdirigera till inloggningssidan
+  if (!isAuthenticated) {
+    return NextResponse.redirect(new URL('/login', req.url));
+  }
 
-  const isLoggedIn = !!token;
-  const hasCompletedOnboarding = !!token?.onboardingComplete;
-  
-  // Loggar endast för relevanta sid-navigationer, inte alla statiska filer.
-  // logger.info(`[Middleware] Path: ${pathname}, Status: ${isLoggedIn ? 'Inloggad' : 'Ej inloggad'}, Onboarding: ${hasCompletedOnboarding ? 'Klar' : 'Ej klar'}`);
+  // Logik för autentiserade användare
+  const isOnboardingPage = pathname.startsWith('/onboarding');
 
-  // --- Kärnlogik för omdirigering ---
-
-  // 1. Användare som är fullständigt onboardade ska till dashboarden.
-  if (isLoggedIn && hasCompletedOnboarding) {
-    if (pathname.startsWith(ROUTES.ONBOARDING) || pathname.startsWith(ROUTES.LOGIN)) {
-      logger.info(`[Middleware] Omdirigerar färdig användare från ${pathname} till ${ROUTES.DASHBOARD}`);
-      return NextResponse.redirect(new URL(ROUTES.DASHBOARD, req.url));
+  // Fall 1: Användaren har INTE slutfört onboarding.
+  if (!hasCompletedOnboarding) {
+    // Om de inte redan är på onboarding-sidan, skicka dit dem.
+    if (!isOnboardingPage) {
+        return NextResponse.redirect(new URL('/onboarding', req.url));
+    }
+  } 
+  // Fall 2: Användaren HAR slutfört onboarding.
+  else {
+    // Om de försöker besöka onboarding-sidan igen, skicka dem till dashboard.
+    if (isOnboardingPage) {
+        return NextResponse.redirect(new URL('/dashboard', req.url));
     }
   }
 
-  // 2. Inloggade användare som INTE är klara med onboarding ska till onboarding-sidan.
-  if (isLoggedIn && !hasCompletedOnboarding) {
-    if (!pathname.startsWith(ROUTES.ONBOARDING)) {
-      logger.info(`[Middleware] Omdirigerar ofullständig användare från ${pathname} till ${ROUTES.ONBOARDING}`);
-      return NextResponse.redirect(new URL(ROUTES.ONBOARDING, req.url));
-    }
-  }
-
-  // 3. Oinloggade användare ska skickas till startsidan om de försöker nå skyddade rutter.
-  if (!isLoggedIn) {
-      logger.info(`[Middleware] Omdirigerar ej inloggad användare från ${pathname} till startsidan.`);
-      return NextResponse.redirect(new URL('/', req.url));
-  }
-
+  // Om ingen av reglerna ovan matchar, fortsätt som vanligt.
   return NextResponse.next();
 }
 
+// Denna middleware appliceras på alla relevanta sidor.
 export const config = {
-  matcher: [
-    /*
-     * Denna middleware ska ENBART köras på applikationens huvudsidor.
-     * Den skyddar dashboard och onboarding-flödet.
-     * Viktigt: Den ignorerar '/' (startsidan) och alla API-rutter, statiska filer etc.
-     * för att undvika att blockera NextAuth-sessioner eller andra nödvändiga anrop.
-     */
-    '/dashboard/:path*',
-    '/onboarding/:path*',
-  ],
+  matcher: ['/dashboard/:path*', '/onboarding', '/login'],
 };

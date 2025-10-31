@@ -1,9 +1,15 @@
 
 import { google } from 'googleapis';
-import { authenticate } from '@/lib/services/googleAuthService'; // Moderniserad för att använda central autentisering
+import { authenticate } from '@/lib/services/googleAuthService';
 import { logger } from '@/lib/logger';
 
-// Helper to get an authenticated drive service instance
+// =================================================================================
+// GOOGLE DRIVE SERVICE V3.0 - Intelligent Loggning
+// =================================================================================
+// Logiken i `getOrCreateFolder` har uppdaterats för att ge en kristallklar och
+// professionell logg-output, vilket eliminerar den "buggiga" känslan av att
+// mappar "inte hittas".
+
 async function getDriveService() {
     const auth = await authenticate();
     if (!auth) {
@@ -12,7 +18,7 @@ async function getDriveService() {
     return google.drive({ version: 'v3', auth });
 }
 
-// GULDSTANDARD IDEMPOTENS: Hittar en mapp, eller skapar den om den inte finns.
+// === DEN NYA, INTELLIGENTA LOGG-FUNKTIONEN ===
 async function getOrCreateFolder(drive: any, name: string, parentId?: string): Promise<string> {
     const escapedName = name.replace(/'/g, "\\'");
     let query = `mimeType='application/vnd.google-apps.folder' and name='${escapedName}' and trashed=false`;
@@ -28,11 +34,13 @@ async function getOrCreateFolder(drive: any, name: string, parentId?: string): P
     });
 
     if (response.data.files && response.data.files.length > 0 && response.data.files[0].id) {
-        logger.info(`[DriveService] Hittade befintlig mapp '${name}' med ID: ${response.data.files[0].id}`);
+        // Hittade mappen, logga med en grön bock.
+        logger.info(`[DriveService] ✅ Mapp '${name}' finns redan.`);
         return response.data.files[0].id;
     }
 
-    logger.info(`[DriveService] Mapp '${name}' hittades inte, skapar ny...`);
+    // Hittade inte mappen, logga med ett plus-tecken.
+    logger.info(`[DriveService] ➕ Skapar ny mapp: '${name}'...`);
     const fileMetadata: any = {
         name: name,
         mimeType: 'application/vnd.google-apps.folder',
@@ -48,18 +56,14 @@ async function getOrCreateFolder(drive: any, name: string, parentId?: string): P
 
     const newFolderId = createResponse.data.id;
     if (!newFolderId) {
-        logger.error(`[DriveService] Kunde inte skapa eller hitta ID för mappen '${name}'.`);
-        throw new Error(`Kunde inte skapa eller hitta ID för mappen '${name}'.`);
+        logger.error(`[DriveService] 🚨 KRITISKT: Misslyckades att skapa mappen '${name}' och fick inget ID.`);
+        throw new Error(`Kunde inte skapa mappen '${name}'.`);
     }
-    logger.info(`[DriveService] Skapade mappen '${name}' med ID: ${newFolderId}`);
+    
+    // Ingen extra logg här behövs, "Skapar..."-meddelandet räcker.
     return newFolderId;
 }
 
-/**
- * GULDSTANDARD-FUNKTION V2: IDEMPOTENT & ROBUST
- * Skapar den fullständiga mappstrukturen. Denna funktion är nu fullständigt idempotent,
- * vilket innebär att den kan köras flera gånger utan att skapa dubbletter.
- */
 export async function createOnboardingFolderStructure(companyName: string) {
     if (!companyName || typeof companyName !== 'string' || companyName.trim().length === 0) {
         throw new Error('Företagsnamn är ogiltigt eller saknas.');
@@ -67,14 +71,13 @@ export async function createOnboardingFolderStructure(companyName: string) {
     
     const drive = await getDriveService();
     const rootFolderName = `ByggPilot - ${companyName.trim()}`;
-    logger.info(`[DriveService] Påbörjar säkerställande av mappstruktur för: ${rootFolderName}`);
+    logger.info(`[DriveService] --------------------------------------------------`);
+    logger.info(`[DriveService] PÅBÖRJAR KONTROLL AV MAPPSTRUKTUR: ${rootFolderName}`);
+    logger.info(`[DriveService] --------------------------------------------------`);
 
     try {
-        // ANVÄND IDEMPOTENT HJÄLPFUNKTION FÖR ROTMAPPEN
         const rootFolderId = await getOrCreateFolder(drive, rootFolderName);
         const rootFolderUrl = `https://drive.google.com/drive/folders/${rootFolderId}`;
-
-        logger.info(`[DriveService] Rotmapp '${rootFolderName}' säkerställd med ID: ${rootFolderId}`);
 
         const subFolders = [
             '01 Projekt', 
@@ -85,13 +88,14 @@ export async function createOnboardingFolderStructure(companyName: string) {
             '06 Leverantörsfakturor'
         ];
 
-        // ANVÄND IDEMPOTENT HJÄLPFUNKTION FÖR ALLA UNDERMAPPAR PARALLELLT
         const creationPromises = subFolders.map(folderName => 
             getOrCreateFolder(drive, folderName, rootFolderId)
         );
         await Promise.all(creationPromises);
         
-        logger.info(`[DriveService] Undermappar säkerställda för '${rootFolderName}'.`);
+        logger.info(`[DriveService] --------------------------------------------------`);
+        logger.info(`[DriveService] ✅ Mappstruktur är nu fullständigt säkerställd.`);
+        logger.info(`[DriveService] --------------------------------------------------`);
 
         return { 
             success: true, 
@@ -100,7 +104,7 @@ export async function createOnboardingFolderStructure(companyName: string) {
         };
 
     } catch (error: any) {
-        logger.error(`[DriveService] Kritiskt fel vid säkerställande av mappstruktur för '${companyName}':`, error);
+        logger.error(`[DriveService] 🚨 Kritiskt fel vid säkerställande av mappstruktur för '${companyName}':`, error);
         throw new Error(`Misslyckades med att säkerställa mappstruktur i Google Drive: ${error.message}`);
     }
 }

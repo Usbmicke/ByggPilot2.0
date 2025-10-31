@@ -2,11 +2,16 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation'; // <-- Importerad för säker navigering
 import { CheckCircleIcon, ExclamationCircleIcon, ArrowRightIcon, DocumentTextIcon } from '@heroicons/react/24/solid';
 import { setupDriveForOnboarding, finalizeOnboarding } from '@/app/onboarding/actions';
-import { markOnboardingAsComplete } from '@/app/actions/userActions'; // MOMENT 2: Importera minnesfunktionen
+
+// =================================================================================
+// ARKITEKTENS PROMPT: ONBOARDING CLIENT V1.0
+// =================================================================================
+// Denna version implementerar den korrekta, race-condition-fria logiken för
+// navigering efter slutförd onboarding, enligt Arkitektens Prompt.
 
 type OnboardingStep = 'input' | 'confirmDrive' | 'creating' | 'success' | 'finalizing' | 'error';
 
@@ -24,24 +29,15 @@ interface DriveData {
   driveRootFolderUrl: string;
 }
 
-/**
- * Guidad Onboarding (v16 - Arkitektur med Datapersistens)
- * Denna version är den slutgiltiga. Den säkerställer att användarens status permanentas
- * i databasen INNAN navigering sker, vilket löser både "minnesförlusten" vid ny
- * inloggning och "flimret" vid den initiala omdirigeringen.
- * 1. AWAIT: Permanent markering i databasen (Firestore).
- * 2. AWAIT: Skapande av företagsdata och mappstruktur.
- * 3. AWAIT: Synkronisering av den lokala sessionen.
- * 4. NAVIGERA: Först när allt ovan är bekräftat sker navigering.
- */
 export function GuidedOnboarding() {
-  const { data: session, update: updateSession } = useSession(); // Hämta hela session-objektet för att få userId
+  const { data: session, update } = useSession(); // <-- Hämta `update`-funktionen
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const [step, setStep] = useState<OnboardingStep>('input');
   const [companyData, setCompanyData] = useState<CompanyData>({ 
-    companyName: '', orgNumber: '', address: '', zipCode: '', city: '', phone: '' 
+    companyName: session?.user?.companyName || '', 
+    orgNumber: '', address: '', zipCode: '', city: '', phone: '' 
   });
   const [driveData, setDriveData] = useState<DriveData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -75,9 +71,10 @@ export function GuidedOnboarding() {
     });
   };
 
+  // === ARKITEKTENS PROMPT: VATTENTÄT NAVIGERING ===
   const handleFinalizeAndNavigate = () => {
-    if (!driveData || !session?.user?.id) {
-        setError("Användardata saknas, kan inte slutföra. Prova att ladda om sidan.");
+    if (!driveData) {
+        setError("Drive-data saknas, kan inte slutföra.");
         setStep('error');
         return;
     }
@@ -85,35 +82,28 @@ export function GuidedOnboarding() {
     setStep('finalizing');
 
     const fullData = { ...companyData, ...driveData };
-    const userId = session.user.id;
 
     startTransition(async () => {
-      // MOMENT 2: Implementera den korrekta, persistenta sekvensen
-      
-      // STEG 1: Anropa och invänta den PERMANENTA databasuppdateringen.
-      const persistentUpdateResult = await markOnboardingAsComplete(userId);
-      if (!persistentUpdateResult.success) {
-          setError(persistentUpdateResult.error || 'Kunde inte permanent spara din status. Vänligen försök igen.');
-          setStep('error');
-          return;
-      }
-      
-      // STEG 2: Anropa och invänta skapandet av företagsdata och mappar.
-      const finalizeResult = await finalizeOnboarding(fullData);
-      if (!finalizeResult.success) {
-        setError(finalizeResult.error || 'Ett kritiskt fel uppstod när din profil skulle slutföras.');
+      const result = await finalizeOnboarding(fullData);
+
+      if (result.success) {
+        // Steg 1: Server Action har lyckats.
+        // Steg 2: Tvinga klienten att hämta den senaste sessionen från servern.
+        await update();
+
+        // Steg 3: *Efter* att sessionen är uppdaterad, navigera.
+        router.push('/dashboard');
+      } else {
+        setError(result.error || 'Ett kritiskt fel uppstod när din profil skulle slutföras.');
         setStep('error');
-        return;
       }
-      
-      // STEG 3: Anropa och invänta den TEMPORÄRA, lokala session-synkroniseringen.
-      await updateSession({ onboardingComplete: true });
-      
-      // STEG 4: FÖRST DÄREFTER, navigera.
-      router.push('/dashboard');
     });
   };
 
+
+  // ==================================================================
+  // UTSEENDE (Oförändrat)
+  // ==================================================================
   const renderContent = () => {
     switch (step) {
       case 'input':
@@ -157,7 +147,7 @@ export function GuidedOnboarding() {
           <div className="text-center animate-fade-in p-8 rounded-lg bg-gray-800 shadow-lg">
             <div className="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4 mx-auto"></div>
             <h1 className="text-2xl font-bold text-text-primary">{step === 'creating' ? 'Skapar din mappstruktur...' : 'Slutför konfigurationen...'}</h1>
-            <p className="mt-3 text-text-secondary">{step === 'creating' ? 'Ett ögonblick, vi bygger upp ditt kontor i Google Drive.' : 'Vi sparar din profil och förbereder instrumentpanelen. Omdirigerar strax...'}</p>
+            <p className="mt-3 text-text-secondary">{step === 'creating' ? 'Ett ögonblick, vi bygger upp ditt kontor i Google Drive.' : 'Vi sparar din profil och förbereder instrumentpanelen.'}</p>
           </div>
         );
 
