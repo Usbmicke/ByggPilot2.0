@@ -3,15 +3,15 @@
 
 import React, { useState, useTransition } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation'; // <-- Importerad för säker navigering
+import { useRouter } from 'next/navigation';
 import { CheckCircleIcon, ExclamationCircleIcon, ArrowRightIcon, DocumentTextIcon } from '@heroicons/react/24/solid';
 import { setupDriveForOnboarding, finalizeOnboarding } from '@/app/onboarding/actions';
 
 // =================================================================================
-// ARKITEKTENS PROMPT: ONBOARDING CLIENT V1.0
+// ONBOARDING CLIENT V2.0 - Hård Omdirigering
 // =================================================================================
-// Denna version implementerar den korrekta, race-condition-fria logiken för
-// navigering efter slutförd onboarding, enligt Arkitektens Prompt.
+// Denna version ersätter router.push() med en hård sidomladdning för att
+// kringgå race conditions med middleware vid sessionsuppdatering.
 
 type OnboardingStep = 'input' | 'confirmDrive' | 'creating' | 'success' | 'finalizing' | 'error';
 
@@ -30,8 +30,8 @@ interface DriveData {
 }
 
 export function GuidedOnboarding() {
-  const { data: session, update } = useSession(); // <-- Hämta `update`-funktionen
-  const router = useRouter();
+  const { data: session, update } = useSession();
+  const router = useRouter(); // Behölls för eventuella framtida "mjuka" navigeringar
   const [isPending, startTransition] = useTransition();
 
   const [step, setStep] = useState<OnboardingStep>('input');
@@ -71,7 +71,6 @@ export function GuidedOnboarding() {
     });
   };
 
-  // === ARKITEKTENS PROMPT: VATTENTÄT NAVIGERING ===
   const handleFinalizeAndNavigate = () => {
     if (!driveData) {
         setError("Drive-data saknas, kan inte slutföra.");
@@ -87,12 +86,11 @@ export function GuidedOnboarding() {
       const result = await finalizeOnboarding(fullData);
 
       if (result.success) {
-        // Steg 1: Server Action har lyckats.
-        // Steg 2: Tvinga klienten att hämta den senaste sessionen från servern.
+        // Steg 1: Servern har uppdaterat användaren.
         await update();
-
-        // Steg 3: *Efter* att sessionen är uppdaterad, navigera.
-        router.push('/dashboard');
+        
+        // Steg 2: Forcerad omdirigering för att garantera att middleware läser den nya sessionen.
+        window.location.href = '/dashboard';
       } else {
         setError(result.error || 'Ett kritiskt fel uppstod när din profil skulle slutföras.');
         setStep('error');
@@ -100,11 +98,8 @@ export function GuidedOnboarding() {
     });
   };
 
-
-  // ==================================================================
-  // UTSEENDE (Oförändrat)
-  // ==================================================================
-  const renderContent = () => {
+  // ... (render-logiken är oförändrad) ...
+    const renderContent = () => {
     switch (step) {
       case 'input':
         return (
