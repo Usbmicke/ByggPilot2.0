@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import React from 'react';
-import Providers from './components/Providers'; // Korrigerad import
+import Providers from './components/Providers';
+import Script from 'next/script'; // Importera Script-komponenten
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -18,11 +19,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="sv">
+      <head>
+        {/* LÄGGER TILL THREE.JS GLOBALT */}
+        <Script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" strategy="beforeInteractive" />
+      </head>
       <body className={`${inter.className} antialiased`}>
-        <Providers>{children}</Providers> {/* Korrigerad komponent */}
-        <audio id="background-audio" loop>
-          <source src="https://aistudio-app-assets.google.com/dev/serve/249852a4-b997-4253-b0f3-a3d8b8a5423c" type="audio/mpeg" />
-        </audio>
+        <Providers>{children}</Providers>
+        {/* BORTTAGEN trasig ljud-tagg för att rensa konsol-fel, enligt Steg 5 i planen */}
       </body>
     </html>
   )
