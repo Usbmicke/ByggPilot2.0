@@ -1,12 +1,12 @@
-import Header from "../components/layout/Header";
-import Sidebar from "../components/layout/Sidebar";
-import Chat from '../components/copilot/Chat'; // <-- STEG 1: Korrekt import-sökväg
+import Header from "@/app/components/layout/Header";
+import Sidebar from "@/app/components/layout/Sidebar";
+import Chat from '@/app/components/copilot/Chat';
 
 // =================================================================================
-// DASHBOARD LAYOUT V2.0 - Co-Pilot Integration
+// DASHBOARD LAYOUT V3.1 - Korrigerade Sökvägar
 // =================================================================================
-// Denna layout implementerar den primära visionen med en persistent Co-Pilot-chatt
-// i en dedikerad kolumn bredvid huvud-innehållet.
+// Denna version rättar de felaktiga relativa sökvägarna från V3.0 till att
+// använda absoluta sökvägar (@/), vilket löser "Module not found"-felet.
 
 export default function DashboardLayout({
   children,
@@ -22,21 +22,14 @@ export default function DashboardLayout({
           <Sidebar />
         </div>
 
-        {/* -- Huvud-grid med innehåll och chatt -- */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 overflow-hidden">
-          
-          {/* -- Huvudinnehåll (Projekt, Kunder etc) -- */}
-          <main className="lg:col-span-2 xl:col-span-3 overflow-y-auto p-6 md:p-8">
-            {children}
-          </main>
-          
-          {/* -- Co-Pilot Chatt-kolumn -- */}
-          <div className="hidden lg:flex lg:col-span-1 xl:col-span-1 h-full">
-            <Chat />
-          </div>
-
-        </div>
+        {/* -- Huvudinnehåll (tar nu upp hela resterande ytan) -- */}
+        <main className="flex-1 overflow-y-auto p-6 md:p-8 relative">
+          {children}
+        </main>
       </div>
+      
+      {/* -- NY, FLYTANDE CO-PILOT KOMPONENT -- */}
+      <Chat />
     </div>
   );
 }

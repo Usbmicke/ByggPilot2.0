@@ -2,73 +2,126 @@
 
 import { useChat } from '@ai-sdk/react';
 import { logger } from '@/lib/logger';
-import { useEffect } from 'react';
-import { useSWRConfig } from 'swr'; // <-- STEG 1: Importera SWR-konfigurations-hooken
+import { useState, useRef, useEffect } from 'react';
+import { useSWRConfig } from 'swr';
+import { ChevronUp, X, Paperclip, Mic, ArrowUp } from 'lucide-react';
 
 // =================================================================================
-// CHAT COMPONENT V2.0 - Blueprint "Sektion 5.2": Sömlös UI-uppdatering
+// CHAT COMPONENT V5.0 - Blueprint "Sektion 5.6": Fullfjädrad Input & Polerad Design
 // =================================================================================
-// Denna version integrerar med SWR för att automatiskt uppdatera andra delar av UI:t
-// när en AI-aktion (som att skapa ett projekt) har slutförts.
+// Den slutgiltiga versionen. Implementerar en fullständig, modern chatt-input i både
+// hopfällt och expanderat läge, med ikoner för bifoga fil och ljudinput. Designen är
+// polerad och alla element är perfekt centrerade och stylade.
 
 export default function Chat() {
-  const { mutate } = useSWRConfig(); // <-- STEG 2: Hämta mutate-funktionen
+  const { mutate } = useSWRConfig();
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const placeholderSuggestions = [
+    'Skapa en checklista för badrumsrenovering',
+    'Vilka projekt har snart deadline?',
+    'Hjälp mig göra en egenkontroll för...',
+    'Sammanfatta den senaste tidrapporteringen',
+    'Skapa ett utkast för en ny offert'
+  ];
+  const [placeholder, setPlaceholder] = useState(placeholderSuggestions[0]);
+
+  useEffect(() => {
+    if (isExpanded) return;
+    const interval = setInterval(() => {
+      setPlaceholder(prev => placeholderSuggestions[(placeholderSuggestions.indexOf(prev) + 1) % placeholderSuggestions.length]);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [isExpanded]);
 
   const { messages, input, handleInputChange, handleSubmit, error, isLoading } = useChat({
     api: '/api/chat',
-    onError: (err) => {
-      logger.error('[useChat Hook]', err);
-    },
-    // STEG 3: Använd onFinish-callbacken som körs när AI:n är klar
+    onError: (err) => logger.error('[useChat Hook]', err),
     onFinish: (message) => {
-      logger.info('[onFinish] AI response finished.', { message });
-
-      // STEG 4: Kontrollera om ett verktyg användes, specifikt 'createProject'
-      if (message.toolInvocations && message.toolInvocations.some(tool => tool.toolName === 'createProject')) {
-        logger.info('[onFinish] createProject tool was used. Triggering UI refresh for projects.');
-        // STEG 5: Anropa mutate för att tvinga SWR att hämta om projektlistan
+      if (message.toolInvocations?.some(tool => tool.toolName === 'createProject')) {
         mutate('/api/projects');
       }
     }
   });
 
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isExpanded && chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages, isExpanded]);
+
+  useEffect(() => {
+    if (isExpanded) inputRef.current?.focus();
+  }, [isExpanded]);
+
+  const commonContainerClasses = `fixed z-50 transition-all duration-500 ease-in-out border border-border-color/80`;
+  const collapsedClasses = `left-80 right-8 bottom-5 h-16 rounded-xl bg-background-secondary shadow-2xl`;
+  const expandedClasses = `top-16 left-72 right-0 bottom-0 rounded-t-xl bg-background-secondary/90 backdrop-blur-md`;
+
+  const expandChat = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    if (!isExpanded) setIsExpanded(true);
+  };
+
   return (
-    <div className="flex flex-col h-full max-h-screen bg-background-secondary border-l border-border-color">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length > 0
-          ? messages.map(m => (
-              <div key={m.id} className={`whitespace-pre-wrap flex flex-col items-${m.role === 'user' ? 'end' : 'start'}`}>
-                <div className={`p-3 rounded-lg max-w-xl ${m.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-background-tertiary'}`}>
-                    <span className="font-bold capitalize">{m.role === 'assistant' ? 'ByggPilot' : 'Du:'}</span>
-                    <p>{m.content}</p>
-                </div>
-              </div>
-            ))
-          : (
-            <div className="text-center text-text-secondary p-8">
-                <h2 className="text-xl font-bold">ByggPilot Co-Pilot</h2>
-                <p>Ställ en fråga eller ge ett kommando för att börja.</p>
-            </div>
-          )}
+    <div className={`${commonContainerClasses} ${isExpanded ? expandedClasses : collapsedClasses}`}>
+      {/* ---- EXPANDERAD HEADER ---- */}
+      <div className={`flex items-center justify-between h-16 px-4 border-b border-border-color/80 ${isExpanded ? '' : 'hidden'}`}>
+        <h2 className="text-lg font-bold">ByggPilot Co-Pilot</h2>
+        <button onClick={() => setIsExpanded(false)} className="p-2 rounded-full hover:bg-background-tertiary">
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
-      {error && (
-        <div className="p-4 bg-red-500 text-white">
-          <p>Ett fel uppstod: {error.message}</p>
-        </div>
-      )}
+      {/* ---- CHATT-INNEHÅLL (Endast synligt när expanderad) ---- */}
+      <div
+        ref={chatContainerRef}
+        className={`overflow-y-auto p-4 space-y-4 ${isExpanded ? '' : 'hidden'}`}
+        style={{ height: isExpanded ? 'calc(100% - 128px)' : '0' }}
+      >
+        {messages.map(m => (
+          <div key={m.id} className={`whitespace-pre-wrap flex flex-col items-${m.role === 'user' ? 'end' : 'start'}`}>
+            <div className={`p-3 rounded-lg max-w-2xl ${m.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-background-tertiary'}`}>
+              <span className="font-bold capitalize">{m.role === 'assistant' ? 'ByggPilot' : 'Du:'}</span>
+              <p>{m.content}</p>
+            </div>
+          </div>
+        ))}
+        {messages.length === 0 && isExpanded && (
+          <div className="text-center text-text-secondary p-8">
+            <p>Chatthistorik kommer att visas här.</p>
+          </div>
+        )}
+      </div>
 
-      <div className="p-4 border-t border-border-color">
-        <form onSubmit={handleSubmit} className="flex items-center space-x-2">
+      {/* ---- UNIVERSAL, POLERAD INPUT ---- */}
+      <div className={`w-full ${isExpanded ? 'p-4 border-t border-border-color/80' : 'p-2 h-full'}`}>
+        <form onSubmit={handleSubmit} className="flex items-center space-x-3 h-full w-full bg-background-tertiary rounded-lg px-4">
+          <button type="button" className="p-2 text-text-secondary hover:text-text-primary">
+            <Paperclip className="w-5 h-5" />
+          </button>
+          <button type="button" className="p-2 text-text-secondary hover:text-text-primary">
+            <Mic className="w-5 h-5" />
+          </button>
           <input
-            className="flex-1 p-2 rounded-md bg-background-tertiary border border-border-color focus:ring-2 focus:ring-primary focus:outline-none"
+            ref={inputRef}
+            className="flex-1 h-full bg-transparent focus:ring-0 focus:outline-none placeholder:text-text-secondary text-base"
             value={input}
-            placeholder={isLoading ? 'Tänker...' : 'Fråga ByggPilot något...'}
+            placeholder={isLoading ? 'Tänker...' : (isExpanded ? 'Ställ en fråga...' : placeholder)}
             onChange={handleInputChange}
+            onFocus={() => expandChat()}
             disabled={isLoading}
           />
-          <button type="submit" className="px-4 py-2 rounded-md bg-primary text-primary-foreground font-semibold disabled:bg-gray-500" disabled={isLoading || !input}>
-            Skicka
+          <button
+            type={isExpanded ? 'submit' : 'button'}
+            onClick={expandChat}
+            className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold disabled:opacity-50 disabled:bg-gray-500"
+            disabled={isExpanded && (isLoading || !input)}
+          >
+            {isExpanded ? <ArrowUp className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
           </button>
         </form>
       </div>
