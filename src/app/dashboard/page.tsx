@@ -3,64 +3,72 @@ import React from 'react';
 import { BriefcaseIcon, FolderOpenIcon, BanknotesIcon } from '@heroicons/react/24/outline';
 import ProjectCard from '../components/dashboard/ProjectCard'; 
 import StatCard from '../components/dashboard/StatCard';
+import { getDashboardStats, getActiveProjects } from '@/lib/dal/projects';
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/config/authOptions"
+
+// Importerar en ny komponent för "Zero State" som vi kommer skapa sen.
+// import ZeroState from '../components/dashboard/ZeroState';
 
 // --- Huvudsida för Dashboard (Server Component) ---
-// Denna komponent renderas på servern för maximal prestanda.
-
-async function getDashboardData() {
-  // I en verklig applikation skulle denna data hämtas från en databas.
-  const userName = "Michael";
-
-  const stats = [
-    { title: 'Totalt antal projekt', value: '12', icon: <BriefcaseIcon className="w-7 h-7 text-gray-300" /> },
-    { title: 'Pågående projekt', value: '5', icon: <FolderOpenIcon className="w-7 h-7 text-gray-300" /> },
-    { title: 'Totala intäkter', value: '842,500 kr', icon: <BanknotesIcon className="w-7 h-7 text-gray-300" /> },
-  ];
-
-  const projects = [
-    { id: 1, title: 'Altanbygge, Kv. Eken', customer: 'Anna Bergsäter, 173-2993', status: 75, rating: 4.2, team: ['/images/avatars/avatar-1.png', '/images/avatars/avatar-2.png', '/images/avatars/avatar-3.png'] },
-    { id: 2, title: 'Takbyte & Fasadmålning', customer: 'Familjen Löfgren, 173-3012', status: 40, rating: 5, team: ['/images/avatars/avatar-4.png', '/images/avatars/avatar-5.png'] },
-    { id: 3, title: 'Grundisolering', customer: 'BRF Utsikten, 173-3015', status: 90, rating: 3.8, team: ['/images/avatars/avatar-1.png', '/images/avatars/avatar-4.png'] },
-    { id: 4, title: 'Balkongrenovering', customer: 'HSB Solängen, 173-3018', status: 60, rating: 4.5, team: ['/images/avatars/avatar-2.png', '/images/avatars/avatar-3.png', '/images/avatars/avatar-5.png'] },
-  ];
-
-  return { userName, stats, projects };
-}
+// Denna komponent är nu helt datadriven och renderas på servern.
 
 export default async function DashboardPage() {
-  const { userName, stats, projects } = await getDashboardData();
+  // TODO: Använd riktig autentisering för att få userId. Just nu används en platshållare.
+  const session = await getServerSession(authOptions);
+  const userId = session?.user?.id || 'placeholder-user-id'; // Fallback för säkerhet
+  const userName = session?.user?.name || "Användare";
+
+  // Parallell datahämtning för maximal prestanda
+  const [stats, projects] = await Promise.all([
+    getDashboardStats(userId),
+    getActiveProjects(userId)
+  ]);
+
+  // Hantering för "Zero State" - om inga projekt finns.
+  if (projects.length === 0) {
+    // return <ZeroState userName={userName} />;
+    // Tillfällig fallback tills ZeroState-komponenten är byggd
+    return (
+        <div className="text-center p-12 bg-gray-800/50 rounded-xl animate-fadeIn">
+            <h1 className="text-4xl font-bold tracking-tight text-white">Välkommen, {userName}!</h1>
+            <p className="mt-4 text-lg text-gray-300">Det ser lite tomt ut här.</p>
+            <p className="mt-2 text-gray-400">Allt börjar med ett projekt. Skapa ditt första för att samla allt på ett ställe.</p>
+            {/* Här kommer vi lägga in "+ Skapa Nytt Projekt"-knappen sen */}
+        </div>
+    );
+  }
 
   return (
-    <div className="space-y-8">
+    // Enkel fade-in animation för en mjukare laddningsupplevelse
+    <div className="space-y-8 animate-fadeIn">
       
       {/* ---- Övre sektionen: Välkomsttitel och Stat-kort ---- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-8 items-start">
         
-        {/* Välkomsttitel (tar upp 1 kolumn på stora skärmar) */}
         <div className="lg:col-span-1 xl:col-span-2">
           <h1 className="text-4xl font-bold tracking-tight text-text-primary">Välkommen tillbaka,</h1>
           <h2 className="text-4xl font-bold tracking-tight text-cyan-400">{userName}!</h2>
         </div>
 
-        {/* Stat-kort (tar upp 2 kolumner och placeras till höger) */}
         <div className="lg:col-span-2 grid grid-cols-2 gap-6">
           <StatCard 
-            icon={stats[0].icon}
-            title={stats[0].title}
-            value={stats[0].value}
+            icon={<BriefcaseIcon className="w-7 h-7 text-gray-300" />}
+            title="Totalt antal projekt"
+            value={stats.totalProjects.toString()}
             className="col-span-1"
           />
           <StatCard 
-            icon={stats[1].icon}
-            title={stats[1].title}
-            value={stats[1].value}
+            icon={<FolderOpenIcon className="w-7 h-7 text-gray-300" />}
+            title="Pågående projekt"
+            value={stats.ongoingProjects.toString()}
             className="col-span-1"
           />
           <StatCard 
-            icon={stats[2].icon}
-            title={stats[2].title}
-            value={stats[2].value}
-            className="col-span-2" // Tar upp hela bredden
+            icon={<BanknotesIcon className="w-7 h-7 text-gray-300" />}
+            title="Totala intäkter"
+            value={stats.totalRevenue}
+            className="col-span-2"
           />
         </div>
       </div>
