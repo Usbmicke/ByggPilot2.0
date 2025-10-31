@@ -1,10 +1,12 @@
-
 import Header from "../components/layout/Header";
 import Sidebar from "../components/layout/Sidebar";
-import { Chat } from '../components/chat/Chat';
+import Chat from '../components/copilot/Chat'; // <-- STEG 1: Korrekt import-sökväg
 
-// BORTTAGNA: UIProvider och ChatProvider. Dessa ska tillhandahållas av rot-layouten
-// för att säkerställa att alla kontexter (inklusive ModalContext) är tillgängliga globalt.
+// =================================================================================
+// DASHBOARD LAYOUT V2.0 - Co-Pilot Integration
+// =================================================================================
+// Denna layout implementerar den primära visionen med en persistent Co-Pilot-chatt
+// i en dedikerad kolumn bredvid huvud-innehållet.
 
 export default function DashboardLayout({
   children,
@@ -12,26 +14,27 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    // Ingen Provider-omslutning här. Layouten renderar endast sin struktur.
     <div className="h-screen flex flex-col bg-background-primary text-text-primary">
-      
       <Header />
-
       <div className="flex flex-1 overflow-hidden">
-        
+        {/* -- Vänster sidomeny -- */}
         <div className="w-72 flex-shrink-0 bg-background-secondary border-r border-border-color">
           <Sidebar />
         </div>
 
-        <div className="flex-1 flex flex-col overflow-hidden">
-            
-            <main className="flex-1 overflow-y-auto p-6 md:p-8">
-                {children}
-            </main>
-            
-            <div className="flex-shrink-0 px-6 md:px-8 pb-4">
-              <Chat />
-            </div>
+        {/* -- Huvud-grid med innehåll och chatt -- */}
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 overflow-hidden">
+          
+          {/* -- Huvudinnehåll (Projekt, Kunder etc) -- */}
+          <main className="lg:col-span-2 xl:col-span-3 overflow-y-auto p-6 md:p-8">
+            {children}
+          </main>
+          
+          {/* -- Co-Pilot Chatt-kolumn -- */}
+          <div className="hidden lg:flex lg:col-span-1 xl:col-span-1 h-full">
+            <Chat />
+          </div>
+
         </div>
       </div>
     </div>

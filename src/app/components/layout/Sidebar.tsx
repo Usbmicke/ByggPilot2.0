@@ -17,7 +17,7 @@ import { useModal } from '../../contexts/ModalContext';
 const Sidebar: React.FC = () => {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const { openModal } = useModal();
+  const { openModal } = useModal(); // Importerar den standardiserade openModal funktionen
 
   return (
     <div className="h-full bg-background-secondary text-text-primary flex flex-col p-4 border-r border-border-color">
@@ -41,7 +41,8 @@ const Sidebar: React.FC = () => {
       {/* ---- MIDDLE SECTION: Create New Button ---- */}
       <div className="my-4">
         <button 
-          onClick={() => openModal('createProject')}
+          // UPPDATERAD: Kallar nu på den nya 'createOptions' modalen istället för den hårdkodade.
+          onClick={() => openModal('createOptions')}
           className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border-2 border-dashed border-gray-600 text-text-secondary font-medium hover:bg-gray-800/60 hover:text-text-primary hover:border-solid hover:border-gray-500 transition-all duration-200"
         >
           <PlusIcon className="h-5 w-5" />

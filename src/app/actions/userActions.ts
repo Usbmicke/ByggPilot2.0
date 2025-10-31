@@ -1,119 +1,41 @@
-
 'use server';
 
-import { firestoreAdmin, admin } from '@/lib/config/firebase-admin';
-import type { CompanyFormData } from '@/lib/types';
+import { revalidatePath } from 'next/cache';
+import { firestoreAdmin } from '@/lib/config/firebase-admin';
+import { logger } from '@/lib/logger';
 
 /**
- * Uppdaterar eller skapar en användares dokument med nästlad företagsinformation.
- * Denna åtgärd är den definitiva lösningen på buggen med företagsnamnet.
+ * Marks a user's onboarding process as complete in Firestore.
+ * This is a critical step to ensure the state persists across sessions.
+ * @param userId - The ID of the user to update.
+ * @returns An object indicating success or failure.
  */
-export async function updateCompanyInfo(formData: CompanyFormData, userId: string) {
+export async function markOnboardingAsComplete(userId: string): Promise<{ success: boolean; error?: string }> {
   if (!userId) {
-    console.error('updateCompanyInfo anropades utan userId.');
-    return { success: false, error: 'Användar-ID saknas. Sessionen kan ha gått ut.' };
+    logger.error('[Action] markOnboardingAsComplete called without userId.');
+    return { success: false, error: 'Användar-ID saknas.' };
   }
 
+  logger.info(`[Action] Attempting to mark onboarding as complete for user: ${userId}`);
+
   try {
-    const userDocRef = firestoreAdmin.collection('users').doc(userId);
+    const userRef = firestoreAdmin.collection('users').doc(userId);
     
-    const saveData = {
-      company: {
-        name: formData.companyName,
-        orgNumber: formData.orgNumber,
-        address: formData.address,
-        postalCode: formData.postalCode,
-        city: formData.city,
-        phone: formData.phone,
-      },
-      isNewUser: false, 
-      companyInfoCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    };
-
-    await userDocRef.set(saveData, { merge: true });
-
-    console.log(`[ACTION SUCCESS] Företagsinformation sparad korrekt för användare ${userId}.`);
-    return { success: true };
-
-  } catch (error) {
-    console.error(`[ACTION CRITICAL] Fel vid uppdatering av företagsinfo för ${userId}:`, error);
-    return { success: false, error: 'Ett serverfel inträffade vid sparande av företagsinformation.' };
-  }
-}
-
-/**
- * Hämtar en specifik användares data från Firestore.
- * @param userId Användarens unika ID (samma som dokument-ID i Firestore).
- * @returns Användardataobjektet eller null om det inte hittas.
- */
-export async function getUserData(userId: string) {
-  if (!userId) {
-    console.error('getUserData anropades utan userId.');
-    return null;
-  }
-
-  try {
-    const userDocRef = firestoreAdmin.collection('users').doc(userId);
-    const docSnap = await userDocRef.get();
-
-    if (docSnap.exists) {
-      return docSnap.data() as { isNewUser?: boolean; [key: string]: any; };
-    } else {
-      console.warn(`Ingen användare med ID ${userId} hittades i databasen.`);
-      return null;
-    }
-  } catch (error) {
-    console.error(`Fel vid hämtning av användardata för ${userId}:`, error);
-    return null; 
-  }
-}
-
-/**
- * Uppdaterar status för användarvillkoren för en specifik användare.
- * @param userId Användarens ID.
- * @param accepted Om användaren har accepterat villkoren.
- * @returns Ett resultatobjekt.
- */
-export async function updateUserTermsStatus(userId: string, accepted: boolean) {
-  if (!userId) {
-    return { success: false, error: 'Användar-ID saknas.' };
-  }
-
-  try {
-    const userDocRef = firestoreAdmin.collection('users').doc(userId);
-    await userDocRef.set({
-      termsAccepted: accepted,
-      termsAcceptedAt: admin.firestore.FieldValue.serverTimestamp(),
-    }, { merge: true });
-    return { success: true };
-  } catch (error) {
-    console.error(`[CRITICAL] Fel vid uppdatering av villkors-status för användare ${userId}:`, error);
-    return { success: false, error: 'Kunde inte uppdatera status för villkor.' };
-  }
-}
-
-/**
- * NY FUNKTION: Markerar användarens onboarding som slutförd.
- * Detta är det sista steget som anropas när användaren klickar på "Gå till Dashboard".
- */
-export async function completeOnboarding(userId: string) {
-  if (!userId) {
-    console.error('completeOnboarding anropades utan userId.');
-    return { success: false, error: 'Användar-ID saknas.' };
-  }
-
-  try {
-    const userDocRef = firestoreAdmin.collection('users').doc(userId);
-    await userDocRef.update({
-      onboardingCompleted: true,
-      isNewUser: false, // Sista bekräftelsen på att användaren inte längre är ny
-      onboardingCompletedAt: admin.firestore.FieldValue.serverTimestamp(),
+    // Använd `update` för att säkerställa att vi inte skriver över hela dokumentet.
+    // Databasfältet `hasCompletedOnboarding` måste matcha det som läses i authOptions.
+    await userRef.update({
+      hasCompletedOnboarding: true
     });
-    console.log(`[ACTION SUCCESS] Onboarding markerad som slutförd för användare ${userId}.`);
+
+    logger.info(`[Action] Successfully marked onboarding as complete for user: ${userId}`);
+    
+    // Invalidera cachen för sökvägar som är beroende av denna status.
+    revalidatePath('/dashboard');
+    revalidatePath('/onboarding');
+
     return { success: true };
   } catch (error) {
-    console.error(`[ACTION CRITICAL] Fel vid slutförande av onboarding för ${userId}:`, error);
-    return { success: false, error: 'Kunde inte slutföra onboarding-processen.' };
+    logger.error(`[Action] Failed to mark onboarding as complete for user ${userId}.`, { error });
+    return { success: false, error: 'Ett databasfel inträffade.' };
   }
 }

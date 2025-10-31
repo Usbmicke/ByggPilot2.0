@@ -6,6 +6,7 @@ import { SessionProvider } from 'next-auth/react';
 import { ModalProvider } from '@/app/contexts/ModalContext';
 import { UIProvider } from '@/app/contexts/UIContext';
 import { ChatProvider } from '@/app/contexts/ChatContext';
+import ModalRenderer from '../components/modals/ModalRenderer'; // Importerad!
 
 interface Props {
     children: React.ReactNode;
@@ -14,10 +15,8 @@ interface Props {
 /**
  * GULDSTANDARD PROVIDER-TRÄD
  * Denna komponent konsoliderar ALLA globala providers till en enda, ren och
- * underhållsvänlig fil. Detta löser det ursprungliga problemet där ModalProvider
- * saknades, vilket orsakade en krasch på instrumentpanelen och en efterföljande
- * omdirigeringsloop. Genom att säkerställa att alla kontexter är tillgängliga
- * från roten av applikationen, garanterar vi en stabil och förutsägbar state-hantering.
+ * underhållsvänlig fil. Genom att inkludera ModalRenderer här säkerställer vi
+ * att modaler kan visas globalt över hela applikationen.
  */
 export default function Providers({ children }: Props) {
     return (
@@ -27,6 +26,8 @@ export default function Providers({ children }: Props) {
                     <ChatProvider>
                         {children}
                     </ChatProvider>
+                    {/* ModalRenderer placeras här för att rendera ovanpå allt annat */}
+                    <ModalRenderer />
                 </ModalProvider>
             </UIProvider>
         </SessionProvider>
