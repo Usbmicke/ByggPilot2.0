@@ -1,12 +1,12 @@
-import Header from './components/landing/Header';
-import Hero from './components/landing/Hero';
-import ThreeCanvas from './components/landing/ThreeCanvas';
-import ProblemSection from './components/landing/ProblemSection';
-import SolutionSection from './components/landing/SolutionSection';
-import FounderSection from './components/landing/FounderSection';
-import CTASection from './components/landing/CTASection';
-import Footer from './components/landing/Footer';
-import AudioControl from './components/landing/AudioControl';
+import Header from '@/components/landing/Header';
+import Hero from '@/components/landing/Hero';
+import ThreeCanvas from '@/components/landing/ThreeCanvas';
+import ProblemSection from '@/components/landing/ProblemSection';
+import SolutionSection from '@/components/landing/SolutionSection';
+import FounderSection from '@/components/landing/FounderSection';
+import CTASection from '@/components/landing/CTASection';
+import Footer from '@/components/landing/Footer';
+import AudioControl from '@/components/landing/AudioControl';
 
 export default function HomePage() {
   return (

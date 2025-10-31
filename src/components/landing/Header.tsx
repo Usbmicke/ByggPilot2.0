@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { SignInButton } from '@/components/auth/SignInButton';
+import LoginButtons from '@/app/components/auth/LoginButtons';
 import Link from 'next/link';
 
 const ByggPilotLogo: React.FC = () => (
@@ -55,7 +55,7 @@ const Header: React.FC = () => {
 
           {/* Right Side */}
           <div className="flex-1 flex justify-end">
-            <SignInButton />
+            <LoginButtons />
           </div>
         </nav>
       </div>
