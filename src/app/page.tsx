@@ -1,31 +1,37 @@
+import Header from './components/landing/Header';
+import Hero from './components/landing/Hero';
+import ThreeCanvas from './components/landing/ThreeCanvas';
+import ProblemSection from './components/landing/ProblemSection';
+import SolutionSection from './components/landing/SolutionSection';
+import FounderSection from './components/landing/FounderSection';
+import CTASection from './components/landing/CTASection';
+import Footer from './components/landing/Footer';
+import AudioControl from './components/landing/AudioControl';
 
-import Image from "next/image";
-import LoginButtons from "./components/auth/LoginButtons"; // KORRIGERING: Återställer till den fungerande relativa sökvägen.
-
-export default function Home() {
+export default function HomePage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-background-primary">
-      <div className="text-center px-4">
-        <div className="mb-8 inline-block">
-          <Image 
-            src="/images/byggpilotlogga1.png" 
-            alt="ByggPilot Logotyp" 
-            width={200} 
-            height={53}
-            priority
-            // KORRIGERING: Lägger till style-attributet som Next.js-varningen rekommenderar
-            // för att bibehålla bildens proportioner när CSS påverkar den.
-            style={{ height: 'auto' }}
-          />
-        </div>
-        <h1 className="text-5xl font-bold text-text-primary">ByggPilot</h1>
-        <p className="mt-2 mb-8 text-lg text-text-secondary">Din digitala kollega, redo att hjälpa.</p>
-        <div className="mt-8 flex justify-center">
-          <div className="w-full max-w-xs">
-            <LoginButtons />
-          </div>
-        </div>
+    <div className="bg-neutral-950">
+      <div className="fixed top-0 left-0 w-full h-full -z-0">
+        <ThreeCanvas />
       </div>
-    </main>
+       <div 
+        className="fixed top-0 left-0 w-full h-full pointer-events-none z-10" 
+        style={{ background: 'radial-gradient(circle at center, rgba(10, 10, 10, 0) 40%, rgba(10, 10, 10, 1) 90%)' }}
+      ></div>
+      
+      <div className="relative z-20">
+        <Header />
+        <main>
+          <Hero />
+          <ProblemSection />
+          <SolutionSection />
+          <FounderSection />
+          <CTASection />
+        </main>
+        <Footer />
+      </div>
+
+      <AudioControl />
+    </div>
   );
 }
