@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { twMerge } from 'tailwind-merge';
 
@@ -9,20 +8,23 @@ interface StatCardProps {
   className?: string;
 }
 
-// StatCard: Enkel, mörk och anpassningsbar för att visa nyckeltal.
+// StatCard V2 - "Clean UI" Edition
+// Designad för att vara ren, modern och i linje med det nya designsystemet.
 const StatCard: React.FC<StatCardProps> = ({ icon, title, value, className }) => {
   return (
-    <div className={twMerge("bg-zinc-800/70 p-4 rounded-lg flex items-center gap-4 border border-zinc-700/80", className)}>
-      
-      {/* Ikonen renderas direkt, utan den extra boxen. */}
-      <div className="flex-shrink-0">
+    <div className={twMerge(
+      `bg-background-secondary p-6 rounded-xl 
+       transition-all duration-200 ease-in-out 
+       hover:-translate-y-1 hover:bg-background-tertiary`,
+      className
+    )}>
+      <div className="flex items-center justify-between">
+        <p className="text-base font-medium text-text-secondary">{title}</p>
+        {/* Ikonen har redan sin färg från föräldern */}
         {icon}
       </div>
-      
-      {/* Textinnehåll med korrekt typografi från designen */}
-      <div>
-        <p className="text-sm text-gray-400 font-medium">{title}</p>
-        <p className="text-2xl font-bold text-white tracking-tight">{value}</p>
+      <div className="mt-2">
+        <p className="text-4xl font-bold text-text-primary tracking-tight">{value}</p>
       </div>
     </div>
   );
