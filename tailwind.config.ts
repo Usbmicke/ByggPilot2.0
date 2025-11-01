@@ -1,7 +1,7 @@
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
-  darkMode: 'class', // Aktiverar dark mode-stöd
+  darkMode: 'class',
   content: [
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
@@ -10,34 +10,38 @@ const config: Config = {
     extend: {
       colors: {
         // =========================================================================
-        // == BYGGPILOT CLEAN UI / V2 DESIGN SYSTEM ================================
+        // == KORREKT SYNTAX FÖR CSS-VARIABLER =====================================
         // =========================================================================
+        // Varje variabel måste slås in i hsl() för att Tailwind ska förstå att det
+        // är en HSL-färg, vilket möjliggör opacitets-modifiers (t.ex. bg-primary/50).
 
         // -- Bakgrunder --
-        'background-primary': 'var(--background-primary)',   // Djup, nästan svart: hsl(220 26% 8%)
-        'background-secondary': 'var(--background-secondary)', // Mörkgrå för kort, menyer: hsl(220 18% 12%)
-        'background-tertiary': 'var(--background-tertiary)', // Ljusare grå för hover/aktiva element: hsl(220 18% 16%)
+        'background-primary': 'hsl(var(--background-primary))',
+        'background-secondary': 'hsl(var(--background-secondary))',
+        'background-tertiary': 'hsl(var(--background-tertiary))',
 
         // -- Kanter (Borders) --
-        'border-color': 'var(--border-color)',         // Subtil kantlinje: hsl(220 15% 20%)
+        'border-color': 'hsl(var(--border-color))',
 
         // -- Text --
-        'text-primary': 'var(--text-primary)',           // Primär text, mjuk vit: hsl(210 20% 95%)
-        'text-secondary': 'var(--text-secondary)',      // Sekundär text, dämpad grå: hsl(216 10% 60%)
+        'text-primary': 'hsl(var(--text-primary))',
+        'text-secondary': 'hsl(var(--text-secondary))',
 
         // -- Primär Accentfärg ("Brand") --
-        'primary': 'var(--primary)',                       // Den nya, eleganta cyan-färgen: hsl(190 80% 65%)
-        'primary-foreground': 'var(--primary-foreground)', // Textfärg för knappar: hsl(220 25% 10%)
+        'primary': 'hsl(var(--primary))',
+        'primary-foreground': 'hsl(var(--primary-foreground))',
 
         // -- Sekundär Accentfärg --
-        'secondary': 'var(--secondary)',                   // För mindre viktiga knappar/tags: hsl(220 18% 16%)
-        'secondary-foreground': 'var(--secondary-foreground)', // Text för sekundära element: hsl(210 20% 95%)
+        'secondary': 'hsl(var(--secondary))',
+        'secondary-foreground': 'hsl(var(--secondary-foreground))',
         
         // -- Statusfärger (Semantiska) --
-        'destructive': 'var(--destructive)', // Röd för fel/varningar: hsl(0 63% 50%)
-        'destructive-foreground': 'var(--destructive-foreground)', // Text för destruktiva element: hsl(210 20% 95%)
-        'success': 'var(--success)', // Grön för framgång: hsl(142 60% 45%)
-        'warning': 'var(--warning)', // Gul för varningar: hsl(48 90% 50%)
+        'destructive': 'hsl(var(--destructive))',
+        'destructive-foreground': 'hsl(var(--destructive-foreground))',
+        'success': 'hsl(var(--success))',
+        'success-foreground': 'hsl(var(--success-foreground))',
+        'warning': 'hsl(var(--warning))',
+        'warning-foreground': 'hsl(var(--warning-foreground))',
       },
       borderRadius: {
         lg: 'var(--radius)',
