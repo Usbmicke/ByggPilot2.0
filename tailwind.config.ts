@@ -1,7 +1,7 @@
-
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
+  darkMode: 'class', // Aktiverar dark mode-stöd
   content: [
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
@@ -9,25 +9,58 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // NY FÄRGPALETT: Neutral gråskala för en lugn och professionell känsla
-        'background-primary': '#18181b', // Mörk, neutral "Zinc 900"
-        'background-secondary': '#27272a', // Något ljusare "Zinc 800" för kort och menyer
-        'text-primary': '#f4f4f5',       // Mjuk vit "Zinc 100"
-        'text-secondary': '#a1a1aa',      // Dämpad grå "Zinc 400" för sekundär text
-        'border-primary': '#3f3f46',       // En tydlig grå kantlinje "Zinc 700"
-        'accent-blue': '#3B82F6',        // Behåller den starka och klara accent-blå för knappar
+        // =========================================================================
+        // == BYGGPILOT CLEAN UI / V2 DESIGN SYSTEM ================================
+        // =========================================================================
 
-        // Statusfärger (behålls som de är)
-        'status-gold': '#FFD700',
-        'status-red': '#DC2626',
+        // -- Bakgrunder --
+        'background-primary': 'var(--background-primary)',   // Djup, nästan svart: hsl(220 26% 8%)
+        'background-secondary': 'var(--background-secondary)', // Mörkgrå för kort, menyer: hsl(220 18% 12%)
+        'background-tertiary': 'var(--background-tertiary)', // Ljusare grå för hover/aktiva element: hsl(220 18% 16%)
+
+        // -- Kanter (Borders) --
+        'border-color': 'var(--border-color)',         // Subtil kantlinje: hsl(220 15% 20%)
+
+        // -- Text --
+        'text-primary': 'var(--text-primary)',           // Primär text, mjuk vit: hsl(210 20% 95%)
+        'text-secondary': 'var(--text-secondary)',      // Sekundär text, dämpad grå: hsl(216 10% 60%)
+
+        // -- Primär Accentfärg ("Brand") --
+        'primary': 'var(--primary)',                       // Den nya, eleganta cyan-färgen: hsl(190 80% 65%)
+        'primary-foreground': 'var(--primary-foreground)', // Textfärg för knappar: hsl(220 25% 10%)
+
+        // -- Sekundär Accentfärg --
+        'secondary': 'var(--secondary)',                   // För mindre viktiga knappar/tags: hsl(220 18% 16%)
+        'secondary-foreground': 'var(--secondary-foreground)', // Text för sekundära element: hsl(210 20% 95%)
+        
+        // -- Statusfärger (Semantiska) --
+        'destructive': 'var(--destructive)', // Röd för fel/varningar: hsl(0 63% 50%)
+        'destructive-foreground': 'var(--destructive-foreground)', // Text för destruktiva element: hsl(210 20% 95%)
+        'success': 'var(--success)', // Grön för framgång: hsl(142 60% 45%)
+        'warning': 'var(--warning)', // Gul för varningar: hsl(48 90% 50%)
       },
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-conic':
-          'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
+      borderRadius: {
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
+      },
+      keyframes: {
+        'accordion-down': {
+          from: { height: '0' },
+          to: { height: 'var(--radix-accordion-content-height)' },
+        },
+        'accordion-up': {
+          from: { height: 'var(--radix-accordion-content-height)' },
+          to: { height: '0' },
+        },
+      },
+      animation: {
+        'accordion-down': 'accordion-down 0.2s ease-out',
+        'accordion-up': 'accordion-up 0.2s ease-out',
       },
     },
   },
-  plugins: [],
+  plugins: [require('tailwindcss-animate')],
 };
+
 export default config;

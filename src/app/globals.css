@@ -2,20 +2,67 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background-color: #0A0A0A;
-  color: #E5E7EB; /* Tailwind gray-200 */
-  overflow-x: hidden;
+@layer base {
+  :root {
+    /* =========================================================================
+     * == BYGGPILOT CLEAN UI / V2 DESIGN SYSTEM ================================
+     * =========================================================================
+     * Alla färger definieras som HSL-variabler för maximal flexibilitet.
+     */
+
+    /* -- Bakgrunder -- */
+    --background-primary: 220 26% 8%;   /* Djup, nästan svart */
+    --background-secondary: 220 18% 12%; /* Mörkgrå för kort & menyer */
+    --background-tertiary: 220 18% 16%; /* Ljusare grå för interaktiva element */
+
+    /* -- Kanter (Borders) -- */
+    --border-color: 220 15% 20%;      /* Subtil kantlinje */
+
+    /* -- Text -- */
+    --text-primary: 210 20% 95%;      /* Primär text, mjuk vit */
+    --text-secondary: 216 10% 60%;     /* Sekundär text, dämpad grå */
+
+    /* -- Primär Accentfärg ("Brand") -- */
+    --primary: 190 80% 65%;           /* Elegant cyan */
+    --primary-foreground: 220 25% 10%; /* Text på primära knappar */
+
+    /* -- Sekundär Accentfärg -- */
+    --secondary: 220 18% 16%;        /* För mindre viktiga knappar/tags */
+    --secondary-foreground: 210 20% 95%;
+
+    /* -- Statusfärger (Semantiska) -- */
+    --destructive: 0 63% 50%;         /* Röd för varningar */
+    --destructive-foreground: 210 20% 95%;
+    --success: 142 60% 45%;           /* Grön för framgång */
+    --warning: 48 90% 50%;            /* Gul för varningar */
+    
+    /* -- Övrigt -- */
+    --radius: 0.75rem; /* Standard-radie för rundade hörn (12px) */
+  }
+
+  /* Just nu är dark mode standard, men detta är förberett för framtiden */
+  .dark {
+    --background-primary: 220 26% 8%;
+    --background-secondary: 220 18% 12%;
+    --background-tertiary: 220 18% 16%;
+    --border-color: 220 15% 20%;
+    --text-primary: 210 20% 95%;
+    --text-secondary: 216 10% 60%;
+    --primary: 190 80% 65%;
+    --primary-foreground: 220 25% 10%;
+    --secondary: 220 18% 16%;
+    --secondary-foreground: 210 20% 95%;
+    --destructive: 0 63% 50%;
+    --destructive-foreground: 210 20% 95%;
+    --success: 142 60% 45%;
+    --warning: 48 90% 50%;
+  }
 }
 
-/* Custom shadow for the hero icon to create an inset 3D effect */
-.hero-icon-shadow {
-  box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.5), inset 0px 1px 1px rgba(255, 255, 255, 0.05), inset 0px -2px 5px rgba(0, 0, 0, 0.8);
-}
-/* Custom shadow for the navigation container */
-.nav-container-shadow {
-  box-shadow: 0px 5px 20px rgba(0, 0, 0, 0.3);
-}
-.section-divider {
-  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.1), transparent);
+@layer base {
+  body {
+    @apply bg-background-primary text-text-primary;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    overflow-x: hidden; /* Förhindra horisontell scroll */
+  }
 }
