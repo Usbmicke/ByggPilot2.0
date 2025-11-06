@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "byggpilot-v2"
-  }
+    "default": "monospace-9"
+  },
+  "targets": {},
+  "etags": {}
 }
