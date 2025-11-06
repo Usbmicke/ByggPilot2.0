@@ -7,40 +7,24 @@
     =========================================================================
     == BYGGPILOT CLEAN UI / DARK THEME ======================================
     =========================================================================
-    Här definieras ALLA färger. Det finns inget ljust tema. Applikationen
-    är designad för att vara mörk. Variablerna appliceras på `:root` och
-    aktiveras sedan genom att `<html>`-taggen har `class="dark"`.
   */
   :root {
-    /* -- Bakgrunder -- */
-    --background-primary: 220 26% 8%;   /* Djup, nästan svart */
-    --background-secondary: 220 18% 12%; /* Mörkgrå för kort & menyer */
-    --background-tertiary: 220 18% 16%; /* Ljusare grå för interaktiva element */
-
-    /* -- Kanter (Borders) -- */
-    --border-color: 220 15% 20%;      /* Subtil kantlinje */
-
-    /* -- Text -- */
-    --text-primary: 210 20% 95%;      /* Primär text, mjuk vit */
-    --text-secondary: 216 10% 60%;     /* Sekundär text, dämpad grå */
-
-    /* -- Primär Accentfärg ("Brand") -- */
-    --primary: 190 80% 65%;           /* Elegant cyan */
-    --primary-foreground: 220 25% 10%; /* Text på primära knappar */
-
-    /* -- Sekundär Accentfärg -- */
+    --background-primary: 220 26% 8%;
+    --background-secondary: 220 18% 12%;
+    --background-tertiary: 220 18% 16%;
+    --border-color: 220 15% 20%;
+    --text-primary: 210 20% 95%;
+    --text-secondary: 216 10% 60%;
+    --primary: 190 80% 65%;
+    --primary-foreground: 220 25% 10%;
     --secondary: 220 18% 16%;
     --secondary-foreground: 210 20% 95%;
-
-    /* -- Statusfärger (Semantiska) -- */
     --destructive: 0 63% 50%;
     --destructive-foreground: 210 20% 95%;
     --success: 142 60% 45%;
     --success-foreground: 142 60% 95%;
     --warning: 48 90% 50%;
     --warning-foreground: 48 90% 95%;
-    
-    /* -- Övrigt -- */
     --radius: 0.75rem;
   }
 }
@@ -50,5 +34,30 @@
     @apply bg-background-primary text-text-primary;
     font-feature-settings: "rlig" 1, "calt" 1;
     overflow-x: hidden;
+  }
+
+  /* 
+    =========================================================================
+    == GULD-STANDARD DETALJ: Truly Global Scrollbar (QA Certified) ==========
+    =========================================================================
+    QA-FIX: Selektorn har ändrats från `body` till `*` (universell) för att
+    säkerställa att **alla** scrollbars i hela applikationen får denna design.
+  */
+  *::-webkit-scrollbar {
+    width: 12px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: hsl(var(--background-primary));
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--background-tertiary));
+    border-radius: 6px;
+    border: 3px solid hsl(var(--background-primary));
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--border-color));
   }
 }
