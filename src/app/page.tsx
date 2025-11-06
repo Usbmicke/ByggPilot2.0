@@ -6,7 +6,6 @@ import SolutionSection from '@/components/landing/SolutionSection';
 import FounderSection from '@/components/landing/FounderSection';
 import CTASection from '@/components/landing/CTASection';
 import Footer from '@/components/landing/Footer';
-import AudioControl from '@/components/landing/AudioControl';
 
 export default function HomePage() {
   return (
@@ -30,8 +29,6 @@ export default function HomePage() {
         </main>
         <Footer />
       </div>
-
-      <AudioControl />
     </div>
   );
 }

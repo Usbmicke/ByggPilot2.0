@@ -5,13 +5,13 @@ import { masterPrompt } from '@/lib/prompts/master-prompt';
 import { aiTools } from '@/lib/tools';
 import { Ratelimit } from '@upstash/ratelimit';
 import { kv } from '@vercel/kv';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/config/authOptions';
+import { getToken } from 'next-auth/jwt';
 import { logger } from '@/lib/logger';
+import { NextRequest } from 'next/server';
 
-// KORRIGERING: Tar bort 'edge' runtime för att tillåta server-tung autentisering.
-// export const runtime = 'edge'; 
-// export const maxDuration = 30;
+// KORRIGERING: Återaktiverar Edge Runtime för prestanda och stabilitet.
+export const runtime = 'edge'; 
+export const maxDuration = 30;
 
 const google = createGoogleGenerativeAI({
     apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
@@ -20,28 +20,34 @@ const google = createGoogleGenerativeAI({
 const ratelimit = kv
   ? new Ratelimit({
       redis: kv,
-      limiter: Ratelimit.slidingWindow(50, '1 d'),
+      // Begränsar till 50 meddelanden per dag per användare.
+      limiter: Ratelimit.slidingWindow(50, '1 d'), 
     })
   : null;
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.id) {
+        // KORRIGERING: Använder Edge-kompatibla 'getToken' för säker autentisering.
+        const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+
+        // Validerar att token finns och innehåller användar-ID ('sub').
+        if (!token?.sub) {
             return new Response('Unauthorized', { status: 401 });
         }
-        const userId = session.user.id;
+        const userId = token.sub;
 
+        // Implementerar Rate Limiting enligt 'viktigt.md'.
         if (ratelimit) {
             const { success } = await ratelimit.limit(userId);
             if (!success) {
-                logger.warn(`[API:Chat] Rate limit exceeded for user: ${userId}`);
-                return new Response('Rate limit exceeded', { status: 429 });
+                logger.warn(`[API:Chat] Rate limit har överskridits för användare: ${userId}`);
+                return new Response('Rate limit överskriden', { status: 429 });
             }
         }
 
         const { messages } = await req.json();
 
+        // Anropar AI-modellen med Vercel AI SDK, nu i rätt miljö.
         const result = await streamText({
             model: google('gemini-1.5-flash-latest'),
             system: masterPrompt,
@@ -52,9 +58,9 @@ export async function POST(req: Request) {
         return result.toAIStreamResponse();
 
     } catch (error) {
-        logger.error({ message: '[API:Chat] An unexpected error occurred', error });
+        logger.error({ message: '[API:Chat] Ett oväntat fel inträffade', error });
 
-        return new Response('An unexpected error occurred. Please try again later.', { 
+        return new Response('Ett oväntat fel inträffade. Försök igen senare.', { 
             status: 500,
             headers: { 'Content-Type': 'text/plain' }
         });
