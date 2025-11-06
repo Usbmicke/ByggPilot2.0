@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import LoginButtons from '@/app/components/auth/LoginButtons';
+import LoginButtons from '@/components/auth/LoginButtons';
 import Link from 'next/link';
 import Image from 'next/image'; // Importerad
 
