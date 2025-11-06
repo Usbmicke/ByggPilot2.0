@@ -35,7 +35,31 @@ export async function markOnboardingAsComplete(userId: string): Promise<{ succes
 
     return { success: true };
   } catch (error) {
-    logger.error(`[Action] Failed to mark onboarding as complete for user ${userId}.`, { error });
+    logger.error({ message: `[Action] Failed to mark onboarding as complete for user ${userId}.`, error });
     return { success: false, error: 'Ett databasfel inträffade.' };
   }
+}
+
+export async function updateCompanyInfo(companyData: any, userId: string): Promise<{ success: boolean; error?: string }> {
+    if (!userId) {
+        logger.error('[Action] updateCompanyInfo called without userId.');
+        return { success: false, error: 'Användar-ID saknas.' };
+    }
+
+    logger.info(`[Action] Attempting to update company info for user: ${userId}`);
+
+    try {
+        const userRef = firestoreAdmin.collection('users').doc(userId);
+        await userRef.update(companyData);
+
+        logger.info(`[Action] Successfully updated company info for user: ${userId}`);
+        
+        revalidatePath('/dashboard');
+        revalidatePath('/onboarding');
+
+        return { success: true };
+    } catch (error) {
+        logger.error({ message: `[Action] Failed to update company info for user ${userId}.`, error });
+        return { success: false, error: 'Ett databasfel inträffade.' };
+    }
 }

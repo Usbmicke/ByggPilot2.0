@@ -1,9 +1,6 @@
 
-// Fil: app/api/time-entries/route.ts
 import { NextResponse } from 'next/server';
 import { getTimeEntries, createTimeEntry } from '@/app/actions/timeEntryActions';
-import { TimeEntry } from '@/lib/types';
-import { Timestamp } from 'firebase-admin/firestore';
 
 /**
  * Hämtar tidrapporter för ett projekt.
@@ -23,15 +20,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: result.error }, { status: 401 });
     }
 
-    const serializableData = result.data.map(entry => {
-      const date = entry.date as Timestamp;
-      return {
-        ...entry,
-        date: date.toDate().toISOString(),
-      };
-    });
-
-    return NextResponse.json(serializableData, { status: 200 });
+    // NextResponse.json hanterar automatiskt serialisering av Date-objekt till ISO-strängar.
+    // Den tidigare mappningen är inte längre nödvändig och var inkorrekt.
+    return NextResponse.json(result.data, { status: 200 });
 
   } catch (error) {
     console.error('API-fel vid hämtning av tidrapporter:', error);
@@ -44,8 +35,14 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
     try {
-        // Defininear en typ för inkommande data, där `date` är en string.
-        type TimeEntryPayload = Omit<TimeEntry, 'id' | 'userId' | 'date'> & { date: string };
+        // Korrekt typdefinition för inkommande data från klienten.
+        type TimeEntryPayload = {
+            projectId: string;
+            date: string; // Datum kommer som en sträng i JSON.
+            hours: number;
+            description?: string;
+            isBilled?: boolean;
+        };
         const body: TimeEntryPayload = await request.json();
 
         if (!body.projectId || !body.date || typeof body.date !== 'string' || body.hours === undefined) {
@@ -54,8 +51,7 @@ export async function POST(request: Request) {
 
         const result = await createTimeEntry({
             projectId: body.projectId,
-            // Skapar ett Date-objekt från strängen.
-            date: new Date(body.date),
+            date: new Date(body.date), // Konvertera datumsträng till Date-objekt.
             hours: body.hours,
             description: body.description,
             isBilled: body.isBilled || false,

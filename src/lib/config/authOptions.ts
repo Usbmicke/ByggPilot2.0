@@ -1,29 +1,24 @@
 
-import { NextAuthOptions, getServerSession } from 'next-auth';
+import { NextAuthOptions, Session, User, getServerSession } from 'next-auth';
+import { JWT } from 'next-auth/jwt';
 import GoogleProvider from 'next-auth/providers/google';
 import { FirestoreAdapter } from '@auth/firebase-adapter';
 import { firestoreAdmin } from '@/lib/config/firebase-admin';
 import { getUser } from '@/lib/data-access';
 import { logger } from '@/lib/logger';
 
-// =================================================================================
-// AUTHENTICATION CORE V4.0 - Databas som Sanningskälla
-// =================================================================================
-// Denna version korrigerar det kritiska felet där JWT-token inte uppdaterades
-// från databasen. Vid varje `update()`-anrop hämtas nu användaren på nytt.
-
 const GOOGLE_API_SCOPES = [
     'https://www.googleapis.com/auth/userinfo.profile',
     'https://www.googleapis.com/auth/userinfo.email',
-    'https://www.googleapis.com/auth/drive.file', // Skapa, läsa, uppdatera, ta bort filer i Drive
-    'https://www.googleapis.com/auth/calendar',      // Kalender
-    'https://www.googleapis.com/auth/gmail.readonly',  // Gmail - Läsa
-    'https://www.googleapis.com/auth/gmail.compose',   // Gmail - Skriva
-    'https://www.googleapis.com/auth/gmail.send',      // Gmail - Skicka
-    'https://www.googleapis.com/auth/spreadsheets', // Sheets
-    'https://www.googleapis.com/auth/documents',      // Docs
-    'https://www.googleapis.com/auth/contacts.readonly',// Kontakter - Läsa
-    'https://www.googleapis.com/auth/tasks'          // Google Tasks
+    'https://www.googleapis.com/auth/drive.file',
+    'https://www.googleapis.com/auth/calendar',
+    'https://www.googleapis.com/auth/gmail.readonly',
+    'https://www.googleapis.com/auth/gmail.compose',
+    'https://www.googleapis.com/auth/gmail.send',
+    'https://www.googleapis.com/auth/spreadsheets',
+    'https://www.googleapis.com/auth/documents',
+    'https://www.googleapis.com/auth/contacts.readonly',
+    'https://www.googleapis.com/auth/tasks'
 ].join(' ');
 
 export const authOptions: NextAuthOptions = {
@@ -46,33 +41,32 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   callbacks: {
-    async jwt({ token, user, trigger }) {
-      // KORRIGERING: Vid första inloggning (`user` finns) ELLER vid en manuell
-      // uppdatering (`trigger === "update"`), måste vi läsa från databasen.
-      const userId = token.sub;
-      if (!userId) return token; // Säkerhetsåtgärd
+    async jwt({ token, user, trigger }: { token: JWT; user?: User; trigger?: 'signIn' | 'signUp' | 'update' }) {
+      const userId = user?.id || token.sub;
+      if (!userId) return token;
 
-      if (user || trigger === 'update') {
+      if (trigger === 'signIn' || trigger === 'signUp' || trigger === 'update') {
         try {
-          const appUser = await getUser(userId);
-          if (appUser) {
-            token.sub = appUser.id;
-            token.hasCompletedOnboarding = appUser.hasCompletedOnboarding || false;
+          const dbUser = await getUser(userId);
+          if (dbUser) {
+            token.onboardingCompleted = dbUser.hasCompletedOnboarding || false;
+            token.sub = dbUser.id; 
+          } else {
+            token.onboardingCompleted = false;
           }
         } catch (error) {
-            logger.error(`[Auth Callback: JWT] Kunde inte hämta användardata för ${userId}:`, error);
-            // Returnera den gamla token om databasen misslyckas
+          logger.error(`[Auth Callback: JWT] Kunde inte hämta användardata för ${userId}`, { error });
+          token.onboardingCompleted = false; // Failsafe
         }
       }
       return token;
     },
 
-    async session({ session, token }) {
-      if (session.user && token.sub) {
+    async session({ session, token }: { session: Session; token: JWT }) {
+      if (session.user) {
+        session.user.id = token.sub as string;
         // @ts-ignore
-        session.user.id = token.sub;
-        // @ts-ignore
-        session.user.hasCompletedOnboarding = token.hasCompletedOnboarding;
+        session.user.onboardingCompleted = token.onboardingCompleted as boolean;
       }
       return session;
     },

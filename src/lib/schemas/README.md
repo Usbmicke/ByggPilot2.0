@@ -1,0 +1,1 @@
+Denna katalog innehåller alla Zod-scheman för projektet. Detta är vår Single Source of Truth för datastrukturer.

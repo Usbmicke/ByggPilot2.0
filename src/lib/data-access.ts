@@ -1,10 +1,10 @@
 
 import { firestoreAdmin as db } from '@/lib/config/firebase-admin';
 import { logger } from '@/lib/logger';
-import { UserSchema } from './types'; // <-- STEG 2: IMPORTERAR RITNINGEN
+import { UserSchema } from '@/lib/schemas'; // <-- KORRIGERAD IMPORT
 
 // =================================================================================
-// DATA ACCESS LAYER (DAL) - V2.0 (Armerad)
+// DATA ACCESS LAYER (DAL) - V2.1 (Schema-centraliserad)
 // =================================================================================
 // Denna version är armerad med Zod-validering för att garantera dataintegritet.
 
@@ -21,8 +21,6 @@ export async function updateUser(userId: string, data: Record<string, any>): Pro
         throw new Error('Användar-ID saknas.');
     }
 
-    // STEG 2: VALIDERINGSVAKT
-    // .partial() tillåter att endast en delmängd av fälten skickas in för uppdatering.
     const validationResult = UserSchema.partial().safeParse(data);
 
     if (!validationResult.success) {
@@ -35,7 +33,6 @@ export async function updateUser(userId: string, data: Record<string, any>): Pro
 
     try {
         const userDocRef = usersRef.doc(userId);
-        // Använder validationResult.data för att säkerställa att endast validerad data används.
         await userDocRef.update(validationResult.data);
         logger.info(`[DAL] updateUser: Användare '${userId}' uppdaterades framgångsrikt med validerad data.`);
         return true;

@@ -1,1 +1,62 @@
-\nimport { createGoogleGenerativeAI } from \'@ai-sdk/google\';\nimport { streamText, StreamingTextResponse } from \'ai\';\nimport { masterPrompt } from \'@/lib/prompts/master-prompt\';\nimport { aiTools } from \'@/lib/tools\';\nimport { Ratelimit } from \'@upstash/ratelimit\';\nimport { kv } from \'@vercel/kv\';\nimport { getServerSession } from \'next-auth/next\';\nimport { authOptions, EnrichedSession } from \'@/lib/config/authOptions\';\nimport { logger } from \'@/lib/logger\';\n\n// =================================================================================\n// CHAT API-ROUTE V1.0 - Blueprint \"Sektion 2.1\" & \"2.3\"\n// =================================================================================\n// Denna API-rutt är hjärnan i AI Co-Pilot. Den tar emot chattmeddelanden,\n// applicerar säkerhetskontroller (rate limiting), och strömmar tillbaka ett svar från AI:n.\n\nexport const runtime = \'edge\';\n\n// Initiera Google Gemini-modellen\nconst google = createGoogleGenerativeAI({\n    apiKey: process.env.GOOGLE_API_KEY,\n});\n\n// Initiera Rate Limiter (förhindrar missbruk och DoS-attacker)\nconst ratelimit = new Ratelimit({\n  redis: kv,\n  // Tillåt 15 förfrågningar per 10 sekunder per användare\n  limiter: Ratelimit.slidingWindow(15, \'10 s\'),\n});\n\nexport async function POST(req: Request) {\n    try {\n        // 1. Autentisering & Auktorisering\n        const session = await getServerSession(authOptions) as EnrichedSession;\n        if (!session?.user?.id) {\n            return new Response(\'Unauthorized\', { status: 401 });\n        }\n        const userId = session.user.id;\n\n        // 2. Rate Limiting (OWASP LLM04)\n        const { success } = await ratelimit.limit(userId);\n        if (!success) {\n            logger.warn(`[API:Chat] Rate limit exceeded for user: ${userId}`);\n            return new Response(\'Rate limit exceeded\', { status: 429 });\n        }\n\n        // 3. Hämta meddelanden från request\n        const { messages } = await req.json();\n\n        // 4. Anropa AI-modellen med verktyg och master-prompt\n        const result = await streamText({\n            model: google(\'gemini-1.5-pro-latest\'),\n            system: masterPrompt, // AI:ns konstitution\n            tools: aiTools, // Tillgängliga verktyg\n            messages: messages, // Chatthistoriken\n        });\n        \n        // 5. Strömma tillbaka svaret till klienten\n        return result.toAIStreamResponse();\n\n    } catch (error) {\n        logger.error(\'[API:Chat] An unexpected error occurred\', { error });\n        // Skicka ett generiskt felmeddelande till klienten\n        return new Response(\'Internal Server Error\', { status: 500 });\n    }\n}\n
+
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { streamText } from 'ai';
+import { masterPrompt } from '@/lib/prompts/master-prompt';
+import { aiTools } from '@/lib/tools';
+import { Ratelimit } from '@upstash/ratelimit';
+import { kv } from '@vercel/kv';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/config/authOptions';
+import { logger } from '@/lib/logger';
+
+// KORRIGERING: Tar bort 'edge' runtime för att tillåta server-tung autentisering.
+// export const runtime = 'edge'; 
+// export const maxDuration = 30;
+
+const google = createGoogleGenerativeAI({
+    apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+});
+
+const ratelimit = kv
+  ? new Ratelimit({
+      redis: kv,
+      limiter: Ratelimit.slidingWindow(50, '1 d'),
+    })
+  : null;
+
+export async function POST(req: Request) {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.id) {
+            return new Response('Unauthorized', { status: 401 });
+        }
+        const userId = session.user.id;
+
+        if (ratelimit) {
+            const { success } = await ratelimit.limit(userId);
+            if (!success) {
+                logger.warn(`[API:Chat] Rate limit exceeded for user: ${userId}`);
+                return new Response('Rate limit exceeded', { status: 429 });
+            }
+        }
+
+        const { messages } = await req.json();
+
+        const result = await streamText({
+            model: google('gemini-1.5-flash-latest'),
+            system: masterPrompt,
+            tools: aiTools,
+            messages: messages,
+        });
+        
+        return result.toAIStreamResponse();
+
+    } catch (error) {
+        logger.error({ message: '[API:Chat] An unexpected error occurred', error });
+
+        return new Response('An unexpected error occurred. Please try again later.', { 
+            status: 500,
+            headers: { 'Content-Type': 'text/plain' }
+        });
+    }
+}

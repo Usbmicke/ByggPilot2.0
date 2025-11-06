@@ -7,7 +7,7 @@ import { firestoreAdmin } from '@/lib/config/firebase-admin';
 // KORRIGERING: Importerar nu det korrekta funktionsnamnet.
 import { createInitialFolderStructure } from './driveActions'; 
 import { projectSchema, type ProjectFormData } from '@/lib/schemas/project';
-import { type Project, type File } from '@/types'; // Standardiserad import
+import { type Project } from '@/lib/types'; // Standardiserad import
 import { logger } from '@/lib/logger'; // Importera logger
 
 export async function createProject(formData: ProjectFormData) {
@@ -36,51 +36,16 @@ export async function createProject(formData: ProjectFormData) {
     // som behöver lösas separat. Att anropa den skulle orsaka ett fel.
     /*
     createInitialFolderStructure(newProjectRef.id, validation.data.projectName).catch(error => 
-        logger.error('Failed to create project folder structure asynchronously', { projectId: newProjectRef.id, error })
+        logger.error({ message: 'Failed to create project folder structure asynchronously', projectId: newProjectRef.id, error })
     );
     */
 
     // Korrekt loggning för att indikera att steget är överhoppat.
-    logger.info('Skipping folder creation: Mismatched function signature in createProject action.', { projectId: newProjectRef.id });
+    logger.info({ message: 'Skipping folder creation: Mismatched function signature in createProject action.', projectId: newProjectRef.id });
 
     return { status: 'success', message: 'Projekt skapat!' };
   } catch (error) {
-    logger.error('Error creating project', { userId, error });
+    logger.error({ message: 'Error creating project', userId, error });
     return { status: 'error', message: 'Ett serverfel uppstod.' };
   }
-}
-
-
-// ... (befintliga project actions) ...
-
-/**
- * GULDSTANDARD ACTION: `addFileToProject`
- * Lägger till en filreferens (metadata) i en sub-collection under ett projekt.
- * Säkerställer att användaren äger projektet innan filen läggs till.
- */
-export async function addFileToProject(projectId: string, fileData: Omit<File, 'id'>) {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-        return { success: false, error: 'Autentisering krävs.' };
-    }
-    const userId = session.user.id;
-
-    try {
-        // Steg 1: Verifiera ägarskap av projektet
-        const projectRef = firestoreAdmin.collection('users').doc(userId).collection('projects').doc(projectId);
-        const projectSnap = await projectRef.get();
-        if (!projectSnap.exists) {
-            return { success: false, error: 'Åtkomst nekad: Du äger inte detta projekt.' };
-        }
-
-        // Steg 2: Lägg till fil-metadatan i en sub-collection
-        const filesCollectionRef = projectRef.collection('files');
-        await filesCollectionRef.add(fileData);
-
-        return { success: true };
-
-    } catch (error) {
-        logger.error('Error adding file to project', { userId, projectId, error });
-        return { success: false, error: 'Ett serverfel uppstod när filen skulle läggas till i projektet.' };
-    }
 }

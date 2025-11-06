@@ -1,19 +1,14 @@
-
 'use server';
 
 import { getServerSession } from 'next-auth/next';
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod'; // Importera z direkt
+import { z } from 'zod';
 
 import { authOptions } from '@/lib/config/authOptions';
 import { createOnboardingFolderStructure } from '@/lib/services/googleDriveService';
 import { updateUser } from '@/lib/data-access';
 import { logger } from '@/lib/logger';
-import { UserSchema } from '@/lib/types';
-
-// =================================================================================
-// ONBOARDING ACTIONS V3.1 - Korrigerad Validering
-// =================================================================================
+import { UserSchema } from '@/lib/schemas'; // KORRIGERAD SÖKVÄG
 
 const OnboardingPayloadSchema = UserSchema.pick({
   companyName: true,
@@ -25,8 +20,6 @@ const OnboardingPayloadSchema = UserSchema.pick({
   driveRootFolderId: true,
   driveRootFolderUrl: true,
 }).extend({
-    // KORRIGERING: Definierar om reglerna med korrekt syntax istället för
-    // att försöka kedja vidare på en existerande, inkompatibel regel.
     companyName: z.string().min(2, 'Företagsnamn måste vara minst 2 tecken.'),
     driveRootFolderId: z.string().min(5, 'Drive-mappens ID saknas eller är ogiltigt.')
 });

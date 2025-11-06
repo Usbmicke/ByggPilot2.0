@@ -1,58 +1,98 @@
 
-import { z } from 'zod';
+// Denna fil innehåller globala TypeScript-typer för projektet.
+// För databas-scheman (Zod), se katalogen src/lib/schemas.
 
-// =================================================================================
-// CENTRALA DATATYPER (ZOD SCHEMAS) V1.0
-// =================================================================================
-// Detta är den enda källan till sanning för hur vår data ska se ut.
-// All data som går in i eller ut ur databasen ska valideras mot dessa scheman.
+// Exempel på en global typ:
+export type Status = 'pending' | 'active' | 'archived';
 
-// ---------------------------------------------------------------------------------
-// Användarschema (motsvarar 'users'-collectionen i Firestore)
-// ---------------------------------------------------------------------------------
-export const UserSchema = z.object({
-  id: z.string(),
-  name: z.string().optional(),
-  email: z.string().email(),
-  image: z.string().url().optional(),
-  emailVerified: z.date().nullable().optional(),
-  
-  // Onboarding-specifika fält
-  companyName: z.string().optional(),
-  orgNumber: z.string().optional(),
-  address: z.string().optional(),
-  zipCode: z.string().optional(),
-  city: z.string().optional(),
-  phone: z.string().optional(),
-  
-  // Google Drive-integration
-  driveRootFolderId: z.string().optional(),
-  driveRootFolderUrl: z.string().url().optional(),
+// Typ för ett chattmeddelande, används i frontend och backend.
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'tool';
+  content: string;
+  timestamp: Date;
+  toolInvocations?: ToolInvocation[];
+  toolResults?: ToolResult[];
+  isOptimistic?: boolean;
+}
 
-  // Kritisk statusflagga
-  hasCompletedOnboarding: z.boolean().default(false),
-});
+export interface ToolInvocation {
+  toolName: string;
+  args: any;
+}
 
-// Exporterar en TypeScript-typ för användning i frontend/backend-kod
-export type User = z.infer<typeof UserSchema>;
+export interface ToolResult {
+  toolName: string;
+  result: any;
+}
 
+export enum ProjectStatus {
+    Active = 'Aktivt',
+    Paused = 'Pausat',
+    Completed = 'Slutfört',
+    Archived = 'Arkiverat'
+}
 
-// ---------------------------------------------------------------------------------
-// Kontoschema (motsvarar 'accounts'-collectionen i Firestore)
-// ---------------------------------------------------------------------------------
-export const AccountSchema = z.object({
-  userId: z.string(),
-  type: z.string(),
-  provider: z.string(),
-  providerAccountId: z.string(),
-  refresh_token: z.string().optional(),
-  access_token: z.string().optional(),
-  expires_at: z.number().optional(),
-  token_type: z.string().optional(),
-  scope: z.string().optional(),
-  id_token: z.string().optional(),
-  session_state: z.string().optional(),
-});
+export interface Project {
+    id: string;
+    projectName: string;
+    customerName?: string;
+    status: ProjectStatus;
+    createdAt: Date;
+    totalCost?: number;
+    totalHours?: number;
+}
 
-// Exporterar en TypeScript-typ
-export type Account = z.infer<typeof AccountSchema>;
+export interface Material {
+    id: string;
+    projectId: string;
+    name: string;
+    quantity: number;
+    unit: string;
+    pricePerUnit: number;
+    price: number;
+    date: any; // acac
+    supplier?: string;
+}
+
+export interface Task {
+    id: string;
+    projectId: string;
+    description: string;
+    completed: boolean;
+    createdAt: Date;
+}
+
+export interface TimeEntry {
+    id: string;
+    taskId?: string;
+    projectId: string;
+    startTime: Date;
+    endTime: Date | null;
+    duration: number; // in hours
+    notes?: string;
+    isRunning?: boolean;
+}
+
+export interface UserProfile {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    company?: {
+        name?: string;
+        vision?: string;
+        hourlyRate?: number;
+    };
+    hasCompletedOnboarding?: boolean;
+    driveRootFolderId?: string;
+    driveRootFolderUrl?: string;
+}
+
+export type User = UserProfile;
+
+export interface EnrichedSession {
+    user?: UserProfile & {
+        id: string;
+    }
+}
