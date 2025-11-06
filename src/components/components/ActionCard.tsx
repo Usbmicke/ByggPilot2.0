@@ -3,8 +3,8 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-// FAS 0 KORRIGERING: Korrigerad importväg. Borttagning av det felaktiga '/app'-prefixet.
-import { ActionableEvent } from '@/types/index';
+// FAS 0 KORRIGERING: Korrigerad importväg.
+import { ActionableEvent } from '@/app/types/index';
 
 const formatDate = (date: any) => {
     if (!date) return 'N/A';

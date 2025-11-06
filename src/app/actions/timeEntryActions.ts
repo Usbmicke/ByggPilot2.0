@@ -89,14 +89,18 @@ export async function getTimeEntries(projectId: string): Promise<{ success: bool
 
         const timeEntries: TimeEntry[] = querySnapshot.docs.map(doc => {
             const data = doc.data();
+            const startTime = (data.date as Timestamp).toDate();
+            const duration = data.hours || 0;
+            const endTime = new Date(startTime.getTime() + duration * 60 * 60 * 1000);
+
             return {
                 id: doc.id,
-                userId: data.userId,
                 projectId: data.projectId,
-                date: data.date, 
-                hours: data.hours,
-                description: data.description || '',
-                isBilled: data.isBilled || false,
+                startTime: startTime,
+                endTime: endTime,
+                duration: duration,
+                notes: data.description || '',
+                isRunning: false, // Manuella entries är aldrig running
             };
         });
 
@@ -104,6 +108,6 @@ export async function getTimeEntries(projectId: string): Promise<{ success: bool
 
     } catch (error) {
         console.error('Fel vid hämtning av tidrapporter:', error);
-        return { success: false, error: 'Ett serverfel uppstod vid hämtning av tidrapporter.' };
+        return { success: false, error: 'Ett serverfel uppstod vid häntning av tidrapporter.' };
     }
 }

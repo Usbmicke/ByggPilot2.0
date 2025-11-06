@@ -1,7 +1,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { createOfferFile } from '@/lib/services/googleDriveService'; // Updated import
+import { createOfferFile } from '@/lib/services/googleDriveService'; 
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/config/authOptions';
+import { logger } from '@/lib/logger';
 
 const createOfferPrompt = (details: any) => {
     return `
@@ -29,9 +32,15 @@ const createOfferPrompt = (details: any) => {
 };
 
 export async function POST(req: NextRequest) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id || !session.user.companyName) {
+        return NextResponse.json({ error: 'Autentisering krävs och företagsnamn måste vara inställt.' }, { status: 401 });
+    }
+    const { companyName } = session.user;
+
     const geminiApiKey = process.env.GEMINI_API_KEY;
     if (!geminiApiKey) {
-        console.error("[Generate Offer] GEMINI_API_KEY är inte konfigurerad.");
+        logger.error("[Generate Offer] GEMINI_API_KEY är inte konfigurerad.");
         return NextResponse.json({ error: "Serverkonfigurationsfel: AI-motorn är inte konfigurerad." }, { status: 500 });
     }
 
@@ -43,17 +52,15 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Offertdetaljer, inklusive projektnamn, saknas' }, { status: 400 });
         }
 
-        // 1. Generate Offer Content with AI
         const prompt = createOfferPrompt(offerDetails);
         const genAI = new GoogleGenerativeAI(geminiApiKey);
         const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
         const generationResult = await model.generateContent(prompt);
         const offerContent = generationResult.response.text();
 
-        // 2. Save the generated offer to Google Drive using the dedicated service function
         const fileName = `Offert_${offerDetails.projectName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.html`;
         
-        const serviceResponse = await createOfferFile(offerDetails.projectName, fileName, offerContent);
+        const serviceResponse = await createOfferFile(companyName, offerDetails.projectName, fileName, offerContent);
 
         if (!serviceResponse.success || !serviceResponse.webViewLink) {
             throw new Error(serviceResponse.error || 'Ett okänt fel inträffade vid filskapandet i Google Drive.');
@@ -66,8 +73,7 @@ export async function POST(req: NextRequest) {
         });
 
     } catch (error: any) {
-        console.error("Fel vid skapande av offert:", error);
-        // Provide a more user-friendly error message
+        logger.error({ message: "Fel vid skapande av offert:", error: error.message });
         const message = error.message.includes('GEMINI') 
             ? "Ett fel inträffade vid generering av offertinnehållet."
             : `Serverfel: ${error.message}`;

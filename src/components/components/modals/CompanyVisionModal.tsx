@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useUI } from '@/app/contexts/UIContext';
-import { User } from '@/app/types/index';
+import { useUI } from '@/contexts/UIContext';
+import { User } from '@/lib/types';
 import { useSession } from 'next-auth/react';
 
 const CompanyVisionModal: React.FC = () => {

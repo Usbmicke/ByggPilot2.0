@@ -1,14 +1,13 @@
 
 'use client';
 
-import { CoreMessage } from 'ai';
+// VÄRLDSKLASS-KORRIGERING: Byt ut CoreMessage mot Message från @ai-sdk/react för kompatibilitet.
+import { type Message } from '@ai-sdk/react';
 
 import { UserIcon, CogIcon } from '@heroicons/react/24/solid';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
 
 // FAS 2: Bygger komponenten för att rendera chatt-meddelanden
-export function ChatMessages({ messages, isLoading }: { messages: CoreMessage[], isLoading: boolean }) {
+export function ChatMessages({ messages, isLoading }: { messages: Message[], isLoading: boolean }) {
   if (!messages.length) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-4">
@@ -24,14 +23,14 @@ export function ChatMessages({ messages, isLoading }: { messages: CoreMessage[],
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-4">
       {messages.map((m, index) => (
-        <div key={index} className={`flex items-start gap-4 ${m.role === 'user' ? 'justify-end' : ''}`}>
+        <div key={m.id || index} className={`flex items-start gap-4 ${m.role === 'user' ? 'justify-end' : ''}`}>
           {m.role === 'assistant' && (
             <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary-500 flex items-center justify-center text-white">
               <CogIcon className="h-5 w-5" />
             </div>
           )}
           <div className={`rounded-lg px-4 py-2 max-w-lg break-words ${m.role === 'user' ? 'bg-primary-500 text-white' : 'bg-background-secondary'}`}>
-           <p> {m.content as string} </p>
+           <p> {m.content} </p>
           </div>
           {m.role === 'user' && (
             <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
@@ -40,7 +39,7 @@ export function ChatMessages({ messages, isLoading }: { messages: CoreMessage[],
           )}
         </div>
       ))}
-      {isLoading && (
+      {isLoading && messages[messages.length - 1]?.role === 'user' && (
         <div className="flex items-start gap-4">
             <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary-500 flex items-center justify-center text-white">
               <CogIcon className="h-5 w-5" />

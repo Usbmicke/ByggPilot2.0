@@ -1,1 +1,21 @@
-\nimport React from \'react\';\nimport ProjectList from \'@/app/components/dashboard/ProjectList\'; // <-- STEG 1: Importera den nya klient-komponenten\n\n// =================================================================================\n// PROJECTSPAGE V3.0 - Arkitektur enligt \"Kungstandard\"\n// =================================================================================\n// Denna server-komponent är nu extremt lättviktig. Dess enda ansvar är att\n// rendera sidans titel och sedan delegera all datahämtning och rendering till\n// den SWR-baserade klient-komponenten `ProjectList`.\n// Detta följer Next.js bästa praxis för prestanda och separation of concerns.\n\nexport default async function ProjectsPage() {\n    return (\n        <div className=\"animate-fadeIn space-y-6\">\n            <h1 className=\"text-3xl font-bold text-text-primary pl-1\">Aktiva Projekt</h1>\n            \n            {/* STEG 2: Rendera klient-komponenten som sköter sin egen datahämtning */}\n            <ProjectList />\n            \n        </div>\n    );\n}\n
+
+import React from 'react';
+import ProjectList from '@/components/dashboard/ProjectList'; // <-- KORRIGERAD IMPORT
+
+// =================================================================================
+// PROJECTSPAGE V3.1 - Arkitektoniskt Korrekt
+// =================================================================================
+// Denna server-komponent är nu extremt lättviktig. Dess enda ansvar är att
+// rendera sidans titel och sedan delegera all datahämtning och rendering till
+// den SWR-baserade klient-komponenten `ProjectList`.
+
+export default async function ProjectsPage() {
+    return (
+        <div className="animate-fadeIn space-y-6">
+            <h1 className="text-3xl font-bold text-text-primary pl-1">Aktiva Projekt</h1>
+            
+            <ProjectList />
+            
+        </div>
+    );
+}

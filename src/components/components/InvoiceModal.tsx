@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Project, Invoice, InvoiceLine, RotDeduction, InvoiceCreationData, Customer } from '@/types';
+import { Project, Invoice, InvoiceLine, RotDeduction, InvoiceCreationData, Customer } from '@/app/types';
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/solid';
 
 interface InvoiceModalProps {

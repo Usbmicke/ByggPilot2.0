@@ -1,12 +1,10 @@
 
-'use client'; 
+'use client';
 
 import Image from 'next/image';
 import Link from 'next/link';
-// KORRIGERING: Korrekt importväg med @-aliaset som pekar från roten.
-import LoginButtons from '@/app/components/auth/LoginButtons'; 
+import LoginButtons from '@/app/components/auth/LoginButtons';
 
-// KORRIGERING: Korrigerat komponentnamn från 'navBar' till 'Navbar' för att följa React-konventioner (PascalCase)
 export const Navbar = () => {
   return (
     <nav className="bg-white shadow-md">
@@ -14,7 +12,6 @@ export const Navbar = () => {
         <div className="flex justify-between items-center h-16">
           <div className="flex-shrink-0">
             <Link href="/">
-              {/* KORRIGERING: Använder en direkt sökväg från public-mappen, vilket är Next.js standardpraxis. */}
               <Image src="/images/byggpilotlogga1.png" alt="ByggPilot Logotyp" width={150} height={40} priority style={{ height: 'auto' }} />
             </Link>
           </div>

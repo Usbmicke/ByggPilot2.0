@@ -10,7 +10,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 /**
  * Hämtar alla uppgifter för ett specifikt projekt.
- * VÄRLDSKLASS-KORRIGERING: Mappar `completed` från databasen till `isCompleted` i Task-typen.
+ * VÄRLDSKLASS-KORRIGERING: Mappar `completed` från databasen till `completed` i Task-typen.
  */
 export async function getTasks(projectId: string): Promise<{ success: boolean; data?: Task[]; error?: string; }> {
     const session = await getServerSession(authOptions);
@@ -34,10 +34,8 @@ export async function getTasks(projectId: string): Promise<{ success: boolean; d
             return {
                 id: doc.id,
                 projectId: projectId,
-                title: data.title || 'Namnlös uppgift',
-                description: data.description || undefined,
-                isCompleted: data.completed || data.isCompleted || false, // Hanterar båda fältnamnen
-                deadline: data.deadline?.toDate(),
+                description: data.description || 'Namnlös uppgift',
+                completed: data.completed || false, // Hanterar båda fältnamnen
                 createdAt: data.createdAt?.toDate(),
             };
         });
@@ -53,7 +51,7 @@ export async function getTasks(projectId: string): Promise<{ success: boolean; d
 /**
  * Skapar en ny uppgift för ett specifikt projekt.
  */
-export async function createTask(projectId: string, title: string): Promise<{ success: boolean; data?: Task; error?: string; }> {
+export async function createTask(projectId: string, description: string): Promise<{ success: boolean; data?: Task; error?: string; }> {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
         return { success: false, error: 'Autentisering krävs.' };
@@ -69,9 +67,9 @@ export async function createTask(projectId: string, title: string): Promise<{ su
 
         const tasksCollectionRef = projectRef.collection('tasks');
         const newTaskData = {
-            title,
+            description,
             projectId,
-            isCompleted: false,
+            completed: false,
             createdAt: FieldValue.serverTimestamp(),
             userId,
         };
@@ -79,9 +77,10 @@ export async function createTask(projectId: string, title: string): Promise<{ su
 
         const returnData: Task = {
             id: docRef.id,
-            title: newTaskData.title,
-            isCompleted: newTaskData.isCompleted,
+            description: newTaskData.description,
+            completed: newTaskData.completed,
             projectId: newTaskData.projectId,
+            createdAt: new Date(),
         };
 
         return { success: true, data: returnData };
@@ -95,7 +94,7 @@ export async function createTask(projectId: string, title: string): Promise<{ su
 /**
  * Uppdaterar en befintlig uppgift.
  */
-export async function updateTask(taskId: string, projectId: string, updates: Partial<Pick<Task, 'title' | 'isCompleted'>>): Promise<{ success: boolean; error?: string; }> {
+export async function updateTask(taskId: string, projectId: string, updates: Partial<Pick<Task, 'description' | 'completed'>>): Promise<{ success: boolean; error?: string; }> {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
         return { success: false, error: 'Autentisering krävs.' };

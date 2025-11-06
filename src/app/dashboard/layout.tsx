@@ -1,12 +1,14 @@
-import Header from "@/app/components/layout/Header";
-import Sidebar from "@/app/components/layout/Sidebar";
-import Chat from '@/app/components/copilot/Chat';
+
+'use client';
+
+import Header from "@/components/layout/Header";
+import Sidebar from "@/components/layout/Sidebar";
+import Chat from '@/components/copilot/Chat';
 
 // =================================================================================
-// DASHBOARD LAYOUT V3.1 - Korrigerade Sökvägar
+// DASHBOARD LAYOUT V4.0 - Arkitektoniskt Korrekt
 // =================================================================================
-// Denna version rättar de felaktiga relativa sökvägarna från V3.0 till att
-// använda absoluta sökvägar (@/), vilket löser "Module not found"-felet.
+// Denna version använder korrekta, absoluta sökvägar enligt tsconfig.json.
 
 export default function DashboardLayout({
   children,
