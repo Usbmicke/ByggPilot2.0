@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { useModal } from '@/app/contexts/ModalContext';
+import { useModal } from '@/contexts/ModalContext';
 import CreateProjectModal from './CreateProjectModal';
 import CreateOptionsModal from './CreateOptionsModal';
 

@@ -1,181 +1,176 @@
 
 'use client';
 
-import React, { useState, useTransition } from 'react';
+import React, { useState, useTransition, FC } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { CheckCircleIcon, ExclamationCircleIcon, ArrowRightIcon, DocumentTextIcon } from '@heroicons/react/24/solid';
-import { setupDriveForOnboarding, finalizeOnboarding } from '@/app/onboarding/actions';
+import { CheckCircleIcon, ArrowRightIcon, FolderIcon, DocumentPlusIcon } from '@heroicons/react/24/solid';
+import { completeOnboardingStep } from '../../onboarding/actions'; // KORRIGERAD IMPORT
 
-// =================================================================================
-// ONBOARDING CLIENT V2.0 - Hård Omdirigering
-// =================================================================================
-// Denna version ersätter router.push() med en hård sidomladdning för att
-// kringgå race conditions med middleware vid sessionsuppdatering.
+// --- Subkomponenter för Tydlighet ---
 
-type OnboardingStep = 'input' | 'confirmDrive' | 'creating' | 'success' | 'finalizing' | 'error';
+const LoadingSpinner: FC = () => (
+    <div className="flex flex-col items-center justify-center space-y-4">
+        <svg className="animate-spin h-12 w-12 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <p className="text-lg text-gray-300 animate-pulse">Arbetar...</p>
+    </div>
+);
 
-interface CompanyData {
-  companyName: string;
-  orgNumber: string;
-  address: string;
-  zipCode: string;
-  city: string;
-  phone: string;
+interface CompanyNameInputProps {
+    onSubmit: (companyName: string) => void;
+    error: string | null;
+    isPending: boolean;
 }
 
-interface DriveData {
-  driveRootFolderId: string;
-  driveRootFolderUrl: string;
-}
+const CompanyNameInput: FC<CompanyNameInputProps> = ({ onSubmit, error, isPending }) => {
+    const [companyName, setCompanyName] = useState('');
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (companyName.trim()) {
+            onSubmit(companyName.trim());
+        }
+    };
+    return (
+        <form onSubmit={handleSubmit} className="animate-fade-in space-y-6">
+            <div>
+                <h1 className="text-3xl font-bold">Välkommen till ByggPilot!</h1>
+                <p className="mt-2 text-gray-300">För att komma igång, vad heter ditt företag?</p>
+            </div>
+            <input
+                type="text"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="Ex: Bygg AB"
+                className="w-full bg-gray-800 border-2 border-gray-700 rounded-lg px-4 py-3 text-white focus:ring-cyan-500 focus:border-cyan-500"
+                disabled={isPending}
+            />
+            {error && <p className="text-sm text-red-400">{error}</p>}
+            <button type="submit" disabled={!companyName.trim() || isPending} className="w-full flex items-center justify-center gap-3 bg-cyan-600 text-white font-bold py-3 px-6 rounded-lg disabled:opacity-50">
+                {isPending ? 'Sparar...' : 'Fortsätt'}
+            </button>
+        </form>
+    );
+};
 
-export function GuidedOnboarding() {
-  const { data: session, update } = useSession();
-  const router = useRouter(); // Behölls för eventuella framtida "mjuka" navigeringar
-  const [isPending, startTransition] = useTransition();
 
-  const [step, setStep] = useState<OnboardingStep>('input');
-  const [companyData, setCompanyData] = useState<CompanyData>({ 
-    companyName: session?.user?.companyName || '', 
-    orgNumber: '', address: '', zipCode: '', city: '', phone: '' 
-  });
-  const [driveData, setDriveData] = useState<DriveData | null>(null);
-  const [error, setError] = useState<string | null>(null);
+// --- Huvudkomponent: GuidedOnboarding (Guldstandard) ---
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setCompanyData(prev => ({ ...prev, [name]: value }));
-  };
+export default function GuidedOnboarding() {
+    const { data: session, update } = useSession();
+    const router = useRouter();
+    
+    const [error, setError] = useState<string | null>(null);
+    const [isPending, startTransition] = useTransition();
 
-  const handleProceedToConfirmation = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (companyData.companyName.trim().length < 2) {
-      setError('Företagsnamnet måste vara minst 2 tecken.');
-      return;
-    }
-    setError(null);
-    setStep('confirmDrive');
-  };
+    // === Steg 1: Företagsinformation ===
+    const handleCompanyInfoSubmit = (companyName: string) => {
+        setError(null);
+        startTransition(async () => {
+            const result = await completeOnboardingStep(1, { companyName });
+            if (result.success) {
+                // HÄRDAD LOGIK: Uppdatera sessionen med det lokala statet, invänta resultatet.
+                await update({ user: { companyName } });
+            } else {
+                setError(result.error || 'Något gick fel med att spara företagsnamnet.');
+            }
+        });
+    };
 
-  const handleCreateStructure = () => {
-    setStep('creating');
-    startTransition(async () => {
-      const result = await setupDriveForOnboarding(companyData.companyName);
-      if (result.success && result.data) {
-        setDriveData(result.data);
-        setStep('success');
-      } else {
-        setError(result.error || 'Ett okänt fel uppstod vid skapande av mappar.');
-        setStep('error');
-      }
-    });
-  };
+    // === Steg 2: Skapa Mappstruktur ===
+    const handleCreateStructure = () => {
+        setError(null);
+        startTransition(async () => {
+            const result = await completeOnboardingStep(2, {});
+            if (result.success && result.driveRootFolderId && result.driveRootFolderUrl) {
+                // HÄRDAD LOGIK: Uppdatera sessionen med ALL data från servern, invänta resultatet.
+                await update({ 
+                    user: { 
+                        driveRootFolderId: result.driveRootFolderId,
+                        driveRootFolderUrl: result.driveRootFolderUrl 
+                    }
+                });
+            } else {
+                setError(result.error || 'Kunde inte skapa mappstrukturen.');
+            }
+        });
+    };
 
-  const handleFinalizeAndNavigate = () => {
-    if (!driveData) {
-        setError("Drive-data saknas, kan inte slutföra.");
-        setStep('error');
-        return;
-    }
-    setError(null);
-    setStep('finalizing');
-
-    const fullData = { ...companyData, ...driveData };
-
-    startTransition(async () => {
-      const result = await finalizeOnboarding(fullData);
-
-      if (result.success) {
-        // Steg 1: Servern har uppdaterat användaren.
-        await update();
+    // === Steg 3: Slutförande & Omdirigering ===
+    const handleFinalizeOnboarding = () => {
+        startTransition(async () => {
+            const result = await completeOnboardingStep(4, {}); // Steg 4 enligt action
+            if (result.success) {
+                // HÄRDAD LOGIK: Invänta session-uppdatering INNAN omdirigering.
+                await update({ user: { onboardingComplete: true }});
+                router.push('/dashboard');
+            } else {
+                setError('Kunde inte slutföra onboardingen. Prova att ladda om sidan.');
+            }
+        });
+    };
+    
+    // === Arkitektonisk Rendering: Tydlig och Robust Steg-logik ===
+    const renderCurrentStep = () => {
+        if (!session?.user) return <LoadingSpinner />;
         
-        // Steg 2: Forcerad omdirigering för att garantera att middleware läser den nya sessionen.
-        window.location.href = '/dashboard';
-      } else {
-        setError(result.error || 'Ett kritiskt fel uppstod när din profil skulle slutföras.');
-        setStep('error');
-      }
-    });
-  };
+        const { companyName, driveRootFolderId, onboardingComplete } = session.user;
 
-  // ... (render-logiken är oförändrad) ...
-    const renderContent = () => {
-    switch (step) {
-      case 'input':
-        return (
-          <form onSubmit={handleProceedToConfirmation} className="space-y-6 animate-fade-in">
-            <div className="text-center">
-              <h1 className="text-4xl font-bold text-text-primary">Ditt digitala kontor</h1>
-              <p className="mt-4 text-lg text-text-secondary">Börja med att fylla i din företagsinformation. Denna information används för att automatiskt fylla i dokument, som offerter.</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <input name="companyName" value={companyData.companyName} onChange={handleInputChange} placeholder="Företagsnamn (obligatoriskt)" required minLength={2} className="sm:col-span-2 w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-blue" />
-              <input name="orgNumber" value={companyData.orgNumber} onChange={handleInputChange} placeholder="Organisationsnummer" className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-blue" />
-              <input name="phone" value={companyData.phone} onChange={handleInputChange} placeholder="Telefonnummer" className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-blue" />
-              <input name="address" value={companyData.address} onChange={handleInputChange} placeholder="Gatuadress" className="sm:col-span-2 w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-blue" />
-              <input name="zipCode" value={companyData.zipCode} onChange={handleInputChange} placeholder="Postnummer" className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-blue" />
-              <input name="city" value={companyData.city} onChange={handleInputChange} placeholder="Ort" className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-blue" />
-            </div>
-            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-            <button type="submit" disabled={isPending} className="w-full flex items-center justify-center gap-3 bg-accent-blue hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg text-lg transition-all transform hover:scale-105 disabled:opacity-50">Nästa</button>
-          </form>
-        );
+        if (onboardingComplete) {
+            // Skulle inte hända pga middleware, men som en failsafe.
+            router.push('/dashboard');
+            return <LoadingSpinner />;
+        }
+        
+        if (!companyName) {
+            return <CompanyNameInput onSubmit={handleCompanyInfoSubmit} error={error} isPending={isPending} />;
+        }
 
-      case 'confirmDrive':
-        return (
-            <div className="text-center animate-fade-in space-y-6">
-                <DocumentTextIcon className="w-16 h-16 text-accent-blue mx-auto" />
-                <h1 className="text-3xl font-bold text-text-primary">Dags att skapa ditt digitala kontor</h1>
-                <p className="text-lg text-text-secondary">Nästa steg är att skapa en mappstruktur i din Google Drive. Det här blir ditt centrala nav där ByggPilot hjälper dig att organisera projekt, offerter och dokument. Allt lagras säkert på din egen Drive.</p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <button onClick={() => setStep('input')} className="w-full sm:w-auto px-6 py-3 border border-gray-600 rounded-lg text-text-secondary hover:bg-gray-700">Tillbaka</button>
-                    <button onClick={handleCreateStructure} disabled={isPending} className="w-full sm:w-auto flex items-center justify-center gap-3 bg-accent-blue hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg text-lg transition-all transform hover:scale-105 disabled:opacity-50">
-                        {isPending ? 'Skapar...' : 'Godkänn och skapa mappar'}
+        if (!driveRootFolderId) {
+            return (
+                 <div className="animate-fade-in space-y-6 text-center">
+                    <DocumentPlusIcon className="h-16 w-16 text-cyan-400 mx-auto"/>
+                    <h1 className="text-3xl font-bold">Skapa din Projektmapp</h1>
+                    <p className="text-gray-300">
+                        Jag kommer nu att skapa en säker, delad mappstruktur i din Google Drive för
+                        <strong className="block text-white mt-1">{session.user.companyName}</strong>.
+                    </p>
+                    {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
+                    <button onClick={handleCreateStructure} disabled={isPending} className="w-full bg-cyan-600 font-bold py-3 px-6 rounded-lg disabled:opacity-50">
+                        {isPending ? 'Skapar struktur...' : 'Ja, skapa mappstruktur'}
                     </button>
                 </div>
+            );
+        }
+
+        return (
+            <div className="animate-fade-in text-center space-y-6">
+                <CheckCircleIcon className="h-20 w-20 text-green-400 mx-auto" />
+                <h1 className="text-4xl font-bold">Allt är klart!</h1>
+                <p className="text-lg text-gray-300">Din grundinstallation är färdig. Din projektmapp har skapats i Google Drive.</p>
+                
+                {session.user.driveRootFolderUrl && (
+                    <a href={session.user.driveRootFolderUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-3 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+                        <FolderIcon className="h-6 w-6" />
+                        Öppna mappen
+                    </a>
+                )}
+
+                <button onClick={handleFinalizeOnboarding} disabled={isPending} className="w-full flex items-center justify-center gap-3 bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg">
+                    {isPending ? 'Omdirigerar...' : 'Gå till Översikten'} 
+                    <ArrowRightIcon className='h-5 w-5'/>
+                </button>
             </div>
         );
+    };
 
-      case 'creating':
-      case 'finalizing':
-        return (
-          <div className="text-center animate-fade-in p-8 rounded-lg bg-gray-800 shadow-lg">
-            <div className="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4 mx-auto"></div>
-            <h1 className="text-2xl font-bold text-text-primary">{step === 'creating' ? 'Skapar din mappstruktur...' : 'Slutför konfigurationen...'}</h1>
-            <p className="mt-3 text-text-secondary">{step === 'creating' ? 'Ett ögonblick, vi bygger upp ditt kontor i Google Drive.' : 'Vi sparar din profil och förbereder instrumentpanelen.'}</p>
-          </div>
-        );
-
-      case 'success':
-        return (
-          <div className="text-center animate-fade-in space-y-6">
-            <CheckCircleIcon className="w-16 h-16 text-green-500 mx-auto" />
-            <h1 className="text-3xl font-bold text-text-primary">Ditt kontor är redo!</h1>
-            <p className="text-lg text-text-secondary">En ny mappstruktur för "{companyData.companyName}" har skapats i din Google Drive.</p>
-            {driveData?.driveRootFolderUrl && <a href={driveData.driveRootFolderUrl} target="_blank" rel="noopener noreferrer" className="inline-block text-accent-blue hover:underline">Öppna mappen för att inspektera</a>}
-            <button onClick={handleFinalizeAndNavigate} disabled={isPending} className="w-full flex items-center justify-center gap-3 bg-accent-blue hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg text-lg transition-all transform hover:scale-105 disabled:opacity-50">
-              {isPending ? 'Slutför...' : 'Slutför & gå till instrumentpanelen'}<ArrowRightIcon className='h-5 w-5 ml-2'/>
-            </button>
-          </div>
-        );
-
-      case 'error':
-        return (
-            <div className="text-center animate-fade-in space-y-6">
-                <ExclamationCircleIcon className="w-16 h-16 text-red-500 mx-auto" />
-                <h1 className="text-3xl font-bold text-text-primary">Något gick fel</h1>
-                <p className="text-lg text-text-secondary bg-red-900/50 p-4 rounded-lg">{error}</p>
-                <button onClick={() => setStep('input')} className="text-accent-blue hover:underline">Börja om</button>
+    return (
+        <div className="w-full h-full flex flex-col justify-center p-8 bg-gray-900/80 backdrop-blur-sm">
+            <div className="max-w-md mx-auto w-full">
+                {isPending ? <LoadingSpinner /> : renderCurrentStep()}
             </div>
-        );
-    }
-  };
-
-  return (
-    <div className="w-full h-full flex flex-col justify-center p-8 md:p-12 bg-gray-900">
-        <div className="max-w-md mx-auto w-full">
-            {renderContent()}
         </div>
-    </div>
-  );
+    );
 }

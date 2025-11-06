@@ -1,18 +1,23 @@
-
 import * as admin from 'firebase-admin';
 
-// KORRIGERING: Implementerar en kontroll för att förhindra åter-initialisering i utvecklingsmiljön.
-// Detta är en kritisk fix för att förhindra att "hot-reloading" skapar multipla, hängande databasanslutningar.
+// GULDSTANDARD-ARKITEKTUR: Korrekt initiering i en Google Cloud-miljö.
+// Genom att anropa initializeApp() utan argument används Application Default Credentials (ADC)
+// som är säkert tillhandahållna av molninfrastrukturen (t.ex. Cloud Workstations, Cloud Run).
+// Detta eliminerar behovet av .env-filer för server-autentisering och är bästa praxis.
 if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'), // Säkerställer korrekt formatering av nyckeln
-    }),
-    databaseURL: process.env.FIREBASE_DATABASE_URL,
-  });
+  try {
+    admin.initializeApp();
+    console.log('Firebase Admin SDK initialized successfully using Application Default Credentials.');
+  } catch (error) {
+    console.error('CRITICAL: Firebase admin initialization failed.', error);
+    console.error('This likely means the environment is not configured with Application Default Credentials. Check the Cloud Workstations setup.');
+    // Vi kastar inte om felet här för att undvika en omedelbar kraschloop under dev,
+    // men loggar det som kritiskt.
+  }
 }
 
+// Exportera instanser för användning i applikationen.
+// Notera: Om initieringen ovan misslyckas kommer dessa anrop också att misslyckas,
+// vilket är avsiktligt för att snabbt synliggöra konfigurationsfelet.
 export const firestoreAdmin = admin.firestore();
 export const authAdmin = admin.auth();

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Briefcase, FolderOpen, Landmark } from 'lucide-react'; // NYTT: Lucide-ikoner
-import StatCard from '../components/dashboard/StatCard';
+import StatCard from '@/components/dashboard/StatCard';
 import { getDashboardStats } from '@/lib/dal/projects';
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/config/authOptions"

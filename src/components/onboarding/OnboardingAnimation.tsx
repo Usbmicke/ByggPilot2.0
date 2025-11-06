@@ -1,76 +1,67 @@
+
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-// Kärnbudskapen, direkt inspirerade av Masterplanen.
-const manifestTexts = [
-  {
-    line1: "Från papperskaos i bilen...",
-    line2: "...till digital ordning i molnet."
-  },
-  {
-    line1: "Ditt digitala kontor.",
-    line2: "Alltid redo, alltid sökbart."
-  },
-  {
-    line1: "Skapa riskanalyser & offerter.",
-    line2: "Direkt från rätt projektmapp."
-  },
-  {
-    line1: "Byggd på säkerheten från Google.",
-    line2: "Dina filer. Ditt konto."
-  },
-  {
-    line1: "Fokusera på hantverket.",
-    line2: "Jag sköter administrationen."
-  }
+// Ord och fraser som ska animeras
+const phrases = [
+    { text: "Samla allt på ett ställe.", icon: "📂" },
+    { text: "Från offert till faktura.", icon: "invoice" },
+    { text: "Full koll på dina projekt.", icon: "construction_worker" },
+    { text: "Automatiska riskbedömningar.", icon: "warning" },
+    { text: "Din digitala kollega.", icon: "robot_face" },
 ];
 
-export const OnboardingAnimation = () => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isVisible, setIsVisible] = useState(true);
-
-  useEffect(() => {
-    // Skapar en intervall för att byta budskap med en mjuk övergång.
-    const interval = setInterval(() => {
-      setIsVisible(false); // Startar uttoning
-      setTimeout(() => {
-        setCurrentIndex((prevIndex) => (prevIndex + 1) % manifestTexts.length);
-        setIsVisible(true); // Startar intoning med nästa budskap
-      }, 750); // Väntar tills uttoningen är klar.
-    }, 5000); // Byt budskap var 5:e sekund.
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const currentText = manifestTexts[currentIndex];
-
-  return (
-    <div className="w-full h-full bg-gray-900 text-white flex flex-col items-center justify-center p-12 text-center relative overflow-hidden">
-      {/* En subtil, pulserande ljuskälla som ger liv åt vyn. */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-        <div className="w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse"></div>
-      </div>
-      
-      <div className="relative z-10">
-        <h2 className="text-3xl lg:text-4xl font-bold text-cyan-300 mb-8">
-          Din Proaktiva Kollega
-        </h2>
-        
-        {/* En container med fast höjd förhindrar att layouten 'hoppar' mellan byten. */}
-        <div className="h-24">
-          <div 
-            className={`transition-opacity duration-700 ease-in-out ${isVisible ? 'opacity-100' : 'opacity-0'}`}
-          >
-            <p className="text-2xl lg:text-3xl font-light text-gray-200">
-              {currentText.line1}
-            </p>
-            <p className="text-2xl lg:text-3xl font-semibold text-gray-50 mt-1">
-              {currentText.line2}
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+// Mappar ikon-namn till faktiska emojis eller ikoner
+const iconMap: { [key: string]: string } = {
+    invoice: "🧾",
+    construction_worker: "👷",
+    warning: "⚠️",
+    robot_face: "🤖",
 };
+
+export default function OnboardingAnimation() {
+    const [index, setIndex] = useState(0);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setIndex((prevIndex) => (prevIndex + 1) % phrases.length);
+        }, 4000); // Byt fras var 4:e sekund
+
+        return () => clearInterval(interval);
+    }, []);
+
+    const currentPhrase = phrases[index];
+    const icon = iconMap[currentPhrase.icon] || currentPhrase.icon;
+
+    return (
+        <div className="w-full h-full flex flex-col justify-center items-center bg-gray-900 p-8 md:p-16 rounded-l-2xl">
+            <div className="text-center">
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.7, ease: "easeInOut" }}
+                        className="flex flex-col items-center"
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.5 }} 
+                            animate={{ scale: 1 }} 
+                            transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.2 }}>
+                           <span className="text-8xl">{icon}</span>
+                        </motion.div>
+                        <p className="mt-6 text-3xl font-semibold text-gray-200 max-w-sm">
+                            {currentPhrase.text}
+                        </p>
+                    </motion.div>
+                </AnimatePresence>
+            </div>
+             <div className="absolute bottom-8 text-center text-gray-600">
+                <p>ByggPilot - Din digitala hantverksassistent</p>
+            </div>
+        </div>
+    );
+}

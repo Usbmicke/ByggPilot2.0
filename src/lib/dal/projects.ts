@@ -39,11 +39,19 @@ export interface DashboardStats {
  */
 export async function getDashboardStats(userId: string): Promise<DashboardStats> {
     console.log(`DAL: Hämtar projektstatistik för användare ${userId}`);
+
+    // GULDSTANDARD-FIX: Guard clause för att säkerställa att vi har ett userId.
+    if (!userId) {
+        console.warn("DAL: getDashboardStats anropades utan userId. Returnerar tomma data.");
+        return { totalProjects: 0, ongoingProjects: 0, totalRevenue: '0 kr' };
+    }
+
     try {
         const projectsCollection = firestoreAdmin.collection('projects').where('userId', '==', userId);
         const snapshot = await projectsCollection.get();
 
         if (snapshot.empty) {
+            console.log("DAL: Inga projekt hittades för användaren, returnerar nollställd statistik.");
             return { totalProjects: 0, ongoingProjects: 0, totalRevenue: '0 kr' };
         }
 
@@ -57,9 +65,15 @@ export async function getDashboardStats(userId: string): Promise<DashboardStats>
         console.log(`DAL: Statistik hämtad: ${totalProjects} totalt, ${ongoingProjects} pågående.`);
         return { totalProjects, ongoingProjects, totalRevenue };
     } catch (error) {
-        console.error("DAL Error in getDashboardStats:", error);
-        // Returnerar ett säkert standardvärde vid fel.
-        return { totalProjects: 0, ongoingProjects: 0, totalRevenue: '0 kr' };
+        // GULDSTANDARD-FELHANTERING: Hantera "NOT_FOUND" specifikt och elegant.
+        if (error.code === 5) { // 5 är gRPC-koden för NOT_FOUND
+            console.log("DAL: 'projects'-collection existerar inte än (förväntat vid första körning). Returnerar nollställd statistik.");
+            return { totalProjects: 0, ongoingProjects: 0, totalRevenue: '0 kr' };
+        } else {
+            console.error("DAL Critical Error in getDashboardStats:", error);
+            // Returnerar ett säkert standardvärde för att förhindra UI-krasch.
+            return { totalProjects: 0, ongoingProjects: 0, totalRevenue: '0 kr' };
+        }
     }
 }
 

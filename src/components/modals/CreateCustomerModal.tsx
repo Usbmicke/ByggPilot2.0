@@ -3,11 +3,11 @@
 
 import React, { useState, useTransition } from 'react';
 import { BuildingOffice2Icon, UserIcon, ArrowLeftIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
-import { createCustomer } from '@/app/actions/customerActions';
-import { useModal } from '@/app/contexts/ModalContext';
+import { createCustomer } from '@/actions/customerActions';
+import { useModal } from '@/contexts/ModalContext';
 import { IdentityLookupStep } from './steps/IdentityLookupStep';
 // VÄRLDSKLASS-KORRIGERING: Importerar endast Customer-typen.
-import { Customer } from '@/app/types/index';
+import { Customer } from '@/types/index';
 
 type Step = 'chooseType' | 'lookup' | 'final';
 // VÄRLDSKLASS-KORRIGERING: Definierar kundtypen som en sträng-union, i enlighet med Customer-interfacet.
