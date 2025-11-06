@@ -6,9 +6,9 @@ import { usePathname } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import { Plus, Settings, LogOut } from 'lucide-react'; // NYTT: Byt till Lucide-ikoner för enhetlighet
 
-import { primaryNavigation } from '../../constants/navigation';
+import { primaryNavigation } from '@/constants/navigation';
 import SidebarUserProfile from './SidebarUserProfile';
-import { useModal } from '../../contexts/ModalContext';
+import { useModal } from '@/contexts/ModalContext';
 
 const Sidebar: React.FC = () => {
   const pathname = usePathname();

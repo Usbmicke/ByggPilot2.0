@@ -4,9 +4,9 @@
 import React, { useState, useEffect, useTransition } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { getCustomers } from '@/app/actions/customerActions';
-import { createProject } from '@/app/actions/projectActions';
-import { useModal } from '@/app/contexts/ModalContext';
+import { getCustomers } from '@/actions/customerActions';
+import { createProject } from '@/actions/projectActions';
+import { useModal } from '@/contexts/ModalContext';
 import { projectSchema, type ProjectFormData } from '@/lib/schemas/project';
 
 const CreateProjectModal = () => {

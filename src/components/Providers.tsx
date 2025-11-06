@@ -3,10 +3,10 @@
 
 import React from 'react';
 import { SessionProvider } from 'next-auth/react';
-import { ModalProvider } from '@/app/contexts/ModalContext';
-import { UIProvider } from '@/app/contexts/UIContext';
+import { ModalProvider } from '@/contexts/ModalContext';
+import { UIProvider } from '@/contexts/UIContext';
 // import { ChatProvider } from '@/contexts/ChatContext';
-import ModalRenderer from '@/app/components/modals/ModalRenderer';
+import ModalRenderer from '@/components/modals/ModalRenderer';
 
 interface Props {
     children: React.ReactNode;

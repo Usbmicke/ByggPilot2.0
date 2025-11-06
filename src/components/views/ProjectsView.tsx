@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 import { Project } from '@/app/types';
 // ARKITEKTURKORRIGERING: Importerar useModal för att interagera med den globala modal-kontexten.
-import { useModal } from '@/app/contexts/ModalContext';
+import { useModal } from '@/contexts/ModalContext';
 
 // --- Sub-komponent för en projektrad --- 
 const ProjectRow = ({ project }: { project: Project }) => {

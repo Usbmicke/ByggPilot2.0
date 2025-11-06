@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { useModal } from '@/app/contexts/ModalContext';
+import { useModal } from '@/contexts/ModalContext';
 import { ArrowRightIcon, BuildingStorefrontIcon, DocumentTextIcon, FolderPlusIcon, UserPlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 // Enskild knapp-komponent för återanvändning

@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
-import SearchResults from '@/app/components/layout/SearchResults';
+import SearchResults from '@/components/layout/SearchResults';
 
 const GlobalSearchBar: React.FC = () => {
   const [query, setQuery] = useState('');

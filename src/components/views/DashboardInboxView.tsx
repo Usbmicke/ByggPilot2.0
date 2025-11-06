@@ -2,10 +2,10 @@
 'use client';
 
 import React from 'react';
-import { useEvents } from '@/app/hooks/useApi';
-import { PROACTIVE_TIP_EVENT } from '@/app/constants/globalContent';
-import ActionCard from '@/app/components/ActionCard';
-import { Event, ActionableEvent } from '@/app/types/index';
+import { useEvents } from '@/hooks/useApi';
+import { PROACTIVE_TIP_EVENT } from '@/constants/globalContent';
+import ActionCard from '@/components/ActionCard';
+import { Event, ActionableEvent } from '@/types/index';
 
 /**
  * VÄRLDSKLASS-TRANSFORMATION: Konverterar alla typer av Events till en garanterat
