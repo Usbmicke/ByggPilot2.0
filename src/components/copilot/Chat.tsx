@@ -5,14 +5,13 @@ import { useChat } from '@ai-sdk/react';
 import { logger } from '@/lib/logger';
 import { useState, useRef, useEffect } from 'react';
 import { useSWRConfig } from 'swr';
-import { ChevronUp, ChevronDown, Paperclip, Mic, ArrowUp, AlertTriangle, X } from 'lucide-react';
+import { ChevronUp, Paperclip, AlertTriangle, X, Send } from 'lucide-react'; // Bytte ut ArrowUp och ChevronDown mot Send
 
 // ===================================================================================================
-// CHAT COMPONENT V27.0 - SLUTGILTIG ARKITEKTUR: ABSOLUT POSITIONERING
+// CHAT COMPONENT V29.0 - KORREKT SKICKA-IKON
 // ===================================================================================================
-// Denna version är designad för att fungera med "Inre Scroll"-arkitekturen i DashboardLayout.
-// Den använder `position: absolute` och enkla, robusta koordinater (`top-8`, `bottom-8`, etc.)
-// för att positionera sig korrekt och responsivt inom den `relative` <main>-containern.
+// Denna version byter ut den tvetydiga ArrowUp-ikonen mot en tydlig Send-ikon (pappersflygplan)
+// för att eliminera förvirringen mellan "expandera" och "skicka".
 
 export default function Chat() {
   const { mutate } = useSWRConfig();
@@ -75,7 +74,6 @@ export default function Chat() {
       setChatError(null);
   };
 
-  // --- KORREKTA KLASSER FÖR ABSOLUT POSITIONERING INOM LAYOUTEN ---
   const commonContainerClasses = `absolute z-10 transition-all duration-500 ease-in-out border shadow-2xl rounded-xl`;
   const collapsedClasses = `bottom-8 left-8 right-8 h-16 bg-background-secondary border-border-color/80`;
   const expandedClasses = `top-8 bottom-8 left-8 right-8 bg-background-secondary/90 backdrop-blur-md border-blue-500/30`;
@@ -102,13 +100,13 @@ export default function Chat() {
         style={{ height: isExpanded ? 'calc(100% - 128px)' : '0' }}
       >
         {chatError && (
-          <div className="bg-destructive/10 border-l-4 border-destructive text-destructive-foreground p-4 rounded-md flex items-start space-x-4">
-            <AlertTriangle className="h-6 w-6 flex-shrink-0 mt-0.5" />
-            <div>
-              <h4 className="font-bold">Ett fel uppstod</h4>
-              <p className="text-sm">{chatError}</p>
+            <div className="bg-destructive/10 border-l-4 border-destructive text-destructive-foreground p-4 rounded-md flex items-start space-x-4">
+                <AlertTriangle className="h-6 w-6 flex-shrink-0 mt-0.5" />
+                <div>
+                    <h4 className="font-bold">Ett fel uppstod</h4>
+                    <p className="text-sm">{chatError}</p>
+                </div>
             </div>
-          </div>
         )}
         {messages.map(m => (
           <div key={m.id} className={`whitespace-pre-wrap flex flex-col items-${m.role === 'user' ? 'end' : 'start'}`}>
@@ -120,17 +118,19 @@ export default function Chat() {
         ))}
       </div>
 
-      {/* ---- Input-sektion (Alltid synlig, men ändrar utseende) ---- */}
+      {/* ---- Input-sektion med korrigerad knapplogik och ikon ---- */}
       <div className={`w-full ${isExpanded ? 'p-4 border-t border-border-color/80' : 'p-2 h-full'}`}>
         <form onSubmit={handleSubmit} className="flex items-center space-x-3 h-full w-full bg-background-tertiary rounded-lg px-4 ring-2 ring-transparent focus-within:ring-blue-500">
           
-          <button 
-            type="button" 
-            onClick={() => setIsExpanded(!isExpanded)} 
-            className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-full"
-          >
-            {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
-          </button>
+          {!isExpanded && (
+            <button 
+              type="button" 
+              onClick={() => setIsExpanded(true)} 
+              className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-full"
+            >
+              <ChevronUp className="w-5 h-5" />
+            </button>
+          )}
 
           <button type="button" onClick={handleFeatureNotImplemented} disabled={isLoading || !!chatError} className="p-2 text-text-secondary hover:text-text-primary disabled:opacity-50">
             <Paperclip className="w-5 h-5" />
@@ -152,7 +152,7 @@ export default function Chat() {
               className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold disabled:opacity-50 disabled:bg-gray-500 hover:bg-primary/90"
               disabled={isLoading || !input?.trim() || !!chatError}
             >
-              <ArrowUp className="w-5 h-5" />
+              <Send className="w-4 h-4" />
             </button>
           )}
         </form>
