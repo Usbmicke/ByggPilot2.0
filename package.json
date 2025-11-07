@@ -26,7 +26,6 @@
     "@types/recharts": "^1.8.29",
     "@upstash/ratelimit": "^2.0.6",
     "@vercel/kv": "^3.0.0",
-    "ai": "^5.0.88",
     "chart.js": "^4.5.0",
     "dotenv": "^17.2.3",
     "firebase": "^10.12.2",
