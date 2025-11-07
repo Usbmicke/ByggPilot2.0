@@ -3,15 +3,18 @@
 
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
-import Chat from '@/components/copilot/Chat';
+import dynamic from 'next/dynamic';
 
 // =================================================================================
-// DASHBOARD LAYOUT V5.0 - Sista Åtgärden: Tvingad Om-rendering
+// DASHBOARD LAYOUT V11.0 - ARKITEKTUR FÖR "INRE SCROLL"
 // =================================================================================
-// Genom att lägga till ett unikt `key`-attribut till Chat-komponenten tvingar vi
-// React att totalt förstöra och återskapa komponenten vid varje rendering.
-// Detta är en "brute force"-metod för att eliminera eventuella dolda tillstånds- 
-// eller cachningsproblem som orsakar den envisa buggen.
+// Detta är den slutgiltiga, korrekta arkitekturen. `main`-elementet agerar
+// som en positionerings-ram (`relative`). Inuti den finns två syskon:
+// 1. En `div` som hanterar sidans innehåll och är den *enda* scrollande delen.
+// 2. Chat-komponenten, som nu kan positioneras `absolute` i förhållande till ramen,
+//    helt frikopplad från innehållets scroll-position.
+
+const Chat = dynamic(() => import('@/components/copilot/Chat'), { ssr: false });
 
 export default function DashboardLayout({
   children,
@@ -22,19 +25,21 @@ export default function DashboardLayout({
     <div className="h-screen flex flex-col bg-background-primary text-text-primary">
       <Header />
       <div className="flex flex-1 overflow-hidden">
-        {/* -- Vänster sidomeny -- */}
         <div className="w-72 flex-shrink-0 bg-background-secondary border-r border-border-color">
           <Sidebar />
         </div>
 
-        {/* -- Huvudinnehåll -- */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8 relative">
-          {children}
+        {/* Huvud-ramen: Icke-scrollande, agerar positionerings-kontext */}
+        <main className="flex-1 relative">
+          {/* Inre scroll-container: Har padding och är den enda scrollande delen */}
+          <div className="h-full overflow-y-auto p-6 md:p-8">
+            {children}
+          </div>
+          
+          {/* Chatten: Positioneras i förhållande till <main>, inte den scrollande diven */}
+          <Chat />
         </main>
       </div>
-      
-      {/* -- Tvingar en ny instans av Chat-komponenten -- */}
-      <Chat key={Math.random()} />
     </div>
   );
 }
