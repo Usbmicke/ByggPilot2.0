@@ -6,9 +6,12 @@ import Sidebar from "@/components/layout/Sidebar";
 import Chat from '@/components/copilot/Chat';
 
 // =================================================================================
-// DASHBOARD LAYOUT V4.0 - Arkitektoniskt Korrekt
+// DASHBOARD LAYOUT V5.0 - Sista Åtgärden: Tvingad Om-rendering
 // =================================================================================
-// Denna version använder korrekta, absoluta sökvägar enligt tsconfig.json.
+// Genom att lägga till ett unikt `key`-attribut till Chat-komponenten tvingar vi
+// React att totalt förstöra och återskapa komponenten vid varje rendering.
+// Detta är en "brute force"-metod för att eliminera eventuella dolda tillstånds- 
+// eller cachningsproblem som orsakar den envisa buggen.
 
 export default function DashboardLayout({
   children,
@@ -24,14 +27,14 @@ export default function DashboardLayout({
           <Sidebar />
         </div>
 
-        {/* -- Huvudinnehåll (tar nu upp hela resterande ytan) -- */}
+        {/* -- Huvudinnehåll -- */}
         <main className="flex-1 overflow-y-auto p-6 md:p-8 relative">
           {children}
         </main>
       </div>
       
-      {/* -- NY, FLYTANDE CO-PILOT KOMPONENT -- */}
-      <Chat />
+      {/* -- Tvingar en ny instans av Chat-komponenten -- */}
+      <Chat key={Math.random()} />
     </div>
   );
 }

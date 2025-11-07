@@ -7,18 +7,32 @@ import { useSWRConfig } from 'swr';
 import { ChevronUp, ChevronDown, X, Paperclip, Mic, ArrowUp, AlertTriangle } from 'lucide-react';
 
 // ===================================================================================================
-//h CHAT COMPONENT V14.0 - Blueprint "Canary Test": Verifierar anslutning.
+//h CHAT COMPONENT V11.0 - Blueprint "Polished Professionalism": Design, Detaljer & Finess
 // ===================================================================================================
-// Detta är ett diagnostiskt test. Den enda ändringen är att ersätta platshållartexten med
-// en statisk sträng för att verifiera att ändringar i denna fil faktiskt når fram till webbläsaren.
+// Denna slutgiltiga version implementerar en professionell visuell uppgradering med fokus på detaljer,
+// färgaccenter och ett otvetydigt gränssnitt, helt i enliget med användarens specifikationer.
 
 export default function Chat() {
   const { mutate } = useSWRConfig();
   const [isExpanded, setIsExpanded] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
 
-  // KANARIETEST: Byt ut dynamisk platshållare mot en statisk sträng.
-  const placeholder = "SER DU DENNA TEXT?";
+  const placeholderSuggestions = [
+    'Skapa en checklista för badrumsrenovering',
+    'Vilka projekt har snart deadline?',
+    'Hjälp mig göra en egenkontroll för...',
+    'Sammanfatta den senaste tidrapporteringen',
+    'Skapa ett utkast för en ny offert'
+  ];
+  const [placeholder, setPlaceholder] = useState(placeholderSuggestions[0]);
+
+  useEffect(() => {
+    if (isExpanded) return;
+    const interval = setInterval(() => {
+      setPlaceholder(prev => placeholderSuggestions[(placeholderSuggestions.indexOf(prev) + 1) % placeholderSuggestions.length]);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [isExpanded]);
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, setMessages, stop } = useChat({
     api: '/api/chat',
@@ -56,6 +70,7 @@ export default function Chat() {
       setChatError(null);
   };
 
+  // DESIGNFIX: Lägger till en subtil blå inramning när chatten är expanderad.
   const commonContainerClasses = `fixed z-50 transition-all duration-500 ease-in-out border`;
   const collapsedClasses = `left-80 right-8 bottom-5 h-16 rounded-xl bg-background-secondary shadow-2xl border-border-color/80`;
   const expandedClasses = `top-16 left-72 right-0 bottom-0 rounded-t-xl bg-background-secondary/90 backdrop-blur-md border-blue-500/30`;
@@ -69,7 +84,7 @@ export default function Chat() {
                 <small>Rensa</small>
             </button>
             <button onClick={() => setIsExpanded(false)} className="p-2 rounded-full hover:bg-background-tertiary">
-              <ChevronDown className="w-5 h-5" />
+              <X className="w-5 h-5" />
             </button>
         </div>
       </div>
@@ -79,47 +94,68 @@ export default function Chat() {
         className={`overflow-y-auto p-4 space-y-4 ${isExpanded ? '' : 'hidden'}`}
         style={{ height: isExpanded ? 'calc(100% - 128px)' : '0' }}
       >
-        {/* ... (oförändrad) ... */}
+        {chatError && (
+            <div className="bg-destructive/10 border-l-4 border-destructive text-destructive-foreground p-4 rounded-md flex items-start space-x-4">
+                <AlertTriangle className="h-6 w-6 flex-shrink-0 mt-0.5" />
+                <div>
+                    <h4 className="font-bold">Ett fel uppstod</h4>
+                    <p className="text-sm">{chatError}</p>
+                </div>
+            </div>
+        )}
+        {messages.map(m => (
+          <div key={m.id} className={`whitespace-pre-wrap flex flex-col items-${m.role === 'user' ? 'end' : 'start'}`}>
+            <div className={`p-3 rounded-lg max-w-2xl ${m.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-background-tertiary'}`}>
+              <span className="font-bold capitalize">{m.role === 'assistant' ? 'ByggPilot' : 'Du:'}</span>
+              <p>{m.content}</p>
+            </div>
+          </div>
+        ))}
+        {messages.length === 0 && !chatError && isExpanded && (
+          <div className="text-center text-text-secondary p-8">
+            <p>Chatthistorik kommer att visas här. Börja med att ställa en fråga nedan.</p>
+          </div>
+        )}
       </div>
 
       <div className={`w-full ${isExpanded ? 'p-4 border-t border-border-color/80' : 'p-2 h-full'}`}>
         <form onSubmit={handleSubmit} className="flex items-center space-x-3 h-full w-full bg-background-tertiary rounded-lg px-4">
+          
+          {/* DESIGNFIX: Knappen har nu en blå accentfärg och tydlig hover-effekt. */}
+          <button 
+            type="button" 
+            onClick={() => setIsExpanded(!isExpanded)} 
+            className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-full"
+          >
+            {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
+          </button>
 
-          {!isExpanded ? (
-            <button 
-              type="button" 
-              onClick={() => setIsExpanded(true)} 
-              className="p-2 w-full h-full flex items-center justify-start text-blue-500"
+          <button type="button" onClick={handleFeatureNotImplemented} disabled={isLoading || !!chatError} className="p-2 text-text-secondary hover:text-text-primary disabled:opacity-50">
+            <Paperclip className="w-5 h-5" />
+          </button>
+          <button type="button" onClick={handleFeatureNotImplemented} disabled={isLoading || !!chatError} className="p-2 text-text-secondary hover:text-text-primary disabled:opacity-50">
+            <Mic className="w-5 h-5" />
+          </button>
+          
+          <input
+            ref={inputRef}
+            className="flex-1 h-full bg-transparent focus:ring-0 focus:outline-none placeholder:text-text-secondary text-base"
+            value={input}
+            placeholder={isLoading ? 'Tänker...' : (isExpanded ? 'Ställ en fråga...' : placeholder)}
+            onChange={handleInputChange}
+            onFocus={() => { if (!isExpanded) setIsExpanded(true); }}
+            disabled={isLoading || !!chatError}
+          />
+          
+          {/* DESIGNFIX: En ren, dedikerad "Skicka"-knapp som bara visas när den behövs. */}
+          {isExpanded && (
+            <button
+              type="submit"
+              className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold disabled:opacity-50 disabled:bg-gray-500 hover:bg-primary/90"
+              disabled={isLoading || !input?.trim() || !!chatError}
             >
-              <ChevronUp className="w-5 h-5 flex-shrink-0 mr-3" />
-              <span className="text-text-secondary">{placeholder}</span>
+              <ArrowUp className="w-5 h-5" />
             </button>
-          ) : (
-            <>
-              <button type="button" onClick={handleFeatureNotImplemented} disabled={isLoading || !!chatError} className="p-2 text-text-secondary hover:text-text-primary disabled:opacity-50">
-                <Paperclip className="w-5 h-5" />
-              </button>
-              <button type="button" onClick={handleFeatureNotImplemented} disabled={isLoading || !!chatError} className="p-2 text-text-secondary hover:text-text-primary disabled:opacity-50">
-                <Mic className="w-5 h-5" />
-              </button>
-              
-              <input
-                ref={inputRef}
-                className="flex-1 h-full bg-transparent focus:ring-0 focus:outline-none placeholder:text-text-secondary text-base"
-                value={input}
-                placeholder={isLoading ? 'Tänker...' : 'Ställ en fråga...'}
-                onChange={handleInputChange}
-                disabled={isLoading || !!chatError}
-              />
-              
-              <button
-                type="submit"
-                className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold disabled:opacity-50 disabled:bg-gray-500 hover:bg-primary/90"
-                disabled={isLoading || !input?.trim() || !!chatError}
-              >
-                <ArrowUp className="w-5 h-5" />
-              </button>
-            </>
           )}
         </form>
       </div>
