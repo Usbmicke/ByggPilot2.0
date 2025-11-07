@@ -4,27 +4,26 @@ import { Message } from '@ai-sdk/react';
 import { AlertTriangle } from 'lucide-react';
 
 // ====================================================================================================
-// MESSAGE LIST COMPONENT V1.2 (Toppskick: A11y & Semantics Certified)
+// MESSAGE LIST COMPONENT V2.0 (Blueprint: "Logisk Chatt med Toppskick-Design")
 // ====================================================================================================
-// Denna version är certifierad för "Toppskick". Den icke-semantiska `div`-baserade listan har 
-// ersatts med en korrekt `<ul>`/`<li>`-struktur, och felmeddelandet har fått `role="alert"`.
-// Detta säkerställer en fullgod upplevelse för användare med skärmläsare.
+// Denna version är helt renad från all expand/collapse-logik. Den är nu en "dum" komponent som 
+// endast ansvarar för att rendera meddelandelistan. Den är alltid synlig när den renderas av sin
+// förälder, `Chat.tsx`.
 
 interface MessageListProps {
   messages: Message[];
   chatError: string | null;
-  isExpanded: boolean;
   chatContainerRef: React.RefObject<HTMLDivElement>;
 }
 
-export function MessageList({ messages, chatError, isExpanded, chatContainerRef }: MessageListProps) {
+export function MessageList({ messages, chatError, chatContainerRef }: MessageListProps) {
 
   return (
+    // `flex-1` säkerställer att listan tar upp allt tillgängligt utrymme.
     <div
       ref={chatContainerRef}
-      className={`overflow-y-auto p-4 flex-1 ${isExpanded ? '' : 'hidden'}`}
+      className="overflow-y-auto p-4 flex-1"
     >
-      {/* TOPPSKICK-FIX: `role="alert"` meddelar skärmläsare omedelbart om felet. */}
       {chatError && (
         <div 
           role="alert"
@@ -38,7 +37,6 @@ export function MessageList({ messages, chatError, isExpanded, chatContainerRef 
         </div>
       )}
 
-      {/* TOPPSKICK-FIX: En `ul` ger semantisk mening åt listan för skärmläsare. */}
       <ul className="space-y-4">
         {messages.map(m => (
           <li key={m.id} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
@@ -50,7 +48,7 @@ export function MessageList({ messages, chatError, isExpanded, chatContainerRef 
         ))}
       </ul>
 
-      {messages.length === 0 && !chatError && isExpanded && (
+      {messages.length === 0 && !chatError && (
         <div className="text-center text-text-secondary p-8">
           <p>Chatthistorik kommer att visas här. Börja med att ställa en fråga nedan.</p>
         </div>
