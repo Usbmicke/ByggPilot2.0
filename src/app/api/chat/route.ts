@@ -9,8 +9,8 @@ import { getToken } from 'next-auth/jwt';
 import { logger } from '@/lib/logger';
 import { NextRequest } from 'next/server';
 
-// KORRIGERING: Återaktiverar Edge Runtime för prestanda och stabilitet.
-export const runtime = 'edge'; 
+// FIX: Tar bort 'edge' runtime. Den är inkompatibel med nödvändiga server-bibliotek (som Firebase/Auth).
+// Detta var grundorsaken till att "Skicka"-anropet kraschade tyst på servern.
 export const maxDuration = 30;
 
 const google = createGoogleGenerativeAI({
