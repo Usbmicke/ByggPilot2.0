@@ -4,28 +4,25 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
-import { Plus, Settings, LogOut } from 'lucide-react'; // NYTT: Byt till Lucide-ikoner för enhetlighet
+import { Plus, Settings, LogOut } from 'lucide-react';
 
 import { primaryNavigation } from '@/constants/navigation';
 import SidebarUserProfile from './SidebarUserProfile';
 import { useModal } from '@/contexts/ModalContext';
 
+// VERSION 1.1: Logotypen är borttagen härifrån och har flyttats till Header.tsx
 const Sidebar: React.FC = () => {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { openModal } = useModal();
 
   return (
+    // Tar bort den övre `h-16`-sektionen för loggan.
     <div className="h-full bg-background-secondary text-text-primary flex flex-col p-4 border-r border-border-color">
       
-      {/* ---- LOGO/VARUMÄRKE ---- */}
-      <div className="h-16 flex items-center px-2 mb-4">
-        {/* Ersätt med din riktiga logotyp-komponent här när den är klar */}
-        <span className="text-2xl font-bold text-text-primary">ByggPilot</span>
-      </div>
-
       {/* ---- HUVUDNAVIGERING ---- */}
-      <nav className="flex-1 space-y-2">
+      {/* `mt-4` tillagt för att ge lite luft uppåt efter att loggan togs bort */}
+      <nav className="flex-1 space-y-2 mt-4">
         {primaryNavigation.map((item) => {
           const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
           return (

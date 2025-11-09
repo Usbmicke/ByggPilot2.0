@@ -9,9 +9,11 @@ import { getToken } from 'next-auth/jwt';
 import { logger } from '@/lib/logger';
 import { NextRequest } from 'next/server';
 
-// FIX: Säkerställer att 'edge' runtime är borttagen. Den är inkompatibel med 
-// server-bibliotek som next-auth, vilket var grundorsaken till att 
-// "Skicka"-anropet kraschade tyst på servern.
+// ===================================================================================================
+// CHAT API V30.0 - FULL FLÖDESREVISION (BACKEND)
+// ===================================================================================================
+// Denna version är fullt instrumenterad med loggning för att diagnostisera hela anropskedjan.
+
 export const maxDuration = 30;
 
 const google = createGoogleGenerativeAI({
@@ -21,24 +23,31 @@ const google = createGoogleGenerativeAI({
 const ratelimit = kv
   ? new Ratelimit({
       redis: kv,
-      // Begränsar till 50 meddelanden per dag per användare.
       limiter: Ratelimit.slidingWindow(50, '1 d'), 
     })
   : null;
 
 export async function POST(req: NextRequest) {
+    logger.info('[API:Chat] STEG 1/5: Anrop mottaget.');
+
     try {
-        // Använder Edge-kompatibla 'getToken' för säker autentisering.
         const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
-        // Validerar att token finns och innehåller användar-ID ('sub').
         if (!token?.sub) {
-            logger.warn('[API:Chat] Obehörigt anrop utan giltig token.');
+            logger.warn('[API:Chat] STEG 2/5: AVSLAGEN. Obehörigt anrop, ingen giltig token.');
             return new Response('Unauthorized', { status: 401 });
         }
         const userId = token.sub;
+        logger.info(`[API:Chat] STEG 2/5: GODKÄND. Anrop autentiserat för användare: ${userId}`);
 
-        // Implementerar Rate Limiting.
+        // Loggar närvaron av API-nyckeln.
+        const apiKeyIsSet = !!process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+        logger.info(`[API:Chat] STEG 3/5: API-nyckel är ${apiKeyIsSet ? 'satt' : 'INTE SATT'}.`);
+        if (!apiKeyIsSet) {
+            // Avslutar tidigt om API-nyckeln saknas för att ge tydligt fel.
+            throw new Error("Miljövariabeln GOOGLE_GENERATIVE_AI_API_KEY är inte satt på servern.");
+        }
+
         if (ratelimit) {
             const { success } = await ratelimit.limit(userId);
             if (!success) {
@@ -48,8 +57,8 @@ export async function POST(req: NextRequest) {
         }
 
         const { messages } = await req.json();
+        logger.info('[API:Chat] STEG 4/5: Påbörjar anrop till AI-modell med följande meddelanden:', { messages });
 
-        // Anropar AI-modellen med Vercel AI SDK i en standard server-miljö.
         const result = await streamText({
             model: google('gemini-1.5-flash-latest'),
             system: masterPrompt,
@@ -57,16 +66,22 @@ export async function POST(req: NextRequest) {
             messages: messages,
         });
         
+        logger.info('[API:Chat] STEG 5/5: AI-anrop lyckades, påbörjar streaming av svar.');
         return result.toAIStreamResponse();
 
     } catch (error) {
-        // Förbättrad fel-loggning för att fånga alla typer av fel.
         const errorMessage = error instanceof Error ? error.message : 'Okänt fel';
-        logger.error('[API:Chat] Ett oväntat fel inträffade', { error: errorMessage, stack: (error as Error).stack });
+        const errorStack = error instanceof Error ? error.stack : 'Ingen stack trace tillgänglig.';
+        logger.error('[API:Chat] KRITISKT FEL under anrop', { 
+            message: errorMessage, 
+            stack: errorStack,
+            errorObject: JSON.stringify(error, null, 2) // Loggar hela felobjektet
+        });
 
-        return new Response('Ett oväntat fel inträffade. Försök igen senare.', { 
+        // Returnerar ett mer informativt fel till klienten
+        return new Response(JSON.stringify({ error: 'Ett oväntat serverfel inträffade.', details: errorMessage }), { 
             status: 500,
-            headers: { 'Content-Type': 'text/plain' }
+            headers: { 'Content-Type': 'application/json' }
         });
     }
 }
