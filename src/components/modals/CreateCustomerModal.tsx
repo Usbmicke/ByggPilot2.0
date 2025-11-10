@@ -3,14 +3,13 @@
 
 import React, { useState, useTransition } from 'react';
 import { BuildingOffice2Icon, UserIcon, ArrowLeftIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
-import { createCustomer } from '@/actions/customerActions';
 import { useModal } from '@/contexts/ModalContext';
 import { IdentityLookupStep } from './steps/IdentityLookupStep';
-// VÄRLDSKLASS-KORRIGERING: Importerar endast Customer-typen.
 import { Customer } from '@/types/index';
 
+// Gammal import borttagen, Genkit-flöde används via API.
+
 type Step = 'chooseType' | 'lookup' | 'final';
-// VÄRLDSKLASS-KORRIGERING: Definierar kundtypen som en sträng-union, i enlighet med Customer-interfacet.
 export type CustomerType = 'company' | 'private';
 
 const CreateCustomerModal = () => {
@@ -41,13 +40,25 @@ const CreateCustomerModal = () => {
       };
 
       startTransition(async () => {
-          const result = await createCustomer(finalData as Customer);
-          if (result.status === 'success') {
-              setCustomerData(finalData);
-              setStep('final');
-          } else {
-              setError(result.message || 'Ett okänt fel uppstod.');
-              setStep('lookup');
+          try {
+            const response = await fetch('/api/flow/customerFlow', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'create', payload: finalData })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.id) {
+                throw new Error(result.message || 'Kunde inte skapa kund.');
+            }
+
+            setCustomerData({ ...finalData, id: result.id });
+            setStep('final');
+
+          } catch (e: any) {
+            setError(e.message || 'Ett okänt fel uppstod.');
+            setStep('lookup'); // Gå tillbaka till formuläret
           }
       });
   }
@@ -94,7 +105,7 @@ const CreateCustomerModal = () => {
 
   return (
     <div>
-       {isPending && <div className="text-center p-4">Sparar kund...</div>}
+       {isPending && <div className="absolute inset-0 bg-gray-900/80 flex items-center justify-center z-50"><div className="text-white text-lg">Sparar kund...</div></div>}
        {error && <div className="my-4 bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm"><strong>Fel:</strong> {error}</div>}
        {!isPending && renderStep()}
     </div>

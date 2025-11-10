@@ -6,11 +6,12 @@ import Sidebar from "@/components/layout/Sidebar";
 import dynamic from 'next/dynamic';
 
 // =================================================================================
-// DASHBOARD LAYOUT V11.0 - ARKITEKTUR FÖR "INRE SCROLL"
+// DASHBOARD LAYOUT V12.0 - CHATTEN ÅTERINkopplad
 // =================================================================================
 
-// BORTTAGET: Chat-komponenten är bortkopplad under ombyggnad.
-// const Chat = dynamic(() => import('@/components/copilot/Chat'), { ssr: false });
+// Importerar den nya, stabila chatt-komponenten. 
+// `ssr: false` är viktigt eftersom den använder hooks som `useState` som bara körs på klienten.
+const Chat = dynamic(() => import('@/components/chat/Chat'), { ssr: false });
 
 export default function DashboardLayout({
   children,
@@ -32,8 +33,8 @@ export default function DashboardLayout({
             {children}
           </div>
           
-          {/* BORTTAGET: Chatten är bortkopplad under ombyggnad. */}
-          {/* <Chat /> */}
+          {/* Chatten är nu återinkopplad och kommer att "flyta" ovanpå huvudinnehållet */}
+          <Chat />
         </main>
       </div>
     </div>

@@ -4,15 +4,19 @@
 import React, { useState, useEffect, useTransition } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-// import { getCustomers } from '@/actions/customerActions'; // BORTTAGEN: Kommer ersättas med Genkit
-// import { createProject } from '@/actions/projectActions'; // BORTTAGEN: Kommer ersättas med Genkit
 import { useModal } from '@/contexts/ModalContext';
-import { projectSchema, type ProjectFormData } from '@/lib/schemas/project';
+import { projectSchema, type ProjectFormData } from 'lib/schemas';
+import toast from 'react-hot-toast';
+
+// Typdefinition för en kund i dropdown-listan
+interface Customer {
+  id: string;
+  name: string;
+}
 
 const CreateProjectModal = () => {
-  // TEMPORÄR FIX: Använder en tom array för kunder tills Genkit-flöde är på plats
-  const [customers, setCustomers] = useState<{ id: string; name: string; }[]>([]);
-  const [isLoadingCustomers, setIsLoadingCustomers] = useState(false); // Satt till false
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(true);
   const [serverError, setServerError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const { hideModal } = useModal();
@@ -27,44 +31,55 @@ const CreateProjectModal = () => {
     }
   });
 
-  // TEMPORÄR FIX: Hämta kunder är bortkopplat. Logik kommer i Fas 2.
+  // Hämta kunder när komponenten mountas
   useEffect(() => {
-    // const fetchCustomers = async () => {
-    //   try {
-    //     // const customerList = await getCustomers(); // BORTTAGEN
-    //     // setCustomers(customerList);
-    //   } catch (error) {
-    //     setServerError('Kunde inte ladda kundlistan.');
-    //   } finally {
-    //     setIsLoadingCustomers(false);
-    //   }
-    // };
-    // fetchCustomers();
-    console.log("Logik för att hämta kunder är temporärt bortkopplad.");
+    const fetchCustomers = async () => {
+      try {
+        const response = await fetch('/api/flow/customerFlow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get' })
+        });
+        if (!response.ok) throw new Error('Kunde inte hämta kunder.');
+        const data = await response.json();
+        setCustomers(data);
+      } catch (error) {
+        toast.error('Kunde inte ladda kundlistan.');
+      } finally {
+        setIsLoadingCustomers(false);
+      }
+    };
+    fetchCustomers();
   }, []);
 
-  // TEMPORÄR FIX: Formulärhantering är bortkopplad. Logik kommer i Fas 2.
   const onSubmit = (data: ProjectFormData) => {
     setServerError(null);
-    console.log("Formulärdata som skulle skickas:", data);
-    alert("Funktionaliteten för att skapa projekt är temporärt inaktiverad och kommer snart att återställas med den nya arkitekturen.");
-    // startTransition(async () => {
-    //   // const result = await createProject(data); // BORTTAGEN
-    //   // if (result.status === 'success') {
-    //   //   hideModal();
-    //   // } else {
-    //   //   setServerError(result.message || 'Ett okänt serverfel uppstod.');
-    //   // }
-    // });
+    startTransition(async () => {
+      try {
+        const response = await fetch('/api/flow/projectFlow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create', payload: data })
+        });
+
+        const result = await response.json();
+        if (!response.ok || !result.id) {
+          throw new Error(result.message || 'Kunde inte skapa projektet.');
+        }
+
+        toast.success('Projekt skapat!');
+        hideModal();
+        // Här kan man också lägga till logik för att uppdatera projektlistan i bakgrunden.
+
+      } catch (e: any) {
+        setServerError(e.message);
+      }
+    });
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <h2 className="text-2xl font-bold text-white">Skapa Nytt Projekt</h2>
-
-      <div className="bg-yellow-900/50 border border-yellow-700 text-yellow-300 px-4 py-3 rounded-lg text-sm">
-        <strong>Observera:</strong> Denna funktion är under ombyggnad. Du kan se formuläret, men det går inte att skapa projekt just nu.
-      </div>
 
       {serverError && <div className="bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm">{serverError}</div>}
 
@@ -73,7 +88,7 @@ const CreateProjectModal = () => {
         <Controller
           name="projectName"
           control={control}
-          render={({ field }) => <input {...field} id="projectName" className="w-full bg-gray-800 border-gray-600 rounded-md px-4 py-2 mt-1 text-white" />} 
+          render={({ field }) => <input {...field} id="projectName" className="w-full bg-gray-800 border-gray-600 rounded-md px-4 py-2 mt-1 text-white" disabled={isPending}/>} 
         />
         {errors.projectName && <p className="text-red-400 text-sm mt-1">{errors.projectName.message}</p>}
       </div>
@@ -84,23 +99,45 @@ const CreateProjectModal = () => {
           name="customerId"
           control={control}
           render={({ field }) => (
-            <select {...field} id="customerId" className="w-full bg-gray-800 border-gray-600 rounded-md px-4 py-2 mt-1 text-white" disabled={true}>
-              <option value="">{'Kundhämtning inaktiverad'}</option>
-              {/* {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)} */}
+            <select {...field} id="customerId" className="w-full bg-gray-800 border-gray-600 rounded-md px-4 py-2 mt-1 text-white" disabled={isLoadingCustomers || isPending}>
+              <option value="">{isLoadingCustomers ? 'Laddar kunder...' : 'Välj en kund'}</option>
+              {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           )} 
         />
         {errors.customerId && <p className="text-red-400 text-sm mt-1">{errors.customerId.message}</p>}
       </div>
       
-      {/* ... (resten av formuläret) ... */}
+       <div>
+        <label htmlFor="projectType" className="block text-sm font-medium text-gray-300">Projekttyp</label>
+        <Controller
+          name="projectType"
+          control={control}
+          render={({ field }) => (
+            <select {...field} id="projectType" className="w-full bg-gray-800 border-gray-600 rounded-md px-4 py-2 mt-1 text-white" disabled={isPending}>
+              <option value="ROT">ROT</option>
+              <option value="RUT">RUT</option>
+              <option value="Annat">Annat</option>
+            </select>
+          )} 
+        />
+      </div>
+
+      <div>
+        <label htmlFor="description" className="block text-sm font-medium text-gray-300">Beskrivning (valfritt)</label>
+        <Controller
+          name="description"
+          control={control}
+          render={({ field }) => <textarea {...field} id="description" rows={3} className="w-full bg-gray-800 border-gray-600 rounded-md px-4 py-2 mt-1 text-white" disabled={isPending}/>} 
+        />
+      </div>
       
        <div className="flex justify-end gap-4 pt-4">
             <button type="button" onClick={hideModal} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">
                 Avbryt
             </button>
-            <button type="submit" disabled={true} className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-                {isPending ? 'Skapar...' : 'Skapa Projekt (Inaktiverad)'}
+            <button type="submit" disabled={isPending || isLoadingCustomers} className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                {isPending ? 'Skapar...' : 'Skapa Projekt'}
             </button>
       </div>
     </form>

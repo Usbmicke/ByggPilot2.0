@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Customer } from '@/lib/schemas/customer'; // KORREKT IMPORT
+import { Customer } from 'lib/schemas'; // KORRIGERAD IMPORT
 
 interface PrivateCustomerFormProps {
     onSave: (data: Partial<Customer>) => void;

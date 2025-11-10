@@ -1,20 +1,15 @@
 
 import { GuidedOnboarding } from '@/components/onboarding/GuidedOnboarding';
-import { getAuth } from '@/lib/config/authOptions';
-import { redirect } from 'next/navigation';
 
 // =================================================================================
-// ONBOARDING PAGE V1.0
+// ONBOARDING PAGE V2.0
 // =================================================================================
 // Denna sida fungerar som en "host" för GuidedOnboarding-komponenten.
+// All logik för att hämta användardata, hantera state och omdirigera
+// har flyttats in i GuidedOnboarding-komponenten och dess underliggande hooks
+// för att följa den nya Genkit-arkitekturen.
 
-export default async function OnboardingPage() {
-  // Även om middleware hanterar det mesta, är detta en extra säkerhetskontroll.
-  const session = await getAuth();
-  if (session?.user?.hasCompletedOnboarding) {
-    redirect('/dashboard');
-  }
-
+export default function OnboardingPage() {
   return (
     <main className="h-screen w-screen">
       <GuidedOnboarding />
