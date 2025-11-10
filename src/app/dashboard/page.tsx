@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { Briefcase, FolderOpen, Landmark } from 'lucide-react'; // NYTT: Lucide-ikoner
 import StatCard from '@/components/dashboard/StatCard';
-import { getDashboardStats } from '@/lib/dal/projects';
+// import { getDashboardStats } from '@/lib/dal/projects'; // BORTTAGEN: Kommer ersättas med Genkit
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/config/authOptions"
 import Link from 'next/link';
@@ -9,7 +10,14 @@ import Link from 'next/link';
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   const userName = session?.user?.name || "Användare";
-  const stats = await getDashboardStats(session?.user?.id);
+
+  // TEMPORÄR FIX: Använder platshållardata tills Genkit-flöde är på plats
+  const stats = {
+    totalProjects: 0,
+    ongoingProjects: 0,
+    totalRevenue: "0 kr",
+  };
+  // const stats = await getDashboardStats(session?.user?.id);
 
   return (
     // Använder nu flexbox för en mer robust layout i framtiden

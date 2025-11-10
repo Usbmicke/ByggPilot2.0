@@ -3,8 +3,8 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-// FAS 0 KORRIGERING: Korrigerad importväg.
-import { ActionableEvent } from '@/app/types/index';
+// FAS 0 KORRIGERING: Korrigerad importväg och nya, säkra typer.
+import { ActionableEvent } from '@/lib/schemas/event';
 
 const formatDate = (date: any) => {
     if (!date) return 'N/A';

@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Customer } from '@/app/types';
+import { Customer } from '@/lib/schemas/customer'; // KORREKT IMPORT
 
 interface PrivateCustomerFormProps {
     onSave: (data: Partial<Customer>) => void;
@@ -10,10 +10,10 @@ interface PrivateCustomerFormProps {
 }
 
 export function PrivateCustomerForm({ onSave, isSaving }: PrivateCustomerFormProps) {
-    const [formData, setFormData] = useState<Partial<Customer>>({});
+    // Byt ut firstName/lastName mot 'name' och härled vid behov
+    const [formData, setFormData] = useState<Partial<Customer & { firstName?: string; lastName?: string }>>({ customerType: 'Private' });
     const [error, setError] = useState<string | null>(null);
 
-    // VÄRLDSKLASS-FÖRENKLING: En enda, platt handleChange hanterar alla fält.
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -21,21 +21,27 @@ export function PrivateCustomerForm({ onSave, isSaving }: PrivateCustomerFormPro
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.firstName || !formData.lastName) {
+        const { firstName, lastName, email, phone } = formData;
+
+        if (!firstName || !lastName) {
             setError('Både för- och efternamn är obligatoriska.');
             return;
         }
-        if (!formData.email && !formData.phone) {
+        if (!email && !phone) {
             setError('Du måste ange antingen en e-postadress eller ett telefonnummer.');
             return;
         }
         setError(null);
         
-        const saveData: Partial<Customer> = {
+        // Sätt samman namnet och ta bort temporära fält
+        const finalData: Partial<Customer> = {
             ...formData,
-            name: `${formData.firstName} ${formData.lastName}`
-        }
-        onSave(saveData);
+            name: `${firstName} ${lastName}`,
+        };
+        delete (finalData as any).firstName;
+        delete (finalData as any).lastName;
+
+        onSave(finalData);
     };
 
     return (
@@ -69,7 +75,6 @@ export function PrivateCustomerForm({ onSave, isSaving }: PrivateCustomerFormPro
                 </div>
             </div>
 
-            {/* VÄRLDSKLASS-KORRIGERING: Adressfälten är nu platta och korrekta. */}
             <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-lg">
                 <h3 className="text-lg font-semibold text-cyan-300 mb-4">Adress (valfritt)</h3>
                 <div className="space-y-4">

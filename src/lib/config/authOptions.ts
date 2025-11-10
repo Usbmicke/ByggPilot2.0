@@ -4,7 +4,7 @@ import { JWT } from 'next-auth/jwt';
 import GoogleProvider from 'next-auth/providers/google';
 import { FirestoreAdapter } from '@auth/firebase-adapter';
 import { firestoreAdmin } from '@/lib/config/firebase-admin';
-import { getUser } from '@/lib/data-access';
+// import { getUser } from '@/lib/data-access'; // BORTTAGEN: Kommer ersättas med Genkit
 import { logger } from '@/lib/logger';
 
 const GOOGLE_API_SCOPES = [
@@ -42,23 +42,29 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user, trigger }: { token: JWT; user?: User; trigger?: 'signIn' | 'signUp' | 'update' }) {
+      // TEMPORÄR FIX: Logiken för att hämta användardata är bortkopplad.
+      // All onboarding-logik kommer att byggas om i Fas 2 med Genkit.
+      // Vi sätter onboardingCompleted till true som standard för att undvika att låsa ute användare.
+      token.onboardingCompleted = true;
+
+      /* GAMMAL LOGIK:
       const userId = user?.id || token.sub;
       if (!userId) return token;
 
       if (trigger === 'signIn' || trigger === 'signUp' || trigger === 'update') {
         try {
-          const dbUser = await getUser(userId);
-          if (dbUser) {
-            token.onboardingCompleted = dbUser.hasCompletedOnboarding || false;
-            token.sub = dbUser.id; 
-          } else {
-            token.onboardingCompleted = false;
-          }
+          // const dbUser = await getUser(userId); // BORTTAGEN
+          // if (dbUser) {
+          //   token.onboardingCompleted = dbUser.hasCompletedOnboarding || false;
+          //   token.sub = dbUser.id; 
+          // } else {
+          //   token.onboardingCompleted = false;
+          // }
         } catch (error) {
           logger.error(`[Auth Callback: JWT] Kunde inte hämta användardata för ${userId}`, { error });
           token.onboardingCompleted = false; // Failsafe
         }
-      }
+      }*/
       return token;
     },
 
