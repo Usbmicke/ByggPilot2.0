@@ -5,9 +5,11 @@ import React, { useState, useTransition, FC } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { CheckCircleIcon, ArrowRightIcon, FolderIcon, DocumentPlusIcon } from '@heroicons/react/24/solid';
-import { completeOnboardingStep } from '../../onboarding/actions'; // KORRIGERAD IMPORT
+import toast from 'react-hot-toast';
 
-// --- Subkomponenter för Tydlighet ---
+// Gammal action-import borttagen. Anrop sker nu via Genkit-flöde.
+
+// --- Subkomponenter ---
 
 const LoadingSpinner: FC = () => (
     <div className="flex flex-col items-center justify-center space-y-4">
@@ -21,11 +23,10 @@ const LoadingSpinner: FC = () => (
 
 interface CompanyNameInputProps {
     onSubmit: (companyName: string) => void;
-    error: string | null;
     isPending: boolean;
 }
 
-const CompanyNameInput: FC<CompanyNameInputProps> = ({ onSubmit, error, isPending }) => {
+const CompanyNameInput: FC<CompanyNameInputProps> = ({ onSubmit, isPending }) => {
     const [companyName, setCompanyName] = useState('');
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -47,7 +48,6 @@ const CompanyNameInput: FC<CompanyNameInputProps> = ({ onSubmit, error, isPendin
                 className="w-full bg-gray-800 border-2 border-gray-700 rounded-lg px-4 py-3 text-white focus:ring-cyan-500 focus:border-cyan-500"
                 disabled={isPending}
             />
-            {error && <p className="text-sm text-red-400">{error}</p>}
             <button type="submit" disabled={!companyName.trim() || isPending} className="w-full flex items-center justify-center gap-3 bg-cyan-600 text-white font-bold py-3 px-6 rounded-lg disabled:opacity-50">
                 {isPending ? 'Sparar...' : 'Fortsätt'}
             </button>
@@ -55,77 +55,80 @@ const CompanyNameInput: FC<CompanyNameInputProps> = ({ onSubmit, error, isPendin
     );
 };
 
-
-// --- Huvudkomponent: GuidedOnboarding (Guldstandard) ---
+// --- Huvudkomponent ---
 
 export default function GuidedOnboarding() {
     const { data: session, update } = useSession();
     const router = useRouter();
-    
-    const [error, setError] = useState<string | null>(null);
     const [isPending, startTransition] = useTransition();
 
-    // === Steg 1: Företagsinformation ===
+    const callOnboardingFlow = async (step: string, data: any) => {
+        if (!session?.user?.id) {
+            toast.error('Användarsession saknas.');
+            return null;
+        }
+        try {
+            const response = await fetch('/api/flow/onboardingFlow', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ step, userId: session.user.id, data })
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || `Fel vid steg: ${step}`);
+            }
+            return result;
+        } catch (error: any) {
+            toast.error(error.message);
+            return null;
+        }
+    };
+
     const handleCompanyInfoSubmit = (companyName: string) => {
-        setError(null);
         startTransition(async () => {
-            const result = await completeOnboardingStep(1, { companyName });
-            if (result.success) {
-                // HÄRDAD LOGIK: Uppdatera sessionen med det lokala statet, invänta resultatet.
-                await update({ user: { companyName } });
-            } else {
-                setError(result.error || 'Något gick fel med att spara företagsnamnet.');
+            const result = await callOnboardingFlow('setCompanyName', { companyName });
+            if (result) {
+                await update({ user: { companyName } }); // Optimistisk uppdatering
             }
         });
     };
 
-    // === Steg 2: Skapa Mappstruktur ===
     const handleCreateStructure = () => {
-        setError(null);
         startTransition(async () => {
-            const result = await completeOnboardingStep(2, {});
-            if (result.success && result.driveRootFolderId && result.driveRootFolderUrl) {
-                // HÄRDAD LOGIK: Uppdatera sessionen med ALL data från servern, invänta resultatet.
+            const result = await callOnboardingFlow('createDriveStructure', {});
+            if (result) {
                 await update({ 
                     user: { 
                         driveRootFolderId: result.driveRootFolderId,
                         driveRootFolderUrl: result.driveRootFolderUrl 
                     }
                 });
-            } else {
-                setError(result.error || 'Kunde inte skapa mappstrukturen.');
             }
         });
     };
 
-    // === Steg 3: Slutförande & Omdirigering ===
     const handleFinalizeOnboarding = () => {
         startTransition(async () => {
-            const result = await completeOnboardingStep(4, {}); // Steg 4 enligt action
-            if (result.success) {
-                // HÄRDAD LOGIK: Invänta session-uppdatering INNAN omdirigering.
+            const result = await callOnboardingFlow('finalizeOnboarding', {});
+            if (result) {
                 await update({ user: { onboardingComplete: true }});
                 router.push('/dashboard');
-            } else {
-                setError('Kunde inte slutföra onboardingen. Prova att ladda om sidan.');
             }
         });
     };
     
-    // === Arkitektonisk Rendering: Tydlig och Robust Steg-logik ===
     const renderCurrentStep = () => {
         if (!session?.user) return <LoadingSpinner />;
         
         const { companyName, driveRootFolderId, onboardingComplete } = session.user;
 
         if (onboardingComplete) {
-            // Skulle inte hända pga middleware, men som en failsafe.
             router.push('/dashboard');
             return <LoadingSpinner />;
         }
         
         if (!companyName) {
-            return <CompanyNameInput onSubmit={handleCompanyInfoSubmit} error={error} isPending={isPending} />;
+            return <CompanyNameInput onSubmit={handleCompanyInfoSubmit} isPending={isPending} />;
         }
 
         if (!driveRootFolderId) {
@@ -137,7 +140,6 @@ export default function GuidedOnboarding() {
                         Jag kommer nu att skapa en säker, delad mappstruktur i din Google Drive för
                         <strong className="block text-white mt-1">{session.user.companyName}</strong>.
                     </p>
-                    {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
                     <button onClick={handleCreateStructure} disabled={isPending} className="w-full bg-cyan-600 font-bold py-3 px-6 rounded-lg disabled:opacity-50">
                         {isPending ? 'Skapar struktur...' : 'Ja, skapa mappstruktur'}
                     </button>

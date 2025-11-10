@@ -5,9 +5,8 @@ import React, { useState } from 'react';
 import { useForm, SubmitHandler, UseFormRegister, FieldError } from 'react-hook-form';
 import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
-import { updateCompanyInfo } from '@/app/actions/userActions';
 
-// useRouter är borttagen eftersom den inte längre behövs.
+// Gammal action-import borttagen. Anrop sker nu via API.
 
 interface IFormInput {
   companyName: string;
@@ -55,20 +54,36 @@ const CompanyInfoForm: React.FC = () => {
     }
 
     setIsLoading(true);
-    const result = await updateCompanyInfo(data, session.user.id);
+    
+    try {
+      const response = await fetch('/api/flow/userFlow', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'updateCompanyInfo',
+          userId: session.user.id,
+          data: data
+        }),
+      });
 
-    if (result.success) {
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Ett okänt fel uppstod vid anrop till Genkit-flödet.');
+      }
+
       toast.success('Information sparad! Omdirigerar...');
       
-      // Uppdatera sessionen och vänta på att det slutförs.
+      // Uppdatera NextAuth-sessionen för att reflektera de nya uppgifterna.
       await update(); 
 
-      // Använd en hård omladdning för att undvika race conditions.
-      // Detta säkerställer att servern ser den uppdaterade sessionen vid nästa sidladdning.
+      // Tvinga en omladdning för att säkerställa att all server-side state är synkad.
       window.location.href = '/dashboard';
 
-    } else {
-      toast.error(result.error || 'Ett okänt fel uppstod.');
+    } catch (error: any) {
+      toast.error(error.message || 'Ett okänt fel uppstod.');
       setIsLoading(false);
     }
   };
