@@ -1,56 +1,46 @@
 
-'use server';
-
-import { revalidatePath } from 'next/cache';
-import { createCustomerInDb, getCustomersFromDb } from '@/lib/dal/customer';
-// ARKITEKTURKORRIGERING: Korrekt relativ sökväg till det nyskapade schemat.
-import { customerSchema } from '@/lib/schemas/project';
+import { firestoreAdmin } from '@/lib/config/firebase-admin';
+import { Customer } from '@/lib/schemas/project';
 
 /**
- * GULDSTANDARD SERVER ACTION: createCustomer
- * Validerar kunddata mot ett Zod-schema och anropar sedan DAL för att skapa kunden.
- * Hanterar fel och returnerar ett standardiserat svarsformat.
+ * Creates a new customer in the Firestore database.
+ * @param customerData - The data for the new customer.
+ * @returns The ID of the newly created customer.
  */
-export async function createCustomer(customerData: any) {
-  const validationResult = customerSchema.safeParse(customerData);
-
-  if (!validationResult.success) {
-    console.error('Zod validation failed:', validationResult.error.flatten());
-    return {
-      status: 'error',
-      message: `Valideringsfel: ${JSON.stringify(validationResult.error.flatten().fieldErrors)}`,
-    };
-  }
-
+export async function createCustomerInDb(customerData: Omit<Customer, 'id'>): Promise<string> {
   try {
-    const customerId = await createCustomerInDb(validationResult.data);
-    revalidatePath('/dashboard/customers');
-
-    return {
-      status: 'success',
-      message: 'Kunden har skapats framgångsrikt!',
-      customerId: customerId,
-    };
+    const newCustomerRef = await firestoreAdmin.collection('customers').add(customerData);
+    return newCustomerRef.id;
   } catch (error) {
-    console.error('Error creating customer:', error);
-    return {
-      status: 'error',
-      message: 'Kunde inte skapa kunden på grund av ett internt serverfel.',
-    };
+    console.error('Error creating customer in Firestore:', error);
+    throw new Error('Failed to create customer in the database.');
   }
 }
 
 /**
- * GULDSTANDARD SERVER ACTION: getCustomers
- * Anropar DAL för att hämta en lista över alla kunder.
- * Minimerar logiken i server-actions och delegerar databashantering.
+ * Retrieves a list of all customers from Firestore.
+ * @returns A list of customers with their ID and name.
  */
-export async function getCustomers() {
+export async function getCustomersFromDb(): Promise<{ id: string; name: string; }[]> {
   try {
-    const customers = await getCustomersFromDb();
+    const customersSnapshot = await firestoreAdmin.collection('customers').get();
+    
+    if (customersSnapshot.empty) {
+      return [];
+    }
+
+    const customers = customersSnapshot.docs.map((doc: { data: () => any; id: any; }) => {
+      const data = doc.data();
+      const name = data.customerType === 'Company' ? data.companyName : `${data.firstName} ${data.lastName}`;
+      return {
+        id: doc.id,
+        name: name || 'Namn saknas',
+      };
+    });
+
     return customers;
   } catch (error) {
-    console.error('Failed to get customers in server action:', error);
-    throw new Error('Kunde inte hämta kundlistan.');
+    console.error("Error fetching customers from Firestore:", error);
+    throw new Error("Could not fetch the customer list.");
   }
 }

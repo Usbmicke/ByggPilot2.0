@@ -1,1 +1,1 @@
-Denna katalog innehåller alla Zod-scheman för projektet. Detta är vår Single Source of Truth för datastrukturer.
+This directory will contain all Zod schemas for the entire application, serving as the Single Source of Truth for our data structures.

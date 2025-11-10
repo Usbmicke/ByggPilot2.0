@@ -3,7 +3,7 @@
 
 import React, { useState, useTransition } from 'react';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
-import { Customer } from '@/app/types/index';
+import { Customer } from '@/lib/schemas/customer'; // KORREKT IMPORT
 
 interface IdentityLookupStepProps {
     customerType: 'company' | 'private';
@@ -82,4 +82,3 @@ export function IdentityLookupStep({ customerType, onDataSelect }: IdentityLooku
         </div>
     );
 }
-

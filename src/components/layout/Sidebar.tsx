@@ -8,13 +8,13 @@ import { Plus, Settings, LogOut } from 'lucide-react';
 
 import { primaryNavigation } from '@/constants/navigation';
 import SidebarUserProfile from './SidebarUserProfile';
-import { useModal } from '@/contexts/ModalContext';
+// import { useModal } from '@/contexts/ModalContext'; // BORTTAGEN: Modal-systemet byggs om.
 
 // VERSION 1.1: Logotypen är borttagen härifrån och har flyttats till Header.tsx
 const Sidebar: React.FC = () => {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const { openModal } = useModal();
+  // const { openModal } = useModal(); // BORTTAGEN: Modal-systemet byggs om.
 
   return (
     // Tar bort den övre `h-16`-sektionen för loggan.
@@ -40,11 +40,12 @@ const Sidebar: React.FC = () => {
         })}
       </nav>
 
-      {/* ---- SKAPA NYTT-KNAPP (Ghost Button Stil) ---- */}
+      {/* ---- SKAPA NYTT-KNAPP (Inaktiverad) ---- */}
       <div className="my-4">
         <button 
-          onClick={() => openModal('createOptions')}
-          className="w-full flex items-center justify-center gap-2 py-3 px-3 rounded-lg border border-border-color text-text-secondary font-semibold hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all duration-200"
+          // onClick={() => openModal('createOptions')} // BORTTAGEN: Funktionalitet inaktiverad under ombyggnad.
+          disabled={true} // Inaktiverar knappen
+          className="w-full flex items-center justify-center gap-2 py-3 px-3 rounded-lg border border-border-color text-text-secondary font-semibold transition-all duration-200 cursor-not-allowed opacity-50"
         >
           <Plus className="h-5 w-5" />
           <span>Skapa Nytt</span>

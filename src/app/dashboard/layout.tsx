@@ -8,13 +8,9 @@ import dynamic from 'next/dynamic';
 // =================================================================================
 // DASHBOARD LAYOUT V11.0 - ARKITEKTUR FÖR "INRE SCROLL"
 // =================================================================================
-// Detta är den slutgiltiga, korrekta arkitekturen. `main`-elementet agerar
-// som en positionerings-ram (`relative`). Inuti den finns två syskon:
-// 1. En `div` som hanterar sidans innehåll och är den *enda* scrollande delen.
-// 2. Chat-komponenten, som nu kan positioneras `absolute` i förhållande till ramen,
-//    helt frikopplad från innehållets scroll-position.
 
-const Chat = dynamic(() => import('@/components/copilot/Chat'), { ssr: false });
+// BORTTAGET: Chat-komponenten är bortkopplad under ombyggnad.
+// const Chat = dynamic(() => import('@/components/copilot/Chat'), { ssr: false });
 
 export default function DashboardLayout({
   children,
@@ -36,8 +32,8 @@ export default function DashboardLayout({
             {children}
           </div>
           
-          {/* Chatten: Positioneras i förhållande till <main>, inte den scrollande diven */}
-          <Chat />
+          {/* BORTTAGET: Chatten är bortkopplad under ombyggnad. */}
+          {/* <Chat /> */}
         </main>
       </div>
     </div>

@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Ata, AtaStatus } from '@/app/types';
+import { Ata, AtaStatus } from '@/lib/schemas/ata'; // KORRIGERAD SÖKVÄG OCH NYA TYPER
 import { PencilIcon, CheckCircleIcon, ChevronRightIcon, ClockIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
 interface AtaListProps {

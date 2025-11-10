@@ -1,65 +1,33 @@
-'use server';
 
-import { revalidatePath } from 'next/cache';
-import { firestoreAdmin } from '@/lib/config/firebase-admin';
-import { logger } from '@/lib/logger';
+import { firestoreAdmin } from "@/lib/config/firebase-admin";
 
-/**
- * Marks a user's onboarding process as complete in Firestore.
- * This is a critical step to ensure the state persists across sessions.
- * @param userId - The ID of the user to update.
- * @returns An object indicating success or failure.
- */
-export async function markOnboardingAsComplete(userId: string): Promise<{ success: boolean; error?: string }> {
-  if (!userId) {
-    logger.error('[Action] markOnboardingAsComplete called without userId.');
-    return { success: false, error: 'Användar-ID saknas.' };
-  }
+const db = firestoreAdmin;
 
-  logger.info(`[Action] Attempting to mark onboarding as complete for user: ${userId}`);
+export async function getNewActions(userId: string) {
+    const actionsSnapshot = await db.collection('users').doc(userId)
+                                   .collection('actions')
+                                   .where('status', '==', 'new')
+                                   .orderBy('createdAt', 'desc')
+                                   .get();
 
-  try {
-    const userRef = firestoreAdmin.collection('users').doc(userId);
-    
-    // Använd `update` för att säkerställa att vi inte skriver över hela dokumentet.
-    // Databasfältet `hasCompletedOnboarding` måste matcha det som läses i authOptions.
-    await userRef.update({
-      hasCompletedOnboarding: true
-    });
+    if (actionsSnapshot.empty) {
+        return [];
+    }
 
-    logger.info(`[Action] Successfully marked onboarding as complete for user: ${userId}`);
-    
-    // Invalidera cachen för sökvägar som är beroende av denna status.
-    revalidatePath('/dashboard');
-    revalidatePath('/onboarding');
-
-    return { success: true };
-  } catch (error) {
-    logger.error({ message: `[Action] Failed to mark onboarding as complete for user ${userId}.`, error });
-    return { success: false, error: 'Ett databasfel inträffade.' };
-  }
+    return actionsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+    }));
 }
 
-export async function updateCompanyInfo(companyData: any, userId: string): Promise<{ success: boolean; error?: string }> {
-    if (!userId) {
-        logger.error('[Action] updateCompanyInfo called without userId.');
-        return { success: false, error: 'Användar-ID saknas.' };
+export async function updateActionStatus(userId: string, actionId: string, newStatus: string) {
+    const actionRef = db.collection('users').doc(userId).collection('actions').doc(actionId);
+    const doc = await actionRef.get();
+
+    if (!doc.exists) {
+        throw new Error("Action not found");
     }
 
-    logger.info(`[Action] Attempting to update company info for user: ${userId}`);
-
-    try {
-        const userRef = firestoreAdmin.collection('users').doc(userId);
-        await userRef.update(companyData);
-
-        logger.info(`[Action] Successfully updated company info for user: ${userId}`);
-        
-        revalidatePath('/dashboard');
-        revalidatePath('/onboarding');
-
-        return { success: true };
-    } catch (error) {
-        logger.error({ message: `[Action] Failed to update company info for user ${userId}.`, error });
-        return { success: false, error: 'Ett databasfel inträffade.' };
-    }
+    await actionRef.update({ status: newStatus });
+    return { success: true };
 }
