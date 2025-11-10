@@ -1,8 +1,8 @@
 
 import { configureGenkit } from '@genkit-ai/core';
 import { firebase } from '@genkit-ai/firebase';
-import { defineFlow } from '@genkit-ai/flow';
-import { onCallGenkit } from '@genkit-ai/firebase/functions';
+import { defineFlow } from 'genkit/flow';
+import { onCall } from 'firebase-functions/v2/https';
 import * as z from 'zod';
 
 // Konfigurera Genkit för att använda Firebase-pluginet
@@ -14,10 +14,10 @@ configureGenkit({
   enableTracingAndMetrics: true,
 });
 
-// Definiera vårt "helloWorld"-flöde
-export const helloWorldFlow = defineFlow(
+// Definiera vårt "menuSuggestion"-flöde
+export const menuSuggestionFlow = defineFlow(
   {
-    name: 'helloWorldFlow',
+    name: 'menuSuggestionFlow',
     inputSchema: z.string(), // Vi förväntar oss en sträng som input
     outputSchema: z.string(), // Vi kommer att returnera en sträng som output
   },
@@ -28,10 +28,9 @@ export const helloWorldFlow = defineFlow(
 );
 
 // Exponera flödet som en anropbar funktion för vår frontend
-export const helloWorld = onCallGenkit(
-    {
-        name: 'helloWorld', // Namnet vi anropar från frontend
-        flow: helloWorldFlow, // Flödet som ska köras
-        // Autentisering hanteras automatiskt av onCallGenkit
-    }
-)
+export const menuSuggestion = onCall({ region: 'europe-west1'}, async (request) => {
+    // Kör flödet med data från anropet.
+    // Notera: request.data är den rekommenderade metoden i v2 av functions.
+    return await menuSuggestionFlow.run(request.data);
+});
+

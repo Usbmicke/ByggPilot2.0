@@ -35,7 +35,7 @@ export const menuSuggestion = onFlow(
     outputSchema: z.string(),
     streamSchema: z.string(),
   },
-  async (subject, { sendChunk }) => {
+  async (subject: string, { sendChunk }: { sendChunk: (chunk: string) => void; }) => {
     const prompt = `Suggest an item for the menu of a ${subject} themed restaurant`;
     const { response, stream } = ai.generateStream({
       model: gemini20Flash,
