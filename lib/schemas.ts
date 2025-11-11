@@ -1,72 +1,99 @@
 
-// =================================================================================
-// ZOD SCHEMAS (DATA-KONTRAKT)
-// =================================================================================
-// Denna fil definierar de Zod-scheman som agerar som våra "datakontrakt".
-// De säkerställer stark typning och validering för all data som flödar
-// genom systemet, från klienten till databasen och tillbaka.
-// =================================================================================
-
 import { z } from 'zod';
 
-/**
- * Grundläggande schema för en användare i Firestore.
- * Innehåller all permanent information om användaren.
- */
-export const UserSchema = z.object({
-  userId: z.string().describe("Användarens unika Firebase Auth UID."),
-  email: z.string().email().optional().describe("Användarens e-postadress."),
-  onboardingComplete: z.boolean().describe("Flagga som visar om användaren slutfört onboarding."),
-  createdAt: z.any().describe("Tidsstämpel för när användaren skapades."),
+// =================================================================================
+// GRUNDLÄGGANDE IDENTIFIERARE
+// =================================================================================
 
-  // Företagsinformation (från onboarding)
-  company: z.object({
-    name: z.string().describe("Företagets namn."),
-    orgNumber: z.string().optional().describe("Företagets organisationsnummer."),
-    address: z.object({
-        street: z.string().optional(),
-        city: z.string().optional(),
-        zip: z.string().optional(),
-    }).optional().describe("Företagets adress."),
-    logoUrl: z.string().url().optional().describe("URL till företagets logotyp i Firebase Storage."),
-  }).optional(),
+export const UserIdSchema = z.string().min(1, { message: 'Användar-ID får inte vara tomt' });
+export const ProjectIdSchema = z.string().min(1, { message: 'Projekt-ID får inte vara tomt' });
+export const AtaIdSchema = z.string().min(1, { message: 'ÄTA-ID får inte vara tomt' });
+export const QuoteIdSchema = z.string().min(1, { message: 'Offert-ID får inte vara tomt' });
 
-  // Standardinställningar (från onboarding)
-  settings: z.object({
-      defaultHourlyRate: z.number().optional().describe("Standard timpris för kalkyler."),
-      defaultMaterialMarkup: z.number().optional().describe("Standard materialpåslag i procent."),
-  }).optional(),
+// =================================================================================
+// ANVÄNDARPROFIL (UserProfile)
+// =================================================================================
+
+export const UserProfileSchema = z.object({
+  userId: UserIdSchema,
+  email: z.string().email({ message: 'Ogiltig e-postadress' }),
+  companyName: z.string().optional(),
+  onboardingComplete: z.boolean().default(false),
+  driveRootFolderId: z.string().optional(),
+  driveRootFolderUrl: z.string().optional(),
 });
+export type UserProfile = z.infer<typeof UserProfileSchema>;
 
-/**
- * Schema för den data som tas emot från klienten under onboarding-processen.
- * Detta är input-schemat för `onboardingCompleteFlow`.
- */
-export const OnboardingDataSchema = z.object({
-    companyName: z.string(),
-    orgNumber: z.string().optional(),
-    address: z.object({
-        street: z.string().optional(),
-        city: z.string().optional(),
-        zip: z.string().optional(),
-    }).optional(),
-    logoUrl: z.string().url().optional(), // Anta att klienten laddat upp filen & skickar URL:en
-    defaultHourlyRate: z.number().optional(),
-    defaultMaterialMarkup: z.number().optional(),
-});
+// =================================================================================
+// PROJEKT (Project)
+// =================================================================================
 
-/**
- * Schema för ett Projekt.
- */
 export const ProjectSchema = z.object({
-    projectId: z.string(),
-    userId: z.string().describe("UID för ägaren av projektet."),
-    name: z.string(),
-    createdAt: z.any(),
-    // ... andra projektfält kommer att läggas till här
+  projectId: ProjectIdSchema,
+  userId: UserIdSchema,
+  name: z.string().min(2, { message: 'Projektnamn måste vara minst 2 tecken' }),
+  description: z.string().optional(),
+  createdAt: z.any().optional(),
+});
+export type Project = z.infer<typeof ProjectSchema>;
+
+// =================================================================================
+// ÄTA (Ändringar, Tillägg, Avgående)
+// =================================================================================
+
+export const AtaSchema = z.object({
+  ataId: AtaIdSchema,
+  projectId: ProjectIdSchema,
+  userId: UserIdSchema,
+  title: z.string().min(3, { message: 'Titel måste vara minst 3 tecken' }),
+  description: z.string(),
+  cost: z.number().positive({ message: 'Kostnaden måste vara ett positivt tal' }),
+  status: z.enum(['pending', 'approved', 'rejected']).default('pending'),
+  createdAt: z.any().optional(),
+});
+export type Ata = z.infer<typeof AtaSchema>;
+
+// Schema för att SKAPA en ÄTA. Innehåller bara fält som AI:n ska extrahera.
+export const AtaCreationSchema = AtaSchema.pick({
+  title: true,
+  description: true,
+  cost: true,
+});
+export type AtaCreationData = z.infer<typeof AtaCreationSchema>;
+
+
+// =================================================================================
+// OFFERT (Quote)
+// =================================================================================
+
+export const QuoteLineItemSchema = z.object({
+  description: z.string(),
+  quantity: z.number(),
+  unit: z.string(),
+  pricePerUnit: z.number(),
 });
 
-// Exporterar typerna för enkel användning i koden.
-export type User = z.infer<typeof UserSchema>;
-export type OnboardingData = z.infer<typeof OnboardingDataSchema>;
-export type Project = z.infer<typeof ProjectSchema>;
+export const QuoteSchema = z.object({
+  quoteId: QuoteIdSchema,
+  projectId: ProjectIdSchema,
+  userId: UserIdSchema,
+  title: z.string().min(3, 'Offertens titel är för kort'),
+  lineItems: z.array(QuoteLineItemSchema),
+  totalCost: z.number(),
+  validUntil: z.any().optional(),
+  status: z.enum(['draft', 'sent', 'accepted', 'declined']).default('draft'),
+  createdAt: z.any().optional(),
+});
+export type Quote = z.infer<typeof QuoteSchema>;
+
+// =================================================================================
+// GENKIT-FLÖDEN / CHAT
+// =================================================================================
+
+export const roleSchema = z.enum(['user', 'model', 'tool']);
+
+export const MessageData = z.object({
+    role: roleSchema,
+    content: z.string(),
+});
+export type MessageData = z.infer<typeof MessageData>;

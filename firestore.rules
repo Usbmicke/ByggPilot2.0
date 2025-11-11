@@ -1,34 +1,41 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // =================================================================================
-    // ANVÄNDARE (Users)
-    // =================================================================================
-    // Regel: Användare kan bara läsa och skriva sin EGEN användardata.
-    // De kan skapa sin egen post, men aldrig läsa andras.
-    // =================================================================================
+    // =====================================================================
+    // Användare (Users)
+    // Användare kan endast läsa och skriva sin egen profildata.
+    // =====================================================================
     match /users/{userId} {
-      allow read, update, delete: if request.auth.uid == userId;
-      allow create: if request.auth.uid != null;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // =================================================================================
-    // EXEMPEL PÅ FRAMTIDA REGEL (t.ex. för Projekt)
-    // =================================================================================
-    // Regel: Användare kan läsa/skriva ett projekt om deras UID matchar
-    // projektets `userId`-fält.
-    // =================================================================================
+    // =====================================================================
+    // Projekt (Projects)
+    // Användare kan skapa, läsa, uppdatera, och radera projekt där deras
+    // userId matchar dokumentets `userId`.
+    // =====================================================================
     match /projects/{projectId} {
-        allow read, write: if request.auth.uid == resource.data.userId;
+      allow read, write: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
     }
 
-    // Lägg till regler för andra collections här (customers, invoices, etc.)
-    // med samma säkerhetsprincip:
-    // match /customers/{customerId} {
-    //   allow read, write: if request.auth.uid == resource.data.userId;
-    // }
+    // =====================================================================
+    // ÄTAs (Atas) och Offerter (Quotes)
+    // Samma logik som för projekt, ägarskap kontrolleras via `userId`.
+    // =====================================================================
+    match /atas/{ataId} {
+        allow read, write: if request.auth != null && request.resource.data.userId == request.auth.uid;
+        allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+    }
+
+    match /quotes/{quoteId} {
+        allow read, write: if request.auth != null && request.resource.data.userId == request.auth.uid;
+        allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Lägg till regler för andra collections här...
+
   }
 }

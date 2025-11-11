@@ -4,12 +4,13 @@
   },
   "functions": [
     {
-      "source": "genkit-project",
       "codebase": "default",
       "disallowLegacyRuntimeConfig": true,
       "predeploy": [
-        "npx tsc --project genkit-project/tsconfig.json"
-      ]
+        "npm --prefix \"$RESOURCE_DIR\" run lint",
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ],
+      "source": "genkit-project"
     }
   ]
 }

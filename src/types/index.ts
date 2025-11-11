@@ -1,33 +1,4 @@
 
-import { type DefaultSession } from "next-auth";
-
-/**
- * ByggPilots anpassade användaregenskaper.
- */
-type ByggPilotUserFields = {
-  id: string; 
-  companyName?: string | null;
-  onboardingComplete?: boolean | null;
-  driveRootFolderId?: string | null;
-  driveRootFolderUrl?: string | null;
-};
-
-declare module "next-auth" {
-  /**
-   * Anpassad Session-modell.
-   * HÄR ÄR DEN KRITISKA ÄNDRINGEN: Vi utökar den globala `UserProfile` istället för `DefaultSession["user"]`.
-   * Detta antar att UserProfile är en globalt definierad typ i ditt projekt.
-   */
-  interface Session extends DefaultSession {
-    user: UserProfile & ByggPilotUserFields;
-  }
-
-  /**
-   * Anpassad User-modell.
-   */
-  interface User extends ByggPilotUserFields {}
-}
-
 // --- DECOUPLED DATA MODELS --- //
 
 export interface ActionableEvent {

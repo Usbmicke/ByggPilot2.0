@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useChat } from '@ai-sdk/react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { ChatMessages } from './ChatMessages';
 import ChatInput from './ChatInput';
 import { ChevronDownIcon, ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/solid';
@@ -10,9 +9,11 @@ import { ChevronDownIcon, ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/reac
 export default function Chat() {
   const [isChatOpen, setIsChatOpen] = useState(true);
 
-  // CORRECTED useChat Implementation
-  // The hook directly provides the necessary handlers for the form.
-  const { messages, input, handleInputChange, handleSubmit, isLoading, stop } = useChat();
+  // REFACTOR (v5): Correctly using the useChat hook as intended.
+  // The hook manages the input state and form submission.
+  const { messages, input, handleInputChange, handleSubmit, isLoading, stop } = useChat({
+    api: '/api/chat',
+  });
 
   if (!isChatOpen) {
     return (
@@ -40,11 +41,11 @@ export default function Chat() {
       </div>
       
       <div className="p-4 border-t border-border-color flex-shrink-0">
-        {/* The form now uses the handlers directly from the hook */}
+        {/* The form now uses the handleSubmit provided by the hook */}
         <form onSubmit={handleSubmit}>
             <ChatInput 
-                input={input} 
-                handleInputChange={handleInputChange} 
+                input={input} // Pass the hook's input state
+                handleInputChange={handleInputChange} // Pass the hook's change handler
                 isLoading={isLoading} 
                 onStop={stop}
             />
