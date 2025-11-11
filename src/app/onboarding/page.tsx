@@ -1,5 +1,5 @@
 
-import { GuidedOnboarding } from '@/components/onboarding/GuidedOnboarding';
+import GuidedOnboarding from '@/components/onboarding/GuidedOnboarding';
 
 // =================================================================================
 // ONBOARDING PAGE V2.0

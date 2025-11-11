@@ -3,8 +3,8 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-// FAS 0 KORRIGERING: Korrigerad importväg och nya, säkra typer.
-import { ActionableEvent } from '@/lib/schemas/event';
+// CORRECTED IMPORT: Points to the central, decoupled type definition.
+import { ActionableEvent } from '@/types';
 
 const formatDate = (date: any) => {
     if (!date) return 'N/A';
@@ -43,8 +43,6 @@ const ActionCard = ({ event }: { event: ActionableEvent }) => {
         return null;
     }
 
-    // VÄRLDSKLASS-ARKITEKTUR: Renderar en länk endast om event.link existerar.
-    // Annars renderas en statisk div. Detta säkerställer typsäkerhet och korrekt UI.
     const cardContent = (
         <div className="bg-gray-800/50 border border-gray-700 rounded-xl mb-4 overflow-hidden transition-all duration-300 ease-in-out hover:border-cyan-500/50 hover:shadow-lg">
             <div className="p-5">
@@ -60,7 +58,6 @@ const ActionCard = ({ event }: { event: ActionableEvent }) => {
 
                 <div className="flex justify-end space-x-3 items-center">
                     <button onClick={handleArchive} className="text-sm font-medium text-gray-400 hover:text-white transition-colors">Markera som läst</button>
-                    {/* Visa knappen endast om det finns en länk att följa */}
                     {event.link && event.link !== '#' && (
                          <Link href={event.link} passHref>
                             <span className="bg-cyan-600 hover:bg-cyan-500 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm cursor-pointer">Visa</span>

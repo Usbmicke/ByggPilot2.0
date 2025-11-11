@@ -2,21 +2,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-// IMPORTERAR ALLA TYPER FRÅN VÅR NYA, CENTRALA SCHEMAKÄLLA
-import { Project } from '@/lib/schemas/project';
-import { Customer } from '@/lib/schemas/customer';
-import { Invoice, InvoiceLine, RotDeduction, InvoiceCreationData } from '@/lib/schemas/invoice';
+// REFACTORED IMPORTS: All types now come from the central, decoupled source.
+import { Project, Customer, Invoice, InvoiceLine, RotDeduction, InvoiceCreationData } from '@/types';
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/solid';
 
 interface InvoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
-  project: Project; // Använder den nya Project-typen
-  customer: Customer; // Använder den nya Customer-typen
+  project: Project;
+  customer: Customer;
   onSave: (newInvoiceData: InvoiceCreationData) => Promise<void>;
 }
 
-// Korrekt typning för en ny rad, exkluderar ID
 const emptyLine: Omit<InvoiceLine, 'id'> = { description: '', quantity: 1, unit: 'st', unitPrice: 0 };
 
 export default function InvoiceModal({ isOpen, onClose, project, customer, onSave }: InvoiceModalProps) {
@@ -51,7 +48,6 @@ export default function InvoiceModal({ isOpen, onClose, project, customer, onSav
         (line) => line.description && line.description.trim() !== '' && line.quantity && line.quantity > 0 && line.unitPrice && line.unitPrice > 0
     ) as InvoiceLine[];
 
-    // Skapar datan enligt det nya, strikta schemat
     const newInvoiceData: InvoiceCreationData = {
       projectId: project.id,
       customer: customer,

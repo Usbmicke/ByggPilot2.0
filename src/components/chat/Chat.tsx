@@ -7,21 +7,13 @@ import { ChatMessages } from './ChatMessages';
 import ChatInput from './ChatInput';
 import { ChevronDownIcon, ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/solid';
 
-// =================================================================================
-// NYA CHAT-KOMPONENTEN (FAS 2 - Stabil & Ren)
-// =================================================================================
-
 export default function Chat() {
   const [isChatOpen, setIsChatOpen] = useState(true);
 
-  // Använder Vercel AI SDK:s useChat-hook
-  // Denna hook hanterar all state management för chatten (meddelanden, input, etc.)
-  // Den anropar automatiskt vår nya API-endpoint.
-  const { messages, input, handleInputChange, handleSubmit, isLoading, stop } = useChat({
-    api: '/api/chat', // Bryggan till vårt Genkit-flöde
-  });
+  // CORRECTED useChat Implementation
+  // The hook directly provides the necessary handlers for the form.
+  const { messages, input, handleInputChange, handleSubmit, isLoading, stop } = useChat();
 
-  // Knappen som visas när chatten är minimerad
   if (!isChatOpen) {
     return (
       <button 
@@ -34,10 +26,8 @@ export default function Chat() {
     )
   }
 
-  // Hela chattfönstret
   return (
     <div className="fixed bottom-8 right-8 w-[450px] h-[70vh] max-h-[700px] bg-background-primary shadow-2xl rounded-2xl border border-border-color flex flex-col z-50 animate-slideInUp">
-      {/* Header */}
       <div className="flex justify-between items-center p-4 border-b border-border-color flex-shrink-0">
         <h3 className="font-bold text-lg">ByggPilot Co-Pilot</h3>
         <button onClick={() => setIsChatOpen(false)} className="p-1 hover:bg-background-secondary rounded-full">
@@ -45,20 +35,20 @@ export default function Chat() {
         </button>
       </div>
 
-      {/* Meddelanden (scrollbart) */}
       <div className="flex-1 flex flex-col overflow-hidden">
          <ChatMessages messages={messages} isLoading={isLoading} />
       </div>
       
-      {/* Input-fält */}
       <div className="p-4 border-t border-border-color flex-shrink-0">
-        <ChatInput 
-            input={input} 
-            handleInputChange={handleInputChange} 
-            handleSubmit={handleSubmit} 
-            isLoading={isLoading} 
-            onStop={stop} // Passar stop-funktionen till input-komponenten
-        />
+        {/* The form now uses the handlers directly from the hook */}
+        <form onSubmit={handleSubmit}>
+            <ChatInput 
+                input={input} 
+                handleInputChange={handleInputChange} 
+                isLoading={isLoading} 
+                onStop={stop}
+            />
+        </form>
       </div>
     </div>
   );
