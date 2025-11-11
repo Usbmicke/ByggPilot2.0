@@ -1,13 +1,10 @@
 
 'use client';
 
-// VÄRLDSKLASS-KORRIGERING: Byt ut CoreMessage mot Message från @ai-sdk/react för kompatibilitet.
-import { type Message } from '@ai-sdk/react';
-
+import { type UIMessage } from '@ai-sdk/react';
 import { UserIcon, CogIcon } from '@heroicons/react/24/solid';
 
-// FAS 2: Bygger komponenten för att rendera chatt-meddelanden
-export function ChatMessages({ messages, isLoading }: { messages: Message[], isLoading: boolean }) {
+export function ChatMessages({ messages, isLoading }: { messages: UIMessage[], isLoading: boolean }) {
   if (!messages.length) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-4">
