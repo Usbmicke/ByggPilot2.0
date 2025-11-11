@@ -3,7 +3,8 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Ata, AtaStatus } from '@/lib/schemas/ata'; // KORRIGERAD SÖKVÄG OCH NYA TYPER
+// KORRIGERING 1: Använder relativ sökväg för att säkerställa att modulen hittas.
+import { Ata, AtaStatus } from '../../lib/schemas/ata'; 
 import { PencilIcon, CheckCircleIcon, ChevronRightIcon, ClockIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
 interface AtaListProps {
@@ -13,18 +14,21 @@ interface AtaListProps {
 
 const AtaList = ({ atas, projectId }: AtaListProps) => {
 
-    // VÄRLDSKLASS-KORRIGERING: Mappar korrekta AtaStatus-värden till UI-element.
+    // KORRIGERING 2: Mappar korrekta enum-värden från AtaStatus till UI-element.
     const getStatusChip = (status: AtaStatus) => {
         switch (status) {
-            case 'Pending':
+            case AtaStatus.Väntar:
                 return <div className="flex items-center gap-1.5 text-xs font-medium text-yellow-400"><ClockIcon className="h-3.5 w-3.5"/> Väntar</div>;
-            case 'Approved':
+            case AtaStatus.Godkänd:
                 return <div className="flex items-center gap-1.5 text-xs font-medium text-green-400"><CheckCircleIcon className="h-3.5 w-3.5"/> Godkänd</div>;
-            case 'Rejected':
+            case AtaStatus.Avvisad:
                 return <div className="flex items-center gap-1.5 text-xs font-medium text-red-400"><XCircleIcon className="h-3.5 w-3.5"/> Avvisad</div>;
+            case AtaStatus.Fakturerad:
+                 return <div className="flex items-center gap-1.5 text-xs font-medium text-blue-400"><CheckCircleIcon className="h-3.5 w-3.5"/> Fakturerad</div>;
+            case AtaStatus.Internt:
+                 return <div className="flex items-center gap-1.5 text-xs font-medium text-gray-400">Internt</div>;
             default:
-                // Detta ska teoretiskt sett aldrig hända med TypeScript, men är bra som fallback.
-                return <div className="flex items-center gap-1.5 text-xs font-medium text-gray-400">Okänd</div>;
+                return <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500">Okänd</div>;
         }
     };
 
@@ -46,7 +50,8 @@ const AtaList = ({ atas, projectId }: AtaListProps) => {
                             <div className="flex justify-between items-center">
                                 <div>
                                     <p className="font-semibold text-white">{ata.title || 'Namnlöst utkast'}</p>
-                                    <p className="text-sm text-gray-400 truncate max-w-md">{ata.notes || 'Inga anteckningar'}</p>
+                                    {/* KORRIGERING 3: Använder 'description' istället för 'notes' */}
+                                    <p className="text-sm text-gray-400 truncate max-w-md">{ata.description || 'Inga anteckningar'}</p>
                                 </div>
                                 <div className="flex items-center gap-4">
                                     {getStatusChip(ata.status)}

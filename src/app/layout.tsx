@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import React from 'react';
-import Providers from '@/components/Providers';
 import Script from 'next/script';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -18,16 +17,12 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    // =========================================================================
-    // == VIKTIGT: "dark" är nu tvingat på hela applikationen ================
-    // =========================================================================
-    // Detta säkerställer att det mörka temat från globals.css alltid används.
     <html lang="sv" className="dark">
       <head>
         <Script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" strategy="beforeInteractive" />
       </head>
       <body className={`${inter.className} antialiased`}>
-        <Providers>{children}</Providers>
+        {children}
       </body>
     </html>
   )

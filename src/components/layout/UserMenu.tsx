@@ -4,7 +4,6 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { signOut } from 'next-auth/react';
 import { CogIcon, UserCircleIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 import { User } from '@/app/types/index'; // Använder vår standardiserade User-typ
 import Popover from '@/app/components/shared/Popover';
@@ -28,7 +27,10 @@ interface UserMenuProps {
 
 const UserMenu: React.FC<UserMenuProps> = ({ user }) => {
   const handleLogout = () => {
-    signOut({ callbackUrl: '/' });
+    // This functionality depends on next-auth, which is no longer available.
+    // For now, we will log to the console and redirect to the homepage.
+    console.log("Simulating logout");
+    window.location.href = '/';
   };
 
   return (

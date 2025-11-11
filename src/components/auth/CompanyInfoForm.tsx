@@ -3,10 +3,10 @@
 
 import React, { useState } from 'react';
 import { useForm, SubmitHandler, UseFormRegister, FieldError } from 'react-hook-form';
-import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 
-// Gammal action-import borttagen. Anrop sker nu via API.
+// SANERING (Fas 0): All next-auth-relaterad kod är borttagen eller inaktiverad.
+// Ny autentiseringslogik med Firebase Auth implementeras i Fas 2.
 
 interface IFormInput {
   companyName: string;
@@ -44,48 +44,18 @@ const Input: React.FC<InputProps> = ({ label, id, type = 'text', register, error
 
 const CompanyInfoForm: React.FC = () => {
   const { register, handleSubmit, formState: { errors } } = useForm<IFormInput>();
-  const { data: session, update } = useSession(); 
   const [isLoading, setIsLoading] = useState(false);
 
+  // SANERING: onSubmit-logiken är tillfälligt ersatt för att undvika beroende av next-auth.
+  // Den fullständiga logiken återställs med Firebase-användare i Fas 2.2.
   const onSubmit: SubmitHandler<IFormInput> = async (data) => {
-    if (!session?.user?.id) {
-        toast.error('Ingen användarsession hittades. Prova att logga in igen.');
-        return;
-    }
-
     setIsLoading(true);
+    toast.error('Funktionen är tillfälligt avstängd under migrering till nytt autentiseringssystem.');
+    console.log('Formulärdata (skickas ej):', data);
+    setIsLoading(false);
     
-    try {
-      const response = await fetch('/api/flow/userFlow', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'updateCompanyInfo',
-          userId: session.user.id,
-          data: data
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Ett okänt fel uppstod vid anrop till Genkit-flödet.');
-      }
-
-      toast.success('Information sparad! Omdirigerar...');
-      
-      // Uppdatera NextAuth-sessionen för att reflektera de nya uppgifterna.
-      await update(); 
-
-      // Tvinga en omladdning för att säkerställa att all server-side state är synkad.
-      window.location.href = '/dashboard';
-
-    } catch (error: any) {
-      toast.error(error.message || 'Ett okänt fel uppstod.');
-      setIsLoading(false);
-    }
+    // Den ursprungliga logiken som använde `session` är borttagen här.
+    // Den kommer att anropa Genkit-flödet med en Firebase-användares UID.
   };
 
   return (
@@ -104,7 +74,8 @@ const CompanyInfoForm: React.FC = () => {
         <div>
             <button 
                 type="submit" 
-                disabled={isLoading || !session}
+                // SANERING: Beroendet av `session` för `disabled`-attributet är borttaget.
+                disabled={isLoading}
                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-transform hover:scale-105 disabled:bg-gray-500 disabled:cursor-not-allowed"
             >
                 {isLoading ? 'Sparar...' : 'Slutför registrering'}

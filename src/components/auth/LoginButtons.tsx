@@ -1,14 +1,41 @@
+
 'use client'
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import toast from 'react-hot-toast';
 import GoogleIcon from '@/components/icons/GoogleIcon';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { auth } from '@/lib/firebase/client'; // Importera den konfigurerade auth-instansen
 
 const LoginButtons = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
-    await signIn('google', { callbackUrl: '/dashboard' });
+    const provider = new GoogleAuthProvider();
+
+    try {
+      // Starta inloggningsprocessen med ett popup-fönster
+      const result = await signInWithPopup(auth, provider);
+      
+      // Användaren har loggats in framgångsrikt
+      const user = result.user;
+      console.log("Inloggad som:", user.displayName);
+
+      // Här skulle vi normalt hämta ID-token och spara i state/context
+      // const token = await user.getIdToken();
+      // console.log("Firebase ID Token:", token);
+
+      toast.success(`Välkommen, ${user.displayName}!`);
+
+      // Omdirigera till dashboard efter lyckad inloggning
+      window.location.href = '/dashboard';
+
+    } catch (error) {
+      console.error("Fel vid Google-inloggning:", error);
+      toast.error('Något gick fel vid inloggningen. Försök igen.');
+      setIsLoading(false);
+    }
+    // Not: setIsLoading(false) behövs inte vid lyckad inloggning eftersom sidan omdirigeras.
   };
 
   return (

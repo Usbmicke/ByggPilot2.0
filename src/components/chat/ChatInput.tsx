@@ -2,17 +2,17 @@
 'use client';
 
 import { ArrowUpIcon } from '@heroicons/react/24/solid';
-import { ChangeEvent, FormEvent } from 'react';
+import { ChangeEvent, KeyboardEvent } from 'react';
 
+// New, simplified props
 interface ChatInputProps {
   input: string;
-  handleInputChange: (e: ChangeEvent<HTMLTextAreaElement>) => void; // Changed to HTMLTextAreaElement
-  handleSubmit: (e: FormEvent<HTMLFormElement>) => void;
+  handleInputChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
   isLoading: boolean;
-  onStop: () => void; // Added onStop for stopping generation
+  onStop: () => void;
 }
 
-// A basic textarea that grows with content, up to a certain limit.
+// The Textarea component remains the same
 const ExpandingTextarea = ({ input, handleInputChange, isLoading }: Pick<ChatInputProps, 'input' | 'handleInputChange' | 'isLoading'>) => {
   return (
     <textarea
@@ -28,13 +28,24 @@ const ExpandingTextarea = ({ input, handleInputChange, isLoading }: Pick<ChatInp
         target.style.height = 'auto';
         target.style.height = `${target.scrollHeight}px`;
       }}
+      // Optional: Submit on Enter, new line on Shift+Enter
+      onKeyDown={(e: KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          // The form submission is handled by the parent component (Chat.tsx)
+          // We find the form and request a submission.
+          const form = e.currentTarget.closest('form');
+          form?.requestSubmit();
+        }
+      }}
     />
   );
 };
 
-export default function ChatInput({ input, handleInputChange, handleSubmit, isLoading, onStop }: ChatInputProps) {
+// The main component no longer has a form element
+export default function ChatInput({ input, handleInputChange, isLoading, onStop }: ChatInputProps) {
   return (
-    <form onSubmit={handleSubmit} className="relative">
+    <div className="relative">
         <ExpandingTextarea 
             input={input}
             handleInputChange={handleInputChange}
@@ -52,7 +63,7 @@ export default function ChatInput({ input, handleInputChange, handleSubmit, isLo
         </button>
       ) : (
         <button 
-            type="submit" 
+            type="submit" // This button now submits the parent form in Chat.tsx
             className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-primary-500 text-white disabled:bg-gray-400 hover:bg-primary-600 transition-colors"
             disabled={!input.trim()}
             aria-label="Skicka meddelande"
@@ -60,6 +71,6 @@ export default function ChatInput({ input, handleInputChange, handleSubmit, isLo
             <ArrowUpIcon className="h-5 w-5" />
         </button>
       )}
-    </form>
+    </div>
   );
 }

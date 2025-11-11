@@ -1,85 +1,88 @@
 
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import { UserProfile, UserProfileSchema } from './schemas';
+
 // =================================================================================
-// DATA ACCESS LAYER (DAL) - V4 ARKITEKTUR (KORRIGERAD)
+// INITIALISERA FIREBASE ADMIN SDK
+// Säkerställer att vi bara initialiserar appen en gång.
 // =================================================================================
 
-import { initializeApp, getApps } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-// KORRIGERING: Importera den korrekta 'Auth'-typen från rätt paket.
-import { type Auth } from '@genkit-ai/firebase'; 
+if (!getApps().length) {
+  // Om vi kör i en Firebase-miljö (t.ex. Cloud Functions) är serviceAccountKey inte nödvändigt.
+  // SDK:t hittar automatiskt rätt konfiguration.
+  // För lokal utveckling kan du behöva peka ut en service account-fil.
+  initializeApp();
+}
 
-// Importera de centraliserade schemana
-import { UserSchema, OnboardingDataSchema, User, OnboardingData } from './schemas';
+const db: Firestore = getFirestore();
+const usersCollection = db.collection('users');
 
-if (!getApps().length) { initializeApp(); }
-const db = getFirestore();
+// =================================================================================
+// DATA ACCESS LAYER (DAL) - ANVÄNDARPROFILER
+// Funktioner för att interagera med `users`-collection i Firestore.
+// =================================================================================
 
 /**
- * Hämtar eller skapar en användare.
+ * Hämtar en användarprofil från Firestore.
+ * @param userId Användarens unika ID (från Firebase Auth).
+ * @returns Användarprofilen eller null om den inte finns.
  */
-export async function getOrCreateUser(auth: Auth): Promise<User> {
-  // Flödet som anropar denna funktion validerar att auth-objektet finns.
-  const userRef = db.collection('users').doc(auth.uid);
-  const userSnapshot = await userRef.get();
-
-  if (userSnapshot.exists()) {
-    return UserSchema.parse(userSnapshot.data());
-  } else {
-    const newUser: Partial<User> = { 
-      userId: auth.uid,
-      email: auth.token?.email,
-      onboardingComplete: false,
-      createdAt: FieldValue.serverTimestamp(),
-    };
-    await userRef.set(newUser);
-    // Hämta igen för att få en fullständig, validerad User-objekt
-    const docAfterWrite = await userRef.get();
-    return UserSchema.parse(docAfterWrite.data());
+export async function getUserProfile(userId: string): Promise<UserProfile | null> {
+  const userDoc = await usersCollection.doc(userId).get();
+  if (!userDoc.exists) {
+    return null;
   }
+  // Validera data mot Zod-schemat innan den returneras
+  const userData = userDoc.data();
+  const validation = UserProfileSchema.safeParse(userData);
+  if (!validation.success) {
+    console.error('Ogiltig användardata i Firestore:', validation.error);
+    // Hantera felet, t.ex. genom att returnera null eller kasta ett fel
+    return null;
+  }
+  return validation.data as UserProfile;
 }
 
 /**
- * Sparar den fullständiga onboardning-datan och sätter användarens status till slutförd.
+ * Skapar en ny användarprofil i Firestore.
+ * @param userId Användarens unika ID.
+ * @param data De grundläggande uppgifterna för den nya profilen.
+ * @returns Den nyskapade användarprofilen.
  */
-export async function completeOnboarding(auth: Auth, onboardingData: OnboardingData): Promise<User> {
-    // Flödet som anropar denna funktion validerar att auth-objektet finns.
-    const validatedData = OnboardingDataSchema.parse(onboardingData);
-    const userRef = db.collection('users').doc(auth.uid);
-    
-    const updateData = {
-        onboardingComplete: true,
-        company: {
-            name: validatedData.companyName,
-            orgNumber: validatedData.orgNumber,
-            address: validatedData.address,
-            logoUrl: validatedData.logoUrl,
-        },
-        settings: {
-            defaultHourlyRate: validatedData.defaultHourlyRate,
-            defaultMaterialMarkup: validatedData.defaultMaterialMarkup,
-        }
-    };
+export async function createUserProfile(userId: string, email: string): Promise<UserProfile> {
+  const newUserProfile: UserProfile = {
+    userId,
+    email,
+    onboardingComplete: false,
+    // Sätt default-värden för andra fält här om nödvändigt
+  };
 
-    await userRef.update(updateData);
-    
-    const updatedUserDoc = await userRef.get();
-    return UserSchema.parse(updatedUserDoc.data());
+  // Validera med Zod innan vi skriver till databasen
+  const validation = UserProfileSchema.parse(newUserProfile);
+
+  await usersCollection.doc(userId).set(validation);
+  return validation;
 }
 
 /**
- * Skapar ett demoprojekt för en specifik användare.
+ * Uppdaterar en befintlig användarprofil i Firestore.
+ * @param userId Användarens unika ID.
+ * @param data De fält som ska uppdateras.
+ * @returns Den uppdaterade användarprofilen.
  */
-export async function createDemoProject(auth: Auth): Promise<any> {
-    // Flödet som anropar denna funktion validerar att auth-objektet finns.
-    const projectRef = db.collection('projects').doc(); 
-    
-    const demoProject = {
-        projectId: projectRef.id,
-        userId: auth.uid, 
-        name: "Renovering Villa Björkhagen (Demo)",
-        createdAt: FieldValue.serverTimestamp(),
-    };
+export async function updateUserProfile(userId: string, data: Partial<UserProfile>): Promise<UserProfile> {
+  const userRef = usersCollection.doc(userId);
 
-    await projectRef.set(demoProject);
-    return demoProject;
+  // Se till att vi inte kan ändra `userId`
+  const updateData = { ...data };
+  delete updateData.userId;
+
+  await userRef.update(updateData);
+
+  // Hämta och returnera den uppdaterade profilen för att vara säker
+  const updatedDoc = await userRef.get();
+  const updatedProfile = updatedDoc.data() as UserProfile;
+
+  return UserProfileSchema.parse(updatedProfile);
 }

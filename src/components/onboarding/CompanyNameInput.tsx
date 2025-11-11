@@ -4,7 +4,6 @@
 import React from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { ArrowRightIcon, BuildingOffice2Icon } from '@heroicons/react/24/solid';
-import { useSession } from 'next-auth/react';
 
 interface IFormInput {
   companyName: string;
@@ -17,7 +16,6 @@ interface CompanyNameInputProps {
 }
 
 const CompanyNameInput: React.FC<CompanyNameInputProps> = ({ onSubmit, error, isPending }) => {
-  const { data: session } = useSession();
   const { register, handleSubmit, formState: { errors } } = useForm<IFormInput>();
 
   const handleFormSubmit: SubmitHandler<IFormInput> = (data) => {
@@ -30,7 +28,7 @@ const CompanyNameInput: React.FC<CompanyNameInputProps> = ({ onSubmit, error, is
             <BuildingOffice2Icon className="h-12 w-12 text-cyan-400" />
             <div>
                 <h1 className="text-3xl font-bold text-white">Sist, vad heter ditt företag?</h1>
-                <p className="text-gray-400">Hej {session?.user?.name?.split(' ')[0]}, detta blir det sista steget.</p>
+                <p className="text-gray-400">Detta är det sista steget för att komma igång.</p>
             </div>
         </div>
       <p className="text-gray-300">
