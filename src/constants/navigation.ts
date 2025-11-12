@@ -5,6 +5,7 @@ import {
   UsersIcon,
   ClockIcon,
   DocumentDuplicateIcon,
+  SparklesIcon, // Importera den nya ikonen
 } from '@heroicons/react/24/outline';
 
 /**
@@ -23,6 +24,8 @@ export interface NavItem {
 export const primaryNavigation: NavItem[] = [
   { name: 'Översikt', href: '/dashboard', icon: HomeIcon },
   { name: 'Projekt', href: '/dashboard/projects', icon: FolderIcon },
+  // Ny länk till specialfunktioner!
+  { name: 'Specialfunktioner', href: '/dashboard/special-functions', icon: SparklesIcon }, 
   { name: 'Dokument', href: '/dashboard/dokument', icon: DocumentDuplicateIcon },
   { name: 'Kunder', href: '/dashboard/customers', icon: UsersIcon, id: 'tour-step-3-customers' },
 ];
