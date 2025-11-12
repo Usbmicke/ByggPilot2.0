@@ -3,20 +3,24 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFunctions } from "firebase/functions";
 import { getAuth } from "firebase/auth";
 
-// Din Firebase-projekts konfiguration
+// ====================================================================================
+// TEMPORÄR FELSÖKNING: Firebase-konfigurationen är hårdkodad för att kringgå
+// eventuella problem med Next.js/Turbopack och laddning av miljövariabler.
+// Detta bekräftar om `invalid_client`-felet beror på konfigurationen.
+// ====================================================================================
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyDYh_D6sq3OGjJD1Rj2McgpRN7XlRlXrqg",
+  authDomain: "byggpilot-v2.firebaseapp.com",
+  projectId: "byggpilot-v2",
+  storageBucket: "byggpilot-v2.firebasestorage.app",
+  messagingSenderId: "196837910328",
+  appId: "1:196837910328:web:64e7a16e69ad3e309903cd",
 };
 
 // Initiera Firebase
 const firebaseApp = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 const auth = getAuth(firebaseApp);
-const functions = getFunctions(firebaseApp, 'europe-west1'); // Exempel med region
+const functions = getFunctions(firebaseApp, 'europe-west1');
 
 export { firebaseApp, auth, functions };
