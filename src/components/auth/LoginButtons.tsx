@@ -1,41 +1,31 @@
 
-'use client'
+'use client';
+
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import { GoogleAuthProvider, signInWithRedirect } from 'firebase/auth';
+// Uppdaterad import: Hämta funktionen, inte objektet direkt.
+import { getClientAuth } from '@/lib/config/firebase-client';
 import GoogleIcon from '@/components/icons/GoogleIcon';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { auth } from '@/lib/firebase/client'; // Importera den konfigurerade auth-instansen
 
 const LoginButtons = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
+    toast.loading('Omdirigerar till Google...');
     const provider = new GoogleAuthProvider();
+    // Hämta auth-instansen här, garanterat på klienten.
+    const auth = getClientAuth();
 
     try {
-      // Starta inloggningsprocessen med ett popup-fönster
-      const result = await signInWithPopup(auth, provider);
-      
-      // Användaren har loggats in framgångsrikt
-      const user = result.user;
-      console.log("Inloggad som:", user.displayName);
-
-      // Här skulle vi normalt hämta ID-token och spara i state/context
-      // const token = await user.getIdToken();
-      // console.log("Firebase ID Token:", token);
-
-      toast.success(`Välkommen, ${user.displayName}!`);
-
-      // Omdirigera till dashboard efter lyckad inloggning
-      window.location.href = '/dashboard';
-
+      await signInWithRedirect(auth, provider);
     } catch (error) {
-      console.error("Fel vid Google-inloggning:", error);
-      toast.error('Något gick fel vid inloggningen. Försök igen.');
+      console.error("Fel vid initiering av Google-inloggning:", error);
+      toast.dismiss();
+      toast.error('Kunde inte starta inloggningen. Försök igen.');
       setIsLoading(false);
     }
-    // Not: setIsLoading(false) behövs inte vid lyckad inloggning eftersom sidan omdirigeras.
   };
 
   return (

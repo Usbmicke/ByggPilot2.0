@@ -1,8 +1,10 @@
+
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import React from 'react';
 import Script from 'next/script';
+import { AuthProvider } from '@/lib/firebase/AuthProvider'; // Importerar AuthProvider
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -22,7 +24,9 @@ export default function RootLayout({
         <Script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" strategy="beforeInteractive" />
       </head>
       <body className={`${inter.className} antialiased`}>
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   )
