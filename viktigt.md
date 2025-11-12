@@ -1,104 +1,101 @@
-# ByggPilot Master Plan & Arkitektur (v4.0 - Genkit Edition)
+# ByggPilot Master-Dokument & Arkitektur (v4.1 - Genkit)
 
 **Status:** Aktiv
-**Senast Uppdaterad:** 2025-11-11
+**Senast Uppdaterad:** 2025-11-12
 **Ägare:** Michael Ekengren Fogelström
-**Arkitektur-paradigm:** Genkit Hybrid
+**Paradigm:** Den Dunderstabila Genkit-Hybriden
 
 ---
 
-## 1. Kärnvision & Filosofi: "ByggPilot-Tänket"
+## 1. Vision & Kärnprinciper ("ByggPilot-Tänket")
 
-ByggPilot är inte ett verktyg; det är en **proaktiv digital kollega** för hantverkare i Sverige. Målet är att eliminera "pappersmonstret", ge hantverkaren full kontroll över sin tid och maximera lönsamheten i varje projekt.
+Detta dokument är den **enda källan till sanning** för projektets arkitektur och tekniska strategi. Det är designat för att en ny utvecklare eller AI-assistent omedelbart ska förstå projektets "hur" och "varför".
 
-- **Grundare:** Michael Ekengren Fogelström.
-- **Kärnvärde:** Byggd av en hantverkare, för hantverkare. Empati och en djup förståelse för användarens stressiga vardag genomsyrar varje beslut.
+### 1.1. Filosofi
+ByggPilot är en **proaktiv digital kollega** för hantverkare. Målet är att eliminera administrativt krångel och maximera lönsamheten. Empati för användarens vardag är kärnan i varje beslut.
 
-### 1.1 Kärnprinciper (Icke-förhandlingsbara)
-
-1.  **Säkerhet Genom Design:** Säkerhet implementeras i varje lager. Vi använder Firebase Genkits inbyggda autentisering (`onCallGenkit`) och Firebase App Check för att säkra vår backend. Klientlogik litas aldrig på.
-2.  **Stabilitet Först:** En buggfri, förutsägbar och blixtsnabb användarupplevelse prioriteras över allt annat. Vi använder dedikerade ramverk (Genkit för backend, Next.js för frontend) för att säkerställa att varje del av systemet är robust och specialiserad för sitt syfte.
-3.  **Ren Kod & Tydliga Gränssnitt:** Koden ska vara lätt att läsa och underhålla. Vi följer en strikt separation mellan frontend och backend. Frontend (Next.js) hanterar UI, backend (Genkit) hanterar all affärslogik och databasinteraktion.
-
-### 1.2 Agentens Persona & Konversationsregler
-
-- **Persona:** Erfaren, lugn, kompetent, självsäker och förtroendeingivande. En expertkollega, inte en undergiven assistent. Ledord: "Planeringen är A och O!" och "Tydlig kommunikation och förväntanshantering är A och O!".
-- **Proaktivitet är Standard:** Agera, fråga inte. Förbered utkast internt, men agera aldrig externt utan användarens explicita godkännande.
-- **En Fråga i Taget:** Varje svar ska vara kort, koncist och avslutas med en enda, tydlig motfråga för att driva konversationen framåt.
+### 1.2. Icke-förhandlingsbara Principer
+1.  **Säkerhet Genom Design:** All backend-logik skyddas av Firebase Autentisering via Genkit-triggers (`onCallGenkit`). Klient-sidan litas aldrig på. Databasen skyddas av tvingande Firestore Security Rules.
+2.  **Stabilitet & Kontroll:** AI:n agerar aldrig fritt. Allt styrs via "Tool Use" (LAM-arkitektur). AI:ns output tvingas till förutsägbara format via Zod-scheman.
+3.  **Ren Kod & Tydliga Gränssnitt:** Strikt separation mellan frontend och backend.
+    *   **Frontend (Next.js):** Hanterar **endast** UI och användarinteraktion.
+    *   **Backend (Genkit):** Hanterar **all** affärslogik, databas- och API-anrop.
 
 ---
 
-## 2. Arkitektur-Blueprint: Den Dunderstabila Genkit-Hybriden
+## 2. Arkitektur-Blueprint
 
-Detta är den enda källan till sanning för ByggPilots arkitektur. Den är designad för maximal stabilitet, säkerhet och skalbarhet genom att använda de bästa verktygen för varje jobb.
+### 2.1. Systemöversikt
 
-### 2.1 Översikt: Frontend vs. Backend
+*   **Frontend (UI-lagret):**
+    *   **Ramverk:** Next.js
+    *   **Ansvar:** Rendera UI, hantera klient-sidig state, och anropa backend. `useChat` från Vercel AI SDK används för att bygga ett responsivt chatt-gränssnitt.
 
-- **Frontend (Presentation Layer):**
-    - **Ramverk:** Next.js
-    - **Hosting:** Vercel
-    - **Ansvar:** Allt som användaren ser och interagerar med. Bygga UI-komponenter, hantera klient-sidig state (`useSWR`), och anropa backend.
-    - **AI-integration:** **Vercel AI SDK** används *enbart* för UI-komponenter som `useChat`-hooken för att skapa ett responsivt chatt-gränssnitt.
+*   **Backend (Logik- & Datalagret):**
+    *   **Ramverk:** Firebase Genkit
+    *   **Ansvar:** **All affärslogik.** Allt definieras som `Flows` och `Tools`. Hanterar databaslogik (via `lib/dal.ts`), validering (Zod), och AI-orkestrering.
 
-- **Backend (Business & Data Layer):**
-    - **Ramverk:** **Firebase Genkit**
-    - **Hosting:** Firebase (Cloud Functions v2 / App Hosting)
-    - **Ansvar:** **All affärslogik.** Att definiera och orkestrera AI-flöden, hantera "Tool Use" (verktygsanrop), anropa databasen (Firestore), interagera med externa API:er (Google Drive, SMHI), och hantera all datavalidering (Zod).
+### 2.2. Autentiseringsflödet (Högsta Standard)
 
-### 2.2 Filstruktur & Ansvarsområden
+Detta är det **enda korrekta** flödet och ersätter all tidigare logik (NextAuth, manuella tokens).
 
-- **Next.js Projektet (Frontend):**
-    - `src/app/`: Next.js-routes, Server Components och Client Components.
-    - `src/components/`: Återanvändbara React-komponenter (UI-fokuserade).
-    - `src/lib/`: Frontend-specifika hjälpfunktioner, och nu även de centrala Zod-schemana.
-    - **FÖRBJUDET:** Inga direkta databas-anrop. Ingen komplex affärslogik. Inga `api/chat`-routes för AI-logik.
+1.  **Initiering (Frontend):** Användaren klickar på "Logga in med Google". Detta anropar `signInWithRedirect` från Firebase klient-SDK. Hela sidan omdirigeras till Google.
+2.  **Retur & Verifiering (Frontend):** Användaren återvänder till appen. En central `AuthProvider`-komponent fångar upp detta via `onAuthStateChanged` och `getRedirectResult`.
+3.  **Synkronisering (Backend-anrop):** `AuthProvider` anropar ett säkert Genkit-flöde (`getOrCreateUserAndCheckStatusFlow`) via `onCallGenkit`. Triggern validerar automatiskt användarens token.
+4.  **Kontroll (Backend):** Genkit-flödet använder `auth.uid` för att kolla i Firestore (via `lib/dal.ts`) om användaren är ny eller har slutfört onboarding. Det returnerar `{ isOnboarded: boolean }`.
+5.  **Navigering (Frontend):** `AuthProvider` tar emot svaret och använder Next.js `useRouter` för att sömlöst navigera användaren till `/dashboard` eller `/onboarding` **utan** en full sid-omladdning.
 
-- **Genkit Projektet (Backend):**
-    - `genkit-project/` (separat katalog)
-    - `src/index.ts`: Definierar alla Genkit-flöden (`defineFlow`).
-    - `src/tools/`: Definierar alla "verktyg" som AI:n kan anropa (`defineTool`), t.ex. `createQuote.ts`, `getWeather.ts`. Varje verktyg validerar sin input med Zod.
-    - `src/lib/`: Databasinteraktioner (Firestore-anrop). All kod som pratar med databasen MÅSTE finnas här.
+### 2.3. Chattflödet (Förstå detta för felsökning)
 
-### 2.3 Autentisering & Säkerhet: Enkelt och Robust
+Om chatten "inte svarar" beror det på ett avbrott i denna kedja:
 
-Vi överger helt komplexiteten med `NextAuth` och manuell token-hantering.
+1.  **Frontend:** `useChat` (Vercel AI SDK) skickar användarens input. Dess `api`-parameter pekar **direkt** på Genkits `onCallGenkit` HTTP-slutpunkt för chattflödet.
+2.  **Backend Trigger:** `onCallGenkit` tar emot anropet, validerar användarens auth-token och startar `chatFlow`. Den har inbyggt stöd för att strömma svaret tillbaka.
+3.  **Backend Flow (`chatFlow`):** Flödet orkestrerar konversationen, använder "Tools" (som `askKnowledgeBaseTool` eller `createQuoteTool`) och genererar ett svar.
+4.  **Frontend:** `useChat` tar emot det strömmande svaret och renderar det i realtid.
 
-- **Flöde:**
-    1. Användaren loggar in på frontend-appen via **Firebase Authentication (klient-SDK)**.
-    2. Frontend (`useChat`) anropar ett Genkit-flöde som är exponerat via `onCallGenkit`.
-    3. `onCallGenkit`-triggern **validerar automatiskt** användarens Firebase Auth-token på servern. Om token är giltig, blir användarens `auth.uid` tillgänglig i Genkit-flödets kontext.
-    4. Genkit-flödet använder `auth.uid` för att säkert hämta och spara data i Firestore.
-
-Detta eliminerar behovet av komplicerad middleware i Next.js. Säkerheten är inbyggd, inte påskruvad.
-
-### 2.4 Data & AI: Förutsägbart och Icke-Hallucinerande
-
-- **Tool Use (LAM-arkitektur):** AI:n får **aldrig** agera direkt. Genkit tvingar modellen att returnera ett strukturerat `tool_calls`-objekt. Vår Genkit-kod tar emot denna begäran, validerar den med Zod, och exekverar den. Detta gör AI:ns handlingar 100% förutsägbara.
-
-- **RAG (Företagets Hjärna):** För att eliminera hallucinationer (t.ex. falska BSAB-koder) används Genkits inbyggda RAG-funktioner.
-    1. Kunskapsdokument (PDFs, text) laddas upp och indexeras via **Gemini File Search API**.
-    2. I Genkit definierar vi ett "retriever-tool" som använder detta index.
-    3. Master-Prompten instruerar AI:n att alltid använda detta verktyg för fack-specifika frågor. Svaren blir därmed "jordade" i verklig data.
+**EXEMPEL PÅ GAMMAL, FÖRBJUDEN KOD (från `app/api`):**
+```javascript
+// DETTA ÄR FEL! Använder inte Genkit, blandar logik, osäker.
+const vertex_ai = new VertexAI({ project: project, location: location });
+// ... manuell hantering av prompt och anrop ...
+return res.status(200).send({ message: "..." });
+```
+**Korrekt metod är alltid att paketera logik i ett `defineFlow` och exponera det säkert med `onCallGenkit`.**
 
 ---
 
-## 3. Strategisk Roadmap: Totalrenovering v4.0
+## 3. Strategisk Roadmap & Checklista (Totalrenovering v4.1)
 
-Denna plan är uppdaterad för att reflektera den nya Genkit-arkitekturen.
+Detta är den aktiva handlingsplanen.
 
-- **Fas 0: Total Nollställning & Kirurgisk Sanering:**
-    - Mål: Skapa en kliniskt ren kodbas. Radera all gammal backend-logik från Next.js-projektet (`api/`, `actions/` som pratar med db, `services/`, `contexts/`).
-    - **Status (2025-11-11):** KLAR. All affärslogik för datatyper har centraliserats till Zod-scheman under `src/lib/schemas/`. Den gamla, osäkra `app/types`-katalogen är nu redo att raderas.
-- **Fas 1: Etablering av den Nya Grunden:**
-    - Mål: Sätta upp de två separata, men sammankopplade, projekt-strukturerna.
-    - Åtgärd: Initiera ett nytt Genkit-projekt. Konfigurera `onCallGenkit`-triggern.
-    - Åtgärd: Konfigurera Next.js-frontend att anropa ett simpelt "helloWorld" Genkit-flöde för att verifiera anslutning och autentisering.
-- **Fas 2: Återuppbyggnad av Kärnflöden:**
-    - Mål: Återansluta den befintliga UI:n till den nya Genkit-backend.
-    - Åtgärd: Migrera logiken från gamla Server Actions (t.ex. `updateUserProfile`) till nya Genkit-flöden. Uppdatera UI-komponenterna att anropa dessa flöden.
-- **Fas 3: Totalrenovering av "The Co-Pilot" (Chatten):**
-    - Mål: Bygga den nya, stabila och intelligenta chatten från grunden.
-    - Åtgärd: Bygg chattens backend som ett Genkit-flöde som använder "Tool Use" och strömmar svar.
-    - Åtgärd: Implementera `useChat`-hooken i Next.js-frontenden för att konsumera det strömmande svaret från Genkit.
-    - Åtgärd: Återuppbygg "Offerthanteringen" som ett `createQuote`-verktyg i Genkit.
-- **Fas 4 & 5:** Implementation av högvärdiga funktioner (Väder, RAG, **Materialspill-analys via bild ('Gemini Banan')**) och långsiktig kvalitetssäkring (tester, övervakning) enligt samma principer, där all logik byggs som robusta Genkit-verktyg.
+### Fas 0: Kirurgisk Sanering
+- [X] Radera `app/api/`-mappen.
+- [X] Radera all `NextAuth.js`-kod.
+- [X] Avinstallera `next-auth`-paket.
+- [X] **Återstår:** Radera `src/app/types/` (planerat i denna session).
+
+### Fas 1: Ny Stabil Grund
+- [X] Genkit initierat i `genkit-project/`.
+- [X] `lib/dal.ts` etablerat som Data Access Layer.
+- [X] `lib/schemas.ts` etablerat för Zod-scheman.
+- [X] Tvingande Firestore Security Rules är på plats.
+
+### Fas 2: Återuppbyggnad av Kärnflöden (Auth & Onboarding)
+- **[PÅGÅR NU]** 2.1: Bygg backend-flöde `getOrCreateUserAndCheckStatusFlow`.
+- **[PÅGÅR NU]** 2.2: Bygg frontend `AuthProvider` med `onAuthStateChanged` och `signInWithRedirect`.
+- **[PÅGÅR NU]** 2.3: Återanslut Onboarding-UI till ett nytt `onboardingCompleteFlow`.
+
+### Fas 3: Totalrenovering av "Hjärnan" (Chatten)
+- [ ] 3.1: Bygg `chatFlow` i Genkit som hanterar "Tool Use" och streaming.
+- [ ] 3.2: Återanslut frontend-UI med `useChat` pekat mot Genkit-slutpunkten.
+
+### Fas 4: Implementera Kärnfunktionalitet (LAM & RAG)
+- [ ] 4.1: Implementera "Företagets Hjärna" (RAG) med Gemini File Search API för att eliminera hallucinationer.
+- [ ] 4.2: Implementera kärnverktyg som `Flows` (t.ex. `createOfferFlow`, `audioToAtaFlow`, `analyzeSpillWasteFlow`).
+
+### Fas 5: Verifiering & Härdning
+- [ ] 5.1: Verifiera bygget med `npx tsc --noEmit` och `npm run build`.
+- [ ] 5.2: Implementera juridisk härdning (friskrivningar).
+- [ ] 5.3: Implementera teknisk härdning (Rate Limiting, Human-in-the-Loop).
+- [ ] 5.4: Skapa kritiska E2E-tester med Playwright.

@@ -1,17 +1,13 @@
 
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { initializeApp, getApps } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import { UserProfile, UserProfileSchema } from './schemas';
 
 // =================================================================================
 // INITIALISERA FIREBASE ADMIN SDK
-// Säkerställer att vi bara initialiserar appen en gång.
 // =================================================================================
 
 if (!getApps().length) {
-  // Om vi kör i en Firebase-miljö (t.ex. Cloud Functions) är serviceAccountKey inte nödvändigt.
-  // SDK:t hittar automatiskt rätt konfiguration.
-  // För lokal utveckling kan du behöva peka ut en service account-fil.
   initializeApp();
 }
 
@@ -20,7 +16,6 @@ const usersCollection = db.collection('users');
 
 // =================================================================================
 // DATA ACCESS LAYER (DAL) - ANVÄNDARPROFILER
-// Funktioner för att interagera med `users`-collection i Firestore.
 // =================================================================================
 
 /**
@@ -33,12 +28,10 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
   if (!userDoc.exists) {
     return null;
   }
-  // Validera data mot Zod-schemat innan den returneras
   const userData = userDoc.data();
   const validation = UserProfileSchema.safeParse(userData);
   if (!validation.success) {
     console.error('Ogiltig användardata i Firestore:', validation.error);
-    // Hantera felet, t.ex. genom att returnera null eller kasta ett fel
     return null;
   }
   return validation.data as UserProfile;
@@ -47,22 +40,21 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 /**
  * Skapar en ny användarprofil i Firestore.
  * @param userId Användarens unika ID.
- * @param data De grundläggande uppgifterna för den nya profilen.
+ * @param profileData Grundläggande data för profilen (e-post, namn, fotolänk).
  * @returns Den nyskapade användarprofilen.
  */
-export async function createUserProfile(userId: string, email: string): Promise<UserProfile> {
+export async function createUserProfile(userId: string, profileData: { email: string; displayName?: string; photoURL?: string }): Promise<UserProfile> {
   const newUserProfile: UserProfile = {
     userId,
-    email,
+    email: profileData.email,
+    displayName: profileData.displayName || '',
+    photoURL: profileData.photoURL || '',
     onboardingComplete: false,
-    // Sätt default-värden för andra fält här om nödvändigt
   };
 
-  // Validera med Zod innan vi skriver till databasen
-  const validation = UserProfileSchema.parse(newUserProfile);
-
-  await usersCollection.doc(userId).set(validation);
-  return validation;
+  const validatedProfile = UserProfileSchema.parse(newUserProfile);
+  await usersCollection.doc(userId).set(validatedProfile);
+  return validatedProfile;
 }
 
 /**
@@ -73,16 +65,12 @@ export async function createUserProfile(userId: string, email: string): Promise<
  */
 export async function updateUserProfile(userId: string, data: Partial<UserProfile>): Promise<UserProfile> {
   const userRef = usersCollection.doc(userId);
-
-  // Se till att vi inte kan ändra `userId`
   const updateData = { ...data };
-  delete updateData.userId;
+  delete updateData.userId; // Förhindra ändring av primärnyckel
 
   await userRef.update(updateData);
 
-  // Hämta och returnera den uppdaterade profilen för att vara säker
   const updatedDoc = await userRef.get();
-  const updatedProfile = updatedDoc.data() as UserProfile;
-
-  return UserProfileSchema.parse(updatedProfile);
+  const updatedProfile = UserProfileSchema.parse(updatedDoc.data());
+  return updatedProfile;
 }

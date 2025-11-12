@@ -9,7 +9,9 @@ export interface ActionableEvent {
   message?: string;
   link?: string;
   isRead: boolean;
-  createdAt: any; 
+  // Korrigerad från 'any' till 'string' för ökad typsäkerhet.
+  // Tidsstämplar från servern serialiseras oftast till ISO-strängar.
+  createdAt: string; 
 }
 
 export interface Project {

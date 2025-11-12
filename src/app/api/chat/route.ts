@@ -1,31 +1,36 @@
-import { MODELS } from '@/lib/config';
-import { NextRequest, NextResponse } from 'next/server';
 
-// This is the primary endpoint for the chat functionality.
-// It will be powered by Genkit and the Tiered Model Architecture.
+import { NextRequest, NextResponse } from 'next/server';
+import { callGenkitFlow } from '@/lib/genkit'; // Importera vår Genkit-anropare
+
+// Importera ReadableStream för att kunna strömma svaret
+const { ReadableStream } = require('stream/web');
+
+// Detta är den primära slutpunkten för chattfunktionaliteten.
+// Den drivs nu av ett dedikerat Genkit-flöde.
 export async function POST(req: NextRequest) {
   try {
-    // For now, we'll just log the model configuration to confirm it's being read.
-    console.log('Accessed /api/chat endpoint.');
-    console.log('Default Tier Model:', MODELS.DEFAULT_TIER);
-    console.log('Heavy Tier Model:', MODELS.HEAVY_TIER);
-
     const { messages } = await req.json();
-    const lastMessage = messages[messages.length - 1]?.content || 'No message found';
 
-    // This is a temporary placeholder response.
-    // In the next step, this will be replaced by the Genkit flow.
-    const responseText = `This is a placeholder response from /api/chat. You sent: "${lastMessage}". The Genkit orchestrator is not yet implemented.`;
+    // Säkerställ att det finns meddelanden att behandla
+    if (!messages || messages.length === 0) {
+      return new NextResponse(
+        JSON.stringify({ error: 'Inga meddelanden i förfrågan' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
-    return new Response(responseText, {
-      status: 200,
+    // Anropa det nya Genkit-flödet för chatt och skicka med hela meddelandehistoriken
+    const stream = await callGenkitFlow('chatWithByggpilotFlow', { messages });
+
+    // Returnera en strömmande respons direkt från Genkit
+    return new Response(stream as any, {
       headers: {
-        'Content-Type': 'text/plain',
+        'Content-Type': 'text/plain; charset=utf-8',
       },
     });
 
   } catch (error) {
-    console.error('Error in /api/chat:', error);
+    console.error('Fel i /api/chat:', error);
     return new NextResponse(
       JSON.stringify({ error: 'Internal Server Error' }),
       {
