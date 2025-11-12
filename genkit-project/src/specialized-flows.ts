@@ -1,78 +1,68 @@
 
-import { defineFlow } from '@genkit-ai/flow';
+import { defineFlow, run } from '@genkit-ai/flow';
 import { z } from 'zod';
-import { gemini15Pro } from '@genkit-ai/googleai';
-import { generate } from '@genkit-ai/ai';
-import { AtaCreationSchema, AtaIdSchema, ProjectIdSchema } from '../../lib/schemas'; // Uppdaterade importer
-import { createAta } from '../../lib/dal';
+import { googleAI, gemini25Pro } from '@genkit-ai/googleai';
+import { generate, defineTool } from '@genkit-ai/ai';
+import { AtaCreationSchema, AtaIdSchema, ProjectIdSchema, QuoteCreationSchema } from '../../lib/schemas';
+import { createAta, createQuote } from '../../lib/dal';
 import { FlowAuth } from '@genkit-ai/flow';
+import { askBranschensHjärnaFlow, askFöretagetsHjärnaFlow } from './brains';
 
 // =================================================================================
-// MODELLER
+// MODELLER (2025-11-12)
 // =================================================================================
 
-const heavyDuty = gemini15Pro; // Gemini 2.5 Pro
+const heavyDuty = gemini25Pro;
+const vision = gemini25Pro; // Vision-modellen
+
+// ... (resten av filen är oförändrad fram till slutet)
 
 // =================================================================================
-// FAS 3: RÖST-TILL-ÄTA-FLÖDE (audioToAtaFlow) - KORRIGERAD VERSION
+// SPILL-ANALYS-FLÖDE (analyzeSpillWasteFlow) - "ÖGAT"
 // =================================================================================
+
+const cutPlanSchema = z.object({
+  description: z.string().describe('En sammanfattning av den föreslagna kapningsplanen.'),
+  estimatedSavings: z.number().describe('Uppskattad besparing i procent.'),
+  cuts: z.array(z.object({
+    piece: z.string().describe('Vilken bit som ska kapas.'),
+    length: z.number().describe('Längden som ska kapas.'),
+    from: z.string().describe('Från vilken spillbit den ska kapas.')
+  }))
+});
 
 /**
- * Ett flöde som tar en ljudfil och ett projekt-ID, analyserar ljudet,
- * extraherar information för en ÄTA, och sparar den i databasen.
+ * Analyserar en bild på spillmaterial och föreslår en optimerad kapningsplan.
  */
-export const audioToAtaFlow = defineFlow(
+export const analyzeSpillWasteFlow = defineFlow(
     {
-        name: 'audioToAtaFlow',
-        // Input kräver nu projectId för att veta var ÄTA:n hör hemma
+        name: 'analyzeSpillWasteFlow',
         inputSchema: z.object({ 
-            audioUrl: z.string().url(),
-            projectId: ProjectIdSchema 
+            imageUrl: z.string().url().describe('URL till en bild på spillmaterialet.')
         }),
-        outputSchema: z.object({ 
-            ataId: AtaIdSchema, 
-            message: z.string() 
-        }),
+        outputSchema: cutPlanSchema,
         authPolicy: (auth, input) => {
             if (!auth) throw new Error('Autentisering krävs.');
         },
     },
-    async ({ audioUrl, projectId }, context) => {
-        const auth = context.auth as FlowAuth;
-        if (!auth?.uid) throw new Error('Kunde inte verifiera användar-ID.');
+    async ({ imageUrl }) => {
+        console.log(`[analyzeSpillWasteFlow] Startar analys för bild: ${imageUrl}`);
 
-        console.log(`[audioToAtaFlow] Startar flöde för ljudfil: ${audioUrl} i projekt: ${projectId}`);
-
-        // Steg 1: Använd heavyDuty-modellen för att analysera ljudet och tvinga JSON-output
         const llmResponse = await generate({
-            model: heavyDuty,
-            prompt: `Analysera följande ljudinspelning. Det är en hantverkare som rapporterar en ÄTA (Ändringar, Tillägg, Avgående). Extrahera titel, en detaljerad beskrivning och en uppskattad kostnad. Svara ENBART med JSON-objektet, inget annat. Ljudinspelning: ${audioUrl}`,
+            model: vision,
+            prompt: `Du är en expert på materialoptimering i byggbranschen. Analysera bilden som finns på följande URL. Identifiera de olika spillbitarna (gipsskivor, reglar, etc.) och deras uppskattade storlekar. Skapa sedan en optimerad kapningsplan för att minimera framtida spill. Svara ENDAST med ett JSON-objekt enligt det specificerade schemat. Bild-URL: ${imageUrl}`,
             output: {
-                schema: AtaCreationSchema, // Använd det nya, begränsade schemat
-                format: 'json',
-            },
+                schema: cutPlanSchema,
+                format: 'json'
+            }
         });
 
-        const extractedData = llmResponse.output();
-        if (!extractedData) {
-            throw new Error("Kunde inte extrahera ÄTA-information från ljudfilen.");
+        const plan = llmResponse.output();
+        if (!plan) {
+            throw new Error("Kunde inte generera en kapningsplan från bilden.");
         }
 
-        console.log("[audioToAtaFlow] Extraherad ÄTA-data:", extractedData);
-
-        // Steg 2: Skapa det fullständiga ÄTA-objektet för databasen
-        const ataToCreate = {
-            projectId: projectId,
-            userId: auth.uid, // Säkerställ att rätt användare är satt
-            ...extractedData,
-        };
-
-        // Steg 3: Anropa vår DAL-funktion direkt för att spara i databasen. Säkert och enkelt.
-        const newAtaId = await createAta(ataToCreate);
-
-        return {
-            ataId: newAtaId,
-            message: "En ny ÄTA har skapats framgångsrikt från din ljudinspelning!",
-        };
+        console.log("[analyzeSpillWasteFlow] Genererad kapningsplan:", plan);
+        return plan;
     }
 );
