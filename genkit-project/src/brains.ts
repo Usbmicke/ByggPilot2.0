@@ -64,22 +64,10 @@ const firestoreRetrieverTool: Tool = {
       throw new Error("Autentisering krävs för att söka i företagsdata.");
     }
     console.log(`[Företagets Hjärna] Användare ${auth.uid} söker efter: "${input.query}"`);
-
-    // Här skulle vi hämta companyId från userProfile
-    // const userProfile = await getUserProfile(auth.uid);
-    // const companyId = userProfile?.companyId;
-    // if (!companyId) { ... }
-
-    // Simulerar ett anrop till Firestore Vector Search med ett companyId-filter
-    // const results = await db.collection('documents').where('companyId', '==', companyId).find(...);
-
     return `Simulerat sökresultat från Firestore för frågan "${input.query}": I projekt P-123 är nästa milstolpe 'Grundläggning' den 2025-12-01.`;
   },
 };
 
-/**
- * Flöde för att svara på frågor genom att söka i företagets privata data.
- */
 export const askFöretagetsHjärnaFlow = defineFlow(
   {
     name: 'askFöretagetsHjärnaFlow',
@@ -91,17 +79,57 @@ export const askFöretagetsHjärnaFlow = defineFlow(
   },
   async ({ prompt }, context) => {
     console.log(`[Företagets Hjärna] Startar flöde för prompt: "${prompt}"`);
-    
-    // Steg 1: Hämta privat kontext med vårt säkra verktyg
     const privateContext = await firestoreRetrieverTool.run({ query: prompt }, { auth: context.auth });
-    
-    // Steg 2: Generera svar baserat på den privata kontexten
     const finalResponse = await generate({
       model: workhorse,
       prompt: `Du är en assistent som har tillgång till företagets interna projektdata. Svara på användarens fråga baserat ENDAST på följande kontext. Svara på svenska.\n\nKontext: "${privateContext}"\n\nFråga: "${prompt}"`,
       config: { temperature: 0.1 }
     });
-    
     return finalResponse.text();
+  }
+);
+
+// =================================================================================
+// FAS 2.3 & 3: CHATT-ORKESTRERING (UPPDATERAD)
+// =================================================================================
+
+enum Brain {
+  None = 'none',
+  Public = 'public', 
+  Private = 'private', 
+  General = 'general',
+  SpecialFunction = 'special', // NYTT VAL FÖR FAS 3
+}
+
+export const chatOrchestratorFlow = defineFlow(
+  {
+    name: 'chatOrchestratorFlow',
+    inputSchema: z.object({ prompt: z.string() }),
+    outputSchema: z.object({
+      brain: z.nativeEnum(Brain),
+      reasoning: z.string(),
+    }),
+    authPolicy: (auth, input) => {
+      if (!auth) throw new Error('Autentisering krävs.');
+    },
+  },
+  async ({ prompt }) => {
+    console.log(`[Orchestrator] Klassificerar prompt: "${prompt}"`);
+
+    const llmResponse = await generate({
+      model: workhorse,
+      prompt: `Du är en AI-assistent i en app för byggföretag. Din uppgift är att klassificera användarens fråga för att avgöra vilken informationskälla som bäst kan besvara den. Svara med ett JSON-objekt med fälten "brain" och "reasoning".\n\nFöljande val finns för "brain":\n- \"public\": Använd om frågan handlar om allmänna byggregler, standarder eller lagar (t.ex. BBR, AMA, AFS).\n- \"private\": Använd om frågan rör specifik information om användarens pågående projekt, kunder, offerter, eller interna företagsdokument.\n- \"special\": Använd om frågan antyder att en avancerad, specifik åtgärd kan utföras, som att skapa en rapport från ljud, analysera spillmaterial, generera en offert, eller exportera bokföringsdata.\n- \"general\": Använd för allmänna frågor, konversation, eller när en webbsökning är mest lämplig.\n\nExempel:\n- Fråga: \"Vilka krav gäller för ventilation i nya badrum?\" -> { \"brain\": \"public\", \"reasoning\": \"Frågan handlar om en allmän byggregel (BBR).\" }\n- Fråga: \"Vad är status för projektet på Storgatan 5?\" -> { \"brain\": \"private\", \"reasoning\": \"Frågan rör ett specifikt, internt projekt.\" }\n- Fråga: \"Jag spelade precis in en genomgång av ett ÄTA-jobb, kan du hjälpa mig?\" -> { \"brain\": \"special\", \"reasoning\": \"Användaren nämner en inspelning för en ÄTA, vilket matchar Röst-till-ÄTA funktionen.\" }\n- Fråga: \"Kan du skapa en offert för en badrumsrenovering åt familjen Andersson?\" -> { \"brain\": \"special\", \"reasoning\": \"Användaren vill skapa en offert, vilket matchar Offertgeneratorn.\" }\n- Fråga: \"Hur många skruvar går det åt per gipsskiva?\" -> { \"brain\": \"general\", \"reasoning\": \"Detta är en allmän byggfråga som bäst besvaras med en webbsökning.\" }\n- Fråga: \"Hej, hur mår du idag?\" -> { \"brain\": \"general\", \"reasoning\": \"Detta är en social konversation.\" }\n\nAnvändarens fråga: "${prompt}"`,
+      output: {
+        schema: z.object({
+          brain: z.nativeEnum(Brain),
+          reasoning: z.string(),
+        }),
+      },
+      config: { temperature: 0.0 }
+    });
+    
+    const result = llmResponse.output();
+    console.log(`[Orchestrator] Resultat: ${JSON.stringify(result)}`);
+    return result;
   }
 );
