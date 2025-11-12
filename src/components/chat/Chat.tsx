@@ -1,30 +1,100 @@
+
 'use client';
 
-import { useChat } from '@ai-sdk/react';
-import React, { useState } from 'react';
+import React, { useState, FormEvent } from 'react';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { app } from '@/lib/firebase'; // Assuming your firebase app instance is exported from here
 import { ChatMessages } from './ChatMessages';
 import ChatInput from './ChatInput';
 import { ChevronDownIcon, ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/solid';
 
+// Define the shape of a message
+interface Message {
+  role: 'user' | 'model';
+  content: string;
+}
+
 export default function Chat() {
   const [isChatOpen, setIsChatOpen] = useState(true);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const auth = getAuth(app);
 
-  // REFACTOR (v5): Correctly using the useChat hook as intended.
-  // The hook manages the input state and form submission.
-  const { messages, input, handleInputChange, handleSubmit, isLoading, stop } = useChat({
-    api: '/api/chat',
-  });
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+
+    const user = auth.currentUser;
+    if (!user) {
+      console.error("User not authenticated");
+      // Optionally, show a message to the user to log in
+      return;
+    }
+
+    const idToken = await user.getIdToken();
+    const newMessages: Message[] = [...messages, { role: 'user', content: input }];
+    setMessages(newMessages);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/genkit/flows/chatRouterFlow', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          // Genkit flows typically take an 'input' field
+          input: {
+            messages: newMessages,
+          }
+        }),
+      });
+
+      if (!response.body) {
+        throw new Error('Response body is null');
+      }
+
+      // Handle streaming response
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let modelResponse = '';
+      setMessages(prev => [...prev, { role: 'model', content: '' }]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        modelResponse += decoder.decode(value, { stream: true });
+        setMessages(prev => {
+          const lastMessage = prev[prev.length - 1];
+          if (lastMessage.role === 'model') {
+            lastMessage.content = modelResponse;
+            return [...prev.slice(0, -1), lastMessage];
+          }
+          return prev;
+        });
+      }
+    } catch (error) {
+      console.error("Error calling Genkit flow:", error);
+      setMessages(prev => [...prev, { role: 'model', content: "Ursäkta, ett fel inträffade." }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   if (!isChatOpen) {
     return (
-      <button 
+      <button
         onClick={() => setIsChatOpen(true)}
         className="fixed bottom-8 right-8 bg-primary-500 text-white p-4 rounded-full shadow-lg hover:bg-primary-600 transition-transform hover:scale-110 z-50 animate-fadeIn"
         aria-label="Öppna chatt"
       >
         <ChatBubbleOvalLeftEllipsisIcon className="h-8 w-8" />
       </button>
-    )
+    );
   }
 
   return (
@@ -39,15 +109,14 @@ export default function Chat() {
       <div className="flex-1 flex flex-col overflow-hidden">
          <ChatMessages messages={messages} isLoading={isLoading} />
       </div>
-      
+
       <div className="p-4 border-t border-border-color flex-shrink-0">
-        {/* The form now uses the handleSubmit provided by the hook */}
         <form onSubmit={handleSubmit}>
-            <ChatInput 
-                input={input} // Pass the hook's input state
-                handleInputChange={handleInputChange} // Pass the hook's change handler
-                isLoading={isLoading} 
-                onStop={stop}
+            <ChatInput
+                input={input}
+                handleInputChange={(e) => setInput(e.target.value)}
+                isLoading={isLoading}
+                onStop={() => { /* Optional: Implement stop logic if needed */ }}
             />
         </form>
       </div>
