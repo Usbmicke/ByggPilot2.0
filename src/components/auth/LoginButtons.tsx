@@ -1,48 +1,37 @@
-
 'use client';
 
 import { useState } from 'react';
-import toast from 'react-hot-toast';
-import { GoogleAuthProvider, signInWithRedirect } from 'firebase/auth';
-// Importera den direkta singleton-instansen
+import { setPersistence, browserLocalPersistence, signInWithRedirect, GoogleAuthProvider } from "firebase/auth";
 import { auth } from '@/lib/config/firebase-client';
-import GoogleIcon from '@/components/icons/GoogleIcon';
+import { FaGoogle } from 'react-icons/fa';
 
-const LoginButtons = () => {
+// FIX: Omskriven med 'export const' syntax för att lösa Next.js byggfel.
+// Detta är ett mer robust sätt att definiera React-komponenter.
+export const LoginButtons = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
-    toast.loading('Omdirigerar till Google...');
     const provider = new GoogleAuthProvider();
-    
-    // Använd den importerade instansen direkt.
     try {
+      await setPersistence(auth, browserLocalPersistence);
       await signInWithRedirect(auth, provider);
     } catch (error) {
-      console.error("Fel vid initiering av Google-inloggning:", error);
-      toast.dismiss();
-      toast.error('Kunde inte starta inloggningen. Försök igen.');
-      setIsLoading(false);
+      console.error("Fel vid Google inloggning:", error);
+      setIsLoading(false); 
     }
   };
 
   return (
     <button
-      onClick={handleGoogleSignIn}
+      onClick={!isLoading ? handleGoogleSignIn : undefined}
       disabled={isLoading}
-      className="flex items-center justify-center px-4 py-2 text-sm font-medium text-neutral-800 bg-neutral-100 border border-transparent rounded-full shadow-sm hover:bg-neutral-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-400 disabled:bg-gray-400 disabled:cursor-not-allowed whitespace-nowrap"
+      className="flex items-center justify-center gap-2.5 bg-white text-black font-semibold px-4 py-2 rounded-full hover:bg-neutral-200 transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap text-sm"
     >
-      {isLoading ? (
-        <span>Omdirigerar...</span>
-      ) : (
-        <>
-          <GoogleIcon className="-ml-1 mr-2 h-4 w-4" />
-          Logga in med Google
-        </>
-      )}
+      <FaGoogle />
+      <span>
+        {isLoading ? 'Omdirigerar...' : 'Logga in med Google'}
+      </span>
     </button>
   );
 };
-
-export default LoginButtons;
