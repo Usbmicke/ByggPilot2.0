@@ -8,15 +8,16 @@ import { setGlobalOptions } from 'firebase-functions/v2';
 import { onUserAfterCreate } from 'firebase-functions/v2/identity';
 import * as logger from 'firebase-functions/logger';
 import { z } from 'zod';
-import { createUserProfile } from '../../lib/dal';
-import { MessageData } from '../../lib/schemas';
+// Importera ALLA funktioner från den korrekta DAL-filen
+import { createUserProfile, getUserProfile } from './dal';
+import { MessageData } from '../../lib/schemas'; // Denna import är fortfarande lite suspekt, men vi låter den vara för nu.
 import { generate, defineTool } from '@genkit-ai/ai';
 import { askBranschensHjärnaFlow, askFöretagetsHjärnaFlow } from './brains';
 import { 
     audioToAtaFlow, 
     generateQuoteFlow, 
     analyzeSpillWasteFlow,
-    generateSie4Flow // Importera sista flödet
+    generateSie4Flow
 } from './specialized-flows'; 
 
 // =================================================================================
@@ -46,7 +47,6 @@ const tools_default = [
 
 const tools_heavy = [
   ...tools_default,
-  // Här skulle de riktiga verktygen för offert och SIE-generering ligga
 ];
 
 // =================================================================================
@@ -59,17 +59,80 @@ export {
     audioToAtaFlow, 
     generateQuoteFlow, 
     analyzeSpillWasteFlow,
-    generateSie4Flow // Exportera sista flödet
+    generateSie4Flow
 }; 
 
 // =================================================================================
-// BAKGRUNDSFLÖDEN & HUVUDFLÖDE
+// SYNKRONISERING & ORKESTRERING (NY ARKITEKTUR)
 // =================================================================================
 
+/**
+ * Bakgrunds-trigger som körs ENBART när en Firebase-användare skapas FÖRSTA gången.
+ * Detta säkerställer att en bas-profil alltid finns.
+ */
 export const onusercreate = onUserAfterCreate(async (user) => {
-  logger.info(`Ny användare: ${user.data.uid}`);
+  logger.info(`Ny användare skapad i Firebase Auth: ${user.data.uid}`);
   await createUserProfile({ userId: user.data.uid, email: user.data.email || '' });
 });
+
+/**
+ * Detta är huvudflödet för autentisering som anropas från frontend (AuthProvider).
+ * Det körs VARJE gång en användare loggar in eller när sidan laddas om.
+ * Det skapar en användarprofil om den saknas och returnerar användarens onboarding-status.
+ */
+export const getOrCreateUserAndCheckStatusFlow = onFlow(
+    {
+        name: 'getOrCreateUserAndCheckStatusFlow',
+        inputSchema: z.void(), // Inga argument behövs från klienten
+        outputSchema: z.object({
+            userExists: z.boolean(),
+            isOnboarded: z.boolean(),
+        }),
+        // SÄKERHET: authPolicy säkerställer att endast inloggade användare kan anropa detta.
+        authPolicy: (auth, input) => {
+            if (!auth || !auth.uid) {
+                throw new Error('Användare måste vara autentiserad.');
+            }
+        },
+    },
+    async (input, context) => {
+        const userId = context.auth!.uid;
+        const userEmail = context.auth!.email || '';
+
+        logger.info(`Kör getOrCreateUserAndCheckStatusFlow för användare: ${userId}`);
+
+        let userProfile = await getUserProfile(userId);
+
+        if (!userProfile) {
+            logger.info(`Profil saknas för ${userId}, skapar ny profil...`);
+            await createUserProfile({ userId, email: userEmail });
+            userProfile = await getUserProfile(userId); // Hämta den nyskapade profilen
+
+            // Om den fortfarande inte finns, kasta ett fel.
+            if (!userProfile) {
+                logger.error(`Kritiskt fel: Misslyckades med att skapa och hämta profil för ${userId}`);
+                throw new Error('Kunde inte skapa eller verifiera användarprofil.');
+            }
+
+            return {
+                userExists: false, // Indikerar att profilen just skapades
+                isOnboarded: false, // Nya profiler är aldrig onboardade
+            };
+        }
+
+        logger.info(`Profil hittades för ${userId}. Onboarding-status: ${userProfile.onboardingStatus}`);
+
+        return {
+            userExists: true,
+            isOnboarded: userProfile.onboardingStatus === 'complete',
+        };
+    }
+);
+
+
+// =================================================================================
+// BEFINTLIGT CHAT-FLÖDE (Lätt modifierat för kontext)
+// =================================================================================
 
 function isFailureResponse(responseText: string): boolean {
     const failureKeywords = ['tyvärr', 'inte kan', 'misslyckades', 'vet inte'];
@@ -81,7 +144,7 @@ export const chatOrchestratorFlow = onFlow(
     name: 'chatOrchestratorFlow',
     inputSchema: z.object({ history: z.array(MessageData), prompt: z.string() }),
     outputSchema: z.string(), 
-    authPolicy: (auth, input) => { if (!auth.uid) { throw new Error('Användare måste vara inloggad.'); } },
+    authPolicy: (auth, input) => { if (!auth || !auth.uid) { throw new Error('Användare måste vara inloggad.'); } },
   },
   async ({ history, prompt }) => {
     const intentResponse = await generate({

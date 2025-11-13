@@ -2,12 +2,13 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  // GULDSTANDARD-FIX 7.0: Lägger till en extra, mer explicit URL för att
-  // säkerställa att absolut alla variationer av ursprunget är täckta.
-  // Detta är för att utesluta alla möjliga konfigurationsfel.
+  // GULDSTANDARD-FIX 8.0: Lägger till en överdrivet explicit URL med port 443.
+  // Detta är ett sista försök att säkerställa att Next.js kan matcha ursprunget
+  // exakt i Cloud Workstations-miljön.
   allowedDevOrigins: [
     "https://3001-firebase-byggpilot4-1761576395592.cluster-ombtxv25tbd6yrjpp3lukp6zhc.cloudworkstations.dev",
-    "http://3001-firebase-byggpilot4-1761576395592.cluster-ombtxv25tbd6yrjpp3lukp6zhc.cloudworkstations.dev"
+    "http://3001-firebase-byggpilot4-1761576395592.cluster-ombtxv25tbd6yrjpp3lukp6zhc.cloudworkstations.dev",
+    "https://3001-firebase-byggpilot4-1761576395592.cluster-ombtxv25tbd6yrjpp3lukp6zhc.cloudworkstations.dev:443"
   ],
 
   async rewrites() {
