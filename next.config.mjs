@@ -2,13 +2,14 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  // GULDSTANDARD-FIX 3.0: Korrigerat domännamn och tillagt protokoll (`https://`).
-  // Detta löser felet "Blocked cross-origin request".
-  allowedDevOrigins: ["https://3001-firebase-byggpilot4-1761576395592.cluster-ombtxv25tbd6yrjpp3lukp6zhc.cloudworkstations.dev"],
+  // GULDSTANDARD-FIX 7.0: Lägger till en extra, mer explicit URL för att
+  // säkerställa att absolut alla variationer av ursprunget är täckta.
+  // Detta är för att utesluta alla möjliga konfigurationsfel.
+  allowedDevOrigins: [
+    "https://3001-firebase-byggpilot4-1761576395592.cluster-ombtxv25tbd6yrjpp3lukp6zhc.cloudworkstations.dev",
+    "http://3001-firebase-byggpilot4-1761576395592.cluster-ombtxv25tbd6yrjpp3lukp6zhc.cloudworkstations.dev"
+  ],
 
-  // GULDSTANDARD-FIX 4.0: Återinfört proxy-regeln. Det är nu tydligt att
-  // Metod A (authDomain i firebase-client) och Metod B (rewrites här)
-  // måste samverka för att lösa både cookie- och 404-problemet.
   async rewrites() {
     return [
       {
