@@ -3,7 +3,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import LoginButtons from '@/components/auth/LoginButtons'; // KORRIGERAD SÖKVÄG
+import { LoginButtons } from '@/components/auth/LoginButtons'; // KORRIGERAD TILL NAMED IMPORT
 
 export const Navbar = () => {
   return (

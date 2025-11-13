@@ -3,7 +3,8 @@
 
 import React, { useState, FormEvent } from 'react';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { app } from '@/lib/firebase'; // Assuming your firebase app instance is exported from here
+// KORRIGERAD SÖKVÄG IGEN - Denna är den rätta baserat på filstrukturen.
+import { app } from '@/lib/config/firebase-client'; 
 import { ChatMessages } from './ChatMessages';
 import ChatInput from './ChatInput';
 import { ChevronDownIcon, ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/solid';
