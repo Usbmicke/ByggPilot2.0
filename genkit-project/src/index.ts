@@ -10,7 +10,7 @@ import * as logger from 'firebase-functions/logger';
 import { z } from 'zod';
 // Importera ALLA funktioner från den korrekta DAL-filen
 import { createUserProfile, getUserProfile } from './dal';
-import { MessageData } from '../../lib/schemas'; // Denna import är fortfarande lite suspekt, men vi låter den vara för nu.
+import { MessageData } from './schemas'; // KORRIGERAD IMPORT
 import { generate, defineTool } from '@genkit-ai/ai';
 import { askBranschensHjärnaFlow, askFöretagetsHjärnaFlow } from './brains';
 import { 
