@@ -3,7 +3,6 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, onAuthStateChanged, getRedirectResult } from 'firebase/auth';
-// Importera den direkta singleton-instansen
 import { auth } from '@/lib/config/firebase-client';
 import { useRouter, usePathname } from 'next/navigation';
 import { callGenkitFlow } from '@/lib/genkit';
@@ -22,33 +21,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Inget behov av att anropa en funktion, använd instansen direkt.
-    let unsubscribe: () => void;
+    // GULDSTANDARD-FIX 6.0: Korrigerar ett "race condition".
+    // 1. Registrera onAuthStateChanged FÖRST. Den kommer att agera som den
+    //    enda källan till sanning för användarstatus.
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log("[AuthProvider] onAuthStateChanged anropad.", user ? `Användare: ${user.uid}`: "Ingen användare");
+      setUser(user);
+      setLoading(false);
+    });
 
+    // 2. Hantera omdirigeringsresultatet. När detta är klart kommer det
+    //    automatiskt att trigga onAuthStateChanged-lyssnaren ovan.
     getRedirectResult(auth)
       .then((result) => {
         if (result) {
           console.log("[AuthProvider] getRedirectResult LYCKADES. Användare:", result.user.uid);
-        } else {
-          console.log("[AuthProvider] Inget omdirigeringsresultat.");
         }
       })
       .catch((error) => {
-        console.error("[AuthProvider] Fel vid getRedirectResult:", error);
-      })
-      .finally(() => {
-        unsubscribe = onAuthStateChanged(auth, (user) => {
-          console.log("[AuthProvider] onAuthStateChanged anropad.", user ? `Användare: ${user.uid}`: "Ingen användare");
-          setUser(user);
-          setLoading(false);
-        });
+        // Vi behöver inte logga "no redirect result" eftersom det är normalt.
+        if (error.code !== 'auth/no-redirect-session') {
+          console.error("[AuthProvider] Fel vid getRedirectResult:", error);
+        }
       });
 
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
+    // 3. Avregistrera lyssnaren när komponenten tas bort.
+    return () => unsubscribe();
   }, []);
 
 
