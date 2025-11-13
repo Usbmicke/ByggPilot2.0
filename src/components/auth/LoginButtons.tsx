@@ -4,8 +4,8 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { GoogleAuthProvider, signInWithRedirect } from 'firebase/auth';
-// Uppdaterad import: Hämta funktionen, inte objektet direkt.
-import { getClientAuth } from '@/lib/config/firebase-client';
+// Importera den direkta singleton-instansen
+import { auth } from '@/lib/config/firebase-client';
 import GoogleIcon from '@/components/icons/GoogleIcon';
 
 const LoginButtons = () => {
@@ -15,9 +15,8 @@ const LoginButtons = () => {
     setIsLoading(true);
     toast.loading('Omdirigerar till Google...');
     const provider = new GoogleAuthProvider();
-    // Hämta auth-instansen här, garanterat på klienten.
-    const auth = getClientAuth();
-
+    
+    // Använd den importerade instansen direkt.
     try {
       await signInWithRedirect(auth, provider);
     } catch (error) {

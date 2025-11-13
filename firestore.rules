@@ -1,41 +1,17 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // =====================================================================
-    // Användare (Users)
-    // Användare kan endast läsa och skriva sin egen profildata.
-    // =====================================================================
+    // Skydda 'users'-collectionen
+    // Användare kan bara läsa och skriva sitt eget dokument.
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // =====================================================================
-    // Projekt (Projects)
-    // Användare kan skapa, läsa, uppdatera, och radera projekt där deras
-    // userId matchar dokumentets `userId`.
-    // =====================================================================
-    match /projects/{projectId} {
-      allow read, write: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-    }
-
-    // =====================================================================
-    // ÄTAs (Atas) och Offerter (Quotes)
-    // Samma logik som för projekt, ägarskap kontrolleras via `userId`.
-    // =====================================================================
-    match /atas/{ataId} {
-        allow read, write: if request.auth != null && request.resource.data.userId == request.auth.uid;
-        allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-    }
-
-    match /quotes/{quoteId} {
-        allow read, write: if request.auth != null && request.resource.data.userId == request.auth.uid;
-        allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
     }
 
     // Lägg till regler för andra collections här...
-
+    // Exempel: match /projects/{projectId} { ... }
   }
 }

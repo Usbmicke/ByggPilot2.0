@@ -3,8 +3,8 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, onAuthStateChanged, getRedirectResult } from 'firebase/auth';
-// Uppdaterad import: Hämta funktionen, inte objektet direkt.
-import { getClientAuth } from '@/lib/config/firebase-client';
+// Importera den direkta singleton-instansen
+import { auth } from '@/lib/config/firebase-client';
 import { useRouter, usePathname } from 'next/navigation';
 import { callGenkitFlow } from '@/lib/genkit';
 
@@ -21,45 +21,64 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Denna useEffect körs BARA på klienten, vilket är vad vi vill.
   useEffect(() => {
-    // Hämta auth-instansen här, garanterat på klienten.
-    const auth = getClientAuth();
+    // Inget behov av att anropa en funktion, använd instansen direkt.
+    let unsubscribe: () => void;
 
-    getRedirectResult(auth).catch((error) => {
-      console.error("[AuthProvider] Fel vid getRedirectResult:", error);
-    });
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          console.log("[AuthProvider] getRedirectResult LYCKADES. Användare:", result.user.uid);
+        } else {
+          console.log("[AuthProvider] Inget omdirigeringsresultat.");
+        }
+      })
+      .catch((error) => {
+        console.error("[AuthProvider] Fel vid getRedirectResult:", error);
+      })
+      .finally(() => {
+        unsubscribe = onAuthStateChanged(auth, (user) => {
+          console.log("[AuthProvider] onAuthStateChanged anropad.", user ? `Användare: ${user.uid}`: "Ingen användare");
+          setUser(user);
+          setLoading(false);
+        });
+      });
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      console.log("[AuthProvider] onAuthStateChanged (klient) anropad.", user ? `Användare: ${user.uid}`: "Ingen användare");
-      setUser(user);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
+
 
   useEffect(() => {
     if (loading) return;
+
+    console.log(`[AuthProvider Nav] Utvärderar. User: ${!!user}, Path: ${pathname}`);
 
     const isProtectedPage = pathname.startsWith('/dashboard') || pathname.startsWith('/onboarding');
     const isOnboardingPage = pathname === '/onboarding';
     const isRootPage = pathname === '/';
 
     if (user) {
-      callGenkitFlow<{ onboardingComplete: boolean }>('getOrCreateUserAndCheckStatusFlow', {})
+        callGenkitFlow<{ onboardingComplete: boolean, userId: string }>('getOrCreateUserAndCheckStatusFlow', {})
         .then(status => {
+          console.log(`[AuthProvider Nav] Genkit status: onboardingComplete=${status.onboardingComplete}`);
           if (!status.onboardingComplete && !isOnboardingPage) {
+            console.log('[AuthProvider Nav] Omdirigerar till /onboarding');
             router.push('/onboarding');
           } else if (status.onboardingComplete && (isOnboardingPage || isRootPage)) {
+            console.log('[AuthProvider Nav] Omdirigerar till /dashboard');
             router.push('/dashboard');
           }
         })
         .catch(error => {
-          console.error("[AuthProvider] Fel vid anrop av Genkit-flöde:", error);
+          console.error("[AuthProvider] Allvarligt fel vid anrop av Genkit-flöde:", error);
         });
     } else {
       if (isProtectedPage) {
+          console.log('[AuthProvider Nav] Ingen användare, skyddad sida. Omdirigerar till /');
           router.push('/');
       }
     }

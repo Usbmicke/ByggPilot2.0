@@ -11,20 +11,11 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Diagnostik kvarstår för säkerhets skull.
-if (typeof window !== 'undefined' && !firebaseConfig.projectId) {
-  console.error('[Firebase-Config] KRITISKT FEL: Firebase miljövariabler är inte laddade på klienten.');
-}
+// Diagnostisk logg: Skriv ut konfigurationen som används.
+console.log("--- Firebase Client Config ---", firebaseConfig);
 
-// Exportera en funktion för att hämta appen, garanterar att den bara körs när den behövs.
-const getClientApp = (): FirebaseApp => {
-  if (getApps().length) {
-    return getApp();
-  }
-  return initializeApp(firebaseConfig);
-};
+// Skapa och exportera app-instansen (singleton)
+export const app: FirebaseApp = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-// Exportera en funktion för att hämta auth, tvingar den att vara klient-specifik.
-export const getClientAuth = (): Auth => {
-  return getAuth(getClientApp());
-};
+// Skapa och exportera auth-instansen (singleton)
+export const auth: Auth = getAuth(app);
