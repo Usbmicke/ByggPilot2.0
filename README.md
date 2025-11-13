@@ -10,7 +10,7 @@ Målet är att ge hantverkare tillbaka kontrollen och tiden att fokusera på det
 
 *   **Framework:** Next.js (App Router)
 *   **Språk:** TypeScript
-*   **Autentisering:** Next-Auth (med Google Provider)
-*   **AI & Intelligens:** Google Gemini
+*   **Autentisering:** Firebase Authentication (Native SDK)
+*   **AI & Backend:** Firebase Genkit (med Google Gemini)
 *   **Integrationer:** Google Workspace (Drive, Gmail, Calendar)
 *   **Styling:** Tailwind CSS
