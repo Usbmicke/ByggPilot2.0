@@ -1,7 +1,7 @@
 
 'use client';
 
-import Header from "@/components/layout/Header";
+import DashboardHeader from "@/components/layout/DashboardHeader"; // ÄNDRAD
 import Sidebar from "@/components/layout/Sidebar";
 import dynamic from 'next/dynamic';
 
@@ -20,7 +20,7 @@ export default function DashboardLayout({
 }) {
   return (
     <div className="h-screen flex flex-col bg-background-primary text-text-primary">
-      <Header />
+      <DashboardHeader /> {/* ÄNDRAD */}
       <div className="flex flex-1 overflow-hidden">
         <div className="w-72 flex-shrink-0 bg-background-secondary border-r border-border-color">
           <Sidebar />

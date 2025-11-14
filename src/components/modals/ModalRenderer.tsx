@@ -2,40 +2,65 @@
 'use client';
 
 import React from 'react';
-import { useModal } from '@/contexts/ModalContext';
-import CreateProjectModal from './CreateProjectModal';
-import CreateOptionsModal from './CreateOptionsModal';
+import { useModal } from '@/app/hooks/useModal'; // Antagen korrekt sökväg till hook
 
-// Denna komponent är hjärnan i modalsystemet.
-// Den lyssnar på ModalContext och renderar den aktiva modalen i en överlagring.
-export default function ModalRenderer() {
-    const { modalType, closeModal } = useModal();
+// Importera alla modal-komponenter.
+// Detta blir den enda platsen där vi behöver hantera modal-importer.
+import { CreateOfferModal } from '@/components/modals/CreateOfferModal';
+import CreateProjectModal from '@/components/modals/CreateProjectModal';
+import CreateAtaModal from '@/components/modals/CreateAtaModal';
+import CreateCustomerModal from '@/components/modals/CreateCustomerModal';
+import SetHourlyRateModal from '@/components/modals/SetHourlyRateModal';
+import CompanyVisionModal from '@/components/modals/CompanyVisionModal';
 
-    if (!modalType) {
-        return null; // Om ingen modal är aktiv, rendera ingenting
-    }
+/**
+ * En mappning från modal-typ (en sträng) till den faktiska React-komponenten.
+ * Detta följer en skalbar och underhållsvänlig designprincip.
+ */
+const modalComponentMap = {
+  createOffer: CreateOfferModal,
+  createProject: CreateProjectModal,
+  createAta: CreateAtaModal,
+  createCustomer: CreateCustomerModal,
+  setHourlyRate: SetHourlyRateModal,
+  companyVision: CompanyVisionModal,
+  // Lägg till nya modaltyper och deras komponenter här.
+};
 
-    // En funktion för att rendera den specifika modalen baserat på typ
-    const renderModal = () => {
-        switch (modalType) {
-            case 'createProject':
-                return <CreateProjectModal />;
-            case 'createOptions':
-                return <CreateOptionsModal />;
-            // TODO: Lägg till case för 'createOffer', 'createCustomer', 'createAta' när de skapas
-            default:
-                return null;
-        }
-    };
+/**
+ * ModalRenderer är en global komponent som renderar den aktiva modalen.
+ * Den använder en mappning för att dynamiskt välja vilken modal som ska visas,
+ * och renderar en standardiserad "inramning" (bakgrund, centrering).
+ * Logiken styrs helt av `useModal`-hooken.
+ */
+const ModalRenderer: React.FC = () => {
+  const { modalType, modalProps, isOpen, closeModal } = useModal();
 
-    return (
-        <div 
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center animate-fadeIn"
-            onClick={closeModal} // Stäng modalen vid klick på bakgrunden
-        >
-            <div onClick={e => e.stopPropagation()} className="w-full max-w-lg">
-                {renderModal()}
-            </div>
-        </div>
-    );
-}
+  if (!isOpen || !modalType) {
+    return null;
+  }
+
+  const ModalComponent = modalComponentMap[modalType];
+
+  if (!ModalComponent) {
+    console.error(`Modal type "${modalType}" not found in modalComponentMap.`);
+    return null;
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center animate-fadeIn"
+      onClick={closeModal} // Stäng modalen vid klick på bakgrunden
+    >
+      <div
+        onClick={(e) => e.stopPropagation()} // Förhindra att klick inuti modalen stänger den
+        className="w-full max-w-lg bg-white rounded-lg shadow-xl" // Standard-styling för modal-innehåll
+      >
+        {/* @ts-ignore - Vi accepterar att props kan variera mellan modaler */}
+        <ModalComponent {...modalProps} isOpen={isOpen} onClose={closeModal} />
+      </div>
+    </div>
+  );
+};
+
+export default ModalRenderer;

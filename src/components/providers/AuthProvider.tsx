@@ -1,13 +1,10 @@
+'use client';
+
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, User } from '@firebase/auth';
 import { auth } from '@/lib/config/firebase-client';
-import { useRouter, usePathname } from 'next/navigation';
 
-// --- Definiera dina sidor ---
-const PUBLIC_PATHS = ['/'];
-const PROTECTED_PATHS = ['/dashboard', '/onboarding'];
-
-// --- Skapa Auth Context ---
+// 1. Skapa en enkel, ren Context för användarstatus
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -15,50 +12,36 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({ user: null, loading: true });
 
-// --- Huvudkomponenten: AuthProvider ---
+// 2. Skapa en Provider som ENDAST hanterar state-förändringar
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true); // Börja alltid som 'laddar'
-  const router = useRouter();
-  const pathname = usePathname();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Lyssna på ändringar i Firebase Auth
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user || null);
-      setLoading(false); // Markera som klar
+      setUser(user || null); // Sätt användaren (eller null)
+      setLoading(false);      // Meddela att laddningen är klar
     });
+
+    // Städa upp prenumerationen vid unmount
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (loading) {
-      return; // Gör INGET förrän laddning är klar
-    }
+  const value = { user, loading };
 
-    const pathIsProtected = PROTECTED_PATHS.some(path => pathname.startsWith(path));
-    const pathIsPublic = PUBLIC_PATHS.includes(pathname);
-
-    // FALL 1: Inte inloggad
-    if (!user && pathIsProtected) {
-      router.push('/');
-    }
-
-    // FALL 2: Inloggad
-    if (user && pathIsPublic) {
-      router.push('/dashboard');
-    }
-  }, [user, loading, pathname, router]);
-
-  // Visa en tom sida eller spinner medan vi väntar
+  // Visa ingenting förrän vi vet om användaren är inloggad eller inte
+  // Detta förhindrar en "flash" av felaktigt innehåll.
   if (loading) {
-    return <>Laddar...</>;
+    return null;
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 }
 
+// 3. Skapa en hook för enkel åtkomst till contexten
 export const useAuth = () => useContext(AuthContext);
