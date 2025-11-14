@@ -3,8 +3,8 @@ import { defineFlow, run } from '@genkit-ai/flow';
 import { z } from 'zod';
 import { googleAI, gemini15Pro } from '@genkit-ai/googleai'; // Uppdaterad modell
 import { generate, defineTool } from '@genkit-ai/ai';
-import { AtaCreationSchema, AtaIdSchema, ProjectIdSchema, QuoteCreationSchema } from '../../lib/schemas';
-import { createAta, createQuote } from '../../lib/dal';
+import { AtaCreationSchema, AtaIdSchema, ProjectIdSchema, QuoteCreationSchema } from '../schemas/schemas';
+import { createAta, createQuote } from '../dal/dal';
 import { FlowAuth } from '@genkit-ai/flow';
 import { askBranschensHjärnaFlow, askFöretagetsHjärnaFlow } from './brains';
 
