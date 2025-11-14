@@ -18,6 +18,13 @@ export interface UserProfile {
   // Lägg till andra fält som du vill spara, t.ex. companyId, settings, etc.
 }
 
+export interface Project {
+  projectId: string;
+  ownerId: string;      // The user who created the project
+  memberIds: string[];  // List of user IDs with access
+  // ... other project fields like name, address, etc.
+}
+
 // ====================================================================
 // CRUD-funktioner för Användare
 // ====================================================================
@@ -62,7 +69,8 @@ export async function createUserProfile(data: Pick<UserProfile, 'userId' | 'emai
   });
 
   // Returnera det nyskapade (eller befintliga) profilobjektet
-  return newProfile;
+  const doc = await userRef.get();
+  return doc.data() as UserProfile;
 }
 
 /**
@@ -76,8 +84,47 @@ export async function updateUserOnboardingStatus(userId: string, status: 'incomp
     await userRef.update({ onboardingStatus: status });
 }
 
+// ====================================================================
+// CRUD-funktioner för Projekt
+// ====================================================================
 
-// Exempel på andra DAL-funktioner du kan behöva:
-// export async function getCompany(companyId: string) { ... }
-// export async function createProject(data: ProjectData) { ... }
-// export async function listProjectsForUser(userId: string) { ... }
+/**
+ * Verifies if a user has access to a specific project.
+ * Throws an error if access is denied.
+ * @param {string} projectId - The ID of the project to check.
+ * @param {string} userId - The ID of the user to verify.
+ * @returns {Promise<void>} Resolves if access is granted, otherwise throws an error.
+ */
+export async function verifyProjectAccess(projectId: string, userId: string): Promise<void> {
+  const projectRef = db.collection('projects').doc(projectId);
+  const doc = await projectRef.get();
+
+  if (!doc.exists) {
+    throw new Error(`Project with ID ${projectId} not found.`);
+  }
+
+  const project = doc.data() as Project;
+
+  // Check if the user is the owner or a member of the project.
+  if (project.ownerId !== userId && !project.memberIds?.includes(userId)) {
+    throw new Error(`User ${userId} does not have access to project ${projectId}.`);
+  }
+}
+
+// ====================================================================
+// CRUD-funktioner för ÄTA och Offert (STUBS)
+// ====================================================================
+// These functions are imported in specialized-flows.ts but were missing.
+// Adding them here as stubs.
+
+export async function createAta(data: any): Promise<string> {
+  const ref = db.collection('projects').doc(data.projectId).collection('atas').doc();
+  await ref.set(data);
+  return ref.id;
+}
+
+export async function createQuote(data: any): Promise<string> {
+  const ref = db.collection('projects').doc(data.projectId).collection('quotes').doc();
+  await ref.set(data);
+  return ref.id;
+}

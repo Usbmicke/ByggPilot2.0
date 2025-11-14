@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { googleAI, gemini15Pro } from '@genkit-ai/googleai'; // Uppdaterad modell
 import { generate, defineTool } from '@genkit-ai/ai';
 import { AtaCreationSchema, AtaIdSchema, ProjectIdSchema, QuoteCreationSchema } from '../schemas/schemas';
-import { createAta, createQuote } from '../dal/dal';
+import { createAta, createQuote, verifyProjectAccess } from '../dal/dal';
 import { FlowAuth } from '@genkit-ai/flow';
 import { askBranschensHjärnaFlow, askFöretagetsHjärnaFlow } from './brains';
 
@@ -32,6 +32,9 @@ const createQuoteDocumentTool = defineTool(
         const auth = context?.auth as FlowAuth;
         if (!auth?.uid) throw new Error('Användarautentisering saknas.');
         
+        // SÄKERHET: Verifiera att användaren har åtkomst till projektet INNAN skrivning
+        await verifyProjectAccess(quoteData.projectId, auth.uid);
+
         // Anropar databasfunktionen för att skapa offerten
         const quoteId = await createQuote({ ...quoteData, createdBy: auth.uid });
         console.log("[Tool:createQuoteDocumentTool] Offert skapad med ID:", quoteId);
@@ -47,7 +50,13 @@ const saveSie4FileToStorage = defineTool(
         inputSchema: z.object({ sieContent: z.string(), projectId: z.string() }),
         outputSchema: z.string().url() 
     },
-    async ({ sieContent, projectId }) => {
+    async ({ sieContent, projectId }, context) => {
+        const auth = context?.auth as FlowAuth;
+        if (!auth?.uid) throw new Error('Användarautentisering saknas.');
+
+        // SÄKERHET: Verifiera att användaren har åtkomst till projektet
+        await verifyProjectAccess(projectId, auth.uid);
+
         console.log(`[Tool:saveSie4FileToStorage] Simulerar sparande av SIE-fil för projekt ${projectId}`);
         // I en verklig applikation skulle vi här ladda upp `sieContent` till t.ex. Google Cloud Storage
         // och returnera en signerad URL för säker nedladdning.
@@ -66,10 +75,8 @@ export const audioToAtaFlow = defineFlow(
             audioUrl: z.string().url().describe('En URL till en ljudfil (t.ex. .mp3, .wav).'),
             projectId: ProjectIdSchema 
         }),
-        outputSchema: z.object({ 
-            ataId: AtaIdSchema, 
-            message: z.string() 
-        }),
+        // STABILITETSFIX: Returnerar extraherad data för validering på klienten
+        outputSchema: AtaCreationSchema.nullable(),
         authPolicy: (auth, input) => {
             if (!auth) throw new Error('Autentisering krävs för detta flöde.');
         },
@@ -78,6 +85,9 @@ export const audioToAtaFlow = defineFlow(
         console.log(`[Flow:audioToAtaFlow] Startar för projekt ${projectId} med ljudfil från ${audioUrl}`);
         const auth = context.auth as FlowAuth;
         if (!auth?.uid) throw new Error('Kunde inte verifiera användar-ID.');
+
+        // SÄKERHETSFIX: Verifiera projektåtkomst
+        await verifyProjectAccess(projectId, auth.uid);
 
         // Steg 1: Använd en multimodal modell för att transkribera och extrahera data
         const llmResponse = await generate({
@@ -88,15 +98,13 @@ export const audioToAtaFlow = defineFlow(
 
         const extractedData = llmResponse.output();
         if (!extractedData) {
-            throw new Error("Kunde inte extrahera ÄTA-information från ljudfilen.");
+            console.error("[Flow:audioToAtaFlow] Kunde inte extrahera ÄTA-information från ljudfilen.");
+            return null;
         }
 
-        // Steg 2: Anropa databaslagret för att skapa ÄTA-posten
-        const ataToCreate = { projectId, userId: auth.uid, ...extractedData };
-        const newAtaId = await createAta(ataToCreate);
-        
-        console.log(`[Flow:audioToAtaFlow] Nytt ÄTA-objekt skapat med ID: ${newAtaId}`);
-        return { ataId: newAtaId, message: "En ny ÄTA har skapats framgångsrikt från ljudfilen." };
+        // Steg 2: Returnera datan till klienten för granskning
+        console.log("[Flow:audioToAtaFlow] Returnerar extraherad data för validering:", extractedData);
+        return extractedData;
     }
 );
 
@@ -118,14 +126,21 @@ export const analyzeSpillWasteFlow = defineFlow(
     {
         name: 'analyzeSpillWasteFlow',
         inputSchema: z.object({ 
-            imageUrl: z.string().url().describe('URL till en bild som visar spillmaterialet.')
+            imageUrl: z.string().url().describe('URL till en bild som visar spillmaterialet.'),
+            projectId: ProjectIdSchema // SÄKERHETSFIX: Lade till projectId för behörighetskontroll
         }),
         outputSchema: cutPlanSchema,
         authPolicy: (auth, input) => {
             if (!auth) throw new Error('Autentisering krävs.');
         },
     },
-    async ({ imageUrl }) => {
+    async ({ imageUrl, projectId }, context) => {
+        const auth = context.auth as FlowAuth;
+        if (!auth?.uid) throw new Error('Kunde inte verifiera användar-ID.');
+
+        // SÄKERHETSFIX: Verifiera projektåtkomst
+        await verifyProjectAccess(projectId, auth.uid);
+
         console.log(`[Flow:analyzeSpillWasteFlow] Startar analys för bild från ${imageUrl}`);
         const llmResponse = await generate({
             model: vision,
@@ -162,6 +177,11 @@ export const generateQuoteFlow = defineFlow(
     },
     async ({ prompt, projectId }, context) => {
         console.log(`[Flow:generateQuoteFlow] Startar för projekt ${projectId} med prompt: \"${prompt}\"`);
+        const auth = context.auth as FlowAuth;
+        if (!auth?.uid) throw new Error('Kunde inte verifiera användar-ID.');
+
+        // SÄKERHETSFIX: Verifiera projektåtkomst
+        await verifyProjectAccess(projectId, auth.uid);
         
         // Steg 1: Använd AI med RAG-verktyg för att samla in information och resonera.
         const llmResponse = await generate({
@@ -203,8 +223,13 @@ export const generateSie4Flow = defineFlow(
             if (!auth) throw new Error('Autentisering krävs.');
         },
     },
-    async ({ projectId }) => {
+    async ({ projectId }, context) => {
         console.log(`[Flow:generateSie4Flow] Startar SIE-4 export för projekt ${projectId}`);
+        const auth = context.auth as FlowAuth;
+        if (!auth?.uid) throw new Error('Kunde inte verifiera användar-ID.');
+
+        // SÄKERHETSFIX: Verifiera projektåtkomst
+        await verifyProjectAccess(projectId, auth.uid);
 
         // Steg 1: (Simulerat) Hämta all nödvändig ekonomisk data från databasen.
         // I en verklig app skulle detta vara ett komplext anrop mot t.ex. Firestore 

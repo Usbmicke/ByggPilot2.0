@@ -1,11 +1,8 @@
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-
   allowedDevOrigins: [
-    "wss://*.cloudworkstations.dev",
-    "https://*.cloudworkstations.dev",
+    "https://3001-firebase-byggpilot4-1761576395592.cluster-ombtxv25tbd6yrjpp3lukp6zhc.cloudworkstations.dev",
     "http://localhost:3000",
     "http://localhost:3001"
   ],
@@ -13,32 +10,12 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: "/__/auth/:path*",
-        destination: "https://byggpilot-v2.firebaseapp.com/__/auth/:path*",
+        source: "/__/auth/:path*", // MÅSTE ha dubbla understreck
+        destination: "https://byggpilot-v2.firebaseapp.com/__/auth/:path*", // MÅSTE ha dubbla understreck
       },
     ];
   },
 
-  // DIAGNOSTISKT STEG: Lägger till ett test-huvud för att verifiera att filen läses.
-  headers: async () => {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'Cross-Origin-Opener-Policy',
-            value: 'same-origin-allow-popups',
-          },
-          // TEST-HEADER: Om detta huvud syns i webbläsaren, vet vi att konfigurationsfilen har laddats.
-          {
-            key: 'X-Config-Status',
-            value: 'Loaded',
-          },
-        ],
-      },
-    ];
-  },
-  
   images: {
     remotePatterns: [
       {
