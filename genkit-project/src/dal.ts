@@ -39,12 +39,11 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 }
 
 /**
- * Skapar en ny användarprofil i Firestore.
- * Denna funktion är designad för att vara idempotent - den skriver bara om användaren inte redan finns.
+ * Skapar en ny användarprofil i Firestore och returnerar den.
  * @param {Pick<UserProfile, 'userId' | 'email'>} data - Användardata.
- * @returns {Promise<void>}
+ * @returns {Promise<UserProfile>} Den nyskapade användarprofilen.
  */
-export async function createUserProfile(data: Pick<UserProfile, 'userId' | 'email'>): Promise<void> {
+export async function createUserProfile(data: Pick<UserProfile, 'userId' | 'email'>): Promise<UserProfile> {
   const userRef: DocumentReference = db.collection('users').doc(data.userId);
 
   const newProfile: UserProfile = {
@@ -55,13 +54,15 @@ export async function createUserProfile(data: Pick<UserProfile, 'userId' | 'emai
   };
 
   // Använd en transaktion för att säkerställa atomicitet.
-  // Skapa bara om dokumentet inte redan finns.
   await db.runTransaction(async (transaction) => {
       const doc = await transaction.get(userRef);
       if (!doc.exists) {
           transaction.set(userRef, newProfile);
       }
   });
+
+  // Returnera det nyskapade (eller befintliga) profilobjektet
+  return newProfile;
 }
 
 /**

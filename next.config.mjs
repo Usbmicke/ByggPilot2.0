@@ -1,14 +1,13 @@
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
 
-  // GULDSTANDARD-FIX 8.0: Lägger till en överdrivet explicit URL med port 443.
-  // Detta är ett sista försök att säkerställa att Next.js kan matcha ursprunget
-  // exakt i Cloud Workstations-miljön.
   allowedDevOrigins: [
-    "https://3001-firebase-byggpilot4-1761576395592.cluster-ombtxv25tbd6yrjpp3lukp6zhc.cloudworkstations.dev",
-    "http://3001-firebase-byggpilot4-1761576395592.cluster-ombtxv25tbd6yrjpp3lukp6zhc.cloudworkstations.dev",
-    "https://3001-firebase-byggpilot4-1761576395592.cluster-ombtxv25tbd6yrjpp3lukp6zhc.cloudworkstations.dev:443"
+    "wss://*.cloudworkstations.dev",
+    "https://*.cloudworkstations.dev",
+    "http://localhost:3000",
+    "http://localhost:3001"
   ],
 
   async rewrites() {
@@ -20,6 +19,7 @@ const nextConfig = {
     ];
   },
 
+  // DIAGNOSTISKT STEG: Lägger till ett test-huvud för att verifiera att filen läses.
   headers: async () => {
     return [
       {
@@ -29,10 +29,16 @@ const nextConfig = {
             key: 'Cross-Origin-Opener-Policy',
             value: 'same-origin-allow-popups',
           },
+          // TEST-HEADER: Om detta huvud syns i webbläsaren, vet vi att konfigurationsfilen har laddats.
+          {
+            key: 'X-Config-Status',
+            value: 'Loaded',
+          },
         ],
       },
     ];
   },
+  
   images: {
     remotePatterns: [
       {

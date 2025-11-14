@@ -8,10 +8,12 @@ import { setGlobalOptions } from 'firebase-functions/v2';
 import { onUserAfterCreate } from 'firebase-functions/v2/identity';
 import * as logger from 'firebase-functions/logger';
 import { z } from 'zod';
-// Importera ALLA funktioner från den korrekta DAL-filen
 import { createUserProfile, getUserProfile } from './dal';
-import { MessageData } from './schemas'; // KORRIGERAD IMPORT
+import { MessageData } from './schemas';
 import { generate, defineTool } from '@genkit-ai/ai';
+
+// Dessa importeras men kommer inte att återexporteras.
+// De är här för att Genkit ska kunna registrera dem.
 import { askBranschensHjärnaFlow, askFöretagetsHjärnaFlow } from './brains';
 import { 
     audioToAtaFlow, 
@@ -37,6 +39,12 @@ configureGenkit({
 });
 
 // =================================================================================
+// KONSTANTER FÖR PROMPTER (För bättre underhåll)
+// =================================================================================
+
+const INTENT_CLASSIFICATION_PROMPT = `Klassificera frågan: "{prompt}". Svara med: 'enkel_chatt', 'bransch_fråga', 'företags_fråga', 'komplex_analys', 'offert_generering', 'okänd'.`;
+
+// =================================================================================
 // VERKTYGSDEFINITIONER
 // =================================================================================
 
@@ -47,20 +55,8 @@ const tools_default = [
 
 const tools_heavy = [
   ...tools_default,
+  // Lägg till eventuella verktyg som endast "Experten" ska ha tillgång till här
 ];
-
-// =================================================================================
-// EXPORTERADE FLÖDEN
-// =================================================================================
-
-export { 
-    askBranschensHjärnaFlow, 
-    askFöretagetsHjärnaFlow, 
-    audioToAtaFlow, 
-    generateQuoteFlow, 
-    analyzeSpillWasteFlow,
-    generateSie4Flow
-}; 
 
 // =================================================================================
 // SYNKRONISERING & ORKESTRERING (NY ARKITEKTUR)
@@ -68,7 +64,6 @@ export {
 
 /**
  * Bakgrunds-trigger som körs ENBART när en Firebase-användare skapas FÖRSTA gången.
- * Detta säkerställer att en bas-profil alltid finns.
  */
 export const onusercreate = onUserAfterCreate(async (user) => {
   logger.info(`Ny användare skapad i Firebase Auth: ${user.data.uid}`);
@@ -76,19 +71,17 @@ export const onusercreate = onUserAfterCreate(async (user) => {
 });
 
 /**
- * Detta är huvudflödet för autentisering som anropas från frontend (AuthProvider).
- * Det körs VARJE gång en användare loggar in eller när sidan laddas om.
- * Det skapar en användarprofil om den saknas och returnerar användarens onboarding-status.
+ * Huvudflöde för autentisering. Anropas från frontend för att säkerställa att en
+ * användarprofil existerar och för att hämta onboarding-status.
  */
 export const getOrCreateUserAndCheckStatusFlow = onFlow(
     {
         name: 'getOrCreateUserAndCheckStatusFlow',
-        inputSchema: z.void(), // Inga argument behövs från klienten
+        inputSchema: z.void(),
         outputSchema: z.object({
             userExists: z.boolean(),
             isOnboarded: z.boolean(),
         }),
-        // SÄKERHET: authPolicy säkerställer att endast inloggade användare kan anropa detta.
         authPolicy: (auth, input) => {
             if (!auth || !auth.uid) {
                 throw new Error('Användare måste vara autentiserad.');
@@ -102,36 +95,25 @@ export const getOrCreateUserAndCheckStatusFlow = onFlow(
         logger.info(`Kör getOrCreateUserAndCheckStatusFlow för användare: ${userId}`);
 
         let userProfile = await getUserProfile(userId);
+        let userExists = true;
 
         if (!userProfile) {
             logger.info(`Profil saknas för ${userId}, skapar ny profil...`);
-            await createUserProfile({ userId, email: userEmail });
-            userProfile = await getUserProfile(userId); // Hämta den nyskapade profilen
-
-            // Om den fortfarande inte finns, kasta ett fel.
-            if (!userProfile) {
-                logger.error(`Kritiskt fel: Misslyckades med att skapa och hämta profil för ${userId}`);
-                throw new Error('Kunde inte skapa eller verifiera användarprofil.');
-            }
-
-            return {
-                userExists: false, // Indikerar att profilen just skapades
-                isOnboarded: false, // Nya profiler är aldrig onboardade
-            };
+            userExists = false;
+            userProfile = await createUserProfile({ userId, email: userEmail });
         }
 
         logger.info(`Profil hittades för ${userId}. Onboarding-status: ${userProfile.onboardingStatus}`);
 
         return {
-            userExists: true,
+            userExists: userExists,
             isOnboarded: userProfile.onboardingStatus === 'complete',
         };
     }
 );
 
-
 // =================================================================================
-// BEFINTLIGT CHAT-FLÖDE (Lätt modifierat för kontext)
+// KÄRNFLÖDE FÖR CHATT (Tidigare "chatOrchestratorFlow")
 // =================================================================================
 
 function isFailureResponse(responseText: string): boolean {
@@ -139,30 +121,39 @@ function isFailureResponse(responseText: string): boolean {
     return failureKeywords.some(keyword => responseText.toLowerCase().includes(keyword));
 }
 
-export const chatOrchestratorFlow = onFlow(
+export const chatFlow = onFlow(
   {
-    name: 'chatOrchestratorFlow',
+    name: 'chatFlow', // NAMN-FIX: Bytt från chatOrchestratorFlow
     inputSchema: z.object({ history: z.array(MessageData), prompt: z.string() }),
     outputSchema: z.string(), 
     authPolicy: (auth, input) => { if (!auth || !auth.uid) { throw new Error('Användare måste vara inloggad.'); } },
   },
   async ({ history, prompt }) => {
+    
+    // Dirigering baserat på avsikt
     const intentResponse = await generate({
       model: workhorse,
-      prompt: `Klassificera frågan: "${prompt}". Svara med: 'enkel_chatt', 'bransch_fråga', 'företags_fråga', 'komplex_analys', 'offert_generering', 'okänd'.`,
+      prompt: INTENT_CLASSIFICATION_PROMPT.replace('{prompt}', prompt), // REFAKTOR: Använder konstant
       output: { schema: z.object({ classification: z.enum(['enkel_chatt', 'bransch_fråga', 'företags_fråga', 'komplex_analys', 'offert_generering', 'okänd']).default('okänd') }) },
     });
     const intent = intentResponse.output()?.classification ?? 'okänd';
     
+    // Konvertera historik till det format som Genkit `generate` förväntar sig
+    // BUGG-FIX: `content` ska vara en sträng, inte ett objekt { text: ... }
+    const modelHistory = history.map(m => ({ role: m.role, content: m.content }));
+
+    // Om avsikten kräver "Experten"
     if (intent === 'komplex_analys' || intent === 'offert_generering') {
-      const proResponse = await generate({ model: heavyDuty, history: history.map(m => ({ role: m.role, content: [{ text: m.content }] })), prompt, tools: tools_heavy });
+      const proResponse = await generate({ model: heavyDuty, history: modelHistory, prompt, tools: tools_heavy });
       return proResponse.text();
     }
 
-    const flashResponse = await generate({ model: workhorse, history: history.map(m => ({ role: m.role, content: [{ text: m.content }] })), prompt, tools: tools_default });
+    // Annars, använd "Arbetsmyran"
+    const flashResponse = await generate({ model: workhorse, history: modelHistory, prompt, tools: tools_default });
 
+    // Fallback till "Experten" om "Arbetsmyran" misslyckas
     if (isFailureResponse(flashResponse.text())) {
-      const retryResponse = await generate({ model: heavyDuty, history: history.map(m => ({ role: m.role, content: [{ text: m.content }] })), prompt: `Försök igen: "${prompt}"`, tools: tools_heavy });
+      const retryResponse = await generate({ model: heavyDuty, history: modelHistory, prompt: `Försök igen: "${prompt}"`, tools: tools_heavy });
       return retryResponse.text();
     }
 
