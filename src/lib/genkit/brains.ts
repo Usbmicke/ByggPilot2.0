@@ -5,7 +5,7 @@ import { gemini15Flash, googleSearchRetriever } from '@genkit-ai/googleai';
 import { defineTool, Tool } from '@genkit-ai/ai';
 import { generate } from '@genkit-ai/ai';
 import { FlowAuth, getFlowAuth } from '@genkit-ai/flow';
-import { getUserProfile } from '../../lib/dal'; // Antag att denna funktion finns för att hämta profil
+import { getUserProfile } from '../dal/dal'; // Antag att denna funktion finns för att hämta profil
 
 // =================================================================================
 // MODELLER

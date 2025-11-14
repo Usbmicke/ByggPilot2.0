@@ -8,8 +8,8 @@ import { setGlobalOptions } from 'firebase-functions/v2';
 import { onUserAfterCreate } from 'firebase-functions/v2/identity';
 import * as logger from 'firebase-functions/logger';
 import { z } from 'zod';
-import { createUserProfile, getUserProfile } from './dal';
-import { MessageData } from './schemas';
+import { createUserProfile, getUserProfile } from '../dal/dal';
+import { MessageData } from '../schemas/schemas';
 import { generate, defineTool } from '@genkit-ai/ai';
 
 // Dessa importeras men kommer inte att återexporteras.
