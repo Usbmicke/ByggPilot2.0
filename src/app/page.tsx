@@ -1,5 +1,5 @@
 
-import Header from "@/components/landing/Header";
+import LandingPageHeader from "@/components/landing/LandingPageHeader"; // ÄNDRAD
 import Hero from "@/components/landing/Hero";
 import ThreeCanvas from "@/components/landing/ThreeCanvas";
 import Footer from "@/components/landing/Footer";
@@ -13,7 +13,7 @@ import AnimatedSection from '@/components/landing/AnimatedSection';
 export default function LandingPage() {
   return (
     <div className="bg-neutral-950 min-h-screen text-white">
-      <Header />
+      <LandingPageHeader /> {/* ÄNDRAD */}
       <main className="relative">
         {/* The 3D canvas is positioned absolutely to act as a background for the Hero section */}
         <ThreeCanvas /> 
