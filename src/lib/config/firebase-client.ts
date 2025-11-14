@@ -2,13 +2,12 @@
 // Denna fil är byggd enligt "Guldstandard"-blueprinten (Del 3.1 & 3.2)
 // för en robust och korrekt Firebase-klient i en Next.js-miljö.
 
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
+import { initializeApp, getApps, getApp, FirebaseApp } from '@firebase/app';
+import { getAuth, Auth } from '@firebase/auth';
+import { getFirestore } from '@firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  // GULDSTANDARD-FIX 5.0: Tar bort manuell överskrivning. Värdet hämtas nu
-  // från .env.local, som är den enda källan till sanning.
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
@@ -26,3 +25,4 @@ function createFirebaseApp(): FirebaseApp {
 
 export const app: FirebaseApp = createFirebaseApp();
 export const auth: Auth = getAuth(app);
+export const db = getFirestore(app);

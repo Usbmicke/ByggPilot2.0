@@ -1,6 +1,6 @@
 
 import { configureGenkit } from '@genkit-ai/core';
-import { firebase } from '@genkit-ai/firebase';
+// import { firebase } from '@genkit-ai/firebase';
 import { onFlow } from '@genkit-ai/firebase/functions';
 import { defineFlow, run } from '@genkit-ai/flow';
 import { googleAI, gemini25Flash, gemini25Pro } from '@genkit-ai/googleai';
@@ -33,9 +33,9 @@ const heavyDuty = gemini25Pro;
 const vision = gemini25Pro;
 
 configureGenkit({
-  plugins: [ firebase(), googleAI() ],
+  plugins: [ googleAI() ],
   logLevel: 'debug',
-  enableTracingAndMetrics: true,
+  enableTracingAndMetrics: false,
 });
 
 // =================================================================================
@@ -67,7 +67,14 @@ const tools_heavy = [
  */
 export const onusercreate = onUserAfterCreate(async (user) => {
   logger.info(`Ny användare skapad i Firebase Auth: ${user.data.uid}`);
-  await createUserProfile({ userId: user.data.uid, email: user.data.email || '' });
+  try {
+    await createUserProfile({ userId: user.data.uid, email: user.data.email || '' });
+    logger.info(`Användarprofil skapades framgångsrikt för ${user.data.uid}`);
+  } catch (error) {
+    logger.error(`[CRITICAL] Misslyckades med att skapa användarprofil för ${user.data.uid}:`, error);
+    // Här skulle du kunna lägga till logik för att försöka igen, eller skicka en notifiering
+    // till en monitoreringstjänst (t.ex. Sentry, Google Cloud Error Reporting).
+  }
 });
 
 /**
@@ -94,19 +101,20 @@ export const getOrCreateUserAndCheckStatusFlow = onFlow(
 
         logger.info(`Kör getOrCreateUserAndCheckStatusFlow för användare: ${userId}`);
 
-        let userProfile = await getUserProfile(userId);
-        let userExists = true;
+        // Använder createUserProfile som nu är atomär tack vare transaktionen i DAL.
+        const userProfile = await createUserProfile({ userId, email: userEmail });
 
-        if (!userProfile) {
-            logger.info(`Profil saknas för ${userId}, skapar ny profil...`);
-            userExists = false;
-            userProfile = await createUserProfile({ userId, email: userEmail });
-        }
+        // Om vi kommer hit, finns profilen. Nu kollar vi om den skapades i *detta* anrop.
+        // Vi antar att om onboardingStatus är 'incomplete' och den skapades nyligen,
+        // så är användaren ny.
+        const now = Date.now();
+        const profileCreationTime = userProfile.createdAt.toMillis();
+        const isNewUser = (now - profileCreationTime < 5000); // 5 sekunders fönster
 
-        logger.info(`Profil hittades för ${userId}. Onboarding-status: ${userProfile.onboardingStatus}`);
+        logger.info(`Profil hanterad för ${userId}. Onboarding-status: ${userProfile.onboardingStatus}`);
 
         return {
-            userExists: userExists,
+            userExists: !isNewUser,
             isOnboarded: userProfile.onboardingStatus === 'complete',
         };
     }

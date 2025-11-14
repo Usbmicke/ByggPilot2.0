@@ -1,100 +1,64 @@
-'use client';
-
-import { useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { useRouter, usePathname } from 'next/navigation';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { onAuthStateChanged, User } from '@firebase/auth';
 import { auth } from '@/lib/config/firebase-client';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { Toaster } from 'react-hot-toast';
+import { useRouter, usePathname } from 'next/navigation';
 
-// En enkel spinner-komponent för laddningsstatus
-const Spinner = () => (
-  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 dark:border-gray-100"></div>
-);
+// --- Definiera dina sidor ---
+const PUBLIC_PATHS = ['/'];
+const PROTECTED_PATHS = ['/dashboard', '/onboarding'];
 
-interface AuthProviderProps {
-  children: ReactNode;
+// --- Skapa Auth Context ---
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
 }
 
-// Definierar det förväntade svaret från vårt backend-flöde
-interface UserStatusResponse {
-    isOnboarded: boolean;
-    userExists: boolean;
-}
+const AuthContext = createContext<AuthContextType>({ user: null, loading: true });
 
-export function AuthProvider({ children }: AuthProviderProps) {
+// --- Huvudkomponenten: AuthProvider ---
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true); // Börja alltid som 'laddar'
   const router = useRouter();
   const pathname = usePathname();
-  // Börjar med loading=true för att visa spinner tills första auth-kollen är klar
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Säkerställer att functions bara initieras en gång.
-    const functions = getFunctions(auth.app);
-    const getOrCreateUserAndCheckStatusFlow = httpsCallable<void, UserStatusResponse>(functions, 'getOrCreateUserAndCheckStatusFlow');
-
-    const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
-      const isPublicPath = ['/', '/login'].includes(pathname); // Anta att '/' är inloggningssidan
-
-      if (user) {
-        // Användare inloggad
-        try {
-          console.log(`Användare ${user.uid} inloggad. Synkroniserar med backend...`);
-          // Genkits onCall-trigger hanterar token-verifiering automatiskt.
-          const result = await getOrCreateUserAndCheckStatusFlow();
-          const data = result.data;
-          console.log('Backend-svar:', data);
-
-          if (data.isOnboarded) {
-            // Användare är fullt onboardad.
-            // Om de är på en publik sida (som login), skicka dem till dashboard.
-            if (isPublicPath) {
-              router.replace('/dashboard');
-            }
-          } else {
-            // Användare finns men har inte slutfört onboarding.
-            // Tvinga dem till onboarding-sidan.
-            if (pathname !== '/onboarding') {
-              router.replace('/onboarding');
-            }
-          }
-        } catch (error) {
-          console.error("Kritiskt fel: Backend-synkronisering av användare misslyckades.", error);
-          // Om backend-synk misslyckas, logga ut och skicka till inloggningssidan.
-          await auth.signOut();
-          router.replace('/');
-        } finally {
-           // Sluta ladda först när all logik är klar
-           setLoading(false);
-        }
-      } else {
-        // Användare är utloggad.
-        // Om de är på en skyddad sida, skicka till inloggningssidan.
-        const isProtectedPath = !isPublicPath && pathname !== '/onboarding';
-        if (isProtectedPath) {
-          router.replace('/');
-        }
-        setLoading(false);
-      }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user || null);
+      setLoading(false); // Markera som klar
     });
-
-    // Rensa upp prenumerationen vid unmount
     return () => unsubscribe();
-  }, [pathname, router]); // Körs vid rutt-ändringar
+  }, []);
 
+  useEffect(() => {
+    if (loading) {
+      return; // Gör INGET förrän laddning är klar
+    }
+
+    const pathIsProtected = PROTECTED_PATHS.some(path => pathname.startsWith(path));
+    const pathIsPublic = PUBLIC_PATHS.includes(pathname);
+
+    // FALL 1: Inte inloggad
+    if (!user && pathIsProtected) {
+      router.push('/');
+    }
+
+    // FALL 2: Inloggad
+    if (user && pathIsPublic) {
+      router.push('/dashboard');
+    }
+  }, [user, loading, pathname, router]);
+
+  // Visa en tom sida eller spinner medan vi väntar
   if (loading) {
-    return (
-      <div className="bg-background flex h-screen w-full items-center justify-center">
-        <Spinner />
-      </div>
-    );
+    return <>Laddar...</>;
   }
 
-  // Rendera children först när auth-status är löst
   return (
-    <>
-      <Toaster position="top-center" />
+    <AuthContext.Provider value={{ user, loading }}>
       {children}
-    </>
+    </AuthContext.Provider>
   );
 }
+
+export const useAuth = () => useContext(AuthContext);

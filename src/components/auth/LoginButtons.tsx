@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { setPersistence, browserLocalPersistence, signInWithRedirect, GoogleAuthProvider } from "firebase/auth";
+import { setPersistence, browserLocalPersistence, signInWithRedirect, GoogleAuthProvider } from "@firebase/auth";
 import { auth } from '@/lib/config/firebase-client';
 import { FaGoogle } from 'react-icons/fa';
 
