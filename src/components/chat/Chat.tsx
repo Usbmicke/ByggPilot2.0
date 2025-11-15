@@ -2,7 +2,7 @@
 'use client';
 
 import { useChat } from '@ai-sdk/react';
-import React, { useState, FormEvent } from 'react';
+import React, { useState } from 'react';
 import { ChatMessages } from './ChatMessages';
 import ChatInput from './ChatInput';
 import { ChevronDownIcon, ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/solid';
@@ -10,25 +10,10 @@ import { ChevronDownIcon, ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/reac
 export default function Chat() {
   const [isChatOpen, setIsChatOpen] = useState(true);
   
-  // useChat hanterar meddelandehistorik, laddningsstatus och kommunikation
-  const { messages, append, isLoading } = useChat({
+  // Använd useChat på det rekommenderade sättet, med full state-hantering.
+  const { messages, isLoading, handleSubmit, handleInputChange, input, stop } = useChat({
     api: '/api/genkit/chat',
   });
-
-  // Lokal state för att hantera värdet i textfältet
-  const [input, setInput] = useState('');
-
-  // Hanterar formulärinskickning
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-
-    // Skicka det nuvarande meddelandet via useChat-hookens append-funktion
-    append({ role: 'user', content: input });
-
-    // Rensa textfältet efter att meddelandet har skickats
-    setInput('');
-  };
 
   if (!isChatOpen) {
     return (
@@ -56,12 +41,13 @@ export default function Chat() {
       </div>
 
       <div className="p-4 border-t border-border-color flex-shrink-0">
+        {/* handleSubmit hanterar formulärinskickning åt oss */}
         <form onSubmit={handleSubmit}>
             <ChatInput
-                input={input} // Skicka ner nuvarande input-värde
-                setInput={setInput} // Skicka ner funktionen för att uppdatera det
+                input={input}
+                handleInputChange={handleInputChange}
                 isLoading={isLoading}
-                onStop={() => { /* Stopp-logik kan implementeras här */ }}
+                onStop={stop}
             />
         </form>
       </div>
