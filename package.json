@@ -5,7 +5,7 @@
   "scripts": {
     "//TODO_SECURITY": "Firebase v10.12.2 har måttliga sårbarheter i beroendet 'undici'. Uppdatera när en säker version av Firebase är tillgänglig.",
     "dev": "kill-port 3001 && next dev --port 3001",
-    "build": "next build",
+    "build": "node --max-old-space-size=4096 node_modules/.bin/next build",
     "start": "next start",
     "lint": "next lint"
   },
@@ -45,7 +45,7 @@
     "googleapis": "^159.0.0",
     "handlebars": "^4.7.8",
     "lucide-react": "^0.544.0",
-    "next": "latest",
+    "next": "14.2.3",
     "react": "^18",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^18",

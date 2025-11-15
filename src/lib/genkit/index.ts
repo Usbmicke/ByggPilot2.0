@@ -1,14 +1,14 @@
 
 import { configureGenkit } from '@genkit-ai/core';
-import { firebase } from '@genkit-ai/firebase'; // FIX: Avkommenterad
+import { firebase } from '@genkit-ai/firebase';
 import { onFlow } from '@genkit-ai/firebase/functions';
 import { defineFlow, run } from '@genkit-ai/flow';
-import { googleAI, gemini15Flash, gemini15Pro } from '@genkit-ai/googleai'; // MODELL-FIX: Rättade till nya namn
+import { googleAI, gemini15Flash, gemini15Pro } from '@genkit-ai/googleai';
 import { setGlobalOptions } from 'firebase-functions/v2';
 import { onUserAfterCreate } from 'firebase-functions/v2/identity';
 import * as logger from 'firebase-functions/logger';
 import { z } from 'zod';
-import { createUserProfile, getUserProfile } from '../dal/dal';
+import { createProject, createUserProfile, getUserProfile, updateUserOnboardingStatus } from '../dal/dal'; // Importerar nya funktioner
 import { MessageData } from '../schemas/schemas';
 import { generate, defineTool } from '@genkit-ai/ai';
 
@@ -28,21 +28,17 @@ const vision = gemini15Pro;
 
 configureGenkit({
   plugins: [ 
-      firebase(), // FIX: Plugin tillagt
+      firebase(), 
       googleAI()
   ],
   logLevel: 'debug',
-  enableTracingAndMetrics: true, // Slår på för bättre felsökning
+  enableTracingAndMetrics: true,
 });
 
 // =================================================================================
-// SYNKRONISERING & ORKESTRERING
+// SYNKRONISERING, ONBOARDING & ORKESTRERING
 // =================================================================================
 
-/**
- * Bakgrunds-trigger som körs när en Firebase-användare skapas.
- * Detta säkerställer att en databasprofil skapas direkt.
- */
 export const onusercreate = onUserAfterCreate(async (user) => {
   logger.info(`Ny användare i Auth: ${user.data.uid}. Skapar databasprofil...`);
   try {
@@ -53,16 +49,12 @@ export const onusercreate = onUserAfterCreate(async (user) => {
   }
 });
 
-/**
- * Huvudflöde för att verifiera en användares status vid inloggning.
- * Anropas från frontend för att dirigera användaren till rätt sida (onboarding/dashboard).
- */
 export const getOrCreateUserAndCheckStatusFlow = onFlow(
     {
         name: 'getOrCreateUserAndCheckStatusFlow',
         inputSchema: z.void(),
         outputSchema: z.object({
-            isNewUser: z.boolean(), // Tydligare namn
+            isNewUser: z.boolean(),
             isOnboarded: z.boolean(),
         }),
         authPolicy: (auth, input) => {
@@ -80,8 +72,6 @@ export const getOrCreateUserAndCheckStatusFlow = onFlow(
             isNewUser = true;
             logger.info(`Profil saknas för ${userId}, skapar en ny...`);
             try {
-                // Detta anrop bör ske sällan tack vare onUserAfterCreate-triggern,
-                // men fungerar som en sista säkerhetsåtgärd.
                 userProfile = await createUserProfile({ userId, email: context.auth!.email || '' });
             } catch (error) {
                 logger.error(`[CRITICAL] Misslyckades med att skapa profil i säkerhetsnätet för ${userId}:`, error);
@@ -99,7 +89,44 @@ export const getOrCreateUserAndCheckStatusFlow = onFlow(
     }
 );
 
-// Chatt-flöde och andra flöden följer nedan...
+/**
+ * Flöde för att slutföra onboarding: skapar ett första projekt och uppdaterar användarstatus.
+ * Anropas från frontend när användaren slutför onboarding-guiden.
+ */
+export const createProjectFlow = onFlow(
+    {
+        name: 'createProjectFlow',
+        inputSchema: z.object({
+            projectName: z.string().min(3, "Projektnamnet måste vara minst 3 tecken långt."),
+        }),
+        outputSchema: z.object({
+            projectId: z.string(),
+        }),
+        authPolicy: (auth, input) => {
+            if (!auth) throw new Error('Användare måste vara autentiserad.');
+        },
+    },
+    async ({ projectName }, context) => {
+        const userId = context.auth!.uid;
+        logger.info(`[Onboarding] Användare ${userId} skapar sitt första projekt med namn: "${projectName}"`);
+
+        // Steg 1: Skapa projektet i databasen
+        const projectId = await createProject({ name: projectName, ownerId: userId });
+        logger.info(`[Onboarding] Projekt med ID ${projectId} har skapats för användare ${userId}.`);
+
+        // Steg 2: Uppdatera användarens onboarding-status till 'complete'
+        await updateUserOnboardingStatus(userId, 'complete');
+        logger.info(`[Onboarding] Användare ${userId} har nu status 'complete'.`);
+
+        // Steg 3: Returnera det nya projekt-ID:t
+        return { projectId };
+    }
+);
+
+
+// =================================================================================
+// CHATT-FLÖDE
+// =================================================================================
 
 const INTENT_CLASSIFICATION_PROMPT = `Klassificera frågan: "{prompt}". Svara med: 'enkel_chatt', 'bransch_fråga', 'företags_fråga', 'komplex_analys', 'offert_generering', 'okänd'.`;
 const tools_default = [

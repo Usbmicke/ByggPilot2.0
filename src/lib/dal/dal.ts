@@ -20,8 +20,10 @@ export interface UserProfile {
 
 export interface Project {
   projectId: string;
+  name: string;
   ownerId: string;      // The user who created the project
   memberIds: string[];  // List of user IDs with access
+  createdAt: Timestamp;
   // ... other project fields like name, address, etc.
 }
 
@@ -110,6 +112,29 @@ export async function verifyProjectAccess(projectId: string, userId: string): Pr
     throw new Error(`User ${userId} does not have access to project ${projectId}.`);
   }
 }
+
+/**
+ * Creates a new project in Firestore.
+ * @param {object} data - Project data.
+ * @param {string} data.name - The name of the project.
+ * @param {string} data.ownerId - The ID of the user creating the project.
+ * @returns {Promise<string>} The ID of the newly created project.
+ */
+export async function createProject(data: { name: string, ownerId: string }): Promise<string> {
+  const projectRef = db.collection('projects').doc(); // Auto-generate ID
+
+  const newProject: Project = {
+    projectId: projectRef.id,
+    name: data.name,
+    ownerId: data.ownerId,
+    memberIds: [data.ownerId], // The owner is always a member
+    createdAt: Timestamp.now(),
+  };
+
+  await projectRef.set(newProject);
+  return projectRef.id;
+}
+
 
 // ====================================================================
 // CRUD-funktioner för ÄTA och Offert (STUBS)

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { setPersistence, browserLocalPersistence, signInWithRedirect, GoogleAuthProvider } from "@firebase/auth";
-import { auth } from '@/lib/config/firebase-client';
+import { auth } from '@/lib/firebase/client';
 import { FaGoogle } from 'react-icons/fa';
 
 // FIX: Omskriven med 'export const' syntax för att lösa Next.js byggfel.
@@ -13,6 +13,26 @@ export const LoginButtons = () => {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     const provider = new GoogleAuthProvider();
+
+    // --- START: Utökade Google API Scopes ---
+    // Grundläggande profilinformation
+    provider.addScope('profile');
+    provider.addScope('email');
+
+    // Google Calendar (läsa/skriva)
+    provider.addScope('https://www.googleapis.com/auth/calendar');
+
+    // Google Drive (full åtkomst till filer, inkluderar Docs, Sheets etc.)
+    provider.addScope('https://www.googleapis.com/auth/drive');
+
+    // Gmail (läsa och skicka e-post)
+    provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
+    provider.addScope('https://www.googleapis.com/auth/gmail.send');
+
+    // Google Tasks (läsa/skriva)
+    provider.addScope('https://www.googleapis.com/auth/tasks');
+    // --- SLUT: Utökade Google API Scopes ---
+
     try {
       await setPersistence(auth, browserLocalPersistence);
       await signInWithRedirect(auth, provider);
