@@ -2,8 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-// DIAGNOSTISK ÄNDRING: Använder relativ sökväg för att kringgå alias-problem.
-import { Invoice, Project, Customer } from '../app/types/index';
+import { Invoice, Project, Customer } from '@/types';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 
 interface SendInvoiceModalProps {
@@ -44,15 +43,15 @@ const SendInvoiceModal: React.FC<SendInvoiceModalProps> = ({ isOpen, onClose, in
         <div className="space-y-4">
           <div>
             <p className="text-sm text-gray-500">Projekt</p>
-            <p className="font-semibold">{project.projectName}</p>
+            <p className="font-semibold">{project.name}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Faktura-ID</p>
-            <p className="font-semibold">{invoice.invoiceId}</p>
+            <p className="font-semibold">{invoice.id}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Belopp</p>
-            <p className="font-semibold">{invoice.amount} SEK</p>
+            <p className="font-semibold">{invoice.totalAmount} SEK</p>
           </div>
 
           {isLoading && <p>Laddar kundinformation...</p>}
