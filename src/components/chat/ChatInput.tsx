@@ -2,14 +2,14 @@
 'use client';
 
 import { ArrowUpIcon } from '@heroicons/react/24/solid';
-import { ChangeEvent, KeyboardEvent, useState, useEffect } from 'react';
+import { ChangeEvent, KeyboardEvent } from 'react';
 
-// Simplified props, as the input state is now managed locally.
+// Props uppdaterade för att ta emot input-värde och en setInput-funktion direkt.
 interface ChatInputProps {
+  input: string;
+  setInput: (value: string) => void;
   isLoading: boolean;
   onStop: () => void;
-  // handleInputChange is still needed to sync the state with the useChat hook.
-  handleInputChange: (e: ChangeEvent<HTMLTextAreaElement> | { target: { name: string, value: string } }) => void;
 }
 
 const ExpandingTextarea = ({ value, handleChange, isLoading }: {
@@ -19,7 +19,7 @@ const ExpandingTextarea = ({ value, handleChange, isLoading }: {
 }) => {
   return (
     <textarea
-      name="message" // Crucial for useChat to identify the input
+      name="message"
       value={value}
       onChange={handleChange}
       placeholder={isLoading ? 'Tänker...' : 'Ställ en fråga till din co-pilot...'}
@@ -43,26 +43,17 @@ const ExpandingTextarea = ({ value, handleChange, isLoading }: {
   );
 };
 
-export default function ChatInput({ isLoading, onStop, handleInputChange }: ChatInputProps) {
-  const [inputValue, setInputValue] = useState('');
+// Komponenten är nu "dum" och hanterar inte längre sitt eget state.
+export default function ChatInput({ input, setInput, isLoading, onStop }: ChatInputProps) {
 
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-    setInputValue(e.target.value);
-    // Manually call the hook's handler to keep it in sync.
-    handleInputChange(e);
+    setInput(e.target.value);
   }
-
-  // Clear local input when the parent form is submitted (isLoading becomes true and then false)
-  useEffect(() => {
-    if (!isLoading) {
-      setInputValue('');
-    }
-  }, [isLoading]);
 
   return (
     <div className="relative">
         <ExpandingTextarea 
-            value={inputValue}
+            value={input}
             handleChange={handleChange}
             isLoading={isLoading}
         />
@@ -80,7 +71,7 @@ export default function ChatInput({ isLoading, onStop, handleInputChange }: Chat
         <button 
             type="submit"
             className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-primary-500 text-white disabled:bg-gray-400 hover:bg-primary-600 transition-colors"
-            disabled={!inputValue.trim()}
+            disabled={!input.trim()}
             aria-label="Skicka meddelande"
         >
             <ArrowUpIcon className="h-5 w-5" />

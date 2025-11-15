@@ -46,7 +46,7 @@ export default function AnvandarvillkorPage() {
             </p>
 
             <p className="mt-8">
-              Har du frågor om villkoren? Kontakta oss på <a href="mailto:support@byggpilot.se" className="text-blue-400 hover:underline">support@byggpilot.se</a>.
+              Har du frågor om villkoren? Kontakta oss på <a href="mailto:byggpilot@gmail.com" className="text-blue-400 hover:underline">support@byggpilot.se</a>.
             </p>
           </div>
         </div>

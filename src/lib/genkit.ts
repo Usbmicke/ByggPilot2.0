@@ -3,7 +3,7 @@
 
 import { getFunctions, httpsCallable, Functions } from 'firebase/functions';
 // Importera den direkta app-instansen från den centrala konfigurationen
-import { app } from '@/lib/config/firebase-client';
+import { app } from '@/lib/firebase/client';
 
 // Håll en singleton-instans av Firebase Functions
 let functionsInstance: Functions | null = null;

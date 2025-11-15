@@ -1,89 +1,33 @@
 
 'use client';
 
+import { useChat } from '@ai-sdk/react';
 import React, { useState, FormEvent } from 'react';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
-// KORRIGERAD SÖKVÄG IGEN - Denna är den rätta baserat på filstrukturen.
-import { app } from '@/lib/config/firebase-client'; 
 import { ChatMessages } from './ChatMessages';
 import ChatInput from './ChatInput';
 import { ChevronDownIcon, ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/solid';
 
-// Define the shape of a message
-interface Message {
-  role: 'user' | 'model';
-  content: string;
-}
-
 export default function Chat() {
   const [isChatOpen, setIsChatOpen] = useState(true);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const auth = getAuth(app);
+  
+  // useChat hanterar meddelandehistorik, laddningsstatus och kommunikation
+  const { messages, append, isLoading } = useChat({
+    api: '/api/genkit/chat',
+  });
 
-  const handleSubmit = async (e: FormEvent) => {
+  // Lokal state för att hantera värdet i textfältet
+  const [input, setInput] = useState('');
+
+  // Hanterar formulärinskickning
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    const user = auth.currentUser;
-    if (!user) {
-      console.error("User not authenticated");
-      // Optionally, show a message to the user to log in
-      return;
-    }
+    // Skicka det nuvarande meddelandet via useChat-hookens append-funktion
+    append({ role: 'user', content: input });
 
-    const idToken = await user.getIdToken();
-    const newMessages: Message[] = [...messages, { role: 'user', content: input }];
-    setMessages(newMessages);
+    // Rensa textfältet efter att meddelandet har skickats
     setInput('');
-    setIsLoading(true);
-
-    try {
-      const response = await fetch('/api/genkit/flows/chatRouterFlow', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          // Genkit flows typically take an 'input' field
-          input: {
-            messages: newMessages,
-          }
-        }),
-      });
-
-      if (!response.body) {
-        throw new Error('Response body is null');
-      }
-
-      // Handle streaming response
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let modelResponse = '';
-      setMessages(prev => [...prev, { role: 'model', content: '' }]);
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        modelResponse += decoder.decode(value, { stream: true });
-        setMessages(prev => {
-          const lastMessage = prev[prev.length - 1];
-          if (lastMessage.role === 'model') {
-            lastMessage.content = modelResponse;
-            return [...prev.slice(0, -1), lastMessage];
-          }
-          return prev;
-        });
-      }
-    } catch (error) {
-      console.error("Error calling Genkit flow:", error);
-      setMessages(prev => [...prev, { role: 'model', content: "Ursäkta, ett fel inträffade." }]);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   if (!isChatOpen) {
@@ -114,10 +58,10 @@ export default function Chat() {
       <div className="p-4 border-t border-border-color flex-shrink-0">
         <form onSubmit={handleSubmit}>
             <ChatInput
-                input={input}
-                handleInputChange={(e) => setInput(e.target.value)}
+                input={input} // Skicka ner nuvarande input-värde
+                setInput={setInput} // Skicka ner funktionen för att uppdatera det
                 isLoading={isLoading}
-                onStop={() => { /* Optional: Implement stop logic if needed */ }}
+                onStop={() => { /* Stopp-logik kan implementeras här */ }}
             />
         </form>
       </div>
