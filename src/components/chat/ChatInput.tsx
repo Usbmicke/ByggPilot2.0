@@ -4,10 +4,10 @@
 import { ArrowUpIcon } from '@heroicons/react/24/solid';
 import { ChangeEvent, KeyboardEvent } from 'react';
 
-// Props uppdaterade för att ta emot input-värde och en setInput-funktion direkt.
+// Props uppdaterade för att vara direkt kompatibla med useChat-hooken
 interface ChatInputProps {
   input: string;
-  setInput: (value: string) => void;
+  handleInputChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
   isLoading: boolean;
   onStop: () => void;
 }
@@ -43,18 +43,12 @@ const ExpandingTextarea = ({ value, handleChange, isLoading }: {
   );
 };
 
-// Komponenten är nu "dum" och hanterar inte längre sitt eget state.
-export default function ChatInput({ input, setInput, isLoading, onStop }: ChatInputProps) {
-
-  const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
-  }
-
+export default function ChatInput({ input, handleInputChange, isLoading, onStop }: ChatInputProps) {
   return (
     <div className="relative">
         <ExpandingTextarea 
             value={input}
-            handleChange={handleChange}
+            handleChange={handleInputChange} // handleInputChange passas nu direkt
             isLoading={isLoading}
         />
       
