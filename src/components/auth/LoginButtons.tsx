@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import { setPersistence, browserLocalPersistence, signInWithRedirect, GoogleAuthProvider } from "@firebase/auth";
-import { auth } from '@/lib/firebase/client';
+import { auth } from '@/lib/config/firebase-client'; // <-- KORRIGERAD SÖKVÄG
 import { FaGoogle } from 'react-icons/fa';
 
-// FIX: Omskriven med 'export const' syntax för att lösa Next.js byggfel.
-// Detta är ett mer robust sätt att definiera React-komponenter.
-export const LoginButtons = () => {
+interface LoginButtonsProps {
+  onAuthSuccess?: () => void;
+}
+
+export const LoginButtons: React.FC<LoginButtonsProps> = ({ onAuthSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
@@ -15,7 +17,7 @@ export const LoginButtons = () => {
     const provider = new GoogleAuthProvider();
 
     // --- START: Utökade Google API Scopes ---
-    // Grundläggande profilinformation
+    // Dessa scopes är nödvändiga för kärnfunktionaliteten i ByggPilot.
     provider.addScope('profile');
     provider.addScope('email');
 
@@ -25,7 +27,7 @@ export const LoginButtons = () => {
     // Google Drive (full åtkomst till filer, inkluderar Docs, Sheets etc.)
     provider.addScope('https://www.googleapis.com/auth/drive');
 
-    // Gmail (läsa och skicka e-post)
+    // Gmail (läsa och skicka, för att kunna analysera och skapa utkast)
     provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
     provider.addScope('https://www.googleapis.com/auth/gmail.send');
 
@@ -43,15 +45,17 @@ export const LoginButtons = () => {
   };
 
   return (
-    <button
-      onClick={!isLoading ? handleGoogleSignIn : undefined}
-      disabled={isLoading}
-      className="flex items-center justify-center gap-2.5 bg-white text-black font-semibold px-4 py-2 rounded-full hover:bg-neutral-200 transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap text-sm"
-    >
-      <FaGoogle />
-      <span>
-        {isLoading ? 'Omdirigerar...' : 'Logga in med Google'}
-      </span>
-    </button>
+    <div className="flex flex-col items-center w-full">
+      <button
+        onClick={!isLoading ? handleGoogleSignIn : undefined}
+        disabled={isLoading}
+        className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+      >
+        <FaGoogle />
+        <span>
+          {isLoading ? 'Omdirigerar...' : 'Logga in med Google'}
+        </span>
+      </button>
+    </div>
   );
 };
