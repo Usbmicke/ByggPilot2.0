@@ -2,12 +2,12 @@
 import { configureGenkit } from '@genkit-ai/core';
 import { firebase } from '@genkit-ai/firebase';
 import { googleAI } from '@genkit-ai/googleai';
-import { defineFlow, runFlow } from '@genkit-ai/flow';
+import { defineFlow } from '@genkit-ai/flow';
 import { z } from 'zod';
-import { adminDb } from '@/lib/firebase/admin';
 import { getGoogleDriveClient } from './google-drive';
+// Importera DAL-funktionen, inte adminDb direkt!
+import { completeUserOnboarding } from '@/lib/dal/dal';
 
-// Konfigurera Genkit med Firebase och Google AI
 configureGenkit({
   plugins: [
     firebase(),
@@ -18,16 +18,15 @@ configureGenkit({
 });
 
 // =================================================================================
-//  ONBOARDING FLOW
+//  ONBOARDING FLOW (Refaktorerad enligt Guldstandard)
 // =================================================================================
 
 export const completeOnboarding = defineFlow(
   {
     name: 'completeOnboarding',
-    inputSchema: z.void(), // Inget input behövs, vi använder auth-context
+    inputSchema: z.void(),
     outputSchema: z.object({ success: z.boolean(), message: z.string() }),
     middleware: [async (input, next, context) => {
-        // Auth-guard: Se till att anropet har en giltig Firebase Auth-användare
         if (!context?.auth) {
           throw new Error("Autentisering krävs för detta anrop.");
         }
@@ -45,7 +44,6 @@ export const completeOnboarding = defineFlow(
     try {
       const drive = await getGoogleDriveClient(userId);
 
-      // 1. Skapa rotmappen "ByggPilot"
       console.log("[Onboarding Flow] Skapar rotmapp i Google Drive...");
       const rootFolderResponse = await drive.files.create({
         requestBody: {
@@ -60,7 +58,6 @@ export const completeOnboarding = defineFlow(
       }
       console.log(`[Onboarding Flow] Rotmapp skapad med ID: ${rootFolderId}`);
 
-      // 2. Skapa undermappen "Kunder"
       console.log("[Onboarding Flow] Skapar undermapp för Kunder...");
       await drive.files.create({
         requestBody: {
@@ -70,14 +67,10 @@ export const completeOnboarding = defineFlow(
         },
       });
 
-      // 3. Uppdatera användarprofilen i Firestore
-      console.log("[Onboarding Flow] Uppdaterar användarprofil i Firestore...");
-      const userDocRef = adminDb.collection('users').doc(userId);
-      await userDocRef.update({
-        isOnboarded: true,
-        googleDriveRootFolderId: rootFolderId, // Spara ID för framtida bruk
-      });
-      console.log("[Onboarding Flow] Användarprofil uppdaterad.");
+      // ANROPAR DAL:et! Flödet pratar inte längre direkt med databasen.
+      console.log("[Onboarding Flow] Anropar DAL för att uppdatera användarprofil...");
+      await completeUserOnboarding(userId, rootFolderId);
+      console.log("[Onboarding Flow] DAL-anrop slutfört.");
 
       return {
         success: true,
@@ -86,7 +79,6 @@ export const completeOnboarding = defineFlow(
 
     } catch (error: any) {
       console.error("[Onboarding Flow Error]", error.message);
-      // Logga hela felobjektet för felsökning
       console.error(error);
       return {
         success: false,

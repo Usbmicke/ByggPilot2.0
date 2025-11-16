@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase/admin'; // Använder admin-instansen
+// Uppdaterad sökväg för att matcha den nya filstrukturen
+import { adminAuth, adminDb } from '@/lib/config/firebase-admin'; 
 
 interface VerifyResponse {
     isAuthenticated: boolean;
@@ -7,10 +8,6 @@ interface VerifyResponse {
     error?: string;
 }
 
-/**
- * API-slutpunkt för att säkert verifiera en användares session från en httpOnly-cookie.
- * Denna slutpunkt är avsedd att anropas av middleware.
- */
 export async function GET(request: NextRequest): Promise<NextResponse<VerifyResponse>> {
     const sessionCookie = request.cookies.get('session')?.value || '';
 
@@ -19,8 +16,6 @@ export async function GET(request: NextRequest): Promise<NextResponse<VerifyResp
     }
 
     try {
-        // VIKTIG ÄNDRING: checkRevoked satt till false.
-        // Detta förhindrar ett fel om "Firebase Authentication API" inte är aktiverad i GCP.
         const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, false);
         const userId = decodedToken.uid;
 

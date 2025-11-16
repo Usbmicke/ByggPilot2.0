@@ -1,57 +1,61 @@
 
-# Viktigt 2.0: Arkitektur för Byggpilot (Horisont 2025)
+# Arkitektur Horisont 2025: Den Definitiva Guiden för Byggpilot
 
-Detta dokument ersätter alla tidigare versioner och utgör den enda källan till sanning för Byggpilot-projektets tekniska arkitektur. Målet är att säkerställa en robust, säker och framtidssäker applikation.
+Detta dokument är den enda källan till sanning för Byggpilots tekniska arkitektur. Alla tidigare versioner är obsoleta. Målet är en automatiserad, säker och högpresterande applikation, fri från manuell hantering och föråldrade mönster.
 
-## Grundprinciper
+## Kärnprinciper
 
-### 1. Den Hermetiska Uppdelningen (Frontend vs. Backend)
+### 1. Absolut Separation: UI vs. Logik
 
-Det råder en absolut och icke-förhandlingsbar uppdelning mellan frontend (Next.js) och backend (säker servermiljö).
+Applikationen är strikt uppdelad. Detta är inte förhandlingsbart.
 
-*   **Frontend (Next.js-appen i `/src`):**
-    *   Hanterar **ENDAST** UI, state management och klient-logik.
-    *   Använder **ENDAST** den klient-anpassade Firebase SDK:n (`@firebase/auth`, `@firebase/firestore`, etc.).
-    *   **FÅR ALDRIG** innehålla `firebase-admin` eller några server-hemligheter. Filen `admin.ts` är strikt förbjuden i Next.js-källkoden.
+*   **Frontend (Next.js `/src`):** Är ett rent presentationslager. Dess enda ansvar är UI, lokal state och att initiera anrop till backend. Den använder den vanliga Firebase Client SDK:n för detta initiala syfte.
 
-*   **Backend (Säker Servermiljö, t.ex. Firebase Functions):**
-    *   Är den **ENDA** platsen där `firebase-admin` används.
-    *   Hanterar all säkerhetskritisk logik: verifiering av ID-tokens, hantering av användarroller, och exekvering av Genkit AI-flöden.
-    *   Kommunikation med frontend sker uteslutande via säkra API-anrop.
+*   **Backend (Next.js API Routes, `/src/app/api`):** Är hjärnan och kassaskåpet. All affärslogik, all databasinteraktion via **Firebase Admin SDK**, all AI-bearbetning (Genkit) och all säkerhetskritisk kod lever här. API-vägarna körs som serverless functions i en säker miljö.
 
-### 2. Den Officiella Dörrvakten (`middleware.ts`)
+### 2. Autentisering: Det Automatiska Session-Cookie Flödet
 
-Applikationens åtkomstkontroll hanteras av **ENDAST EN** mekanism: en `middleware.ts`-fil i projektets rot.
+Vi har övergivit all manuell token-hantering. Autentisering sker via ett modernt, säkert och automatiserat flöde som utnyttjar Firebase och Next.js fullt ut.
 
-*   **Syfte:** Agera som en blixtsnabb "dörrvakt" som körs före varje sidladdning.
-*   **Logik:** Den inspekterar **endast två saker**: 1) Den begärda URL:en och 2) Förekomsten av en giltig `session`-cookie.
-*   **Förbud:** Den gamla `proxy.ts`-metoden är utfasad och **får inte användas**. Middleware är den officiella, framtidssäkra standarden från Vercel/Next.js.
+1.  **Initiering (Klient):** En användare klickar på "Logga in". Firebase Client SDK (`signInWithPopup`) hanterar interaktionen med Google. Efter lyckad inloggning hos Google får klienten ett **ID Token**.
 
-### 3. Den Säkra Sessionshanteringen (Cookie-flödet)
+2.  **Session-etablering (API-anrop):** Klienten skickar omedelbart detta ID Token – *en enda gång* – till vår backend-endpoint: `POST /api/auth/session`.
 
-Autentisering och sessionshantering följer ett säkert och väldefinierat flöde för att koppla samman frontend-inloggning med backend-verifiering.
+3.  **Cookie-skapande (Backend):** Vår API-route tar emot ID-tokenet, verifierar det med **Firebase Admin SDK**, och skapar sedan en **Session Cookie** med `admin.auth().createSessionCookie()`. Denna cookie sätts i webbläsarens svar med `HttpOnly`, `Secure` och `SameSite=Lax`-flaggor, vilket gör den osynlig och oåtkomlig för klient-skript. Detta är branschstandard för säkerhet.
 
-1.  **Inloggning (Klient):** Användaren loggar in via Google i sin webbläsare med hjälp av Firebase Client SDK i `AuthProvider.tsx`.
-2.  **Signal till Backend (API-anrop):** `AuthProvider`, efter en lyckad inloggning, skickar ett `POST`-anrop till vår backend-API-väg: `/api/auth/session`.
-3.  **Cookie-skapande (Backend):** API-vägen (`/api/auth/session/route.ts`) tar emot anropet. Den skapar och sätter en **`httpOnly`, `secure` `session`-cookie**. Detta är kritiskt, då `httpOnly` förhindrar att klient-skript kan komma åt cookien, vilket skyddar mot XSS-attacker.
-4.  **Verifiering (Dörrvakten):** Vid varje ny sidförfrågan läser `middleware.ts` `session`-cookien. Om cookien finns, släpps användaren in till skyddade sidor. Om den saknas, omdirigeras de till landningssidan.
+4.  **Automatisk Verifiering (`middleware.ts`):** För varje efterföljande anrop som görs till applikationen skickar webbläsaren automatiskt med denna säkra cookie. Vår `middleware.ts` fångar upp den, verifierar den blixtsnabbt via ett anrop till `/api/auth/verify`, och vet då exakt vem användaren är. Middlewaren agerar som en intelligent dörrvakt för hela applikationen.
 
-### 4. Centraliserad Konfiguration
+Detta mönster eliminerar helt behovet för klienten att någonsin igen befatta sig med tokens. Sessionen är etablerad och hanteras sömlöst.
 
-För att undvika fel och säkerställa underhållsbarhet, centraliseras all konfiguration.
+### 3. Centraliserad & Säker Hantering av Hemligheter (NY STANDARD)
 
-*   **Klient-konfiguration:** All Firebase-klientkonfiguration finns i **ENDAST EN** fil: `src/lib/config/firebase-client.ts`. Alla komponenter och providers importerar härifrån.
-*   **Backend-konfiguration:** Hanteras via säkra miljövariabler (`.env.local`) som endast är tillgängliga på serversidan.
+All hantering av hemligheter och miljövariabler har standardiserats för maximal säkerhet och minimal risk för läckage.
 
----
+*   **Princip:** Hemligheter lagras **aldrig** i koden eller i `.env.local`. De hämtas dynamiskt från en säker, molnbaserad källa (t.ex. Google Secret Manager) vid behov.
 
-## Framtida Integration: Genkit AI-flöden
+*   **Implementering:** All server-kod **måste** använda den centraliserade funktionen `getSecret('SECRET_NAME')` från `src/lib/config/secrets.ts` för att hämta hemligheter. Denna funktion är den enda tillåtna vägen för att accessa känslig konfiguration.
 
-De planerade chatt-flödena (t.ex. `Gemini 2.5 Flash` för snabba frågor, `Gemini 2.5 Pro` för djupare analys) kommer att implementeras med full respekt för denna arkitektur.
+*   **`.env.local`-filens roll:** Denna fil är **endast** avsedd för:
+    1.  **Publika variabler:** Värden som är säkra att exponera för klienten. Dessa måste ha prefixet `NEXT_PUBLIC_`. Exempel: `NEXT_PUBLIC_FIREBASE_PROJECT_ID`.
+    2.  **Lokala pekare (endast utveckling):** Variabeln `GOOGLE_APPLICATION_CREDENTIALS` som pekar till den lokala JSON-filen för Firebase Admin-tjänstekontot. Denna används bara under lokal utveckling.
 
-*   **Implementation:** Varje Genkit-flöde kommer att exponeras som en säker Firebase Function (eller annan serverless endpoint).
-*   **Anrop:** Frontend-appen kommer att anropa dessa endpoints via autentiserade API-anrop. Användarens ID-token kommer att skickas med i `Authorization`-headern och verifieras av backend-funktionen med `firebase-admin` innan flödet exekveras.
-*   **Resultat:** Detta garanterar att den tunga AI-bearbetningen och eventuella hemliga API-nycklar förblir säkra på servern, medan Next.js-appen förblir lättviktig och snabb.
+*   **Aktiva Hemligheter (hanteras via `getSecret`):**
+    *   `ENCRYPTION_KEY`: 32-bytes nyckel för AES-256-kryptering.
+    *   `ENCRYPTION_IV`: 16-bytes IV för AES-256-kryptering.
 
----
-**Denna arkitektur är vår kompass. Alla nya funktioner och all kodrefaktorering måste följa dessa principer.**
+*   **Inaktiva/Framtida Hemligheter:**
+    *   `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`: Är **inte aktiva**. Projektet använder Firebase inbyggda sessionshantering, inte Redis.
+    *   `GOOGLE_CLIENT_SECRET`: Är **inte aktiv**. Används för framtida Google API-integrationer men har ingen funktion i nuläget.
+
+-- -
+
+## Integration av AI (Genkit)
+
+Denna arkitektur är skräddarsydd för säker integration av Genkit.
+
+*   **Flöden som API:er:** Varje Genkit AI-flöde (t.ex., `chatOrchestrator`) exponeras som en egen säker API-route (t.ex., `/api/genkit/chat`).
+*   **Automatisk Auktorisering:** När frontend anropar `/api/genkit/chat`, verifierar vår `middleware.ts` automatiskt användarens session via session-cookien. Genkit-flödet kan därmed lita på att anropet är autentiserat och kan agera på uppdrag av den verifierade användaren.
+
+-- -
+
+**Denna arkitektur är inte en rekommendation; den är en lag. All nyutveckling och refaktorering måste följa dessa principer för att säkerställa en skalbar, säker och underhållbar produkt för 2025 och framåt.**
