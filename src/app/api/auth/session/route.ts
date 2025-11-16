@@ -1,35 +1,68 @@
-import { NextResponse, type NextRequest } from 'next/server';
-import { adminAuth } from '@/lib/firebase/admin';
 
-// Denna API-väg skapar en säker, httpOnly session-cookie efter att en användare har loggat in på klienten.
+import { NextResponse, type NextRequest } from 'next/server';
+import { getFirebaseAdmin } from '@/lib/config/firebase-admin';
+
+// Denna funktion hanterar skapandet av en säker session-cookie.
 export async function POST(request: NextRequest) {
   try {
+    const admin = await getFirebaseAdmin();
     const body = await request.json();
-    const token = body.token; // Förvänta oss en Firebase ID-token
+    const idToken = body.idToken as string;
 
-    if (!token) {
-      // Om ingen token finns, tolkar vi det som en utloggning.
-      const response = NextResponse.json({ success: true, message: 'Session avslutad.' });
-      // Instruera webbläsaren att rensa cookien.
-      response.cookies.set('session', '', { httpOnly: true, secure: true, maxAge: -1, path: '/' });
-      return response;
+    if (!idToken) {
+      return NextResponse.json({ error: 'ID token is required' }, { status: 400 });
     }
 
-    // Verifiera ID-token med Admin SDK. Detta garanterar att den är giltig.
-    await adminAuth.verifyIdToken(token);
-
-    // Skapa en session-cookie som är giltig i 14 dagar.
+    // Sessionen är giltig i 14 dagar, vilket är standard för många webbappar.
     const expiresIn = 60 * 60 * 24 * 14 * 1000; // 14 dagar i millisekunder
-    const sessionCookie = await adminAuth.createSessionCookie(token, { expiresIn });
 
-    // Sätt cookien i svaret till klienten.
-    const response = NextResponse.json({ success: true, message: 'Session skapad.' });
-    response.cookies.set('session', sessionCookie, { httpOnly: true, secure: true, maxAge: expiresIn, path: '/' });
+    // Skapa session-cookien med det verifierade ID-tokenet.
+    const sessionCookie = await admin.auth().createSessionCookie(idToken, { expiresIn });
+
+    // Sätt cookien i svarets header. 
+    // httpOnly: Cookien kan inte nås via klient-script, skyddar mot XSS.
+    // secure: Skickas endast över HTTPS.
+    // path: Tillgänglig för hela applikationen.
+    // sameSite: 'Lax' är en bra balans mellan säkerhet och användarvänlighet.
+    const options = {
+      name: 'session',
+      value: sessionCookie,
+      maxAge: expiresIn / 1000,
+      httpOnly: true,
+      secure: true,
+      path: '/',
+      sameSite: 'lax' as const,
+    };
+
+    const response = NextResponse.json({ success: true });
+    response.cookies.set(options);
 
     return response;
 
-  } catch (error) {
-    console.error('[Session API Error]', error);
-    return NextResponse.json({ success: false, error: 'Kunde inte skapa session.' }, { status: 401 });
+  } catch (error: any) {
+    console.error('Session Login Error:', error);
+    return NextResponse.json({ error: 'Failed to create session' }, { status: 500 });
   }
 }
+
+// Denna funktion hanterar utloggning genom att rensa session-cookien.
+export async function DELETE(request: NextRequest) {
+  try {
+    // Instruera webbläsaren att radera cookien genom att sätta en utgången maxAge.
+    const options = {
+      name: 'session', 
+      value: '', 
+      maxAge: -1, 
+    };
+
+    const response = NextResponse.json({ success: true });
+    response.cookies.set(options);
+
+    return response;
+
+  } catch (error: any) {
+    console.error('Session Logout Error:', error);
+    return NextResponse.json({ error: 'Failed to log out' }, { status: 500 });
+  }
+}
+

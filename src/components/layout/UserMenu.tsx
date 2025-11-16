@@ -5,8 +5,10 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { CogIcon, UserCircleIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
-import { User } from '@/app/types/index'; // Använder vår standardiserade User-typ
+import { User } from '@/app/types/index';
 import Popover from '@/app/components/shared/Popover';
+import { getAuth, signOut } from 'firebase/auth';
+import { auth } from '@/lib/config/firebase-client';
 
 // Hjälpfunktion för att generera initialer
 const getInitials = (name: string | null | undefined) => {
@@ -26,11 +28,15 @@ interface UserMenuProps {
 }
 
 const UserMenu: React.FC<UserMenuProps> = ({ user }) => {
-  const handleLogout = () => {
-    // This functionality depends on next-auth, which is no longer available.
-    // For now, we will log to the console and redirect to the homepage.
-    console.log("Simulating logout");
-    window.location.href = '/';
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      // Omdirigera till startsidan efter lyckad utloggning
+      window.location.href = '/';
+    } catch (error) {
+      console.error("Fel vid utloggning: ", error);
+      // Hantera eventuella fel här, t.ex. visa ett meddelande till användaren
+    }
   };
 
   return (

@@ -1,61 +1,56 @@
 'use client';
 
 import { useState } from 'react';
-import { setPersistence, browserLocalPersistence, signInWithRedirect, GoogleAuthProvider } from "@firebase/auth";
-import { auth } from '@/lib/config/firebase-client'; // <-- KORRIGERAD SÖKVÄG
+import { signInWithPopup, GoogleAuthProvider } from "@firebase/auth";
+import { auth } from '@/lib/config/firebase-client';
 import { FaGoogle } from 'react-icons/fa';
 
-interface LoginButtonsProps {
-  onAuthSuccess?: () => void;
-}
-
-export const LoginButtons: React.FC<LoginButtonsProps> = ({ onAuthSuccess }) => {
+// Denna komponent initierar Google-inloggningen via en popup.
+// Den komplexa logiken för att hantera sessionen ligger inte här,
+// utan i AuthProvider och på servern.
+export const LoginButtons = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
+    setError(null);
     const provider = new GoogleAuthProvider();
 
-    // --- START: Utökade Google API Scopes ---
-    // Dessa scopes är nödvändiga för kärnfunktionaliteten i ByggPilot.
-    provider.addScope('profile');
-    provider.addScope('email');
-
-    // Google Calendar (läsa/skriva)
-    provider.addScope('https://www.googleapis.com/auth/calendar');
-
-    // Google Drive (full åtkomst till filer, inkluderar Docs, Sheets etc.)
-    provider.addScope('https://www.googleapis.com/auth/drive');
-
-    // Gmail (läsa och skicka, för att kunna analysera och skapa utkast)
-    provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
-    provider.addScope('https://www.googleapis.com/auth/gmail.send');
-
-    // Google Tasks (läsa/skriva)
-    provider.addScope('https://www.googleapis.com/auth/tasks');
-    // --- SLUT: Utökade Google API Scopes ---
-
     try {
-      await setPersistence(auth, browserLocalPersistence);
-      await signInWithRedirect(auth, provider);
-    } catch (error) {
-      console.error("Fel vid Google inloggning:", error);
-      setIsLoading(false); 
+      // Starta inloggningen. `AuthProvider` kommer att upptäcka
+      // ändringen i `onAuthStateChanged` och hantera sessionsskapandet.
+      await signInWithPopup(auth, provider);
+      // Ingen omdirigering eller token-hantering behövs här.
+      // `AuthProvider` tar över.
+    } catch (error: any) {
+      // Hantera specifika, användarvänliga fel
+      if (error.code === 'auth/popup-closed-by-user') {
+        setError('Inloggningsfönstret stängdes.');
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        // Ignorera detta, händer när användaren klickar snabbt
+      } else {
+        console.error("Google Sign-In Error:", error);
+        setError('Ett fel uppstod vid inloggning.');
+      }
+      setIsLoading(false);
     }
+    // `isLoading` kommer att sättas till false via AuthProvider när allt är klart.
   };
 
   return (
     <div className="flex flex-col items-center w-full">
       <button
-        onClick={!isLoading ? handleGoogleSignIn : undefined}
+        onClick={handleGoogleSignIn}
         disabled={isLoading}
         className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 font-semibold py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
       >
         <FaGoogle />
         <span>
-          {isLoading ? 'Omdirigerar...' : 'Logga in med Google'}
+          {isLoading ? 'Väntar på Google...' : 'Logga in med Google'}
         </span>
       </button>
+      {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
     </div>
   );
 };
