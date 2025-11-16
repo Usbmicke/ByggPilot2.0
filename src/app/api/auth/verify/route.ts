@@ -12,7 +12,6 @@ interface VerifyResponse {
  * Denna slutpunkt är avsedd att anropas av middleware.
  */
 export async function GET(request: NextRequest): Promise<NextResponse<VerifyResponse>> {
-    // Läs cookien från den inkommande förfrågan
     const sessionCookie = request.cookies.get('session')?.value || '';
 
     if (!sessionCookie) {
@@ -20,17 +19,15 @@ export async function GET(request: NextRequest): Promise<NextResponse<VerifyResp
     }
 
     try {
-        // Verifiera session-cookien med Firebase Admin SDK
-        const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true);
+        // VIKTIG ÄNDRING: checkRevoked satt till false.
+        // Detta förhindrar ett fel om "Firebase Authentication API" inte är aktiverad i GCP.
+        const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, false);
         const userId = decodedToken.uid;
 
-        // Hämta användarprofilen från Firestore för att kontrollera onboarding-status
         const userDocRef = adminDb.collection('users').doc(userId);
         const userDoc = await userDocRef.get();
 
         if (!userDoc.exists) {
-            // Detta är ett edge case, men bör hanteras.
-            // Användaren finns i Auth men inte i databasen.
             return NextResponse.json({ isAuthenticated: true, isOnboarded: false }, { status: 200 });
         }
 
@@ -41,7 +38,6 @@ export async function GET(request: NextRequest): Promise<NextResponse<VerifyResp
 
     } catch (error) {
         console.error('[Auth Verify Error]', error);
-        // Cookien är ogiltig eller har utgått
         return NextResponse.json({ isAuthenticated: false }, { status: 401 });
     }
 }
