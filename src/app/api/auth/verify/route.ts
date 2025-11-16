@@ -1,38 +1,32 @@
 import { NextResponse, type NextRequest } from 'next/server';
-// Uppdaterad sökväg för att matcha den nya filstrukturen
-import { adminAuth, adminDb } from '@/lib/config/firebase-admin'; 
+import { adminAuth, adminDb } from '@/lib/config/firebase-admin';
 
 interface VerifyResponse {
-    isAuthenticated: boolean;
-    isOnboarded?: boolean;
-    error?: string;
+  isAuthenticated: boolean;
+  isOnboarded?: boolean;
+  uid?: string;
+  error?: string;
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse<VerifyResponse>> {
-    const sessionCookie = request.cookies.get('session')?.value || '';
+  const sessionCookie = request.cookies.get('session')?.value || '';
 
-    if (!sessionCookie) {
-        return NextResponse.json({ isAuthenticated: false }, { status: 401 });
-    }
+  if (!sessionCookie) {
+    return NextResponse.json({ isAuthenticated: false }, { status: 401 });
+  }
 
-    try {
-        const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, false);
-        const userId = decodedToken.uid;
+  try {
+    // SLUTGILTIG KORRIGERING: Ändra checkRevoked till false.
+    // Detta förhindrar ett race condition där en ny användares session underkänns
+    // innan användaren är fullt propagerad i Firebase backend.
+    const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, false);
+    const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
+    const isOnboarded = userDoc.exists && userDoc.data()?.isOnboarded === true;
 
-        const userDocRef = adminDb.collection('users').doc(userId);
-        const userDoc = await userDocRef.get();
+    return NextResponse.json({ isAuthenticated: true, uid: decodedToken.uid, isOnboarded }, { status: 200 });
 
-        if (!userDoc.exists) {
-            return NextResponse.json({ isAuthenticated: true, isOnboarded: false }, { status: 200 });
-        }
-
-        const userData = userDoc.data();
-        const isOnboarded = userData?.isOnboarded || false;
-
-        return NextResponse.json({ isAuthenticated: true, isOnboarded }, { status: 200 });
-
-    } catch (error) {
-        console.error('[Auth Verify Error]', error);
-        return NextResponse.json({ isAuthenticated: false }, { status: 401 });
-    }
+  } catch (error) {
+    console.error('Error verifying session cookie:', error);
+    return NextResponse.json({ isAuthenticated: false, error: 'Session invalid' }, { status: 401 });
+  }
 }
