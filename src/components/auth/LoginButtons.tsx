@@ -1,13 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { signInWithPopup, GoogleAuthProvider } from "@firebase/auth";
+import { signInWithRedirect, GoogleAuthProvider } from "@firebase/auth";
 import { auth } from '@/lib/config/firebase-client';
 import { FaGoogle } from 'react-icons/fa';
 
-// Denna komponent initierar Google-inloggningen via en popup.
-// Den komplexa logiken för att hantera sessionen ligger inte här,
-// utan i AuthProvider och på servern.
+// Denna komponent initierar Google-inloggningen via en omdirigering,
+// i enlighet med den robusta autentiseringsplanen.
 export const LoginButtons = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,26 +15,20 @@ export const LoginButtons = () => {
     setIsLoading(true);
     setError(null);
     const provider = new GoogleAuthProvider();
+    
+    // Vi begär endast minimala behörigheter initialt, enligt "Progressive Consent"-principen.
+    provider.addScope('email');
+    provider.addScope('profile');
 
     try {
-      // Starta inloggningen. `AuthProvider` kommer att upptäcka
-      // ändringen i `onAuthStateChanged` och hantera sessionsskapandet.
-      await signInWithPopup(auth, provider);
-      // Ingen omdirigering eller token-hantering behövs här.
-      // `AuthProvider` tar över.
+      // Omdirigerar hela sidan till Google. AuthProvider och /api/auth/callback hanterar resultatet.
+      await signInWithRedirect(auth, provider);
     } catch (error: any) {
-      // Hantera specifika, användarvänliga fel
-      if (error.code === 'auth/popup-closed-by-user') {
-        setError('Inloggningsfönstret stängdes.');
-      } else if (error.code === 'auth/cancelled-popup-request') {
-        // Ignorera detta, händer när användaren klickar snabbt
-      } else {
-        console.error("Google Sign-In Error:", error);
-        setError('Ett fel uppstod vid inloggning.');
-      }
+      console.error("Google Sign-In Redirect Error:", error);
+      setError('Kunde inte starta inloggningen. Vänligen försök igen.');
       setIsLoading(false);
     }
-    // `isLoading` kommer att sättas till false via AuthProvider när allt är klart.
+    // Användaren navigeras bort, så ingen mer kod exekveras här.
   };
 
   return (
@@ -47,7 +40,7 @@ export const LoginButtons = () => {
       >
         <FaGoogle />
         <span>
-          {isLoading ? 'Väntar på Google...' : 'Logga in med Google'}
+          {isLoading ? 'Omdirigerar till Google...' : 'Logga in med Google'}
         </span>
       </button>
       {error && <p className="text-red-500 text-sm mt-2">{error}</p>}

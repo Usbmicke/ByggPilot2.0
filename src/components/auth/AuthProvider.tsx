@@ -30,8 +30,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // onIdTokenChanged är mer robust här än onAuthStateChanged.
     // Den körs när användaren loggar in/ut OCH när deras token uppdateras.
     const unsubscribe = auth.onIdTokenChanged(async (currentUser) => {
-      setIsLoading(true);
-      setUser(currentUser);
+      setUser(currentUser); // Sätt användaren omedelbart
 
       if (currentUser) {
         // ANVÄNDAREN ÄR INLOGGAD PÅ KLIENTEN
@@ -39,14 +38,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         try {
           const idToken = await currentUser.getIdToken();
           // Skicka token till vår backend för att skapa en session cookie.
-          await fetch('/api/auth/session', {
+          const response = await fetch('/api/auth/session', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({ idToken }),
           });
-          console.log("Server session established.");
+          if(response.ok) {
+            console.log("Server session established.");
+          } else {
+            console.error("Failed to establish server session, status:", response.status)
+          }
         } catch (error) {
           console.error("Failed to establish server session:", error);
           // Här kan man lägga till logik för att hantera felet, t.ex. logga ut användaren.
@@ -55,7 +58,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // ANVÄNDAREN ÄR UTLOGGAD
         // Vi måste nu förstöra server-sessionen.
         try {
-          // Skicka en request för att rensa session cookien.
           await fetch('/api/auth/session', { method: 'DELETE' });
           console.log("Server session destroyed.");
         } catch (error) {
@@ -72,7 +74,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   return (
     <AuthContext.Provider value={{ user, isLoading }}>
-      {children}
+      {!isLoading && children}
     </AuthContext.Provider>
   );
 };
