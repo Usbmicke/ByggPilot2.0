@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/components/providers/AuthProvider';
+// KORRIGERAD SÖKVÄG: Pekar nu på den enda, sanna provider-filen.
+import { useAuth } from '@/app/providers/ClientProviders';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Bell, Search, LogOut, User as UserIcon, LayoutDashboard, Settings } from 'lucide-react';
@@ -65,9 +66,14 @@ const PublicHeader: React.FC = () => {
   );
 };
 
-const AuthenticatedHeader: React.FC<{ user: NonNullable<ReturnType<typeof useAuth>['user']>, onSignOut: () => void }> = ({ user, onSignOut }) => {
+const AuthenticatedHeader: React.FC<{ user: NonNullable<ReturnType<typeof useAuth>['user']> }> = ({ user }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   
+  const handleSignOut = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    // AuthProvider kommer att upptäcka utloggningen och uppdatera state automatiskt.
+  };
+
   return (
     <header className="flex h-16 items-center justify-between px-4 sm:px-6 bg-white border-b sticky top-0 z-40">
       <div className="flex items-center">
@@ -116,7 +122,7 @@ const AuthenticatedHeader: React.FC<{ user: NonNullable<ReturnType<typeof useAut
                     <Link href="/dashboard/settings" className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                         <Settings size={16} /> Inställningar
                     </Link>
-                    <button onClick={onSignOut} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                    <button onClick={handleSignOut} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
                         <LogOut size={16} /> Logga ut
                     </button>
                 </div>
@@ -132,19 +138,16 @@ const AuthenticatedHeader: React.FC<{ user: NonNullable<ReturnType<typeof useAut
 // --- Huvudkomponent: Den enda källan till sanning ---
 
 export default function Header() {
-    const { user, loading, signOut } = useAuth();
+    // Koden är nu enklare: vi får user och isLoading direkt från vår enda sanna hook.
+    const { user, isLoading } = useAuth();
 
-    // Visa en minimal header under laddning för att undvika layout-skift
-    if (loading) {
-        return (
-            <header className="sticky top-0 left-0 right-0 z-50 bg-neutral-950 h-[68px] flex items-center px-4 sm:px-6">
-                <ByggPilotLogo />
-            </header>
-        );
+    // Visa ingenting alls medan vi väntar. AuthProvider visar redan "Laddar..."
+    if (isLoading) {
+        return null;
     }
 
     if (user) {
-        return <AuthenticatedHeader user={user} onSignOut={signOut} />;
+        return <AuthenticatedHeader user={user} />;
     }
     
     return <PublicHeader />;

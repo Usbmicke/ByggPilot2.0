@@ -1,34 +1,29 @@
-
+// src/app/layout.tsx
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import React from 'react';
-import Script from 'next/script';
-import { ClientProviders } from '@/components/providers/ClientProviders'; // Importerar den nya skal-komponenten
+// Importera den korrekta providern med det nya namnet
+import { AuthProvider } from '@/app/providers/ClientProviders';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'ByggPilot - AI Automation',
-  description: 'AI för hantverkare. På riktigt. Automatisera KMA, säkra din ekonomi och stoppa byggfelen innan de ens sker.',
+  title: 'ByggPilot',
+  description: 'Din digitala kollega i byggbranschen',
 };
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
-    <html lang="sv" className="dark">
-      <head>
-        <Script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" strategy="beforeInteractive" />
-      </head>
-      <body className={`${inter.className} antialiased`}>
-        {/* RootLayout (server) renderar nu bara ClientProviders (klient), vilket är korrekt. */}
-        <ClientProviders>
+    <html lang="sv">
+      <body className={inter.className}>
+        <AuthProvider> {/* <-- Använd det korrekta namnet här */}
           {children}
-        </ClientProviders>
+        </AuthProvider>
       </body>
     </html>
-  )
+  );
 }

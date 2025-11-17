@@ -1,70 +1,45 @@
 
+// src/app/api/auth/session/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { initializeAdminApp } from '@/lib/config/firebase-admin';
+// KORREKT IMPORT: Importera de färdiga, initialiserade tjänsterna direkt.
+import { adminAuth } from '@/lib/config/firebase-admin';
 
-// Denna funktion är nu den enda källan till sanning för att skapa en session OCH säkerställa en användarprofil.
+export const runtime = 'nodejs';
+
+// Denna funktion skapar en session-cookie efter att klienten har loggat in.
 export async function POST(request: NextRequest) {
+  console.log('[API /session]: Startar POST-förfrågan för att skapa cookie.');
   try {
-    // Kör initialiseringen i början av varje anrop. Den är idempotent.
-    const { adminAuth, adminDb } = initializeAdminApp();
-
     const body = await request.json();
-    const idToken = body.token as string;
+    const idToken = body.idToken as string;
 
     if (!idToken) {
+      console.log('[API /session]: Inget ID-token i request body. Kan inte skapa cookie.');
       return NextResponse.json({ error: 'ID token is required' }, { status: 400 });
     }
 
-    // Avkoda token för att få användarinformation
-    const decodedToken = await adminAuth.verifyIdToken(idToken);
-    const { uid, email, name, picture } = decodedToken;
+    const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 dagar i millisekunder
 
-    const userRef = adminDb.collection('users').doc(uid);
-    const userDoc = await userRef.get();
-
-    // Transaktionell "upsert" för att garantera dataintegritet
-    if (!userDoc.exists) {
-      // Skapa användaren om den inte finns
-      await userRef.set({
-        uid,
-        email,
-        name,
-        picture,
-        createdAt: new Date().toISOString(),
-        isOnboarded: false, // Nya användare är ALDRIG onboardade
-      });
-    } else {
-      // Uppdatera befintlig användare (t.ex. om profilbild ändrats)
-      // RÖR INTE isOnboarded-flaggan här.
-      await userRef.update({
-        name,
-        picture,
-      });
-    }
-
-    // Skapa session-cookie
-    const expiresIn = 60 * 60 * 24 * 14 * 1000; // 14 dagar
+    // Använd `adminAuth` direkt. Ingen initialisering behövs.
     const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
+    console.log('[API /session]: Session-cookie skapad.');
 
     const options = {
       name: 'session',
       value: sessionCookie,
-      maxAge: expiresIn / 1000,
+      maxAge: expiresIn,
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
-      sameSite: 'lax' as const,
+      secure: true,
     };
 
-    // Sätt cookien och returnera framgångsrikt svar
-    const response = NextResponse.json({ success: true, uid });
+    const response = NextResponse.json({ success: true }, { status: 200 });
     response.cookies.set(options);
+    console.log('[API /session]: Cookie har satts i svaret. Flödet lyckades.');
+    
     return response;
 
   } catch (error: any) {
-    console.error('--- KRITISKT FEL VID SESSIONSSKAPANDE ---', error);
-    return NextResponse.json({ error: 'Failed to create session and sync user' }, { status: 401 });
+    console.error(`[API /session]: KRITISKT FEL vid skapande av cookie: ${error.message}`);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
-
-// DELETE-metoden har flyttats till en egen route för att följa manifestets principer.

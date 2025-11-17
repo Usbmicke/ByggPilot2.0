@@ -1,7 +1,3 @@
-
-// Denna fil är byggd enligt "Guldstandard"-blueprinten (Del 3.1 & 3.2)
-// för en robust och korrekt Firebase-klient i en Next.js-miljö.
-
 import { initializeApp, getApps, getApp, FirebaseApp } from '@firebase/app';
 import { getAuth, Auth } from '@firebase/auth';
 import { getFirestore } from '@firebase/firestore';
@@ -15,14 +11,28 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Singleton-mönster: Säkerställer att endast en Firebase-instans skapas.
-function createFirebaseApp(): FirebaseApp {
+let app: FirebaseApp | undefined;
+let auth: Auth | undefined;
+let db: any; // Firestore can be any, to avoid type issues on server
+
+// This condition ensures this ENTIRE block only runs in the browser.
+if (typeof window !== 'undefined') {
   if (!getApps().length) {
-    return initializeApp(firebaseConfig);
+    try {
+      app = initializeApp(firebaseConfig);
+      console.log('Firebase client app initialized successfully');
+    } catch (error) {
+      console.error('Error initializing Firebase client app:', error);
+    }
+  } else {
+    app = getApp();
   }
-  return getApp();
+
+  if (app) {
+    auth = getAuth(app);
+    db = getFirestore(app);
+  }
 }
 
-export const app: FirebaseApp = createFirebaseApp();
-export const auth: Auth = getAuth(app);
-export const db = getFirestore(app);
+// Export potentially undefined values. Components that use them must be client-side.
+export { app, auth, db };
