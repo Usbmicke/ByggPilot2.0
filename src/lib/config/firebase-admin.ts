@@ -1,67 +1,41 @@
 // src/lib/config/firebase-admin.ts
 import admin from 'firebase-admin';
-import { getApp, getApps, initializeApp, type App } from 'firebase-admin/app';
-import { getAuth, type Auth } from 'firebase-admin/auth';
-import { getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { getApp, getApps, initializeApp, cert } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 
-interface AdminApp {
-  app: App;
-  auth: Auth;
-  db: Firestore;
+// --- ROBUST SINGLETON-IMPLEMENTATION ---
+
+const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+
+// Denna kontroll körs bara en gång när modulen laddas.
+if (!serviceAccountJson) {
+  console.error('[Admin SDK] KRITISKT FEL: Miljövariabeln FIREBASE_SERVICE_ACCOUNT_JSON är inte satt.');
+  throw new Error('Miljövariabeln FIREBASE_SERVICE_ACCOUNT_JSON är inte satt. Appen kan inte starta på servern.');
 }
 
-// Global cache
-let adminAppInstance: AdminApp | null = null;
+let app;
 
-export function initializeAdminApp(): AdminApp {
-  // Om appen redan är initierad (via cache eller hot-reload), återanvänd den.
-  if (adminAppInstance) {
-    return adminAppInstance;
-  }
-  if (getApps().length > 0) {
-    const app = getApp();
-    adminAppInstance = {
-      app,
-      auth: getAuth(app),
-      db: getFirestore(app),
-    };
-    return adminAppInstance;
-  }
-
-  // --- HÄR ÄR DEN NYA, SYNKRONA LOGIKEN ---
-  
-  // Läs de separata miljövariablerna
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  // Ersätt alla \n med faktiska radbrytningar för Admin SDK
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\n/g, '\n');
-
-  if (!projectId || !clientEmail || !privateKey) {
-    throw new Error('FATAL: Firebase Admin environment variables (PROJECT_ID, CLIENT_EMAIL, PRIVATE_KEY) are not set in .env.local');
-  }
-
+if (getApps().length === 0) {
+  // Om ingen app finns, skapa en ny.
+  console.log('[Admin SDK]: Skapar en ny Firebase Admin-instans...');
   try {
-    const app = initializeApp({
-      credential: admin.credential.cert({
-        projectId,
-        clientEmail,
-        privateKey,
-      }),
-      projectId: projectId, // Sätt projectId här också
+    const serviceAccount = JSON.parse(serviceAccountJson);
+    app = initializeApp({
+      credential: cert(serviceAccount),
     });
-
-    console.log(`Firebase Admin SDK successfully initialized for project: ${app.options.projectId}`);
-
-    adminAppInstance = {
-      app,
-      auth: getAuth(app),
-      db: getFirestore(app),
-    };
-    return adminAppInstance;
-
-  } catch (error: any) {
-    console.error('--- CRITICAL FIREBASE ADMIN INITIALIZATION FAILURE ---');
-    console.error('Error:', error.message);
-    throw new Error('Application stopped due to invalid Firebase Admin configuration.');
+    console.log('[Admin SDK]: Ny Admin-instans skapad.');
+  } catch (e: any) {
+    console.error('[Admin SDK]: KRITISKT FEL - Kunde inte PARSA FIREBASE_SERVICE_ACCOUNT_JSON. Är den korrekt kopierad?', e.message);
+    throw new Error('Fel vid parsning av FIREBASE_SERVICE_ACCOUNT_JSON.');
   }
+} else {
+  // Om en app redan finns, återanvänd den.
+  console.log('[Admin SDK]: Återanvänder befintlig Firebase Admin-instans.');
+  app = getApp();
 }
+
+// Exportera de färdig-initialiserade, garanterat fungerande tjänsterna direkt.
+// Andra filer ska importera DESSA, inte försöka initialisera något själva.
+export const adminAuth = getAuth(app);
+export const adminDb = getFirestore(app);
