@@ -11,18 +11,18 @@ export const MODELS = {
    * Correct ID for the latest Gemini 1.5 Flash model.
    * Use Case: Standard chat, simple Q&A, intent classification.
    */
-  DEFAULT_TIER: 'gemini-1.5-flash-latest',
+  DEFAULT_TIER: 'gemini-2.5-flash',
 
   /**
    * The powerful, escalation model for complex tasks.
    * Correct ID for the latest Gemini 1.5 Pro model.
    * Use Case: Code generation, complex reasoning, heavy tool use.
    */
-  HEAVY_TIER: 'gemini-1.5-pro-latest',
+  HEAVY_TIER: 'gemini-2.5-pro',
 
   /**
    * An experimental model for future development and testing.
    * This is a fictional example and should be replaced with a real model ID when available.
    */
-  EXPERIMENTAL_TIER: 'gemini-2.0-preview',
+  EXPERIMENTAL_TIER: 'gemini-2.5-flash',
 };
