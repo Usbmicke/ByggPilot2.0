@@ -1,55 +1,67 @@
+// src/lib/config/firebase-admin.ts
 import admin from 'firebase-admin';
-import { getApp, getApps, initializeApp } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getApp, getApps, initializeApp, type App } from 'firebase-admin/app';
+import { getAuth, type Auth } from 'firebase-admin/auth';
+import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 
-// --- UNIKT NAMN FÖR ATT FÖRHINDRA KONFLIKTER ---
-const ADMIN_APP_NAME = '__BYGGPILOT_ADMIN__';
-
-function getAdminApp(): admin.app.App {
-  // Om appen med vårt unika namn redan finns, returnera den.
-  if (getApps().find((app) => app.name === ADMIN_APP_NAME)) {
-    return getApp(ADMIN_APP_NAME);
-  }
-
-  // Annars, skapa en ny instans med våra credentials.
-  console.log(`Skapar en NY Firebase Admin App-instans: ${ADMIN_APP_NAME}`);
-
-  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (!serviceAccountJson) {
-    throw new Error('FATALT: FIREBASE_SERVICE_ACCOUNT_JSON är inte satt i miljön.');
-  }
-
-  // --- DIAGNOSTISK LOGGNING ---
-  // Loggar rådata för att verifiera formateringen av miljövariabeln.
-  console.log('--- Start av Rå FIREBASE_SERVICE_ACCOUNT_JSON ---');
-  console.log(serviceAccountJson);
-  console.log('--- Slut på Rå FIREBASE_SERVICE_ACCOUNT_JSON ---');
-  // --- SLUT PÅ DIAGNOSTISK LOGGNING ---
-
-  try {
-    // Parsa JSON-strängen direkt.
-    // Miljövariabeln MÅSTE vara en korrekt formaterad JSON-sträng på en enda rad,
-    // med alla radbrytningar i private_key escapade som \n.
-    const parsedServiceAccount = JSON.parse(serviceAccountJson);
-
-    return initializeApp(
-      {
-        credential: admin.credential.cert(parsedServiceAccount),
-      },
-      ADMIN_APP_NAME
-    );
-  } catch (error: any) {
-    console.error('--- ALLVARLIGT FEL VID FIREBASE ADMIN INITIERING ---');
-    console.error('Kunde inte parsa FIREBASE_SERVICE_ACCOUNT_JSON. Kontrollera att variabeln i din .env.local är en giltig JSON-sträng på en enda rad.');
-    console.error('Felmeddelande:', error.message);
-    throw new Error('Stoppar applikationen på grund av felaktig Firebase Admin-konfiguration.');
-  }
+interface AdminApp {
+  app: App;
+  auth: Auth;
+  db: Firestore;
 }
 
-// Exportera de autentiserade tjänsterna från vår unika, säkra app-instans.
-export const adminApp = getAdminApp();
-export const adminAuth = getAuth(adminApp);
-export const adminDb = getFirestore(adminApp);
+// Global cache
+let adminAppInstance: AdminApp | null = null;
 
-console.log(`Firebase Admin SDK redo för projekt: ${adminApp.options.projectId}`);
+export function initializeAdminApp(): AdminApp {
+  // Om appen redan är initierad (via cache eller hot-reload), återanvänd den.
+  if (adminAppInstance) {
+    return adminAppInstance;
+  }
+  if (getApps().length > 0) {
+    const app = getApp();
+    adminAppInstance = {
+      app,
+      auth: getAuth(app),
+      db: getFirestore(app),
+    };
+    return adminAppInstance;
+  }
+
+  // --- HÄR ÄR DEN NYA, SYNKRONA LOGIKEN ---
+  
+  // Läs de separata miljövariablerna
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  // Ersätt alla \n med faktiska radbrytningar för Admin SDK
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\n/g, '\n');
+
+  if (!projectId || !clientEmail || !privateKey) {
+    throw new Error('FATAL: Firebase Admin environment variables (PROJECT_ID, CLIENT_EMAIL, PRIVATE_KEY) are not set in .env.local');
+  }
+
+  try {
+    const app = initializeApp({
+      credential: admin.credential.cert({
+        projectId,
+        clientEmail,
+        privateKey,
+      }),
+      projectId: projectId, // Sätt projectId här också
+    });
+
+    console.log(`Firebase Admin SDK successfully initialized for project: ${app.options.projectId}`);
+
+    adminAppInstance = {
+      app,
+      auth: getAuth(app),
+      db: getFirestore(app),
+    };
+    return adminAppInstance;
+
+  } catch (error: any) {
+    console.error('--- CRITICAL FIREBASE ADMIN INITIALIZATION FAILURE ---');
+    console.error('Error:', error.message);
+    throw new Error('Application stopped due to invalid Firebase Admin configuration.');
+  }
+}
