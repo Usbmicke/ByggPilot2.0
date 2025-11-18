@@ -1,6 +1,6 @@
 
 // ===================================================================
-// MIDDLEWARE (v3.0 - Edge-kompatibel)
+// MIDDLEWARE (v3.1 - Korrigerad Matcher)
 // ===================================================================
 // Denna middleware är designad för att köras på Next.js Edge Runtime.
 // Den är lätt och snabb, och dess enda ansvar är att hantera omdirigeringar.
@@ -13,9 +13,10 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 export const config = {
   // Skydda alla rutter utom de som är nödvändiga för appens funktion
-  // och de som är explicit publika.
+  // och de som är explicit publika. Notera det viktiga undantaget för
+  // 'api/auth/session' för att tillåta klienten att skapa en session.
   matcher: [
-    '/((?!api/|_next/static|_next/image|favicon.ico|images|manifest.json|robots.txt|browserconfig.xml).+)',
+    '/((?!api/auth/session|api/auth/verify|_next/static|_next/image|favicon.ico|images|manifest.json|robots.txt|browserconfig.xml).+)',
   ],
 };
 
@@ -52,6 +53,8 @@ export async function middleware(request: NextRequest) {
   // --- Logik för skyddade sidor ---
 
   // Om ingen session-cookie finns, skicka omedelbart till inloggningssidan.
+  // Eftersom matchern nu ignorerar /api/auth/*, kommer detta inte längre att
+  // blockera inloggningsförsöket.
   if (!sessionCookie) {
     return NextResponse.redirect(new URL(SIGN_IN_PATH, request.url));
   }
@@ -64,11 +67,16 @@ export async function middleware(request: NextRequest) {
       body: JSON.stringify({ session: sessionCookie }),
     });
 
+    // Om verifierings-API:et självt misslyckas, kasta ett fel.
+    if (!response.ok) {
+        throw new Error(`Verification API failed with status: ${response.status}`);
+    }
+
     const { isAuthenticated, isOnboarded } = await response.json();
 
     if (!isAuthenticated) {
-      // Om verifieringen misslyckas, kasta ett fel för att hamna i catch-blocket.
-      throw new Error('Session verification failed');
+      // Om verifieringen returnerar att användaren inte är autentiserad.
+      throw new Error('Session verification returned isAuthenticated: false');
     }
 
     // --- Omdirigeringslogik baserat på verifierat svar ---
