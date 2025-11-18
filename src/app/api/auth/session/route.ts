@@ -1,45 +1,50 @@
 
-// src/app/api/auth/session/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
-// KORREKT IMPORT: Importera de färdiga, initialiserade tjänsterna direkt.
-import { adminAuth } from '@/lib/config/firebase-admin';
+// KORRIGERAD SÖKVÄG: Importerar från den nya, centraliserade konfigurationsfilen.
+import { auth } from '@/app/_lib/config/firebase-admin';
 
-export const runtime = 'nodejs';
+// Giltighetstid för session-cookien i millisekunder.
+// 5 dagar = 5 * 24 * 60 * 60 * 1000 = 432 000 000 ms
+const SESSION_COOKIE_EXPIRES_IN_MS = 5 * 24 * 60 * 60 * 1000;
 
-// Denna funktion skapar en session-cookie efter att klienten har loggat in.
+/**
+ * Denna endpoint är den enda bron mellan klientens Firebase-autentisering och vår server-session.
+ * Den tar emot ett ID-token från en autentiserad klient och byter det mot en säker, 
+ * HTTP-only session-cookie som kan användas av middleware och server-komponenter.
+ */
 export async function POST(request: NextRequest) {
-  console.log('[API /session]: Startar POST-förfrågan för att skapa cookie.');
   try {
+    // 1. Hämta ID-token från request body
     const body = await request.json();
-    const idToken = body.idToken as string;
+    const { idToken } = body;
 
     if (!idToken) {
-      console.log('[API /session]: Inget ID-token i request body. Kan inte skapa cookie.');
-      return NextResponse.json({ error: 'ID token is required' }, { status: 400 });
+      return new NextResponse(JSON.stringify({ error: 'ID-token saknas.' }), { status: 400 });
     }
 
-    const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 dagar i millisekunder
+    // 2. Skapa session-cookie med Firebase Admin SDK
+    // `auth.createSessionCookie` verifierar ID-tokenet och skapar en JWT-cookie.
+    const sessionCookie = await auth.createSessionCookie(idToken, { expiresIn: SESSION_COOKIE_EXPIRES_IN_MS });
 
-    // Använd `adminAuth` direkt. Ingen initialisering behövs.
-    const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
-    console.log('[API /session]: Session-cookie skapad.');
+    // 3. Sätt cookien i svaret
+    const response = new NextResponse(JSON.stringify({ status: 'success' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
 
-    const options = {
-      name: 'session',
-      value: sessionCookie,
-      maxAge: expiresIn,
-      httpOnly: true,
-      secure: true,
-    };
+    // Sätt cookie-alternativen för säkerhet
+    response.cookies.set('session', sessionCookie, {
+      httpOnly: true, // Kan inte läsas av klient-skript
+      secure: process.env.NODE_ENV === 'production', // Skicka bara över HTTPS i produktion
+      maxAge: SESSION_COOKIE_EXPIRES_IN_MS, // Samma giltighetstid som JWT-tokenet
+      path: '/', // Tillgänglig för hela appen
+      sameSite: 'lax', // Bra skydd mot CSRF
+    });
 
-    const response = NextResponse.json({ success: true }, { status: 200 });
-    response.cookies.set(options);
-    console.log('[API /session]: Cookie har satts i svaret. Flödet lyckades.');
-    
     return response;
 
-  } catch (error: any) {
-    console.error(`[API /session]: KRITISKT FEL vid skapande av cookie: ${error.message}`);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } catch (error) {
+    console.error('Fel vid skapande av session-cookie:', error);
+    return new NextResponse(JSON.stringify({ error: 'Kunde inte skapa session.' }), { status: 401 });
   }
 }

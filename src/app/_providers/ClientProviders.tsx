@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, User, getIdToken } from '@firebase/auth';
-import { auth } from '@/lib/config/firebase-client'; 
+import { auth } from '@/app/_lib/config/firebase-client'; 
 import { useRouter } from 'next/navigation';
 
 // --- 1. AUTHENTICATION CONTEXT ---

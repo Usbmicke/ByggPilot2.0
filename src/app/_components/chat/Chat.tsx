@@ -1,45 +1,15 @@
 'use client';
 
-import React, { useState, FormEvent } from 'react';
+import React from 'react';
+import { useChat } from '@ai-sdk/react';
 import { ChatMessages } from './ChatMessages';
 import ChatInput from './ChatInput';
 import { ChevronDownIcon, ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/solid';
-import { callGenkitFlow } from '@/lib/genkit';
-import { Message } from 'ai'; // Återanvänd Message-typen för struktur
 
 export default function Chat() {
-  const [isChatOpen, setIsChatOpen] = useState(true);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!input) return;
-
-    const newUserMessage: Message = { id: Date.now().toString(), role: 'user', content: input };
-    setMessages(prev => [...prev, newUserMessage]);
-    setIsLoading(true);
-    setInput(''); // Rensa input direkt
-
-    try {
-      // ANROP TILL GENKIT - FÖRBERETT FÖR FRAMTIDEN
-      const response = await callGenkitFlow<string>('geminiProChat', { message: input, history: messages });
-
-      const assistantMessage: Message = { id: Date.now().toString(), role: 'assistant', content: response };
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error("Fel vid anrop av chatt-flöde:", error);
-      const errorMessage: Message = {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: "Tyvärr, jag kunde inte ansluta till AI-assistenten just nu.",
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Isolera useChat-hooken för att undvika destruktureringsproblem.
+  const chat = useChat();
+  const [isChatOpen, setIsChatOpen] = React.useState(true);
 
   if (!isChatOpen) {
     return (
@@ -63,16 +33,16 @@ export default function Chat() {
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-         <ChatMessages messages={messages} isLoading={isLoading} />
+         <ChatMessages messages={chat.messages} isLoading={chat.isLoading} />
       </div>
 
       <div className="p-4 border-t border-gray-200 flex-shrink-0">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={chat.handleSubmit}>
             <ChatInput
-                input={input}
-                handleInputChange={(e) => setInput(e.target.value)}
-                isLoading={isLoading}
-                onStop={() => { /* Stopp-logik kan implementeras här om Genkit-flödet stödjer det */ }}
+                input={chat.input}
+                handleInputChange={chat.handleInputChange}
+                isLoading={chat.isLoading}
+                onStop={() => chat.stop() }
             />
         </form>
       </div>

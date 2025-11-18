@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, FolderKanban, Users, Settings, LogOut } from 'lucide-react'
 import SidebarUserProfile from './SidebarUserProfile'
-import { useAuth } from '@/providers/ClientProviders' // <-- KORRIGERAD IMPORT
+import { useAuth } from '@/app/_providers/ClientProviders' // <-- KORRIGERAD IMPORT
 
 const navItems = [
   { href: '/dashboard', icon: Home, label: 'Översikt' },

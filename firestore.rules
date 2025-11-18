@@ -1,17 +1,11 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Skydda 'users'-collectionen
-    // Användare kan bara läsa och skriva sitt eget dokument.
-    match /users/{userId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null;
+    // Neka all klient-åtkomst. All databasinteraktion måste ske
+    // via säkra server-side API-routes som använder Firebase Admin SDK.
+    match /{document=**} {
+      allow read, write: if false;
     }
-
-    // Lägg till regler för andra collections här...
-    // Exempel: match /projects/{projectId} { ... }
   }
 }

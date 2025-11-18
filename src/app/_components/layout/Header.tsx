@@ -1,12 +1,14 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
 // KORRIGERAD SÖKVÄG: Pekar nu på den enda, sanna provider-filen.
-import { useAuth } from '@/providers/ClientProviders';
+import { useAuth } from '@/app/_providers/ClientProviders';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Bell, Search, LogOut, User as UserIcon, LayoutDashboard, Settings } from 'lucide-react';
-import { LoginButtons } from '@/app/_components/auth/LoginButtons';
+// NYTT: Importerar den nya, intelligenta komponenten som hanterar allt.
+import { SignInHandler } from '@/app/_components/auth/SignInHandler';
 
 // --- Högkvalitativa underkomponenter för läsbarhet ---
 
@@ -58,7 +60,8 @@ const PublicHeader: React.FC = () => {
             <PublicNavLinks />
           </div>
           <div className="flex-1 flex justify-end">
-            <LoginButtons />
+            {/* ERSATT: Använder nu den nya, självförsörjande komponenten. */}
+            <SignInHandler />
           </div>
         </nav>
       </div>
@@ -133,7 +136,6 @@ const AuthenticatedHeader: React.FC<{ user: NonNullable<ReturnType<typeof useAut
     </header>
   );
 };
-
 
 // --- Huvudkomponent: Den enda källan till sanning ---
 

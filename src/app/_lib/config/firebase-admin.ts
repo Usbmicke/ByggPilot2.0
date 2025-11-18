@@ -1,41 +1,40 @@
-// src/lib/config/firebase-admin.ts
+
+// ===================================================================
+// SERVER-SIDA FIREBASE ADMIN-KONFIGURATION (ENDAST BACKEND)
+// ===================================================================
+// Denna fil initierar Firebase Admin SDK. Den är den enda källan
+// till sanning för all backend-kommunikation med Firebase.
+// Den är avsedd att användas i API Routes, Server Actions och middleware-anropade endpoints.
+// FÅR ALDRIG IMPORTERAS I EN KLIENT-KOMPONENT.
+
 import admin from 'firebase-admin';
-import { getApp, getApps, initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// --- ROBUST SINGLETON-IMPLEMENTATION ---
+// --- Initieringslogik ---
 
-const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+const SERVICE_ACCOUNT_JSON = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
-// Denna kontroll körs bara en gång när modulen laddas.
-if (!serviceAccountJson) {
-  console.error('[Admin SDK] KRITISKT FEL: Miljövariabeln FIREBASE_SERVICE_ACCOUNT_JSON är inte satt.');
-  throw new Error('Miljövariabeln FIREBASE_SERVICE_ACCOUNT_JSON är inte satt. Appen kan inte starta på servern.');
+if (!SERVICE_ACCOUNT_JSON) {
+  throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON miljövariabel är inte satt. Kan inte initiera Admin SDK.');
 }
 
-let app;
+// Parsa JSON-strängen från miljövariabeln
+// Vi måste hantera eventuella escape-sekvenser korrekt.
+const serviceAccount = JSON.parse(SERVICE_ACCOUNT_JSON);
 
-if (getApps().length === 0) {
-  // Om ingen app finns, skapa en ny.
-  console.log('[Admin SDK]: Skapar en ny Firebase Admin-instans...');
-  try {
-    const serviceAccount = JSON.parse(serviceAccountJson);
-    app = initializeApp({
-      credential: cert(serviceAccount),
-    });
-    console.log('[Admin SDK]: Ny Admin-instans skapad.');
-  } catch (e: any) {
-    console.error('[Admin SDK]: KRITISKT FEL - Kunde inte PARSA FIREBASE_SERVICE_ACCOUNT_JSON. Är den korrekt kopierad?', e.message);
-    throw new Error('Fel vid parsning av FIREBASE_SERVICE_ACCOUNT_JSON.');
-  }
-} else {
-  // Om en app redan finns, återanvänd den.
-  console.log('[Admin SDK]: Återanvänder befintlig Firebase Admin-instans.');
-  app = getApp();
+// Initiera bara appen om den inte redan finns.
+// Detta är viktigt för att undvika fel i Next.js med hot-reloading.
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+  console.log('[Firebase Admin]: SDK initierat.');
 }
 
-// Exportera de färdig-initialiserade, garanterat fungerande tjänsterna direkt.
-// Andra filer ska importera DESSA, inte försöka initialisera något själva.
-export const adminAuth = getAuth(app);
-export const adminDb = getFirestore(app);
+// --- Exporter ---
+
+// Exportera de nödvändiga, färdig-initierade modulerna
+export const auth = getAuth();
+export const firestore = getFirestore();
+export default admin;
