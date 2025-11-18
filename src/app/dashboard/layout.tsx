@@ -1,10 +1,10 @@
 'use client';
 
-import Header from "@/app/_components/layout/Header"; 
-import Sidebar from "@/app/_components/layout/Sidebar";
+import Header from "@/components/layout/Header"; 
+import Sidebar from "@/components/layout/Sidebar";
 import dynamic from 'next/dynamic';
 
-const Chat = dynamic(() => import('@/app/_components/chat/Chat'), { ssr: false });
+const Chat = dynamic(() => import('@/components/chat/Chat'), { ssr: false });
 
 export default function DashboardLayout({
   children,

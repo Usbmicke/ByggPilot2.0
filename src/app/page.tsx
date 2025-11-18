@@ -1,12 +1,12 @@
 
-import Header from "@/app/_components/layout/Header"; 
-import Hero from "@/app/_components/landing/Hero";
-import ThreeCanvas from "@/app/_components/landing/ThreeCanvas";
-import Footer from "@/app/_components/landing/Footer";
-import CTASection from "@/app/_components/landing/CTASection";
-import ProblemSection from "@/app/_components/landing/ProblemSection";
-import SolutionSection from "@/app/_components/landing/SolutionSection";
-import FounderSection from "@/app/_components/landing/FounderSection";
+import Header from "@/components/layout/Header"; 
+import Hero from "@/components/landing/Hero";
+import ThreeCanvas from "@/components/landing/ThreeCanvas";
+import Footer from "@/components/landing/Footer";
+import CTASection from "@/components/landing/CTASection";
+import ProblemSection from "@/components/landing/ProblemSection";
+import SolutionSection from "@/components/landing/SolutionSection";
+import FounderSection from "@/components/landing/FounderSection";
 
 
 export default function LandingPage() {

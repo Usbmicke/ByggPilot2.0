@@ -2,7 +2,7 @@
 // src/app/api/auth/session/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 // KORREKT IMPORT: Importera de färdiga, initialiserade tjänsterna direkt.
-import { adminAuth } from '@/app/_lib/config/firebase-admin';
+import { adminAuth } from '@/lib/config/firebase-admin';
 
 export const runtime = 'nodejs';
 

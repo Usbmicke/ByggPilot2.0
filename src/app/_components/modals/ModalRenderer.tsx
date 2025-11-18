@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { useModal } from '@/app/hooks/useModal'; // Antagen korrekt sökväg till hook
+import { useModal } from '@/contexts/ModalContext';
 
 // Importera alla modal-komponenter.
 // Detta blir den enda platsen där vi behöver hantera modal-importer.
