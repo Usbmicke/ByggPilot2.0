@@ -26,6 +26,17 @@ export interface Project {
   createdAt: Timestamp;
 }
 
+export interface ActionableEvent {
+    id: string;
+    type: 'new_task' | 'invoice_due' | 'project_approved' | 'new_message' | 'log' | 'Tip';
+    title: string;
+    createdAt: Timestamp | Date;
+    description?: string;
+    message?: string;
+    link?: string;
+    isRead: boolean;
+}
+
 // ====================================================================
 // CRUD-funktioner för Användare
 // ====================================================================

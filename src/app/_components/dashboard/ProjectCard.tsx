@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Project, ProjectStatus } from '@/lib/types';
+import { Project, ProjectStatus } from '@/lib/schemas/project';
 import { MoreVertical } from 'lucide-react';
 import Link from 'next/link';
 

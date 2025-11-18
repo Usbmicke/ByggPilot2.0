@@ -1,10 +1,10 @@
 
 'use client';
 
-import { type UIMessage } from '@ai-sdk/react';
+import { type Message } from 'ai';
 import { UserIcon, CogIcon } from '@heroicons/react/24/solid';
 
-export function ChatMessages({ messages, isLoading }: { messages: UIMessage[], isLoading: boolean }) {
+export function ChatMessages({ messages, isLoading }: { messages: Message[], isLoading: boolean }) {
   if (!messages.length) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-4">

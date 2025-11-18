@@ -3,8 +3,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-// CORRECTED IMPORT: Points to the central, decoupled type definition.
-import { ActionableEvent } from '@/types';
+import { ActionableEvent } from '@/lib/dal/dal'; // <-- KORRIGERAD IMPORT
 
 const formatDate = (date: any) => {
     if (!date) return 'N/A';

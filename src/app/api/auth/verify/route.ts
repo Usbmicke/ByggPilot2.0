@@ -2,7 +2,7 @@
 // src/app/api/auth/verify/route.ts
 import { NextResponse, type NextRequest } from 'next/server';
 // KORREKT IMPORT: Importera de färdiga, initialiserade tjänsterna direkt.
-import { adminAuth, adminDb } from '@/app/_lib/config/firebase-admin'; 
+import { adminAuth, adminDb } from '@/lib/config/firebase-admin'; 
 
 export const runtime = 'nodejs'; // Tvinga Node.js!
 

@@ -2,7 +2,7 @@
 'use client';
 
 import useSWR from 'swr';
-import { Project } from '@/lib/dal/dal'; // <-- KORRIGERAD IMPORT
+import { Project } from '@/lib/schemas/project';
 import ProjectCard from './ProjectCard';
 
 const fetcher = (url: string) => fetch(url).then(res => {
