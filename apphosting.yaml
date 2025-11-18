@@ -1,0 +1,6 @@
+
+# Filen apphosting.yaml specificerar konfigurationen för din App Hosting-backend.
+
+env:
+  - variable: FIREBASE_SERVICE_ACCOUNT_JSON
+    secret: FIREBASE_ADMIN_SERVICE_ACCOUNT # Detta är namnet på hemligheten du ska skapa i nästa steg.

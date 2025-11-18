@@ -1,90 +1,96 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, getIdToken } from '@firebase/auth';
-import { auth } from '@/app/_lib/config/firebase-client'; 
-import { useRouter } from 'next/navigation';
+import { onAuthStateChanged, User } from '@firebase/auth';
+import { auth } from '@/app/_lib/config/firebase-client';
 
-// --- 1. AUTHENTICATION CONTEXT ---
-
+// --- CONTEXT SETUP ---
 interface AuthContextType {
-  user: User | null;
-  isLoading: boolean;
+  user: User | null; // Firebase User-objektet
+  isLoading: boolean; // Säger om vi aktivt försöker fastställa inloggningsstatus
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Den "tålmodiga" AuthProvider-logiken
+// --- AUTH PROVIDER KOMPONENT ---
 function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [authState, setAuthState] = useState<'pending' | 'loggedIn' | 'loggedOut'>('pending');
-  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true); // Startar som true tills vi vet status
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log(`[AuthProvider]: onAuthStateChanged körs. Status: ${user ? user.email : 'null'}`);
+    console.log('[DIAGNOS] AuthProvider useEffect körs.');
 
-      if (user) {
-        // --- ANVÄNDAREN ÄR INLOGGAD (från Google) ---
-        setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log(`[DIAGNOS] onAuthStateChanged callback. Användarstatus från Firebase: ${firebaseUser ? firebaseUser.email : 'null'}`);
+      
+      if (firebaseUser) {
+        // Steg 1: Firebase säger att en användare är inloggad.
+        setUser(firebaseUser);
+
         try {
-          const idToken = await user.getIdToken();
-          console.log('[AuthProvider]: Har ID-token. Anropar /api/auth/session...');
+          console.log('[DIAGNOS] Användare finns. Hämtar ID-token...');
+          const idToken = await firebaseUser.getIdToken();
+          console.log('[DIAGNOS] Har token. Anropar POST /api/auth/session för att skapa server-cookie.');
 
-          const sessionResponse = await fetch('/api/auth/session', {
+          const response = await fetch('/api/auth/session', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idToken: idToken }),
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ idToken }),
           });
 
-          if (!sessionResponse.ok) {
-            throw new Error(`Servern misslyckades skapa session: ${sessionResponse.statusText}`);
+          if (!response.ok) {
+            // Servern misslyckades med att skapa sessionen
+            const errorBody = await response.text();
+            console.error(`[DIAGNOS] FEL: Servern svarade med ${response.status}. Body:`, errorBody);
+            throw new Error('Server-side session creation failed.');
           }
-          
-          console.log('[AuthProvider]: Session-cookie skapad. Sätter state "loggedIn".');
-          setAuthState('loggedIn');
-          router.refresh(); 
+
+          console.log('[DIAGNOS] Servern skapade sessionen framgångsrikt.');
 
         } catch (error) {
-          console.error('[AuthProvider]: Fel vid skapande av session:', error);
-          setAuthState('loggedOut');
-          // VI TAR BORT DET FELAKTIGA LOGOUT-ANROPET HÄRIFRÅN
+          console.error('[DIAGNOS] ETT ALLVARLIGT FEL UPPSTOD under sessionsskapandet:', error);
+          // Om sessionsskapandet misslyckas, loggar vi ut användaren från klienten för att undvika osynk.
+          // Detta kan hända om servern är nere eller om det finns ett fel i API-routen.
+          setUser(null);
         }
+
       } else {
-        // --- ANVÄNDAREN ÄR UTLOGGAD ---
+        // Steg 2: Firebase säger att ingen användare är inloggad.
+        console.log('[DIAGNOS] Ingen Firebase-användare. Sätter user-state till null.');
         setUser(null);
-        setAuthState('loggedOut');
-        // DET FELAKTIGA LOGOUT-ANROPET TAS ÄVEN BORT HÄRIFRÅN
       }
+
+      // Steg 3: Vi är klara med den initiala laddningen.
+      setIsLoading(false);
     });
 
-    return () => unsubscribe();
-  }, [router]); // Beroendet av authState tas bort för att förhindra race condition
+    // Cleanup-funktion som körs när komponenten tas bort
+    return () => {
+      console.log('[DIAGNOS] AuthProvider unmounted. Avbryter prenumeration på onAuthStateChanged.');
+      unsubscribe();
+    };
+  }, []); // Tom beroendearray säkerställer att detta bara körs en gång vid montering
 
-  if (authState === 'pending') {
+  // Medan vi väntar på det första svaret från onAuthStateChanged, visa en laddningsindikator.
+  if (isLoading) {
     return (
-      <div style={{
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh', 
-        backgroundColor: '#1a1a1a', 
-        color: 'white', 
-        fontFamily: 'sans-serif'
-      }}>
-        Laddar ByggPilot...
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        Laddar...
       </div>
     );
   }
 
+  // När laddningen är klar, rendera applikationen med rätt inloggningsstatus.
   return (
-    <AuthContext.Provider value={{ user, isLoading: authState === 'pending' }}>
+    <AuthContext.Provider value={{ user, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-// Exportera hooken som Header.tsx behöver
+// --- CUSTOM HOOK ---
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -93,12 +99,7 @@ export const useAuth = (): AuthContextType => {
   return context;
 };
 
-// --- 2. HUVUD-PROVIDERN ---
-
+// --- HUVUD-PROVIDER ---
 export function ClientProviders({ children }: { children: ReactNode }) {
-  return (
-    <AuthProvider>
-      {children}
-    </AuthProvider>
-  );
+  return <AuthProvider>{children}</AuthProvider>;
 }
