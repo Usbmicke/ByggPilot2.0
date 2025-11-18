@@ -1,6 +1,25 @@
-import { initializeApp, getApps, getApp, FirebaseApp } from '@firebase/app';
-import { getAuth, Auth } from '@firebase/auth';
-import { getFirestore } from '@firebase/firestore';
+
+// ====================================================================
+// KLIENT-SIDA FIREBASE KONFIGURATION (FÖR WEBLÄSAREN)
+// ====================================================================
+// Denna fil initierar Firebase på klientsidan. Den använder publika
+// miljövariabler (prefixade med NEXT_PUBLIC_) för att säkert ladda
+// konfigurationen utan att exponera hemligheter.
+
+import { initializeApp, getApps } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+
+// Din webbapps Firebase-konfiguration. 
+// FÖR ATT DETTA SKA FUNGERA:
+// 1. Skapa en .env.local-fil i projektets rot.
+// 2. Lägg till dina Firebase webb-nycklar där.
+//    Exempel:
+//    NEXT_PUBLIC_FIREBASE_API_KEY="AIzaSy...YOUR_KEY"
+//    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="your-project.firebaseapp.com"
+//    NEXT_PUBLIC_FIREBASE_PROJECT_ID="your-project-id"
+//    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="your-project.appspot.com"
+//    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="123456789012"
+//    NEXT_PUBLIC_FIREBASE_APP_ID="1:123456789012:web:abcdef1234567890"
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -11,28 +30,12 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-let app: FirebaseApp | undefined;
-let auth: Auth | undefined;
-let db: any; // Firestore can be any, to avoid type issues on server
-
-// This condition ensures this ENTIRE block only runs in the browser.
-if (typeof window !== 'undefined') {
-  if (!getApps().length) {
-    try {
-      app = initializeApp(firebaseConfig);
-      console.log('Firebase client app initialized successfully');
-    } catch (error) {
-      console.error('Error initializing Firebase client app:', error);
-    }
-  } else {
-    app = getApp();
-  }
-
-  if (app) {
-    auth = getAuth(app);
-    db = getFirestore(app);
-  }
+// Initiera Firebase
+let app;
+if (!getApps().length) {
+  app = initializeApp(firebaseConfig);
+} else {
+  app = getApps()[0]; // Använd den befintliga appen om den redan har initierats
 }
 
-// Export potentially undefined values. Components that use them must be client-side.
-export { app, auth, db };
+export const auth = getAuth(app);

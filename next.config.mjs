@@ -1,11 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    output: 'export',
-    // Din befintliga konfiguration kan finnas här
-    // Till exempel, om du har experimental-flaggor eller annat:
-    // experimental: {
-    //   serverActions: true,
-    // },
+    // Konfigurationen är avsiktligt minimal för att säkerställa
+    // att applikationen körs i standard-serverläge.
+    // Raden `output: 'export'` är garanterat borttagen.
 };
 
 export default nextConfig;

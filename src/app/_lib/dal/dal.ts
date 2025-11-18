@@ -48,24 +48,6 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
   return doc.data() as UserProfile;
 }
 
-export async function createUserProfile(data: Pick<UserProfile, 'userId' | 'email'>): Promise<UserProfile> {
-  const userRef: DocumentReference = db.collection('users').doc(data.userId);
-  const newProfile: UserProfile = {
-    userId: data.userId,
-    email: data.email,
-    createdAt: Timestamp.now(),
-    onboardingStatus: 'incomplete',
-  };
-  await db.runTransaction(async (transaction) => {
-    const doc = await transaction.get(userRef);
-    if (!doc.exists) {
-      transaction.set(userRef, newProfile);
-    }
-  });
-  const doc = await userRef.get();
-  return doc.data() as UserProfile;
-}
-
 /**
  * Slutför en användares onboarding.
  * @param {string} userId - Användarens ID.
