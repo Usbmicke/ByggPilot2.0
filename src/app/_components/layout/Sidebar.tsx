@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Home, FolderKanban, Users, Settings, LogOut } from 'lucide-react'
 import SidebarUserProfile from './SidebarUserProfile'
-import { useAuth } from '@/components/providers/AuthProvider'
+import { useAuth } from '@/app/_providers/ClientProviders' // <-- KORRIGERAD IMPORT
 
 const navItems = [
   { href: '/dashboard', icon: Home, label: 'Översikt' },
@@ -25,13 +25,13 @@ const NavLink: React.FC<{ item: typeof navItems[0] }> = ({ item }) => {
 }
 
 export default function Sidebar() {
-  const { user, signOut } = useAuth(); // Hämta användare och signOut-funktion
+  const { user } = useAuth(); // Hämta bara användaren
 
   const handleSignOut = async () => {
-    if (signOut) {
-        await signOut();
-        // Användaren kommer automatiskt att omdirigeras av middleware efter utloggning.
-    }
+    // Implementera utloggning direkt här
+    await fetch('/api/auth/logout', { method: 'POST' });
+    // Ladda om sidan för att tvinga middleware att köra och omdirigera
+    window.location.href = '/'; 
   };
 
   if (!user) return null; // Rendera ingenting om ingen användare är inloggad
@@ -50,7 +50,6 @@ export default function Sidebar() {
           </nav>
         </div>
         <div className="mt-auto p-4 border-t border-neutral-800">
-          {/* Använd signOut från useAuth-hooken */}
           <button onClick={handleSignOut} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-red-400 transition-all hover:bg-neutral-700 hover:text-red-500">
             <LogOut className="h-4 w-4" />
             Logga ut

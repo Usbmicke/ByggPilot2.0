@@ -1,10 +1,10 @@
 'use client';
 
-import Header from "@/components/layout/Header"; // ANVÄNDER DEN NYA, ENHETLIGA HEADERN
-import Sidebar from "@/components/layout/Sidebar";
+import Header from "@/app/_components/layout/Header"; 
+import Sidebar from "@/app/_components/layout/Sidebar";
 import dynamic from 'next/dynamic';
 
-const Chat = dynamic(() => import('@/components/chat/Chat'), { ssr: false });
+const Chat = dynamic(() => import('@/app/_components/chat/Chat'), { ssr: false });
 
 export default function DashboardLayout({
   children,
@@ -13,7 +13,7 @@ export default function DashboardLayout({
 }) {
   return (
     <div className="h-screen flex flex-col bg-background-primary text-text-primary">
-      <Header /> {/* DEN NYA HEADERN ÄR NU INTEGRERAD */}
+      <Header /> 
       <div className="flex flex-1 overflow-hidden">
         <div className="w-72 flex-shrink-0 bg-background-secondary border-r border-border-color">
           <Sidebar />

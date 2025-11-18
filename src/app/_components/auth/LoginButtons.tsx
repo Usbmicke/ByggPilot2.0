@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { signInWithRedirect, GoogleAuthProvider } from "@firebase/auth";
-import { auth } from '@/lib/config/firebase-client';
+import { auth } from '@/app/_lib/config/firebase-client';
 import { FaGoogle } from 'react-icons/fa';
 
 // Denna komponent initierar Google-inloggningen via en omdirigering,
@@ -16,7 +16,7 @@ export const LoginButtons = () => {
     setError(null);
     const provider = new GoogleAuthProvider();
     
-    // Vi begär endast minimala behörigheter initialt, enligt "Progressive Consent"-principen.
+    // Vi begär endast minimala behörigheter initialt, enligt \"Progressive Consent\"-principen.
     provider.addScope('email');
     provider.addScope('profile');
 
