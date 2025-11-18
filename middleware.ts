@@ -1,6 +1,6 @@
 
 // ===================================================================
-// MIDDLEWARE (v3.1 - Korrigerad Matcher)
+// MIDDLEWARE (v3.2 - Firebase Auth Flow Fix)
 // ===================================================================
 // Denna middleware är designad för att köras på Next.js Edge Runtime.
 // Den är lätt och snabb, och dess enda ansvar är att hantera omdirigeringar.
@@ -22,19 +22,30 @@ export const config = {
 
 const ONBOARDING_PATH = '/onboarding';
 const DASHBOARD_PATH = '/dashboard';
-const SIGN_IN_PATH = '/inloggning';
+const SIGN_IN_PATH = '/'; // Ändrad till landningssidan
 const LANDING_PAGE_PATH = '/';
 
 // Publikt tillgängliga sidor som inte kräver inloggning.
-const PUBLIC_PATHS = [LANDING_PAGE_PATH, SIGN_IN_PATH, '/integritetspolicy', '/anvandarvillkor'];
+const PUBLIC_PATHS = [LANDING_PAGE_PATH, '/integritetspolicy', '/anvandarvillkor'];
 
 /**
  * Hjärtat i appens autentiseringsflöde.
  * Denna middleware bestämmer om en användare får tillgång till en sida eller inte.
  */
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
   const sessionCookie = request.cookies.get('session')?.value;
+
+  // ===================== NYTT: Firebase Auth Flow Undantag =====================
+  // Om URL:en innehåller parametrar som tyder på en pågående Firebase-inloggning
+  // (efter redirect från Google), låt requesten passera HELT utan åtgärd.
+  // Detta låter Firebase-klienten på landningssidan slutföra inloggningen och
+  // skapa session-cookien via /api/auth/session.
+  const isFirebaseAuthFlow = searchParams.has('mode') && searchParams.has('oobCode');
+  if (isFirebaseAuthFlow) {
+    return NextResponse.next();
+  }
+  // ==========================================================================
 
   // Bygg den fullständiga URL:en till vår verify-endpoint.
   const verifyUrl = new URL('/api/auth/verify', request.url);
@@ -53,8 +64,6 @@ export async function middleware(request: NextRequest) {
   // --- Logik för skyddade sidor ---
 
   // Om ingen session-cookie finns, skicka omedelbart till inloggningssidan.
-  // Eftersom matchern nu ignorerar /api/auth/*, kommer detta inte längre att
-  // blockera inloggningsförsöket.
   if (!sessionCookie) {
     return NextResponse.redirect(new URL(SIGN_IN_PATH, request.url));
   }
@@ -89,17 +98,19 @@ export async function middleware(request: NextRequest) {
       }
     } else {
       // Om användaren HAR slutfört onboarding...
-      if (pathname !== DASHBOARD_PATH) {
-        // ...och de inte är på dashboarden, skicka dem dit.
-        // (Detta täcker även fallet där de försöker nå /onboarding igen).
-        return NextResponse.redirect(new URL(DASHBOARD_PATH, request.url));
+      if (pathname.startsWith(DASHBOARD_PATH)) {
+          // Om de redan är på en dashboard-sida, låt dem vara.
+          return NextResponse.next();
+      } else {
+          // Annars, skicka dem till huvuddashboarden.
+          return NextResponse.redirect(new URL(DASHBOARD_PATH, request.url));
       }
     }
 
     // Om ingen omdirigering behövs (t.ex. de är redan på rätt sida), låt dem passera.
     return NextResponse.next();
 
-  } catch (error) {
+  } catch (error) { 
     // Om anropet till /api/auth/verify misslyckas eller om cookien är ogiltig,
     // rensa den felaktiga cookien och skicka till inloggning.
     console.error('[Middleware Error]:', error);

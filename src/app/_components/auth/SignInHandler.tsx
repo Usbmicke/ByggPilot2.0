@@ -2,6 +2,7 @@
 'use client';
 
 import { useState } from 'react';
+// ÄNDRING: Byter tillbaka till signInWithRedirect som är rätt för produktionsmiljön
 import { signInWithRedirect, GoogleAuthProvider } from "firebase/auth";
 import { LoginButtons } from './LoginButtons';
 
@@ -21,7 +22,7 @@ export const SignInHandler: React.FC = () => {
     provider.addScope('profile');
 
     try {
-      // Anropa signInWithRedirect med den centrala, delade auth-instansen
+      // Anropa signInWithRedirect. Detta är den korrekta metoden när allt är rätt konfigurerat.
       await signInWithRedirect(auth, provider);
       // Efter detta anrop kommer sidan att omdirigeras av Firebase, så kod här under körs sällan.
     } catch (error: any) {
