@@ -3,8 +3,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-// KORRIGERING 1: Använder relativ sökväg för att säkerställa att modulen hittas.
-import { Ata, AtaStatus } from '../../lib/schemas/ata'; 
+import { Ata, AtaStatus } from '@/lib/schemas/ata'; // ANVÄNDER KORREKT ALIAS
 import { PencilIcon, CheckCircleIcon, ChevronRightIcon, ClockIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
 interface AtaListProps {
@@ -14,7 +13,6 @@ interface AtaListProps {
 
 const AtaList = ({ atas, projectId }: AtaListProps) => {
 
-    // KORRIGERING 2: Mappar korrekta enum-värden från AtaStatus till UI-element.
     const getStatusChip = (status: AtaStatus) => {
         switch (status) {
             case AtaStatus.Väntar:
@@ -50,7 +48,6 @@ const AtaList = ({ atas, projectId }: AtaListProps) => {
                             <div className="flex justify-between items-center">
                                 <div>
                                     <p className="font-semibold text-white">{ata.title || 'Namnlöst utkast'}</p>
-                                    {/* KORRIGERING 3: Använder 'description' istället för 'notes' */}
                                     <p className="text-sm text-gray-400 truncate max-w-md">{ata.description || 'Inga anteckningar'}</p>
                                 </div>
                                 <div className="flex items-center gap-4">

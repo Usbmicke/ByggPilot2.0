@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 // KORRIGERAD SÖKVÄG: Pekar nu på den enda, sanna provider-filen.
-import { useAuth } from '@/app/providers/ClientProviders';
+import { useAuth } from '@/app/_providers/ClientProviders';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Bell, Search, LogOut, User as UserIcon, LayoutDashboard, Settings } from 'lucide-react';
-import { LoginButtons } from '@/components/auth/LoginButtons';
+import { LoginButtons } from '@/app/_components/auth/LoginButtons';
 
 // --- Högkvalitativa underkomponenter för läsbarhet ---
 

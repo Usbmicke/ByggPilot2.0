@@ -23,6 +23,7 @@ export async function middleware(request: NextRequest) {
   console.log('[MIDDLEWARE]: Anropar /api/auth/verify...');
   const verifyResponse = await fetch(new URL('/api/auth/verify', absoluteURL), {
     headers: { cookie: request.headers.get('cookie') || '' },
+    cache: 'no-store',
   });
 
   // Logg från din plan

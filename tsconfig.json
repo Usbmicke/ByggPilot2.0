@@ -25,9 +25,9 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/components/*": ["./src/app/_components/*"],
+      "@/lib/*": ["./src/app/_lib/*"],
+      "@/*": ["./src/*"]
     },
     "strictNullChecks": true
   },

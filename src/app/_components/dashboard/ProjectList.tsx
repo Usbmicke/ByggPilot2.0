@@ -2,9 +2,8 @@
 'use client';
 
 import useSWR from 'swr';
-import { Project } from '@/lib/types';
+import { Project } from '@/lib/dal/dal'; // <-- KORRIGERAD IMPORT
 import ProjectCard from './ProjectCard';
-// import { logger } from '@/lib/logger'; // BORTTAGET
 
 const fetcher = (url: string) => fetch(url).then(res => {
     if (!res.ok) {
@@ -19,7 +18,6 @@ export default function ProjectList() {
     const { data: projects, error, isLoading } = useSWR<Project[]>('/api/projects', fetcher);
 
     if (error) {
-        // Ersatt logger.error med console.error
         console.error('[ProjectList] SWR fetch error', { error });
         return <div className="text-center text-red-500 p-8"><p>Kunde inte ladda projekten.</p></div>;
     }
@@ -28,7 +26,6 @@ export default function ProjectList() {
         return <div className="text-center text-text-secondary p-8"><p>Laddar projekt...</p></div>;
     }
 
-    // Uppdatering: `project.id` bytt till `project.projectId` för att matcha schema
     return (
         <>
             {projects && projects.length > 0 ? (

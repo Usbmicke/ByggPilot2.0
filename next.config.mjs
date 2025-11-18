@@ -1,10 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
-  images: {
-    remotePatterns: [
-      { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
-    ],
-  },
+    output: 'export',
+    // Din befintliga konfiguration kan finnas här
+    // Till exempel, om du har experimental-flaggor eller annat:
+    // experimental: {
+    //   serverActions: true,
+    // },
 };
+
 export default nextConfig;
