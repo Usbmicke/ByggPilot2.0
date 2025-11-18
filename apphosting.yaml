@@ -3,4 +3,7 @@
 
 env:
   - variable: FIREBASE_SERVICE_ACCOUNT_JSON
-    secret: FIREBASE_ADMIN_SERVICE_ACCOUNT # Detta är namnet på hemligheten du ska skapa i nästa steg.
+    secret: FIREBASE_ADMIN_SERVICE_ACCOUNT # Detta är namnet på hemligheten du skapade.
+
+  - variable: GOOGLE_GENAI_API_KEY
+    secret: GOOGLE_GENAI_API_KEY # Detta är namnet på din andra hemlighet.
