@@ -8,7 +8,7 @@
     ],
     "allowJs": true,
     "skipLibCheck": true,
-    "strict": false,
+    "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "esModuleInterop": true,
@@ -16,7 +16,7 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "incremental": true,
     "plugins": [
       {
@@ -25,11 +25,16 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/components/*": ["./src/app/_components/*"],
-      "@/lib/*": ["./src/app/_lib/*"],
-      "@/*": ["./src/*"]
-    },
-    "strictNullChecks": true
+      "@/components/*": [
+        "./src/app/_components/*"
+      ],
+      "@/lib/*": [
+        "./src/app/_lib/*"
+      ],
+      "@/*": [
+        "./src/*"
+      ]
+    }
   },
   "include": [
     "next-env.d.ts",
