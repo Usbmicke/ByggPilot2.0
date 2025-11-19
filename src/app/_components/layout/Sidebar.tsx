@@ -1,64 +1,108 @@
-'use client'
-import React from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Home, FolderKanban, Users, Settings, LogOut } from 'lucide-react'
-import SidebarUserProfile from './SidebarUserProfile'
-import { useAuth } from '@/app/_providers/ClientProviders' // <-- KORRIGERAD IMPORT
 
+'use client';
+import React from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { usePathname } from 'next/navigation';
+import {
+    Home, FolderKanban, Clock, FileText, Users, Settings, LogOut, Plus
+} from 'lucide-react';
+import { useAuth } from '@/app/_providers/ClientProviders';
+
+// =======================================================================
+//  SIDOMENY (VERSION 2.0 - HIERARKISK DESIGN)
+//  Designad med en tydlig visuell hierarki mellan arbetsverktyg,
+//  primära handlingar och användarinställningar.
+// =======================================================================
+
+// --- 1. Komponent för en enskild navigeringslänk ---
 const navItems = [
-  { href: '/dashboard', icon: Home, label: 'Översikt' },
-  { href: '/dashboard/projects', icon: FolderKanban, label: 'Projekt' },
-  { href: '/dashboard/customers', icon: Users, label: 'Kunder' },
-  { href: '/dashboard/settings', icon: Settings, label: 'Inställningar' },
-]
+    { href: '/dashboard', icon: Home, label: 'Översikt' },
+    { href: '/dashboard/projects', icon: FolderKanban, label: 'Projekt' },
+    { href: '/dashboard/time-reports', icon: Clock, label: 'Tidrapportering' },
+    { href: '/dashboard/documents', icon: FileText, label: 'Dokument' },
+    { href: '/dashboard/customers', icon: Users, label: 'Kunder' },
+];
 
-const NavLink: React.FC<{ item: typeof navItems[0] }> = ({ item }) => {
-  const pathname = usePathname()
-  const isActive = pathname === item.href
-  return (
-    <Link href={item.href} className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-neutral-700 ${isActive ? 'bg-neutral-800 text-white' : 'text-neutral-400'}`}>
-      <item.icon className="h-4 w-4" />
-      {item.label}
-    </Link>
-  )
-}
+const NavLink = ({ item }: { item: typeof navItems[0] }) => {
+    const pathname = usePathname();
+    const isActive = pathname === item.href;
+    return (
+        <Link href={item.href} className={`flex items-center gap-3.5 px-3 py-2.5 rounded-lg transition-colors duration-200 ${isActive ? 'bg-neutral-700/50 text-white' : 'text-neutral-400 hover:bg-neutral-800 hover:text-white'}`}>
+            <item.icon className="h-5 w-5" />
+            <span className="font-medium text-sm">{item.label}</span>
+        </Link>
+    );
+};
 
+// --- 2. Komponent för användarprofilsektionen ---
+const UserProfile = ({ user }: { user: NonNullable<ReturnType<typeof useAuth>['user']> }) => {
+    const handleSignOut = async () => {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        window.location.href = '/';
+    };
+
+    return (
+        <div className="px-4 py-4">
+            <div className="flex items-center gap-3">
+                <Image
+                    src={user.photoURL || 'https://via.placeholder.com/40'}
+                    alt="User avatar"
+                    width={36}
+                    height={36}
+                    className="rounded-full"
+                />
+                <div className="flex-1 overflow-hidden">
+                    <p className="font-semibold text-sm text-white truncate">{user.displayName || 'Användare'}</p>
+                    <p className="text-xs text-neutral-400 truncate">{user.email}</p>
+                </div>
+            </div>
+            <div className="space-y-1 text-sm mt-4">
+                <Link href="/dashboard/settings" className="flex items-center gap-3.5 py-2 px-2.5 rounded-md text-neutral-400 hover:bg-neutral-800 hover:text-white">
+                    <Settings size={16} /> Inställningar
+                </Link>
+                <button onClick={handleSignOut} className="w-full flex items-center gap-3.5 py-2 px-2.5 rounded-md text-neutral-400 hover:bg-neutral-800 hover:text-red-400">
+                    <LogOut size={16} /> Logga ut
+                </button>
+            </div>
+        </div>
+    );
+};
+
+// --- 3. Huvudkomponenten för Sidomenyn ---
 export default function Sidebar() {
-  const { user } = useAuth(); // Hämta bara användaren
+    const { user } = useAuth();
 
-  const handleSignOut = async () => {
-    // Implementera utloggning direkt här
-    await fetch('/api/auth/logout', { method: 'POST' });
-    // Ladda om sidan för att tvinga middleware att köra och omdirigera
-    window.location.href = '/'; 
-  };
+    if (!user) return null; // Rendera inte om användardata saknas
 
-  if (!user) return null; // Rendera ingenting om ingen användare är inloggad
+    return (
+        <aside className="w-[250px] flex-shrink-0 bg-[#1C1C1E] border-r border-neutral-800/50 flex flex-col h-full">
+            
+            {/* Logo Sektion */}
+            <div className="h-20 flex items-center px-6 border-b border-neutral-800/50">
+                <Link href="/dashboard" className="flex items-center gap-3">
+                    <Image src="/images/byggpilotlogga1.png" alt="ByggPilot Logotyp" width={30} height={30} className="rounded-md" />
+                    <span className="text-xl font-semibold text-white">ByggPilot</span>
+                </Link>
+            </div>
 
-  return (
-    <div className="hidden border-r bg-neutral-900/95 backdrop-blur-lg md:block text-white">
-      <div className="flex h-full max-h-screen flex-col gap-2">
-        <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-          <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-            <span className="text-lg">ByggPilot</span>
-          </Link>
-        </div>
-        <div className="flex-1">
-          <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-            {navItems.map(item => <NavLink key={item.label} item={item} />)}
-          </nav>
-        </div>
-        <div className="mt-auto p-4 border-t border-neutral-800">
-          <button onClick={handleSignOut} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-red-400 transition-all hover:bg-neutral-700 hover:text-red-500">
-            <LogOut className="h-4 w-4" />
-            Logga ut
-          </button>
-          <div className="mt-4">
-            <SidebarUserProfile user={user} />
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+            {/* Primära verktyg och handlingar */}
+            <div className="flex-1 flex flex-col py-5 px-4 overflow-y-auto">
+                <nav className="space-y-1.5 flex-1">
+                    {navItems.map(item => <NavLink key={item.label} item={item} />)}
+                </nav>
+
+                <button className="w-full mt-4 bg-white/5 border border-white/10 text-neutral-100 font-medium flex items-center justify-center gap-2 py-2.5 rounded-lg hover:bg-white/10 transition-colors duration-200">
+                    <Plus size={18} />
+                    Skapa Nytt
+                </button>
+            </div>
+
+            {/* Avdelare och Användarprofil Sektion */}
+            <div className="flex-shrink-0 border-t border-neutral-800/50">
+                <UserProfile user={user} />
+            </div>
+
+        </aside>
+    );
 }

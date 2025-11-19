@@ -1,30 +1,45 @@
+
 import React from 'react';
+import { ArrowUp, ArrowDown } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
+
+// =======================================================================
+//  STATISTIKKORT (VERSION 4.0 - DYNAMISKA INSIKTER)
+//  Designad för att ge en "Wow-faktor" med visuella jämförelsedata.
+// =======================================================================
 
 interface StatCardProps {
   icon: React.ReactNode;
   title: string;
   value: string | number;
+  comparison?: {
+    value: string; // t.ex. "15%"
+    direction: 'up' | 'down'; // Bestämmer pil och färg
+  };
   className?: string;
 }
 
-// StatCard V2 - "Clean UI" Edition
-// Designad för att vara ren, modern och i linje med det nya designsystemet.
-const StatCard: React.FC<StatCardProps> = ({ icon, title, value, className }) => {
+const StatCard: React.FC<StatCardProps> = ({ icon, title, value, comparison, className }) => {
+  const isUp = comparison?.direction === 'up';
+
   return (
     <div className={twMerge(
-      `bg-background-secondary p-6 rounded-xl 
-       transition-all duration-200 ease-in-out 
-       hover:-translate-y-1 hover:bg-background-tertiary`,
+      `bg-[#1C1C1E] border border-neutral-800/50 p-5 rounded-lg transition-all duration-200 ease-in-out`,
       className
     )}>
-      <div className="flex items-center justify-between">
-        <p className="text-base font-medium text-text-secondary">{title}</p>
-        {/* Ikonen har redan sin färg från föräldern */}
-        {icon}
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-sm font-medium text-neutral-400">{title}</p>
+        <div className="text-neutral-500">{icon}</div>
       </div>
-      <div className="mt-2">
-        <p className="text-4xl font-bold text-text-primary tracking-tight">{value}</p>
+      
+      <div className="flex items-end justify-between">
+        <p className="text-3xl font-bold text-white tracking-tight">{value}</p>
+        {comparison && (
+          <div className={`flex items-center text-xs font-semibold ${isUp ? 'text-green-400' : 'text-red-400'}`}>
+            {isUp ? <ArrowUp size={14} className="mr-1" /> : <ArrowDown size={14} className="mr-1" />}
+            <span>{comparison.value}</span>
+          </div>
+        )}
       </div>
     </div>
   );

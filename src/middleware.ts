@@ -4,6 +4,11 @@ import type { NextRequest } from 'next/server';
 import { getUserProfile } from './app/_lib/dal/dal'; // Importera DAL för databasåtkomst
 import { auth } from './app/_lib/config/firebase-admin'; // Importera firebase-admin för token-verifiering
 
+// **KORRIGERING: Tvinga middleware att köra i Node.js-miljön**
+// Detta löser "Cannot find module 'node:process'"-felet genom att ge
+// firebase-admin den miljö den behöver för att fungera korrekt.
+export const runtime = 'nodejs';
+
 /**
  * Middleware för att skydda rutter och hantera omdirigeringar baserat på
  * autentisering och onboarding-status. Körs på servern före varje request.

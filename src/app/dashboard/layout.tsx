@@ -1,10 +1,14 @@
-'use client';
 
-import Header from "@/components/layout/Header"; 
-import Sidebar from "@/components/layout/Sidebar";
-import dynamic from 'next/dynamic';
+import Sidebar from '@/app/_components/layout/Sidebar';
+import Header from '@/app/_components/layout/Header';
+import Chat from '@/app/_components/chat/Chat';
+import React from 'react';
 
-const Chat = dynamic(() => import('@/components/chat/Chat'), { ssr: false });
+// =======================================================================
+//  HUVUDLAYOUT FÖR HELA DASHBOARDEN
+//  Struktur: [Fast Sidebar] [Flexibel Huvudyta]
+//  Huvudytan innehåller: [Fast Header] [Scrollbart Innehåll] [Fast Chatt-bar]
+// =======================================================================
 
 export default function DashboardLayout({
   children,
@@ -12,20 +16,27 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="h-screen flex flex-col bg-background-primary text-text-primary">
-      <Header /> 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="w-72 flex-shrink-0 bg-background-secondary border-r border-border-color">
-          <Sidebar />
-        </div>
+    <div className="flex h-screen bg-[#111113] text-white">
+      
+      {/* ---- 1. FAST SIDOMENY (VÄNSTER) ---- */}
+      <Sidebar />
 
-        <main className="flex-1 relative">
-          <div className="h-full overflow-y-auto p-6 md:p-8">
-            {children}
-          </div>
-          
-          <Chat />
+      {/* ---- 2. FLEXIBEL HUVUDYTA (HÖGER) ---- */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        
+        {/* ---- 2a. FAST HEADER ---- */}
+        <Header />
+
+        {/* ---- 2b. SCROLLBART HUVUDINNEHÅLL ---- */}
+        {/* 'relative' är viktigt för att chatten ska kunna positionera sig korrekt */}
+        <main className="flex-1 overflow-y-auto p-6 md:p-8 relative">
+          {children}
         </main>
+        
+        {/* ---- 2c. FAST CHATT-BAR ---- */}
+        {/* Denna komponent kommer att byggas om helt härnäst */}
+        <Chat />
+
       </div>
     </div>
   );
