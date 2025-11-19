@@ -65,7 +65,7 @@ export default function ChatInput({ input, handleInputChange, isLoading, onStop 
         <button 
             type="submit"
             className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-primary-500 text-white disabled:bg-gray-400 hover:bg-primary-600 transition-colors"
-            disabled={!input.trim()}
+            disabled={!input?.trim()}
             aria-label="Skicka meddelande"
         >
             <ArrowUpIcon className="h-5 w-5" />
