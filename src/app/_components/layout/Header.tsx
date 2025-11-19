@@ -2,15 +2,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-// KORRIGERAD SÖKVÄG: Pekar nu på den enda, sanna provider-filen.
 import { useAuth } from '@/app/_providers/ClientProviders';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Bell, Search, LogOut, User as UserIcon, LayoutDashboard, Settings } from 'lucide-react';
-// NYTT: Importerar den nya, intelligenta komponenten som hanterar allt.
+import { Bell, Search } from 'lucide-react';
 import { SignInHandler } from '@/app/_components/auth/SignInHandler';
 
-// --- Högkvalitativa underkomponenter för läsbarhet ---
+// =======================================================================
+//  1. HEADER FÖR PUBLIK LANDNINGSSIDA (UTLOGGAD)
+//     (Denna del är oförändrad, den fungerar som den ska)
+// =======================================================================
 
 const ByggPilotLogo: React.FC = () => (
   <Link href="/" className="flex items-center space-x-2.5">
@@ -60,7 +61,6 @@ const PublicHeader: React.FC = () => {
             <PublicNavLinks />
           </div>
           <div className="flex-1 flex justify-end">
-            {/* ERSATT: Använder nu den nya, självförsörjande komponenten. */}
             <SignInHandler />
           </div>
         </nav>
@@ -69,88 +69,53 @@ const PublicHeader: React.FC = () => {
   );
 };
 
-const AuthenticatedHeader: React.FC<{ user: NonNullable<ReturnType<typeof useAuth>['user']> }> = ({ user }) => {
-  const [menuOpen, setMenuOpen] = useState(false);
-  
-  const handleSignOut = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    // AuthProvider kommer att upptäcka utloggningen och uppdatera state automatiskt.
-  };
 
+// =======================================================================
+//  2. HEADER FÖR DASHBOARD (INLOGGAD)
+//     (Denna del är helt omskriven för att matcha den nya designen)
+// =======================================================================
+
+const AuthenticatedHeader: React.FC = () => {
   return (
-    <header className="flex h-16 items-center justify-between px-4 sm:px-6 bg-white border-b sticky top-0 z-40">
-      <div className="flex items-center">
-        <h1 className="text-lg font-semibold sm:text-xl">Dashboard</h1>
+    <header className="flex h-20 flex-shrink-0 items-center justify-between px-6 md:px-8 bg-[#1C1C1E] border-b border-neutral-800/50">
+      {/* Sökfält */}
+      <div className="relative flex-1 max-w-xl">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-500" />
+        <input
+          type="text"
+          placeholder="Sök efter projekt, kunder, dokument..."
+          className="w-full bg-[#111113] border border-neutral-700/70 rounded-lg text-neutral-200 pl-11 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 placeholder:text-neutral-500"
+        />
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-4">
-        <div className="relative hidden sm:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Sök projekt, kunder..."
-            className="pl-10 pr-4 py-2 w-48 lg:w-72 border rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300"
-          />
-        </div>
-
-        <button className="p-2 rounded-full hover:bg-gray-100">
-          <Bell className="h-5 w-5 sm:h-6 sm:w-6 text-gray-600" />
+      {/* Notisklocka */}
+      <div className="flex items-center gap-4 ml-6">
+        <button className="p-2 rounded-full text-neutral-400 hover:bg-neutral-800 hover:text-white transition-colors">
+          <Bell className="h-6 w-6" />
         </button>
-
-        <div className="relative">
-          <button onClick={() => setMenuOpen(!menuOpen)} className="flex items-center space-x-3 focus:outline-none">
-            <Image
-              src={user.photoURL || 'https://via.placeholder.com/40'}
-              alt="User avatar"
-              width={36}
-              height={36}
-              className="rounded-full"
-            />
-            <div className="hidden md:block">
-              <p className="font-semibold text-sm text-left">{user.displayName || 'Användare'}</p>
-              <p className="text-xs text-gray-500 text-left">{user.email || ''}</p>
-            </div>
-          </button>
-          
-          {menuOpen && (
-             <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border z-50" onMouseLeave={() => setMenuOpen(false)}>
-                <div className="py-1">
-                    <div className="px-4 py-2 border-b">
-                        <p className="text-sm font-semibold">{user.displayName || 'Användare'}</p>
-                        <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                    </div>
-                    <Link href="/dashboard" className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                        <LayoutDashboard size={16} /> Dashboard
-                    </Link>
-                    <Link href="/dashboard/settings" className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                        <Settings size={16} /> Inställningar
-                    </Link>
-                    <button onClick={handleSignOut} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
-                        <LogOut size={16} /> Logga ut
-                    </button>
-                </div>
-            </div>
-          )}
-        </div>
       </div>
     </header>
   );
 };
 
-// --- Huvudkomponent: Den enda källan till sanning ---
+// =======================================================================
+//  3. HUVUDKOMPONENT SOM VÄLJER RÄTT HEADER
+//     (Logiken är densamma, den väljer bara en ny version av AuthHeader)
+// =======================================================================
 
 export default function Header() {
-    // Koden är nu enklare: vi får user och isLoading direkt från vår enda sanna hook.
     const { user, isLoading } = useAuth();
 
-    // Visa ingenting alls medan vi väntar. AuthProvider visar redan "Laddar..."
+    // Visa ingenting medan vi verifierar auth-status
     if (isLoading) {
         return null;
     }
 
+    // Om användare är inloggad, visa den nya, slimmade dashboard-headern
     if (user) {
-        return <AuthenticatedHeader user={user} />;
+        return <AuthenticatedHeader />;
     }
     
+    // Annars, visa den publika headern för landningssidan
     return <PublicHeader />;
 }

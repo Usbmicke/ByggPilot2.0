@@ -1,3 +1,4 @@
+
 'use client';
 import { configureGenkit } from '@genkit-ai/core';
 import { firebase } from '@genkit-ai/firebase';
@@ -5,8 +6,7 @@ import { googleAI } from '@genkit-ai/googleai';
 import { defineFlow } from '@genkit-ai/flow';
 import { z } from 'zod';
 import { getGoogleDriveClient } from './google-drive';
-// Importera DAL-funktionen, inte adminDb direkt!
-import { completeUserOnboarding } from '@/lib/dal/dal';
+import { completeUserOnboarding, getCompanyName, saveCompanyInfo as saveCompanyInfoToDb } from '@/app/_lib/dal/dal';
 
 configureGenkit({
   plugins: [
@@ -18,14 +18,49 @@ configureGenkit({
 });
 
 // =================================================================================
-//  ONBOARDING FLOW (Refaktorerad enligt Guldstandard)
+//  NYTT FLOW: Spara Företagsinformation
+// =================================================================================
+
+export const saveCompanyInfo = defineFlow(
+  {
+    name: 'saveCompanyInfo',
+    inputSchema: z.object({ companyName: z.string(), companyAddress: z.string() }),
+    outputSchema: z.object({ success: z.boolean(), message: z.string() }),
+    cors: { origin: "*", methods: "POST" },
+    middleware: [async (input, next, context) => {
+        if (!context?.auth) {
+          throw new Error("Autentisering krävs.");
+        }
+        return next(input);
+    }],
+  },
+  async (input, context) => {
+    const userId = context.auth?.uid;
+    if (!userId) {
+      return { success: false, message: "Användar-ID saknas." };
+    }
+
+    try {
+      await saveCompanyInfoToDb(userId, input.companyName, input.companyAddress);
+      return { success: true, message: 'Företagsinformation har sparats.' };
+    } catch (error: any) {
+      console.error("[Save Company Info Error]", error.message);
+      return { success: false, message: `Ett fel inträffade: ${error.message}` };
+    }
+  }
+);
+
+
+// =================================================================================
+//  ONBOARDING FLOW V2 - Med CORS & Korrekt Mappstruktur
 // =================================================================================
 
 export const completeOnboarding = defineFlow(
   {
     name: 'completeOnboarding',
     inputSchema: z.void(),
-    outputSchema: z.object({ success: z.boolean(), message: z.string() }),
+    outputSchema: z.object({ success: z.boolean(), message: z.string(), driveFolderUrl: z.string().optional() }),
+    cors: { origin: "*", methods: "POST" },
     middleware: [async (input, next, context) => {
         if (!context?.auth) {
           throw new Error("Autentisering krävs för detta anrop.");
@@ -36,50 +71,62 @@ export const completeOnboarding = defineFlow(
   async (input, context) => {
     const userId = context.auth?.uid;
     if (!userId) {
-      throw new Error("Användar-ID kunde inte hittas i autentiseringskontexten.");
+      return { success: false, message: "Användar-ID kunde inte hittas i autentiseringskontexten." };
     }
 
-    console.log(`[Onboarding Flow] Startar för användare: ${userId}`);
+    console.log(`[Onboarding Flow v2] Startar för användare: ${userId}`);
 
     try {
       const drive = await getGoogleDriveClient(userId);
+      const companyName = await getCompanyName(userId); // Hämta företagsnamn från DAL
+      const rootFolderName = `ByggPilot - ${companyName || 'Mitt Företag'}`;
 
-      console.log("[Onboarding Flow] Skapar rotmapp i Google Drive...");
+      console.log(`[Onboarding Flow v2] Skapar rotmapp: "${rootFolderName}"`);
       const rootFolderResponse = await drive.files.create({
         requestBody: {
-          name: 'ByggPilot',
+          name: rootFolderName,
           mimeType: 'application/vnd.google-apps.folder',
         },
-        fields: 'id',
+        fields: 'id, webViewLink',
       });
       const rootFolderId = rootFolderResponse.data.id;
-      if (!rootFolderId) {
+      const rootFolderUrl = rootFolderResponse.data.webViewLink;
+
+      if (!rootFolderId || !rootFolderUrl) {
         throw new Error("Kunde inte skapa rotmappen i Google Drive.");
       }
-      console.log(`[Onboarding Flow] Rotmapp skapad med ID: ${rootFolderId}`);
+      console.log(`[Onboarding Flow v2] Rotmapp skapad med ID: ${rootFolderId}`);
 
-      console.log("[Onboarding Flow] Skapar undermapp för Kunder...");
-      await drive.files.create({
-        requestBody: {
-          name: 'Kunder',
-          mimeType: 'application/vnd.google-apps.folder',
-          parents: [rootFolderId],
-        },
-      });
+      const subFolders = [
+        '1. Kundprojekt',
+        '2. Leverantörsfakturor',
+        '3. KMA-Dokumentation',
+        '4. Avtal & Offerer'
+      ];
 
-      // ANROPAR DAL:et! Flödet pratar inte längre direkt med databasen.
-      console.log("[Onboarding Flow] Anropar DAL för att uppdatera användarprofil...");
+      for (const folderName of subFolders) {
+        console.log(`[Onboarding Flow v2] Skapar undermapp: "${folderName}"`);
+        await drive.files.create({
+          requestBody: {
+            name: folderName,
+            mimeType: 'application/vnd.google-apps.folder',
+            parents: [rootFolderId],
+          },
+        });
+      }
+
+      console.log("[Onboarding Flow v2] Anropar DAL för att uppdatera användarprofil...");
       await completeUserOnboarding(userId, rootFolderId);
-      console.log("[Onboarding Flow] DAL-anrop slutfört.");
+      console.log("[Onboarding Flow v2] DAL-anrop slutfört.");
 
       return {
         success: true,
         message: "Onboarding slutförd! Mappar har skapats och profilen har uppdaterats.",
+        driveFolderUrl: rootFolderUrl,
       };
 
     } catch (error: any) {
-      console.error("[Onboarding Flow Error]", error.message);
-      console.error(error);
+      console.error("[Onboarding Flow v2 Error]", error.message);
       return {
         success: false,
         message: `Ett fel inträffade: ${error.message}`,

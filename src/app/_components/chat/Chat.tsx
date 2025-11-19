@@ -1,51 +1,70 @@
+
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { ChatMessages } from './ChatMessages';
 import ChatInput from './ChatInput';
-import { ChevronDownIcon, ChatBubbleOvalLeftEllipsisIcon } from '@heroicons/react/24/solid';
+import { XMarkIcon, PaperAirplaneIcon, StopCircleIcon } from '@heroicons/react/24/solid';
+
+// =======================================================================
+//  CHATT-KOMPONENT (VERSION 2.0 - INTEGRERAD BAR)
+//  Designad för att vara en permanent del av UI:t, med hopfällt och
+//  utfällt läge, precis som i visionen.
+// =======================================================================
 
 export default function Chat() {
-  // Isolera useChat-hooken för att undvika destruktureringsproblem.
-  const chat = useChat();
-  const [isChatOpen, setIsChatOpen] = React.useState(true);
+  const { messages, input, handleInputChange, handleSubmit, isLoading, stop } = useChat();
+  const [isExpanded, setIsExpanded] = useState(false);
 
-  if (!isChatOpen) {
-    return (
-      <button
-        onClick={() => setIsChatOpen(true)}
-        className="fixed bottom-8 right-8 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-transform hover:scale-110 z-50"
-        aria-label="Öppna chatt"
-      >
-        <ChatBubbleOvalLeftEllipsisIcon className="h-8 w-8" />
-      </button>
-    );
-  }
+  const handleFocus = () => {
+    if (!isExpanded) {
+      setIsExpanded(true);
+    }
+  };
+
+  const handleClose = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Förhindra att klicket triggar onFocus på input igen
+    setIsExpanded(false);
+  };
 
   return (
-    <div className="fixed bottom-8 right-8 w-[450px] h-[70vh] max-h-[700px] bg-white/80 backdrop-blur-lg shadow-2xl rounded-2xl border border-gray-200 flex flex-col z-50">
-      <div className="flex justify-between items-center p-4 border-b border-gray-200 flex-shrink-0">
-        <h3 className="font-bold text-lg text-gray-800">ByggPilot Co-Pilot</h3>
-        <button onClick={() => setIsChatOpen(false)} className="p-1 hover:bg-gray-200 rounded-full">
-            <ChevronDownIcon className="h-6 w-6 text-gray-600" />
-        </button>
-      </div>
+    <div className="flex-shrink-0 bg-[#1C1C1E] border-t border-neutral-800/50 p-4">
+        <div className={`mx-auto max-w-3xl transition-all duration-300 ease-in-out`}>
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-         <ChatMessages messages={chat.messages} isLoading={chat.isLoading} />
-      </div>
+            {/* --- UTFÄLLT LÄGE: Visar hela chatten --- */}
+            {isExpanded && (
+                <div 
+                    className="bg-[#111113] border border-neutral-700/80 rounded-t-xl shadow-2xl mb-4 animate-slide-up"
+                    style={{ height: '65vh', display: 'flex', flexDirection: 'column' }}
+                >
+                    {/* Header för chattfönstret */}
+                    <div className="flex justify-between items-center p-4 border-b border-neutral-800 flex-shrink-0">
+                        <h3 className="font-bold text-lg text-gray-200">Fråga ByggPilot AI...</h3>
+                        <button onClick={handleClose} className="p-1 hover:bg-neutral-700 rounded-full">
+                            <XMarkIcon className="h-6 w-6 text-gray-400" />
+                        </button>
+                    </div>
 
-      <div className="p-4 border-t border-gray-200 flex-shrink-0">
-        <form onSubmit={chat.handleSubmit}>
-            <ChatInput
-                input={chat.input}
-                handleInputChange={chat.handleInputChange}
-                isLoading={chat.isLoading}
-                onStop={() => chat.stop() }
-            />
-        </form>
-      </div>
+                    {/* Chatthistorik */}
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        <ChatMessages messages={messages} isLoading={isLoading} />
+                    </div>
+                </div>
+            )}
+
+            {/* --- ALLTID SYNLIG INPUT-BAR --- */}
+            <form onSubmit={handleSubmit} className="relative">
+                 <ChatInput
+                    input={input}
+                    handleInputChange={handleInputChange}
+                    onFocus={handleFocus} // Fäller ut chatten vid fokus
+                    isLoading={isLoading}
+                    onStop={stop}
+                    placeholder="Fråga ByggPilot AI, t.ex. 'Skapa ett nytt projekt för Brf. Eken'..."
+                 />
+            </form>
+        </div>
     </div>
   );
 }

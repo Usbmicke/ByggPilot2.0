@@ -1,19 +1,26 @@
+
 import { NextResponse } from 'next/server';
 
-// Denna route har ett enda syfte: att förstöra session-cookien och logga ut användaren.
+// =======================================================================
+//  API ENDPOINT: Logga ut (/api/auth/logout)
+//  (VERSION 2.0 - KORRIGERAD COOKIE-NAMN)
+// =======================================================================
+
 export async function POST() {
   try {
+    // KORRIGERING: Använder det korrekta cookie-namnet '__session'
+    // Detta säkerställer att vi raderar rätt cookie och loggar ut användaren.
     const options = {
-      name: 'session',
+      name: '__session', // Matchar nu middleware och session-skapande
       value: '',
-      maxAge: -1, // Sätt till ett negativt värde för att instruera webbläsaren att radera cookien
+      maxAge: -1, 
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       path: '/',
       sameSite: 'lax' as const,
     };
 
-    const response = NextResponse.json({ success: true, message: 'Logged out' });
+    const response = NextResponse.json({ success: true, message: 'Logged out successfully' });
     response.cookies.set(options);
     return response;
 
