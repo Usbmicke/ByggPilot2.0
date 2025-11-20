@@ -1,35 +1,46 @@
 
 // ===================================================================
 // SERVER-SIDA FIREBASE ADMIN-KONFIGURATION (ENDAST BACKEND)
+// (VERSION 2.0 - ROBUST INITIERING)
 // ===================================================================
 // Denna fil initierar Firebase Admin SDK. Den är den enda källan
 // till sanning för all backend-kommunikation med Firebase.
-// Den är avsedd att användas i API Routes, Server Actions och middleware-anropade endpoints.
-// FÅR ALDRIG IMPORTERAS I EN KLIENT-KOMPONENT.
 
 import admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// --- Initieringslogik ---
-
-const SERVICE_ACCOUNT_JSON = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-
-if (!SERVICE_ACCOUNT_JSON) {
-  throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON miljövariabel är inte satt. Kan inte initiera Admin SDK.');
-}
-
-// Parsa JSON-strängen från miljövariabeln
-// Vi måste hantera eventuella escape-sekvenser korrekt.
-const serviceAccount = JSON.parse(SERVICE_ACCOUNT_JSON);
+// --- Robust Initieringslogik ---
 
 // Initiera bara appen om den inte redan finns.
-// Detta är viktigt för att undvika fel i Next.js med hot-reloading.
+// Detta är kritiskt för att undvika fel i Next.js med hot-reloading.
 if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
-  console.log('[Firebase Admin]: SDK initierat.');
+  console.log('[Firebase Admin]: Försöker initiera SDK...');
+  try {
+    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+    if (!serviceAccountJson) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON miljövariabel är inte satt.');
+    }
+
+    // Försök att parsa JSON. Fånga eventuella syntaxfel.
+    let serviceAccount;
+    try {
+        serviceAccount = JSON.parse(serviceAccountJson);
+    } catch (e) {
+        console.error("[FATAL] Kunde inte parsa FIREBASE_SERVICE_ACCOUNT_JSON. Kontrollera att det är giltig JSON och korrekt escapat i .env.local");
+        throw e;
+    }
+
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+    console.log('[Firebase Admin]: SDK initierat framgångsrikt.');
+
+  } catch (error) {
+    console.error('[FATAL] Allvarligt fel vid initiering av Firebase Admin SDK:', error);
+    // Kasta om felet för att säkerställa att servern inte startar i ett trasigt tillstånd.
+    throw error;
+  }
 }
 
 // --- Exporter ---
