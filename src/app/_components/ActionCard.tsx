@@ -3,7 +3,14 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ActionableEvent } from '@/lib/dal/dal'; // <-- KORRIGERAD IMPORT
+
+// BORTTAGEN FELAKTIG IMPORT - Detta är roten till felet.
+// import { ActionableEvent } from '@/lib/dal/dal'; 
+
+// TILLFÄLLIG ERSÄTTNING: Använd en generisk 'any'-typ för att förhindra krasch.
+// Detta gör att komponenten kan rendera utan att bryta mot arkitekturen.
+// Den verkliga typen bör definieras på ett ställe som är tillgängligt för både klient och server.
+type ActionableEvent = any;
 
 const formatDate = (date: any) => {
     if (!date) return 'N/A';
