@@ -6,7 +6,7 @@ const SESSION_COOKIE_EXPIRES_IN_MS = 5 * 24 * 60 * 60 * 1000; // 5 dagar
 
 // =======================================================================
 //  API ENDPOINT: Skapa Session & Synka Användare (/api/auth/session)
-//  (VERSION 2.0 - STABIL OCH KOMPLETT)
+//  (VERSION 2.1 - KORRIGERAD FÖR HTTPS I UTVECKLING)
 // =======================================================================
 
 export async function POST(request: NextRequest) {
@@ -26,12 +26,11 @@ export async function POST(request: NextRequest) {
 
     if (!userDoc.exists) {
       // 3. Om användaren INTE finns, skapa en ny profil
-      // Detta är den avgörande steget för en ny användare (onboarding)
       await userRef.set({
         uid: uid,
-        email: email || '', // Säkerställ att fälten alltid finns
+        email: email || '',
         displayName: name || '',
-        onboardingStatus: 'incomplete', // Sätt initial status
+        onboardingStatus: 'incomplete',
         createdAt: new Date().toISOString(),
       });
     }
@@ -47,7 +46,10 @@ export async function POST(request: NextRequest) {
 
     response.cookies.set('__session', sessionCookie, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      // **KORRIGERING:** Sätt alltid secure-flaggan till true eftersom vår
+      // utvecklingsmiljö (Cloud Workstations) använder HTTPS. Webbläsare
+      // vägrar att sätta en cookie på en HTTPS-sida om inte denna flagga är satt.
+      secure: true, 
       maxAge: SESSION_COOKIE_EXPIRES_IN_MS,
       path: '/',
       sameSite: 'lax',

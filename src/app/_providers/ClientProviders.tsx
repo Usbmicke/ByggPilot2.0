@@ -4,93 +4,76 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { onAuthStateChanged, User } from '@firebase/auth';
 import { auth } from '@/app/_lib/config/firebase-client';
 
-// --- CONTEXT SETUP ---
+// 1. Definiera kontext-typen
 interface AuthContextType {
-  user: User | null; // Firebase User-objektet
-  isLoading: boolean; // Säger om vi aktivt försöker fastställa inloggningsstatus
+  user: User | null;
+  isLoading: boolean; // True under den allra första session-valideringen
 }
 
+// 2. Skapa kontexten
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// --- AUTH PROVIDER KOMPONENT ---
+// 3. Hjälpfunktion för att skapa server-session
+async function createSession(idToken: string): Promise<boolean> {
+  try {
+    const response = await fetch('/api/auth/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken }),
+    });
+    if (response.ok) {
+      console.log('[DIAGNOS] Server-session skapad/verifierad.');
+      return true;
+    }
+    console.error('[DIAGNOS] FEL: Servern misslyckades med att skapa sessionen.', await response.text());
+    return false;
+  } catch (error) {
+    console.error('[DIAGNOS] ETT ALLVARLIGT FEL uppstod vid fetch till /api/auth/session:', error);
+    return false;
+  }
+}
+
+// 4. Huvudkomponenten: AuthProvider
 function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Startar som true tills vi vet status
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    console.log('[DIAGNOS] AuthProvider useEffect körs.');
-
+    // onAuthStateChanged är den definitiva källan för auth-status.
+    // Den hanterar automatiskt resultatet från signInWithRedirect.
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log(`[DIAGNOS] onAuthStateChanged callback. Användarstatus från Firebase: ${firebaseUser ? firebaseUser.email : 'null'}`);
+      console.log(`[DIAGNOS] onAuthStateChanged anropad. Användare: ${firebaseUser?.uid || 'null'}`);
       
       if (firebaseUser) {
-        // Steg 1: Firebase säger att en användare är inloggad.
+        // Användare är inloggad. Skapa/verifiera server-sessionen.
+        const idToken = await firebaseUser.getIdToken();
+        await createSession(idToken);
         setUser(firebaseUser);
-
-        try {
-          console.log('[DIAGNOS] Användare finns. Hämtar ID-token...');
-          const idToken = await firebaseUser.getIdToken();
-          console.log('[DIAGNOS] Har token. Anropar POST /api/auth/session för att skapa server-cookie.');
-
-          const response = await fetch('/api/auth/session', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ idToken }),
-          });
-
-          if (!response.ok) {
-            // Servern misslyckades med att skapa sessionen
-            const errorBody = await response.text();
-            console.error(`[DIAGNOS] FEL: Servern svarade med ${response.status}. Body:`, errorBody);
-            throw new Error('Server-side session creation failed.');
-          }
-
-          console.log('[DIAGNOS] Servern skapade sessionen framgångsrikt.');
-
-        } catch (error) {
-          console.error('[DIAGNOS] ETT ALLVARLIGT FEL UPPSTOD under sessionsskapandet:', error);
-          // Om sessionsskapandet misslyckas, loggar vi ut användaren från klienten för att undvika osynk.
-          // Detta kan hända om servern är nere eller om det finns ett fel i API-routen.
-          setUser(null);
-        }
-
       } else {
-        // Steg 2: Firebase säger att ingen användare är inloggad.
-        console.log('[DIAGNOS] Ingen Firebase-användare. Sätter user-state till null.');
+        // Användare är inte inloggad.
         setUser(null);
       }
-
-      // Steg 3: Vi är klara med den initiala laddningen.
+      
+      // När processen är klar är den initiala laddningen över.
       setIsLoading(false);
     });
 
-    // Cleanup-funktion som körs när komponenten tas bort
-    return () => {
-      console.log('[DIAGNOS] AuthProvider unmounted. Avbryter prenumeration på onAuthStateChanged.');
-      unsubscribe();
-    };
-  }, []); // Tom beroendearray säkerställer att detta bara körs en gång vid montering
+    // Städa upp lyssnaren när komponenten tas bort
+    return () => unsubscribe();
+  }, []); // Denna tomma array säkerställer att effekten bara körs en gång
 
-  // Medan vi väntar på det första svaret från onAuthStateChanged, visa en laddningsindikator.
-  if (isLoading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        Laddar...
-      </div>
-    );
-  }
-
-  // När laddningen är klar, rendera applikationen med rätt inloggningsstatus.
   return (
     <AuthContext.Provider value={{ user, isLoading }}>
-      {children}
+      {isLoading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#111113', color: 'white' }}>
+          Autentiserar...
+        </div>
+      ) : children}
     </AuthContext.Provider>
   );
 }
 
-// --- CUSTOM HOOK ---
+// 5. Hook för att komma åt kontexten
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -99,7 +82,7 @@ export const useAuth = (): AuthContextType => {
   return context;
 };
 
-// --- HUVUD-PROVIDER ---
+// 6. Exportera huvud-providern
 export function ClientProviders({ children }: { children: ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>;
 }

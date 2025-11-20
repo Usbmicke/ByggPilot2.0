@@ -5,9 +5,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
-    Home, FolderKanban, Clock, FileText, Users, Settings, LogOut, Plus
+    Settings, LogOut, Plus
 } from 'lucide-react';
 import { useAuth } from '@/app/_providers/ClientProviders';
+import { navItems } from '@/app/_constants/navigation';
 
 // =======================================================================
 //  SIDOMENY (VERSION 2.0 - HIERARKISK DESIGN)
@@ -16,13 +17,6 @@ import { useAuth } from '@/app/_providers/ClientProviders';
 // =======================================================================
 
 // --- 1. Komponent för en enskild navigeringslänk ---
-const navItems = [
-    { href: '/dashboard', icon: Home, label: 'Översikt' },
-    { href: '/dashboard/projects', icon: FolderKanban, label: 'Projekt' },
-    { href: '/dashboard/time-reports', icon: Clock, label: 'Tidrapportering' },
-    { href: '/dashboard/documents', icon: FileText, label: 'Dokument' },
-    { href: '/dashboard/customers', icon: Users, label: 'Kunder' },
-];
 
 const NavLink = ({ item }: { item: typeof navItems[0] }) => {
     const pathname = usePathname();

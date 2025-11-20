@@ -1,6 +1,6 @@
 
 import Sidebar from '@/app/_components/layout/Sidebar';
-import Header from '@/app/_components/layout/Header';
+import DashboardHeader from '@/app/_components/layout/DashboardHeader';
 import Chat from '@/app/_components/chat/Chat';
 import React from 'react';
 
@@ -25,7 +25,7 @@ export default function DashboardLayout({
       <div className="flex-1 flex flex-col overflow-hidden">
         
         {/* ---- 2a. FAST HEADER ---- */}
-        <Header />
+        <DashboardHeader />
 
         {/* ---- 2b. SCROLLBART HUVUDINNEHÅLL ---- */}
         {/* 'relative' är viktigt för att chatten ska kunna positionera sig korrekt */}

@@ -1,4 +1,5 @@
 
+'use client';
 import React from 'react';
 
 // Denna komponent är medvetet enkel. Fokus ligger på tydlighet och läsbarhet.

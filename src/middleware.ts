@@ -19,10 +19,7 @@ export async function middleware(request: NextRequest) {
 
   // Om det inte finns någon session-cookie, omdirigera till login om de försöker nå en skyddad sida
   if (!sessionCookie) {
-    if (pathname.startsWith('/dashboard') || pathname.startsWith('/onboarding')) {
       return NextResponse.redirect(new URL('/', request.url)); // Omdirigera till startsidan
-    }
-    return NextResponse.next();
   }
 
   try {
@@ -33,15 +30,6 @@ export async function middleware(request: NextRequest) {
     // Hämta användarprofilen för att kontrollera onboarding-status
     const userProfile = await getUserProfile(userId);
 
-    // Om användaren är på inloggningssidan men redan inloggad, omdirigera
-    if (pathname === '/') {
-        if (userProfile?.onboardingStatus === 'complete') {
-            return NextResponse.redirect(new URL('/dashboard', request.url));
-        } else {
-            return NextResponse.redirect(new URL('/onboarding', request.url));
-        }
-    }
-    
     // Logik för omdirigering baserat på onboarding-status
     if (userProfile) {
       const isOnboardingComplete = userProfile.onboardingStatus === 'complete';
@@ -55,6 +43,9 @@ export async function middleware(request: NextRequest) {
         // Om de försöker nå dashboard men inte har slutfört onboarding, skicka till onboarding
         return NextResponse.redirect(new URL('/onboarding', request.url));
       }
+    } else if (pathname.startsWith('/dashboard')) {
+        // Om det inte finns någon profil alls (ny användare), tvinga till onboarding
+        return NextResponse.redirect(new URL('/onboarding', request.url));
     }
 
     // Om ingen omdirigering behövs, fortsätt till den begärda sidan
@@ -71,8 +62,9 @@ export async function middleware(request: NextRequest) {
 
 // Definiera vilka rutter som denna middleware ska köras på
 export const config = {
+  // Middlewaren ska BARA köra på de sidor som KRÄVER inloggning.
+  // Startsidan ('/') hanterar sin egen logik och ska inte blockeras.
   matcher: [
-    '/',                   // Startsidan (för att omdirigera inloggade användare)
     '/dashboard/:path*',   // Alla sidor under dashboard
     '/onboarding',         // Onboarding-sidan
   ],
