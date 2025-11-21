@@ -23,16 +23,10 @@
         "name": "next"
       }
     ],
-    "baseUrl": ".",
+    "baseUrl": "src",
     "paths": {
-      "@/components/*": [
-        "./src/app/_components/*"
-      ],
-      "@/lib/*": [
-        "./src/app/_lib/*"
-      ],
       "@/*": [
-        "./src/*"
+        "*"
       ]
     }
   },
@@ -44,7 +38,6 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    "src/flows"
+    "node_modules"
   ]
 }

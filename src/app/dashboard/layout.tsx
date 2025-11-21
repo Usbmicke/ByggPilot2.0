@@ -3,41 +3,30 @@ import Sidebar from '@/app/_components/layout/Sidebar';
 import DashboardHeader from '@/app/_components/layout/DashboardHeader';
 import Chat from '@/app/_components/chat/Chat';
 import React from 'react';
+import { AuthProvider } from '@/app/_lib/context/AuthContext'; // IMPORTERA
 
 // =======================================================================
-//  HUVUDLAYOUT FÖR HELA DASHBOARDEN
-//  Struktur: [Fast Sidebar] [Flexibel Huvudyta]
-//  Huvudytan innehåller: [Fast Header] [Scrollbart Innehåll] [Fast Chatt-bar]
+//  HUVUDLAYOUT FÖR HELA DASHBOARDEN (VERSION 2 - MED AUTHPROVIDER)
 // =======================================================================
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen bg-[#111113] text-white">
-      
-      {/* ---- 1. FAST SIDOMENY (VÄNSTER) ---- */}
-      <Sidebar />
-
-      {/* ---- 2. FLEXIBEL HUVUDYTA (HÖGER) ---- */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+    // Omslut hela layouten med AuthProvider
+    <AuthProvider>
+      <div className="flex h-screen bg-[#111113] text-white">
         
-        {/* ---- 2a. FAST HEADER ---- */}
-        <DashboardHeader />
+        <Sidebar />
 
-        {/* ---- 2b. SCROLLBART HUVUDINNEHÅLL ---- */}
-        {/* 'relative' är viktigt för att chatten ska kunna positionera sig korrekt */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8 relative">
-          {children}
-        </main>
-        
-        {/* ---- 2c. FAST CHATT-BAR ---- */}
-        {/* Denna komponent kommer att byggas om helt härnäst */}
-        <Chat />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <DashboardHeader />
 
+          <main className="flex-1 overflow-y-auto p-6 md:p-8 relative">
+            {children}
+          </main>
+          
+          <Chat />
+        </div>
       </div>
-    </div>
+    </AuthProvider>
   );
 }
