@@ -3,6 +3,7 @@
 
 import React, { ReactNode } from 'react';
 import { FirebaseAuthHandler } from '@/app/_components/auth/FirebaseAuthHandler';
+import { AuthProvider } from '@/app/_lib/context/AuthContext'; // IMPORTERA AuthProvider
 
 /**
  * ClientProviders är en samlingskomponent för alla globala klient-sidans providers.
@@ -13,9 +14,11 @@ export function ClientProviders({ children }: { children: ReactNode }) {
     <>
       {/* Denna komponent hanterar synkroniseringen mellan Firebase Auth och vår server-session. */}
       <FirebaseAuthHandler />
-      
-      {/* Här kan andra globala providers läggas till i framtiden, t.ex. ThemeProvider, QueryClientProvider, etc. */}
-      {children}
+
+      {/* Denna Provider hämtar användardata från /api/user/me och gör den tillgänglig för klient-komponenter */}
+      <AuthProvider>
+        {children}
+      </AuthProvider>
     </>
   );
 }

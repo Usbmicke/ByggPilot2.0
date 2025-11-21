@@ -1,51 +1,53 @@
 
-// ===================================================================
-// SERVER-SIDA FIREBASE ADMIN-KONFIGURATION (ENDAST BACKEND)
-// (VERSION 2.0 - ROBUST INITIERING)
-// ===================================================================
-// Denna fil initierar Firebase Admin SDK. Den är den enda källan
-// till sanning för all backend-kommunikation med Firebase.
-
 import admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// --- Robust Initieringslogik ---
-
-// Initiera bara appen om den inte redan finns.
-// Detta är kritiskt för att undvika fel i Next.js med hot-reloading.
 if (!admin.apps.length) {
   console.log('[Firebase Admin]: Försöker initiera SDK...');
-  try {
-    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-    if (!serviceAccountJson) {
-      throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON miljövariabel är inte satt.');
-    }
 
-    // Försök att parsa JSON. Fånga eventuella syntaxfel.
-    let serviceAccount;
-    try {
-        serviceAccount = JSON.parse(serviceAccountJson);
-    } catch (e) {
-        console.error("[FATAL] Kunde inte parsa FIREBASE_SERVICE_ACCOUNT_JSON. Kontrollera att det är giltig JSON och korrekt escapat i .env.local");
-        throw e;
-    }
+  // Om vi kör i utvecklingsläge, använd INTE service-kontot.
+  // Anslut till emulatorerna istället.
+  if (process.env.NODE_ENV === 'development') {
+    console.log("INFO: [Firebase Admin] Ansluter till Emulatorer (Auth & Firestore)")
+    // Sätt miljövariablerna som Admin SDK automatiskt känner av.
+    process.env.FIRESTORE_EMULATOR_HOST = "localhost:8080";
+    process.env.FIREBASE_AUTH_EMULATOR_HOST = "localhost:9099";
 
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID, // Använd projekt-ID från env
     });
-    console.log('[Firebase Admin]: SDK initierat framgångsrikt.');
+    console.log('[Firebase Admin]: SDK initierat i Emulator-läge.');
 
-  } catch (error) {
-    console.error('[FATAL] Allvarligt fel vid initiering av Firebase Admin SDK:', error);
-    // Kasta om felet för att säkerställa att servern inte startar i ett trasigt tillstånd.
-    throw error;
+  } else {
+    // --- PRODUKTIONS-LÄGE ---
+    // Detta körs när du driftsätter till Vercel, etc.
+    try {
+      const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+      if (!serviceAccountJson) {
+        throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON miljövariabel är inte satt.');
+      }
+
+      let serviceAccount;
+      try {
+          serviceAccount = JSON.parse(serviceAccountJson);
+      } catch (e) {
+          console.error("[FATAL] Kunde inte parsa FIREBASE_SERVICE_ACCOUNT_JSON. Kontrollera att det är giltig JSON och korrekt escapat i .env.local");
+          throw e;
+      }
+
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+      console.log('[Firebase Admin]: SDK initierat framgångsrikt i Produktions-läge.');
+
+    } catch (error) {
+      console.error('[FATAL] Allvarligt fel vid initiering av Firebase Admin SDK:', error);
+      throw error;
+    }
   }
 }
 
-// --- Exporter ---
-
-// Exportera de nödvändiga, färdig-initierade modulerna
 export const auth = getAuth();
 export const firestore = getFirestore();
 export default admin;
