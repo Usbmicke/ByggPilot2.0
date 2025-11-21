@@ -1,11 +1,4 @@
-
-
-// BORTTAGEN FELAKTIG IMPORT - Detta är roten till felet.
-// import { ActionableEvent } from '@/lib/dal/dal'; 
-
-// TILLFÄLLIG ERSÄTTNING: Använd en generisk 'any'-typ för att förhindra krasch.
-type ActionableEvent = any;
-
+import { ActionableEvent } from '@/app/_lib/dal/dal';
 
 /**
  * Denna fil innehåller statiskt innehåll som används på flera ställen i applikationen.

@@ -3,12 +3,10 @@
 
 import React from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
-import { CogIcon, UserCircleIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
-import { User } from '@/app/types/index';
-import Popover from '@/app/components/shared/Popover';
-import { getAuth, signOut } from 'firebase/auth';
-import { auth } from '@/lib/config/firebase-client';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/app/_lib/context/AuthContext'; // <-- NY! Använd vår AuthContext
+import { ArrowRightOnRectangleIcon, CogIcon, UserCircleIcon } from '@heroicons/react/24/outline';
+import { Skeleton } from '@/app/_components/ui/skeleton'; // <-- NY! För laddnings-state
 
 // Hjälpfunktion för att generera initialer
 const getInitials = (name: string | null | undefined) => {
@@ -16,36 +14,50 @@ const getInitials = (name: string | null | undefined) => {
   return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
 };
 
-// Popover-innehåll för funktioner under utveckling
-const wipPopoverContent = (
-  <div className="text-sm text-text-secondary">
-    Denna funktion är under utveckling.
-  </div>
-);
+export default function UserMenu() {
+  const router = useRouter();
+  const { user, isLoading } = useAuth(); // <-- Hämta användare och laddningsstatus från kontexten
 
-interface UserMenuProps {
-  user: User;
-}
-
-const UserMenu: React.FC<UserMenuProps> = ({ user }) => {
+  // KORREKT UTLOGGNINGSFUNKTION
   const handleLogout = async () => {
     try {
-      await signOut(auth);
-      // Omdirigera till startsidan efter lyckad utloggning
-      window.location.href = '/';
+      // Steg 1: Anropa vår backend-endpoint för att säkert radera session-cookien
+      const response = await fetch('/api/auth/logout', { method: 'POST' });
+
+      if (!response.ok) {
+        // Om något gick fel på servern, logga det men försök ändå fortsätta
+        console.error('Server-side logout failed', await response.json());
+      }
+
+      // Steg 2: Omdirigera till startsidan med Next.js Router för en mjuk övergång
+      router.push('/');
+      // Opcional: Ladda om sidan helt för att säkerställa att all state rensas
+      router.refresh();
+
     } catch (error) {
-      console.error("Fel vid utloggning: ", error);
-      // Hantera eventuella fel här, t.ex. visa ett meddelande till användaren
+      console.error("Fel vid utloggningsanrop: ", error);
+      // Visa ett felmeddelande för användaren här om det behövs
     }
   };
+
+  // Visa en laddnings-skeleton medan användardatan hämtas
+  if (isLoading) {
+    return <Skeleton className="h-10 w-10 rounded-full" />;
+  }
+
+  // Om användaren inte är inloggad (t.ex. vid fel eller utgången session),
+  // visa ingenting eller en inloggningsknapp.
+  if (!user) {
+    return null; 
+  }
 
   return (
     <div className="relative group">
       {/* Avatar / Profilbild */}
-      <div className="h-10 w-10 rounded-full bg-accent-blue flex items-center justify-center text-white font-bold text-sm border-2 border-border-primary cursor-pointer overflow-hidden">
-        {user.image ? (
+      <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm cursor-pointer overflow-hidden border-2 border-neutral-700">
+        {user.avatarUrl ? (
           <Image 
-            src={user.image} 
+            src={user.avatarUrl} 
             alt="Profilbild" 
             width={40} 
             height={40} 
@@ -57,27 +69,25 @@ const UserMenu: React.FC<UserMenuProps> = ({ user }) => {
       </div>
       
       {/* Dropdown-meny */}
-      <div className="absolute right-0 w-56 bg-background-secondary border border-border-primary rounded-md shadow-lg z-50 hidden group-hover:block transition-all duration-300 origin-top-right animate-in fade-in-0 zoom-in-95 pt-2">
-        <div className="px-4 py-3 border-b border-border-primary">
-          <p className="text-sm font-semibold text-text-primary truncate">{user.name || "Användare"}</p>
-          <p className="text-xs text-text-secondary truncate">{user.email}</p>
+      <div className="absolute right-0 mt-2 w-60 bg-[#1C1C1E] border border-neutral-700/80 rounded-lg shadow-2xl z-50 hidden group-hover:block transition-all duration-300 origin-top-right animate-in fade-in-0 zoom-in-95">
+        <div className="px-4 py-3 border-b border-neutral-700/60">
+          <p className="text-sm font-semibold text-neutral-100 truncate">{user.name || "Användare"}</p>
+          <p className="text-xs text-neutral-400 truncate">{user.email}</p>
         </div>
-        <div className="py-1.5">
-          <Link href="/settings" className="flex items-center gap-3 px-4 py-2 text-sm text-text-secondary hover:bg-background-tertiary hover:text-text-primary">
+        <div className="py-2">
+          <button disabled className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-neutral-400 cursor-not-allowed">
             <CogIcon className="h-5 w-5" />
             Inställningar
-          </Link>
-          <Popover content={wipPopoverContent} trigger={
-            <button className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-text-secondary hover:bg-background-tertiary hover:text-text-primary">
-              <UserCircleIcon className="h-5 w-5" />
-              Min Profil
-            </button>
-          } />
+          </button>
+           <button disabled className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-neutral-400 cursor-not-allowed">
+            <UserCircleIcon className="h-5 w-5" />
+            Min Profil
+          </button>
         </div>
-        <div className="py-1.5 border-t border-border-primary">
+        <div className="py-2 border-t border-neutral-700/60">
           <button
             onClick={handleLogout}
-            className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-status-danger hover:bg-status-danger/20"
+            className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-500 hover:bg-red-500/10"
           >
             <ArrowRightOnRectangleIcon className="h-5 w-5" />
             Logga ut
@@ -86,6 +96,4 @@ const UserMenu: React.FC<UserMenuProps> = ({ user }) => {
       </div>
     </div>
   );
-};
-
-export default UserMenu;
+}
