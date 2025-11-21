@@ -1,17 +1,20 @@
-
 import { NextResponse, type NextRequest } from 'next/server';
-import { cookies } from 'next/headers'; // <-- Importera cookies här!
+import { cookies } from 'next/headers';
 import { verifySession, getMyProfile } from '@/app/_lib/dal/dal';
 
 export async function GET(request: NextRequest) {
   try {
-    // Steg 1: Ansvaret att läsa cookien ligger nu HÄR.
-    const sessionCookie = cookies().get('__session')?.value;
+    // Logic confirmed by diagnostics: await is mandatory
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get('__session')?.value;
 
-    // Steg 2: Skicka cookie-värdet till den rena verifieringsfunktionen.
+    if (!sessionCookie) {
+      // This is an expected condition for unauthenticated users.
+      throw new Error("Session cookie not found.");
+    }
+
+    // Follow the Golden Standard flow
     const session = await verifySession(sessionCookie);
-
-    // Steg 3: Skicka den verifierade sessionen till data-funktionen.
     const userProfile = await getMyProfile(session);
 
     if (!userProfile) {
@@ -21,8 +24,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(userProfile, { status: 200 });
 
   } catch (error: any) {
-    // Fångar alla fel (från verifySession eller getMyProfile)
-    console.error('[API /api/user/me] Authentication error:', error.message);
+    // Log the actual error for server-side debugging
+    console.error(`[API /api/user/me] Auth Error: ${error.message}`);
+    // Return a generic error to the client
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 }
