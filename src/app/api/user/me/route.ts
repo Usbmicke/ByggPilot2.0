@@ -1,48 +1,28 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
-import { auth } from '@/app/_lib/config/firebase-admin';
-import { getUserProfile } from '@/app/_lib/dal/dal';
-
-// =======================================================================
-//  API ENDPOINT: Hämta aktuell användare (/api/user/me)
-// =======================================================================
-// Denna skyddade endpoint hämtar och returnerar den inloggade användarens
-// fullständiga profil från Firestore. Den används av klienten (t.ex. i en
-// AuthContext) för att fylla på med användardata efter den initiala laddningen.
+import { cookies } from 'next/headers'; // <-- Importera cookies här!
+import { verifySession, getMyProfile } from '@/app/_lib/dal/dal';
 
 export async function GET(request: NextRequest) {
   try {
-    // 1. Hämta session-cookien från requesten.
-    const sessionCookie = request.cookies.get('__session')?.value;
-    if (!sessionCookie) {
-      return new NextResponse(JSON.stringify({ error: 'Ej autentiserad. Session-cookie saknas.' }), {
-        status: 401, // Unauthorized
-      });
-    }
+    // Steg 1: Ansvaret att läsa cookien ligger nu HÄR.
+    const sessionCookie = cookies().get('__session')?.value;
 
-    // 2. Verifiera cookien med Firebase Admin SDK för att få användarens ID.
-    const decodedToken = await auth.verifySessionCookie(sessionCookie, true /** checkRevoked */);
-    const userId = decodedToken.uid;
+    // Steg 2: Skicka cookie-värdet till den rena verifieringsfunktionen.
+    const session = await verifySession(sessionCookie);
 
-    // 3. Använd den säkra DAL-funktionen för att hämta användarprofilen från Firestore.
-    const userProfile = await getUserProfile(userId);
+    // Steg 3: Skicka den verifierade sessionen till data-funktionen.
+    const userProfile = await getMyProfile(session);
 
-    // Om profilen inte hittades (vilket är osannolikt om en session finns),
-    // returnera ett fel.
     if (!userProfile) {
-      return new NextResponse(JSON.stringify({ error: 'Användarprofilen kunde inte hittas.' }), {
-        status: 404, // Not Found
-      });
+      return NextResponse.json({ error: 'User profile not found in database.' }, { status: 404 });
     }
 
-    // 4. Returnera den fullständiga, säkra användarprofilen som JSON.
-    return NextResponse.json(userProfile);
+    return NextResponse.json(userProfile, { status: 200 });
 
-  } catch (error) {
-    console.error('Fel i /api/user/me:', error);
-    // Om cookien är ogiltig eller utgången, kommer verifySessionCookie att kasta ett fel.
-    return new NextResponse(JSON.stringify({ error: 'Ogiltig eller utgången session.' }), {
-      status: 401, // Unauthorized
-    });
+  } catch (error: any) {
+    // Fångar alla fel (från verifySession eller getMyProfile)
+    console.error('[API /api/user/me] Authentication error:', error.message);
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 }
