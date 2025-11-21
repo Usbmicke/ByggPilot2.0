@@ -1,62 +1,61 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { verifySession, getUserProfileForMiddleware } from './app/_lib/dal/dal'; // Importera verifySession
+import { verifySession, getUserProfileForMiddleware } from './app/_lib/dal/dal';
 
-export const runtime = 'nodejs';
-
-const ONBOARDING_PATH = '/dashboard/onboarding';
+const ONBOARDING_PATH = '/onboarding';
 const DASHBOARD_PATH = '/dashboard';
 const HOME_PATH = '/';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get('__session')?.value;
 
+  console.log(`[Proxy]: Path: ${pathname}, Har cookie: ${!!sessionCookie}`);
+
   let session = null;
   try {
-    // Använd den nya centrala verifieringsfunktionen.
-    // Om den kastar ett fel, fångas det i catch-blocket.
     session = await verifySession(sessionCookie);
+    console.log('[Proxy]: Session verifierad framgångsrikt.');
   } catch (error) {
-    // Detta innebär att sessionen är ogiltig eller saknas.
-    // Om användaren är på en skyddad sida, skicka till startsidan.
-    if (pathname.startsWith(DASHBOARD_PATH)) {
+    // ================== AVGÖRANDE LOGGNING ==================
+    // Om sessionen misslyckas, logga exakt varför.
+    console.error('[Proxy ERROR]: Session-verifiering misslyckades. Orsak:', error);
+    // =======================================================
+
+    if (pathname.startsWith(DASHBOARD_PATH) || pathname.startsWith(ONBOARDING_PATH)) {
       const response = NextResponse.redirect(new URL(HOME_PATH, request.url));
       response.cookies.delete('__session');
       return response;
     }
-    // Annars, låt dem vara (t.ex. på startsidan).
     return NextResponse.next();
   }
 
-  // Om vi kommer hit är användaren autentiserad.
   const userProfile = await getUserProfileForMiddleware(session.userId);
 
-  // Säkerhets-check: Om profilen av någon anledning inte finns, agera som utloggad.
   if (!userProfile) {
+      console.warn('[Proxy]: Användarprofil saknas trots giltig session. Skickar till login.');
       const response = NextResponse.redirect(new URL(HOME_PATH, request.url));
       response.cookies.delete('__session');
       return response;
   }
 
   const isOnboardingComplete = userProfile.onboardingStatus === 'complete';
+  console.log(`[Proxy]: Onboarding klar: ${isOnboardingComplete}`);
 
-  // --- Omdirigeringsregler för inloggade användare ---
-
-  // 1. På startsidan -> Skicka till rätt ställe.
   if (pathname === HOME_PATH) {
     const targetPath = isOnboardingComplete ? DASHBOARD_PATH : ONBOARDING_PATH;
+    console.log(`[Proxy]: På startsidan, omdirigerar till ${targetPath}`);
     return NextResponse.redirect(new URL(targetPath, request.url));
   }
 
-  // 2. Försöker nå onboarding men är redan klar -> Skicka till dashboard.
   if (isOnboardingComplete && pathname.startsWith(ONBOARDING_PATH)) {
+    console.log('[Proxy]: Klar med onboarding, skickas till dashboard.');
     return NextResponse.redirect(new URL(DASHBOARD_PATH, request.url));
   }
 
-  // 3. Försöker nå dashboard men är INTE klar -> Skicka till onboarding.
   if (!isOnboardingComplete && pathname.startsWith(DASHBOARD_PATH) && !pathname.startsWith(ONBOARDING_PATH)) {
+    console.log('[Proxy]: Inte klar med onboarding, skickas dit.');
     return NextResponse.redirect(new URL(ONBOARDING_PATH, request.url));
   }
 
@@ -65,7 +64,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/', 
+    '/',
     '/dashboard/:path*',
+    '/onboarding',
   ],
 };
