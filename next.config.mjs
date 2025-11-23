@@ -13,31 +13,22 @@ const nextConfig = {
     ],
   },
   /**
-   * GULDSTANDARD v5.0: Konfiguration för att köra Genkit INOM Next.js-processen.
-   * Detta instruerar Next.js att INTE försöka paketera vissa Genkit- och gRPC-moduler.
-   * Dessa moduler är avsedda att köras på servern och Next.js ska lämna dem ifred.
-   * Detta löser 'Module not found: Can\'t resolve (<dynamic> | \'undefined\')'-felet.
+   * GULDSTANDARD v5.2: Korrekt konfiguration för Turbopack.
+   * Istället för den ineffektiva `webpack`-konfigurationen använder vi
+   * `serverComponentsExternalPackages` för att instruera Turbopack att INTE
+   * paketera de specificerade server-side biblioteken.
+   * Detta löser de ihållande 'Module not found'-felen.
    */
-  webpack: (
-    config,
-    { buildId, dev, isServer, defaultLoaders, nextRuntime, webpack }
-  ) => {
-    if (isServer) {
-      config.externals.push(
-        '@genkit-ai/core',
-        '@genkit-ai/flow',
-        '@grpc/grpc-js',
-        '@google-cloud/functions-framework'
-      );
-    }
-    return config;
+  experimental: {
+    serverComponentsExternalPackages: [
+      '@genkit-ai/core',
+      '@genkit-ai/flow',
+      '@genkit-ai/firebase', // Inkludera baspaketen
+      '@genkit-ai/googleai',
+      '@grpc/grpc-js',
+      '@google-cloud/functions-framework',
+    ],
   },
-  /**
-   * Tystar Turbopack-varningen. Next.js 16 aktiverade Turbopack som standard, 
-   * och det klagar på att vi har en webpack-konfiguration men ingen Turbopack-konfiguration.
-   * En tom konfiguration är tillräckligt för att lösa detta.
-   */
-  turbopack: {},
 };
 
 export default nextConfig;
