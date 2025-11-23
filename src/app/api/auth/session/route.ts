@@ -1,6 +1,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { auth } from '@/app/_lib/config/firebase-admin';
+import { getOrCreateUserFromToken } from '@/app/_lib/dal/dal'; // Importera den nya funktionen
 
 const SESSION_COOKIE_EXPIRES_IN_MS = 5 * 24 * 60 * 60 * 1000; // 5 dagar
 
@@ -9,35 +10,33 @@ export async function POST(request: NextRequest) {
   const { idToken } = await request.json();
 
   if (!idToken) {
-    return NextResponse.json(
-      { status: 'error', message: 'ID-token saknas i request body.' },
-      { status: 400 }
-    );
+    return NextResponse.json({ status: 'error', message: 'ID-token saknas.' }, { status: 400 });
   }
 
   try {
-    console.log("[API /api/auth/session] Försöker skapa session-cookie...");
+    // Steg 1: Dekoda token för att få användarinformation
+    const decodedToken = await auth.verifyIdToken(idToken);
+
+    // Steg 2: Använd den nya DAL-funktionen för att säkerställa att en profil existerar
+    // Detta löser race condition-problemet vid nyregistrering.
+    await getOrCreateUserFromToken(decodedToken);
+    console.log(`[API /api/auth/session] Användarprofil för ${decodedToken.uid} är säkerställd.`);
+
+    // Steg 3: Skapa session-cookien, nu när vi VET att en profil finns
     const sessionCookie = await auth.createSessionCookie(idToken, { expiresIn: SESSION_COOKIE_EXPIRES_IN_MS });
-    console.log("[API /api/auth/session] Session-cookie skapad. Förbereder svar.");
+    console.log("[API /api/auth/session] Session-cookie skapad.");
 
-    const response = NextResponse.json(
-      { status: 'success', message: 'Cookie skapad och kommer att ställas in.' },
-      { status: 200 }
-    );
+    const response = NextResponse.json({ status: 'success' }, { status: 200 });
 
-    // ================== VIKTIG ÄNDRING FÖR CROSS-ORIGIN ==================
-    // Ändrar sameSite till 'none' för att tillåta cookies att ställas in
-    // i en proxied/cross-origin utvecklingsmiljö. Kräver secure: true.
     response.cookies.set('__session', sessionCookie, {
       httpOnly: true,
-      secure: true, 
+      secure: true,
       maxAge: SESSION_COOKIE_EXPIRES_IN_MS,
       path: '/',
-      sameSite: 'none', // Tidigare 'lax'
+      sameSite: 'none', 
     });
-    // =====================================================================
     
-    console.log("[API /api/auth/session] Cookie inställd i svar. Skickar...");
+    console.log("[API /api/auth/session] Cookie inställd. Skickar svar.");
     return response;
 
   } catch (error: any) {
@@ -45,12 +44,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { 
         status: 'error', 
-        message: 'Server-fel vid skapande av session-cookie.',
-        error: {
-          name: error.name,
-          code: error.code,
-          message: error.message,
-        }
+        message: 'Server-fel vid skapande av session.',
+        error: { name: error.name, code: error.code, message: error.message }
       },
       { status: 500 }
     );

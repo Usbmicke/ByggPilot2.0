@@ -3,6 +3,7 @@ import { auth, firestore as db } from '@/app/_lib/config/firebase-admin';
 import { DocumentReference, Timestamp } from 'firebase-admin/firestore';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
+import { DecodedIdToken } from 'firebase-admin/auth';
 
 // ====================================================================
 // GULDSTANDARD: TYPER OCH SCHEMAN
@@ -22,6 +23,8 @@ const UserProfileSchema = z.object({
   googleDriveRootFolderId: z.string().optional(),
   companyName: z.string().optional(),
   companyAddress: z.string().optional(),
+  // NYTT FÄLT FÖR FÖRETAGSLOGGA
+  companyLogoUrl: z.string().url().optional(),
 });
 
 const ProjectSchema = z.object({
@@ -33,10 +36,42 @@ const ProjectSchema = z.object({
 export type UserProfile = z.infer<typeof UserProfileSchema>;
 
 // ====================================================================
-// GULDSTANDARD: KÄRNSÄKERHETSFUNKTION (verifySession V3 - REN FUNKTION)
+// NY FUNKTION: HÄMTA ELLER SKAPA ANVÄNDARE
 // ====================================================================
-// Denna funktion är nu "ren". Den känner inte till cookies, bara värdet.
-// Den tar emot en cookie-sträng och returnerar en verifierad session.
+export async function getOrCreateUserFromToken(decodedToken: DecodedIdToken): Promise<UserProfile> {
+  const userRef = db.collection('users').doc(decodedToken.uid);
+  const doc = await userRef.get();
+
+  if (doc.exists) {
+    const profile = UserProfileSchema.parse(doc.data());
+    return profile;
+  } else {
+    console.log(`[DAL] Skapar ny användarprofil för UID: ${decodedToken.uid}`);
+    const newCompanyId = uuidv4();
+    const newUserProfile: UserProfile = {
+      userId: decodedToken.uid,
+      email: decodedToken.email || '',
+      companyId: newCompanyId,
+      createdAt: Timestamp.now(),
+      onboardingStatus: 'incomplete',
+    };
+
+    const companyRef = db.collection('companies').doc(newCompanyId);
+    const batch = db.batch();
+    batch.set(userRef, newUserProfile);
+    batch.set(companyRef, {
+      companyId: newCompanyId,
+      name: 'Nytt Företag',
+      createdAt: Timestamp.now(),
+    });
+    await batch.commit();
+    return newUserProfile;
+  }
+}
+
+// ====================================================================
+// GULDSTANDARD: KÄRNSÄKERHETSFUNKTION
+// ====================================================================
 export async function verifySession(sessionCookie: string | undefined): Promise<Session> {
   if (!sessionCookie) {
     throw new Error('Unauthorized: No session cookie provided.');
@@ -68,8 +103,6 @@ export async function verifySession(sessionCookie: string | undefined): Promise<
 // ====================================================================
 //  DAL-funktioner anpassade till Guldstandarden
 // ====================================================================
-// Notera hur alla funktioner nu tar emot en 'session' som argument.
-// De är frikopplade från ansvaret att verifiera sessionen själva.
 
 export async function getMyProfile(session: Session): Promise<UserProfile | null> {
     const userRef: DocumentReference = db.collection('users').doc(session.userId);
@@ -77,6 +110,34 @@ export async function getMyProfile(session: Session): Promise<UserProfile | null
     if (!doc.exists) return null;
     return UserProfileSchema.parse(doc.data());
 }
+
+// UPPDATERAD FUNKTION
+export async function saveMyCompanyInfo(
+  session: Session, 
+  companyName: string, 
+  companyAddress: string, 
+  companyLogoUrl?: string
+): Promise<void> {
+  const userRef: DocumentReference = db.collection('users').doc(session.userId);
+  const companyRef = db.collection('companies').doc(session.companyId);
+
+  const userDataToUpdate: { [key: string]: any } = {
+    companyName: companyName,
+    companyAddress: companyAddress,
+  };
+
+  if (companyLogoUrl) {
+    userDataToUpdate.companyLogoUrl = companyLogoUrl;
+  }
+
+  // Använd en batch för att uppdatera båda dokumenten samtidigt
+  const batch = db.batch();
+  batch.update(userRef, userDataToUpdate);
+  batch.update(companyRef, { name: companyName });
+
+  await batch.commit();
+}
+
 
 export async function getProjectForUser(session: Session, projectId: string): Promise<any> {
   const projectRef = db.collection('projects').doc(projectId);
@@ -94,16 +155,6 @@ export async function getProjectForUser(session: Session, projectId: string): Pr
   }
 
   return validatedProject;
-}
-
-export async function saveMyCompanyInfo(session: Session, companyName: string, companyAddress: string): Promise<void> {
-  const userRef: DocumentReference = db.collection('users').doc(session.userId);
-  await userRef.update({
-    companyName: companyName,
-    companyAddress: companyAddress,
-  });
-  const companyRef = db.collection('companies').doc(session.companyId);
-  await companyRef.update({ name: companyName });
 }
 
 export async function completeMyOnboarding(session: Session, googleDriveRootFolderId: string): Promise<void> {

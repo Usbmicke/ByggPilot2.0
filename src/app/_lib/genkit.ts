@@ -6,7 +6,7 @@
 
 import { getFunctions, httpsCallable, Functions } from 'firebase/functions';
 // KORRIGERAD SÖKVÄG: Importera den centrala, klient-säkra app-instansen.
-import { app } from '@/lib/config/firebase-client';
+import { app } from '@/app/_lib/config/firebase-client';
 
 // Håll en singleton-instans av Firebase Functions
 let functionsInstance: Functions | null = null;

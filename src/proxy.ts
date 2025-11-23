@@ -1,7 +1,5 @@
 
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { verifySession, getUserProfileForMiddleware } from './app/_lib/dal/dal';
+import { NextResponse, type NextRequest } from 'next/server';
 
 const ONBOARDING_PATH = '/onboarding';
 const DASHBOARD_PATH = '/dashboard';
@@ -10,55 +8,41 @@ const HOME_PATH = '/';
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get('__session')?.value;
+  const verificationApiUrl = new URL('/api/auth/verify', request.url);
 
-  console.log(`[Proxy]: Path: ${pathname}, Har cookie: ${!!sessionCookie}`);
+  // Om det inte finns någon cookie och användaren försöker nå en skyddad sida
+  if (!sessionCookie && (pathname.startsWith(DASHBOARD_PATH) || pathname.startsWith(ONBOARDING_PATH))) {
+    return NextResponse.redirect(new URL(HOME_PATH, request.url));
+  }
 
-  let session = null;
-  try {
-    session = await verifySession(sessionCookie);
-    console.log('[Proxy]: Session verifierad framgångsrikt.');
-  } catch (error) {
-    // ================== AVGÖRANDE LOGGNING ==================
-    // Om sessionen misslyckas, logga exakt varför.
-    console.error('[Proxy ERROR]: Session-verifiering misslyckades. Orsak:', error);
-    // =======================================================
+  // Om det finns en cookie, verifiera den via den nya API-rutten
+  if (sessionCookie) {
+    const headers = new Headers({
+        'Cookie': `__session=${sessionCookie}`
+    });
+    const response = await fetch(verificationApiUrl, { headers });
 
-    if (pathname.startsWith(DASHBOARD_PATH) || pathname.startsWith(ONBOARDING_PATH)) {
-      const response = NextResponse.redirect(new URL(HOME_PATH, request.url));
-      response.cookies.delete('__session');
-      return response;
+    if (response.ok) {
+      const { isAuthenticated, isOnboardingComplete } = await response.json();
+
+      if (isAuthenticated) {
+        // Användaren är autentiserad, nu gör vi rätt omdirigeringar
+        if (pathname === HOME_PATH) {
+            const target = isOnboardingComplete ? DASHBOARD_PATH : ONBOARDING_PATH;
+            return NextResponse.redirect(new URL(target, request.url));
+        }
+        if (pathname.startsWith(DASHBOARD_PATH) && !isOnboardingComplete) {
+            return NextResponse.redirect(new URL(ONBOARDING_PATH, request.url));
+        }
+        if (pathname === ONBOARDING_PATH && isOnboardingComplete) {
+            return NextResponse.redirect(new URL(DASHBOARD_PATH, request.url));
+        }
+        return NextResponse.next(); // Allt ok, fortsätt till den begärda sidan
+      }
     }
-    return NextResponse.next();
   }
 
-  const userProfile = await getUserProfileForMiddleware(session.userId);
-
-  if (!userProfile) {
-      console.warn('[Proxy]: Användarprofil saknas trots giltig session. Skickar till login.');
-      const response = NextResponse.redirect(new URL(HOME_PATH, request.url));
-      response.cookies.delete('__session');
-      return response;
-  }
-
-  const isOnboardingComplete = userProfile.onboardingStatus === 'complete';
-  console.log(`[Proxy]: Onboarding klar: ${isOnboardingComplete}`);
-
-  if (pathname === HOME_PATH) {
-    const targetPath = isOnboardingComplete ? DASHBOARD_PATH : ONBOARDING_PATH;
-    console.log(`[Proxy]: På startsidan, omdirigerar till ${targetPath}`);
-    return NextResponse.redirect(new URL(targetPath, request.url));
-  }
-
-  if (isOnboardingComplete && pathname.startsWith(ONBOARDING_PATH)) {
-    console.log('[Proxy]: Klar med onboarding, skickas till dashboard.');
-    return NextResponse.redirect(new URL(DASHBOARD_PATH, request.url));
-  }
-
-  if (!isOnboardingComplete && pathname.startsWith(DASHBOARD_PATH) && !pathname.startsWith(ONBOARDING_PATH)) {
-    console.log('[Proxy]: Inte klar med onboarding, skickas dit.');
-    return NextResponse.redirect(new URL(ONBOARDING_PATH, request.url));
-  }
-
+  // Om inget annat matchar, låt begäran passera.
   return NextResponse.next();
 }
 
@@ -66,6 +50,9 @@ export const config = {
   matcher: [
     '/',
     '/dashboard/:path*',
-    '/onboarding',
+    '/onboarding/:path*',
+    // Vi exkluderar API-rutter från att trigga proxyn för att undvika oändliga loopar.
+    // Dock hanterar Next.js detta ganska bra, men det är en bra säkerhetsåtgärd.
+    // I det här fallet är det inte strikt nödvändigt eftersom vi bara matchar specifika sidor.
   ],
 };
