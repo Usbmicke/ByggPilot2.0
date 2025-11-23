@@ -100,18 +100,30 @@ const GuidedOnboarding: FC = () => {
     });
   };
 
+  // ====================================================================
+  // KORRIGERAD FUNKTION - Anropar det riktiga backend-API:et
+  // ====================================================================
   const handleCreateDriveFolders = async () => {
     startTransition(async () => {
       const toastId = toast.loading('Skapar mappstruktur i Google Drive...');
       try {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        const result = { success: true, driveFolderUrl: 'https://drive.google.com' };
+        // Anropa den nya API-endpointen
+        const response = await fetch('/api/onboarding/create-drive-folders', {
+          method: 'POST',
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Ett serverfel inträffade.');
+        }
+
         if (result.success && result.driveFolderUrl) {
           toast.success('Mappstrukturen har skapats!', { id: toastId });
-          setDriveFolderUrl(result.driveFolderUrl);
+          setDriveFolderUrl(result.driveFolderUrl); // Spara den riktiga URL:en
           setCurrentStep(3);
         } else {
-          throw new Error('Ett okänt fel inträffade.');
+          throw new Error('Ett okänt fel inträffade vid skapandet av mappar.');
         }
       } catch (error: any) {
         console.error("Fel vid skapande av mappar:", error);
