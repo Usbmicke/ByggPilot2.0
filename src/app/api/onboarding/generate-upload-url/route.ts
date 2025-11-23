@@ -1,15 +1,15 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { verifySession } from '@/app/_lib/dal/dal';
-import { Storage } from '@google-cloud/storage';
+// BORTTAGET: import { Storage } from '@google-cloud/storage';
+import { storage } from '@/app/_lib/config/firebase-admin'; // KORRIGERAD: Importerar den nu korrekta centrala instansen
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 
-// Initiera Google Cloud Storage
-const storage = new Storage();
+// BORTTAGET: const storage = new Storage();
 
-// KORRIGERAT: Använder den befintliga Firebase-bucketen som du identifierade.
-const bucketName = 'byggpilot-v2.firebasestorage.app'; 
+// Använder den befintliga Firebase-bucketen som är konfigurerad i firebase-admin
+const bucket = storage.bucket(); 
 
 // Zod-schema för att validera inkommande filinformation
 const FileInfoSchema = z.object({
@@ -37,10 +37,9 @@ export async function POST(request: NextRequest) {
     const { fileName, fileType } = validation.data;
 
     // 3. Skapa en säker och unik sökväg för filen
-    // Format: logos/{companyId}/{uuidv4}-{original-filename}
     const fileExtension = fileName.split('.').pop();
     const uniqueFileName = `${uuidv4()}.${fileExtension}`;
-    const path = `public/logos/${session.companyId}/${uniqueFileName}`;
+    const path = `logos/${session.companyId}/${uniqueFileName}`;
 
     // 4. Konfigurera signerad URL
     const options = {
@@ -51,8 +50,7 @@ export async function POST(request: NextRequest) {
     };
 
     // 5. Generera den signerade URL:en
-    const [signedUrl] = await storage
-      .bucket(bucketName)
+    const [signedUrl] = await bucket
       .file(path)
       .getSignedUrl(options);
 
@@ -63,7 +61,7 @@ export async function POST(request: NextRequest) {
         { 
             success: true, 
             signedUrl,
-            publicUrl: `https://storage.googleapis.com/${bucketName}/${path}` 
+            publicUrl: bucket.file(path).publicUrl() 
         }, 
         { status: 200 }
     );
