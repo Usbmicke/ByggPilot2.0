@@ -1,17 +1,18 @@
 
-import { defineFlow } from '@genkit-ai/flow';
+// GULDSTANDARD v15.0: ISOLERAT GENKIT-FLÖDE
+import { flow } from '@genkit-ai/flow'; 
 import { z } from 'zod';
-import { getGoogleDriveClient } from '@/app/_lib/config/google-drive-client';
+import { getGoogleDriveClient } from '../google-drive-client'; // KORRIGERAD SÖKVÄG
 
 // ====================================================================
 // FLÖDESDEFINITION: SKAPA ONBOARDING-MAPPSTRUKTUR
 // ====================================================================
 
-export const createOnboardingFolderStructureFlow = defineFlow(
+export const createOnboardingFolderStructureFlow = flow(
   {
-    name: 'createOnboardingFolderStructure',
+    name: 'createOnboardingFolderStructure', 
     inputSchema: z.object({
-      companyId: z.string(), // Reserverad för framtida bruk
+      companyId: z.string(), 
       companyName: z.string(),
     }),
     outputSchema: z.object({
@@ -22,10 +23,8 @@ export const createOnboardingFolderStructureFlow = defineFlow(
   async (input) => {
     console.log(`[Genkit Flow] Startar mappskapande för: ${input.companyName}`);
 
-    // Hämta den autentiserade Google Drive-klienten (synkront anrop).
     const drive = getGoogleDriveClient();
 
-    // 1. Skapa rotmappen
     const rootFolderName = `ByggPilot - ${input.companyName}`;
     const rootFolderMetadata = {
       name: rootFolderName,
@@ -45,7 +44,6 @@ export const createOnboardingFolderStructureFlow = defineFlow(
 
     console.log(`[Genkit Flow] Rotmapp skapad med ID: ${rootFolderId}`);
 
-    // 2. Definiera och skapa undermappar
     const subfolders = [
       '01 - Projekt',
       '02 - Avtal & Offert',
@@ -71,7 +69,6 @@ export const createOnboardingFolderStructureFlow = defineFlow(
 
     console.log(`[Genkit Flow] Hela mappstrukturen skapad för ${input.companyName}.`);
 
-    // 3. Returnera resultatet
     return {
       driveRootFolderId: rootFolderId,
       driveRootFolderUrl: rootFolderUrl,

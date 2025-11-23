@@ -1,6 +1,6 @@
-Läs @AI_INSTRUCTIONS.md och @ARCHITECTURE.md. Jag vill att du följer dessa regler strikt för att undvika byggfel med Next.js 16 och Genkit.
+Läs @AI_INSTRUCTIONS.md och @ARCHITECTURE.md. Jag vill att du följer dessa regler strikt för att undvika byggfel med Next.js 16 och Genkit. Bekräfta att du läst bägge dokument och förstår hela artikekturen.
 
-# ByggPilot Arkitektur: Guldstandarden (v5.0)
+# ByggPilot Arkitektur: Guldstandarden 
 
 Detta dokument beskriver den slutgiltiga och säkraste arkitekturen för ByggPilot. Den är designad för maximal säkerhet, underhållbarhet och tydlighet. Alla framtida ändringar, oavsett om de görs av människor eller AI, **MÅSTE** följa dessa principer.
 

@@ -13,22 +13,19 @@ const nextConfig = {
     ],
   },
   /**
-   * GULDSTANDARD v5.2: Korrekt konfiguration för Turbopack.
-   * Istället för den ineffektiva `webpack`-konfigurationen använder vi
-   * `serverComponentsExternalPackages` för att instruera Turbopack att INTE
-   * paketera de specificerade server-side biblioteken.
-   * Detta löser de ihållande 'Module not found'-felen.
+   * GULDSTANDARD v9.0: Korrekt konfiguration för Next.js 16 (Turbopack).
+   * Vi använder `serverExternalPackages` för att instruera Turbopack att inte
+   * bunta server-specifika bibliotek som Genkit. Detta är den moderna,
+   * korrekta metoden och eliminerar behovet av en anpassad `webpack`-konfiguration.
    */
-  experimental: {
-    serverComponentsExternalPackages: [
-      '@genkit-ai/core',
-      '@genkit-ai/flow',
-      '@genkit-ai/firebase', // Inkludera baspaketen
-      '@genkit-ai/googleai',
-      '@grpc/grpc-js',
-      '@google-cloud/functions-framework',
-    ],
-  },
+  serverExternalPackages: [
+    '@genkit-ai/core',
+    '@genkit-ai/flow',
+    '@genkit-ai/firebase',
+    '@genkit-ai/googleai',
+    '@grpc/grpc-js', // Kritiskt beroende för Firebase/Google-SDKs
+    '@google-cloud/functions-framework', // Ofta ett dolt beroende
+  ],
 };
 
 export default nextConfig;
