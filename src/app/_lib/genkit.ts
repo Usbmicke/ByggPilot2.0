@@ -1,51 +1,50 @@
-/**
- * @fileoverview Klient-sida för att interagera med Genkit-flöden.
- * Denna fil hanterar anrop till Firebase Functions som exponerar Genkit-flöden.
- */
-'use client';
 
-import { getFunctions, httpsCallable, Functions } from 'firebase/functions';
-// KORRIGERAD SÖKVÄG: Importera den centrala, klient-säkra app-instansen.
-import { app } from '@/app/_lib/config/firebase-client';
-
-// Håll en singleton-instans av Firebase Functions
-let functionsInstance: Functions | null = null;
-
-function getFunctionsInstance(): Functions {
-  if (typeof window === 'undefined') {
-    // Detta ska aldrig hända eftersom filen är 'use client', men som en extra säkerhet.
-    throw new Error('Firebase Functions kan bara initialiseras på klienten.');
-  }
-  if (!functionsInstance) {
-    // Skapa instansen och associera den med vår centrala Firebase-app
-    functionsInstance = getFunctions(app);
-  }
-  return functionsInstance;
-}
+import { genkit, configure } from '@genkit-ai/core';
+import { firebase } from '@genkit-ai/firebase';
+import { googleAI } from '@genkit-ai/googleai';
+import { z } from 'zod';
 
 /**
- * En generisk funktion för att anropa ett Genkit-flöde via en Firebase Function.
- *
- * @template I Input-datatyp för flödet.
- * @template O Output-datatyp från flödet.
- * @param {string} flowName Namnet på det Genkit-flöde som ska anropas.
- *                          Detta måste matcha namnet på den exporterade funktionen i Firebase.
- * @param {I} payload Datan som ska skickas till flödet.
- * @returns {Promise<O>} En promise som resolverar med resultatet från flödet.
+ * GULDSTANDARD v5.0: Centraliserad Genkit-initialisering.
+ * Denna funktion kapslar in hela konfigurationen för Genkit.
+ * Den anropas EN GÅNG från Next.js-servern, vilket garanterar att
+ * Genkit är redo att ta emot anrop från API-routes.
  */
-export async function callGenkitFlow<I, O>(flowName: string, payload: I): Promise<O> {
-  try {
-    const functions = getFunctionsInstance();
-    const callable = httpsCallable<I, { data: O }>(functions, flowName);
-    const result = await callable(payload);
-    
-    // Firebase Callable Functions returnerar data i ett `data`-objekt.
-    // Vi packar upp det för att göra API:et renare för våra komponenter.
-    return result.data.data;
-
-  } catch (error) {
-    console.error(`[Genkit Error] Anrop till flödet "${flowName}" misslyckades:`, error);
-    // Kasta om felet så att den anropande komponenten kan hantera det (t.ex. visa ett felmeddelande).
-    throw error;
+export function initGenkit() {
+  // Kontrollera om Genkit redan är konfigurerat för att undvika dubbel-initiering
+  // i Next.js heta omladdningsmiljö.
+  if (genkit()?.plugins()?.some(p => p.name === 'google-ai')) {
+    console.log("[Genkit] Redan initialiserad. Skippar omkonfigurering.");
+    return;
   }
+
+  console.log("[Genkit] Initialiserar Genkit för Guldstandard v5.0...");
+
+  configure({
+    plugins: [
+      firebase(), // Ansluter till Firebase (för auth, etc.)
+      googleAI(), // Ansluter till Google AI-modeller som Gemini
+    ],
+    logLevel: 'debug', // Logga allt för felsökning
+    enableTracingAndMetrics: true, // Viktigt för observation
+  });
+  
+  console.log("[Genkit] Initialisering slutförd.");
 }
+
+
+/**
+ * GULDSTANDARD v5.0: Central och agnostisk meddelandetyp.
+ * Denna Zod-schema och TypeScript-typ definierar strukturen för ett chattmeddelande.
+ * Den är placerad här för att kunna delas säkert mellan:
+ *   1. Frontend-komponenter (t.ex. Chat.tsx)
+ *   2. Backend Genkit-flöden (t.ex. brains.ts)
+ * Detta förhindrar cirkulära beroenden och håller arkitekturen ren.
+ */
+export const Message = z.object({
+  role: z.enum(['user', 'assistant', 'system']),
+  content: z.string(),
+});
+
+// Exportera även som en TypeScript-typ för enkel användning i komponenter.
+export type Message = z.infer<typeof Message>;
