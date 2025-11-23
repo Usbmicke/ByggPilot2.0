@@ -2,6 +2,7 @@
 import admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage'; 
 
 if (!admin.apps.length) {
   console.log('[Firebase Admin]: Försöker initiera SDK...');
@@ -12,14 +13,10 @@ if (!admin.apps.length) {
       throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON miljövariabel är inte satt.');
     }
 
-    // ================== ROBUST PARSNING (DIN LÖSNING) ==================
-    // Om strängen är omgiven av apostrofer, ta bort dem innan parse.
-    // Detta gör koden motståndskraftig mot hur .env-filer kan tolkas.
     if (serviceAccountJson.startsWith("'") && serviceAccountJson.endsWith("'")) {
       console.log('[Firebase Admin]: Upptäckte och korrigerar apostrofer runt JSON-strängen.');
       serviceAccountJson = serviceAccountJson.substring(1, serviceAccountJson.length - 1);
     }
-    // ===================================================================
 
     let serviceAccount;
     try {
@@ -31,6 +28,7 @@ if (!admin.apps.length) {
 
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
+      storageBucket: 'byggpilot-v2.firebasestorage.app' // TILLAGD
     });
 
     console.log('[Firebase Admin]: SDK initierat framgångsrikt.');
@@ -43,4 +41,5 @@ if (!admin.apps.length) {
 
 export const auth = getAuth();
 export const firestore = getFirestore();
+export const storage = getStorage(); // TILLAGD
 export default admin;
