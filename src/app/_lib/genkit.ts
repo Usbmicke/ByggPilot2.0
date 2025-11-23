@@ -1,31 +1,38 @@
 
-import { genkit, configure } from '@genkit-ai/core';
-import { firebase } from '@genkit-ai/firebase/plugin'; // GULDSTANDARD v5.1: Korrekt import-sökväg
-import { googleAI } from '@genkit-ai/googleai/plugin'; // GULDSTANDARD v5.1: Korrekt import-sökväg
+// GULDSTANDARD v14: DEN STORA UPPDATERINGEN
+// Helt omskriven för att använda den moderna Genkit-arkitekturen baserat på användarens dokumentation.
+// Detta använder `genkit()` och det nya, enade `@genkit-ai/google-genai`-pluginet.
+
+import { genkit } from '@genkit-ai/core';
+import { firebase } from '@genkit-ai/firebase'; 
+// KORRIGERAD IMPORT: Använder det nya, enade google-genai-pluginet.
+import { googleAI } from '@genkit-ai/google-genai'; 
 import { z } from 'zod';
 
-/**
- * GULDSTANDARD v5.1: Centraliserad Genkit-initialisering.
- * Uppdaterad för att hantera de senaste ändringarna i Genkit-biblioteket.
- */
-export function initGenkit() {
-  if (genkit()?.plugins()?.some(p => p.name === 'google-ai')) {
-    console.log("[Genkit] Redan initialiserad. Skippar omkonfigurering.");
+declare global {
+  var __genkitInitialized: boolean | undefined;
+}
+
+// KORRIGERAD FUNKTION: Byt namn för tydlighet och för att undvika förvirring.
+export function ensureGenkitInitialized() {
+  if (global.__genkitInitialized) {
     return;
   }
 
-  console.log("[Genkit] Initialiserar Genkit för Guldstandard v5.1...");
+  console.log("[Genkit] Initialiserar Genkit för Guldstandard v14.0...");
 
-  configure({
+  // NY SYNTAX: Använder `genkit()`-anropet enligt den nya dokumentationen.
+  genkit({
     plugins: [
-      firebase(),
-      googleAI(),
+      firebase(), // Notera: Vissa plugins kan behöva anropas som funktioner.
+      googleAI(), // Anropar det nya googleAI-pluginet.
     ],
     logLevel: 'debug',
     enableTracingAndMetrics: true,
   });
   
-  console.log("[Genkit] Initialisering slutförd.");
+  global.__genkitInitialized = true;
+  console.log("[Genkit] Initialisering slutförd med den nya arkitekturen.");
 }
 
 

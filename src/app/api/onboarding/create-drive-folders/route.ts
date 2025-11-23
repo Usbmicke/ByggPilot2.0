@@ -1,67 +1,78 @@
 
-import { NextResponse, type NextRequest } from 'next/server';
-import { verifySession, getMyProfile, completeMyOnboarding } from '@/app/_lib/dal/dal';
+// GULDSTANDARD v15.0: SECURE API PROXY ROUTE
+import { NextRequest, NextResponse } from 'next/server';
+import { getVerifiedSession } from '@/app/_lib/session';
+import { dal } from '@/app/_lib/dal/dal';
 
-// GULDSTANDARD v5.0: Importera Genkit-flödet och 'run' direkt.
-// Webpack-konfigurationen i next.config.mjs säkerställer att detta fungerar
-// smidigt inom en enda `npm run dev`-process.
-import { run } from '@genkit-ai/flow';
-import { createOnboardingFolderStructureFlow } from '@/app/_lib/genkit/flows/onboarding';
-import { initGenkit } from '@/app/_lib/genkit';
+// ===================================================================
+// ENDPOINT: /api/onboarding/create-drive-folders
+// ===================================================================
+//
+// Denna API-route agerar som en säker proxy. Den validerar användarens
+// session, hämtar nödvändig information från databasen (via DAL),
+// och anropar sedan den separata Genkit-servern för att utföra den
+// tunga uppgiften att skapa en mappstruktur i Google Drive.
+//
+// ARKITEKTURPRINCIP: Next.js hanterar frontend och agerar som proxy.
+// Genkit hanterar all AI- och tung bakgrundslogik.
+//
+// ===================================================================
 
-// Kör Genkit-initieringen en gång när servern startar.
-initGenkit();
+export async function POST(req: NextRequest) {
+  console.log('[API /onboarding/create-drive-folders] Mottog begäran.');
 
-export async function POST(request: NextRequest) {
-  console.log("[API /create-drive-folders] Mottog POST-anrop (v3 - Enkel Process)");
+  const session = await getVerifiedSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Ogiltig session' }, { status: 401 });
+  }
+  console.log(`[API] Session verifierad för userId: ${session.uid}`);
 
   try {
-    // 1. Verifiera sessionen
-    const session = await verifySession(request.cookies.get('__session')?.value);
-    console.log(`[API] Session verifierad för userId: ${session.userId}`);
-
-    // 2. Hämta användarprofil för att få företagsnamn
-    const userProfile = await getMyProfile(session);
-    if (!userProfile || !userProfile.companyName) {
-      throw new Error("Kunde inte hitta användarprofil eller företagsnamn.");
+    // 1. Hämta företagsinformation från vår databas via DAL
+    const company = await dal.getCompanyByAdminId(session.uid);
+    if (!company) {
+      return NextResponse.json({ error: 'Företag hittades inte' }, { status: 404 });
     }
 
-    console.log(`[API] Anropar Genkit-flöde direkt för företag: ${userProfile.companyName}`);
+    const { id: companyId, name: companyName } = company;
+    console.log(`[API] Företagsdata hämtad för: ${companyName}`);
 
-    // 3. Kör Genkit-flödet direkt i samma process
-    const flowResult = await run(createOnboardingFolderStructureFlow, {
-        companyId: session.companyId,
-        companyName: userProfile.companyName,
+    // 2. Anropa Genkit-servern för att starta mappskapandet
+    // URL:en pekar till den lokala Genkit-servern under utveckling.
+    // I produktion måste detta vara den deployade Genkit-serverns URL.
+    const genkitServerUrl = process.env.GENKIT_SERVER_URL || 'http://127.0.0.1:3400';
+    
+    console.log(`[API] Anropar Genkit-server på: ${genkitServerUrl}`);
+
+    const response = await fetch(`${genkitServerUrl}/createOnboardingFolderStructure`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ companyId, companyName }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error(`[API] Fel från Genkit-server: ${response.status}`, errorBody);
+      throw new Error(`Genkit-servern svarade med status: ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    // 3. (Valfritt) Spara resultatet (t.ex. Drive-mappens ID) i vår databas
+    await dal.updateCompany(companyId, {
+      driveRootFolderId: result.output.driveRootFolderId,
+      driveRootFolderUrl: result.output.driveRootFolderUrl,
     });
+    console.log(`[API] Drive-information sparad för companyId: ${companyId}`);
 
-    const driveRootFolderId = flowResult.driveRootFolderId;
-    const driveRootFolderUrl = flowResult.driveRootFolderUrl;
+    return NextResponse.json({ success: true, ...result.output });
 
-    if (!driveRootFolderId) {
-      throw new Error("Inget driveRootFolderId mottogs från Genkit-flödet.");
-    }
-
-    console.log(`[API] Genkit-flöde slutfört. Mapp-ID: ${driveRootFolderId}`);
-
-    // 4. Spara resultatet i databasen via DAL
-    await completeMyOnboarding(session, driveRootFolderId);
-
-    console.log(`[API] Onboarding markerad som slutförd för userId: ${session.userId}`);
-
-    // 5. Returnera framgångsrikt svar
-    return NextResponse.json({
-      success: true,
-      message: 'Mappstruktur skapad och onboarding slutförd!',
-      driveFolderUrl: driveRootFolderUrl
-    }, { status: 200 });
-
-  } catch (error: any) {
-    if (error.message.includes('Unauthorized')) {
-      console.error("[API] Obehörig åtkomst:", error.message);
-      return NextResponse.json({ error: 'Obehörig' }, { status: 401 });
-    }
-
-    console.error(`[API] Internt serverfel i /create-drive-folders: ${error.message}`, error);
-    return NextResponse.json({ error: 'Kunde inte skapa mappstruktur.', details: error.message }, { status: 500 });
+  } catch (error) {
+    console.error('[API] Ett oväntat fel inträffade:', error);
+    return NextResponse.json({ error: 'Internt serverfel' }, { status: 500 });
   }
 }
