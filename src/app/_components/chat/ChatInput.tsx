@@ -1,76 +1,62 @@
 
 'use client';
 
-import { ArrowUpIcon } from '@heroicons/react/24/solid';
-import { ChangeEvent, KeyboardEvent } from 'react';
+import { PaperAirplaneIcon, StopCircleIcon } from '@heroicons/react/24/solid';
+import { ChangeEvent, FocusEventHandler } from 'react';
 
-// Props uppdaterade för att vara direkt kompatibla med useChat-hooken
+// GULDSTANDARD v5.0: Props förenklade för manuell hantering.
+// Onödig komplexitet borttagen.
 interface ChatInputProps {
   input: string;
-  handleInputChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
+  handleInputChange: (e: ChangeEvent<HTMLInputElement>) => void;
   isLoading: boolean;
+  onFocus: FocusEventHandler<HTMLInputElement>;
   onStop: () => void;
+  placeholder: string;
 }
 
-const ExpandingTextarea = ({ value, handleChange, isLoading }: {
-  value: string;
-  handleChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
-  isLoading: boolean;
-}) => {
-  return (
-    <textarea
-      name="message"
-      value={value}
-      onChange={handleChange}
-      placeholder={isLoading ? 'Tänker...' : 'Ställ en fråga till din co-pilot...'}
-      className="w-full bg-background-secondary rounded-lg py-3 pl-4 pr-12 border border-border-color focus:outline-none focus:ring-2 focus:ring-primary-500 transition-shadow resize-none"
-      disabled={isLoading}
-      rows={1}
-      maxLength={2000}
-      onInput={(e) => {
-        const target = e.target as HTMLTextAreaElement;
-        target.style.height = 'auto';
-        target.style.height = `${target.scrollHeight}px`;
-      }}
-      onKeyDown={(e: KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          const form = e.currentTarget.closest('form');
-          form?.requestSubmit();
-        }
-      }}
-    />
-  );
-};
+export default function ChatInput({
+  input,
+  handleInputChange,
+  isLoading,
+  onFocus,
+  onStop,
+  placeholder,
+}: ChatInputProps) {
 
-export default function ChatInput({ input, handleInputChange, isLoading, onStop }: ChatInputProps) {
   return (
-    <div className="relative">
-        <ExpandingTextarea 
-            value={input}
-            handleChange={handleInputChange} // handleInputChange passas nu direkt
-            isLoading={isLoading}
-        />
-      
-      {isLoading ? (
-        <button 
-            type="button" 
+    <div className="relative flex items-center">
+      <input
+        type="text"
+        value={input}
+        onChange={handleInputChange}
+        onFocus={onFocus}
+        disabled={isLoading}
+        placeholder={isLoading ? "Tänker..." : placeholder}
+        className="w-full bg-[#3A3A3C] text-gray-200 border-none rounded-full py-3 pl-5 pr-20 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-shadow duration-200"
+        autoComplete="off"
+      />
+      <div className="absolute right-2 top-1/2 -translate-y-1/2">
+        {isLoading ? (
+          <button
+            type="button"
             onClick={onStop}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors"
+            className="p-2 text-gray-400 hover:text-white"
             aria-label="Stoppa generering"
-        >
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z"></path></svg>
-        </button>
-      ) : (
-        <button 
+          >
+            <StopCircleIcon className="h-7 w-7" />
+          </button>
+        ) : (
+          <button
             type="submit"
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-primary-500 text-white disabled:bg-gray-400 hover:bg-primary-600 transition-colors"
-            disabled={!input?.trim()}
+            disabled={!input.trim()}
+            className="p-2 text-gray-400 disabled:text-gray-600 enabled:hover:text-white enabled:text-indigo-400 transition-colors"
             aria-label="Skicka meddelande"
-        >
-            <ArrowUpIcon className="h-5 w-5" />
-        </button>
-      )}
+          >
+            <PaperAirplaneIcon className="h-6 w-6" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

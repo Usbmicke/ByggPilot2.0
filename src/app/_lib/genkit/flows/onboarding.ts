@@ -1,19 +1,17 @@
 
-import { defineFlow, run } from '@genkit-ai/flow';
+import { defineFlow } from '@genkit-ai/flow';
 import { z } from 'zod';
-import { google } from 'googleapis';
-import admin from 'firebase-admin';
 import { getGoogleDriveClient } from '@/app/_lib/config/google-drive-client';
 
 // ====================================================================
-// DEFINIERA FLÖDET OCH DESS INPUT/OUTPUT
+// FLÖDESDEFINITION: SKAPA ONBOARDING-MAPPSTRUKTUR
 // ====================================================================
 
 export const createOnboardingFolderStructureFlow = defineFlow(
   {
     name: 'createOnboardingFolderStructure',
     inputSchema: z.object({
-      companyId: z.string(),
+      companyId: z.string(), // Reserverad för framtida bruk
       companyName: z.string(),
     }),
     outputSchema: z.object({
@@ -24,7 +22,8 @@ export const createOnboardingFolderStructureFlow = defineFlow(
   async (input) => {
     console.log(`[Genkit Flow] Startar mappskapande för: ${input.companyName}`);
 
-    const drive = await getGoogleDriveClient();
+    // Hämta den autentiserade Google Drive-klienten (synkront anrop).
+    const drive = getGoogleDriveClient();
 
     // 1. Skapa rotmappen
     const rootFolderName = `ByggPilot - ${input.companyName}`;
@@ -38,7 +37,9 @@ export const createOnboardingFolderStructureFlow = defineFlow(
     });
 
     const rootFolderId = rootFolder.data.id;
-    if (!rootFolderId) {
+    const rootFolderUrl = rootFolder.data.webViewLink;
+
+    if (!rootFolderId || !rootFolderUrl) {
       throw new Error('Kunde inte skapa rotmapp i Google Drive.');
     }
 
@@ -57,13 +58,12 @@ export const createOnboardingFolderStructureFlow = defineFlow(
     ];
 
     for (const folderName of subfolders) {
-      const subfolderMetadata = {
-        name: folderName,
-        mimeType: 'application/vnd.google-apps.folder',
-        parents: [rootFolderId],
-      };
       await drive.files.create({
-        requestBody: subfolderMetadata,
+        requestBody: {
+          name: folderName,
+          mimeType: 'application/vnd.google-apps.folder',
+          parents: [rootFolderId],
+        },
         fields: 'id',
       });
       console.log(`[Genkit Flow] Skapade undermapp: ${folderName}`);
@@ -74,7 +74,7 @@ export const createOnboardingFolderStructureFlow = defineFlow(
     // 3. Returnera resultatet
     return {
       driveRootFolderId: rootFolderId,
-      driveRootFolderUrl: rootFolder.data.webViewLink || '',
+      driveRootFolderUrl: rootFolderUrl,
     };
   }
 );
