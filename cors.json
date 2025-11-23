@@ -1,0 +1,9 @@
+
+[
+  {
+    "origin": ["https://3001-firebase-byggpilot4-1761576395592.cluster-ombtxv25tbd6yrjpp3lukp6zhc.cloudworkstations.dev"],
+    "method": ["GET", "PUT", "POST", "DELETE"],
+    "responseHeader": ["Content-Type", "Authorization", "Origin"],
+    "maxAgeSeconds": 3600
+  }
+]
