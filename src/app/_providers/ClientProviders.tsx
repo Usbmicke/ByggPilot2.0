@@ -2,18 +2,15 @@
 'use client';
 
 import React, { ReactNode } from 'react';
-import { AuthProvider } from '@/app/_lib/context/AuthContext';
 
 /**
- * ClientProviders är en samlingskomponent för alla globala klient-sidans providers.
- * Genom att placera dem här hålls rotlayouten ren och fokuserad.
+ * GULDSTANDARD v15.0: Förenklad Client Provider
+ * Denna komponent finns kvar som en central plats för framtida
+ * klient-specifika providers (t.ex. ThemeProvider, SWRConfig, etc.),
+ * men den hanterar inte längre autentisering.
  */
 export function ClientProviders({ children }: { children: ReactNode }) {
-  return (
-    // AuthProvider innehåller nu ALL autentiseringslogik,
-    // inklusive synkronisering med Firebase Auth och server-sessioner.
-    <AuthProvider>
-      {children}
-    </AuthProvider>
-  );
+  // AuthProvider är borttagen. Autentisering hanteras nu av server-side sessions,
+  // middleware och den klient-sidiga `useUser` hooken.
+  return <>{children}</>;
 }
