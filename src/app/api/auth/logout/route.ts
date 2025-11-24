@@ -1,31 +1,29 @@
 
-import { NextResponse } from 'next/server';
+// GULDSTANDARD v15.0: Säker Utloggnings-API-Route
+import { NextRequest, NextResponse } from 'next/server';
+import { getVerifiedSession } from '@/app/_lib/session';
 
-// =======================================================================
-//  API ENDPOINT: Logga ut (/api/auth/logout)
-//  (VERSION 2.0 - KORRIGERAD COOKIE-NAMN)
-// =======================================================================
-
-export async function POST() {
+/**
+ * ENDPOINT: /api/auth/logout
+ * METOD: POST
+ * 
+ * Hanterar användarutloggning genom att förstöra den krypterade server-sessionen.
+ */
+export async function POST(req: NextRequest) {
   try {
-    // KORRIGERING: Använder det korrekta cookie-namnet '__session'
-    // Detta säkerställer att vi raderar rätt cookie och loggar ut användaren.
-    const options = {
-      name: '__session', // Matchar nu middleware och session-skapande
-      value: '',
-      maxAge: -1, 
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
-      sameSite: 'lax' as const,
-    };
+    const session = await getVerifiedSession();
+    const userId = session.user?.uid;
 
-    const response = NextResponse.json({ success: true, message: 'Logged out successfully' });
-    response.cookies.set(options);
-    return response;
+    // Förstör sessionen och tar bort cookien från webbläsaren.
+    session.destroy();
 
-  } catch (error: any) {
-    console.error('Session Logout Error:', error);
-    return NextResponse.json({ error: 'Failed to log out' }, { status: 500 });
+    console.log(`[API /auth/logout] Användare ${userId || 'N/A'} loggade ut. Session förstörd.`);
+
+    // Skickar ett svar som indikerar att klienten kan rensa sitt state och omdirigera.
+    return NextResponse.json({ success: true });
+
+  } catch (error) {
+    console.error('[API /auth/logout] Utloggningsfel:', error);
+    return NextResponse.json({ error: 'Logout failed' }, { status: 500 });
   }
 }
