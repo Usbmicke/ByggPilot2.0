@@ -1,0 +1,1 @@
+Läs @AI_INSTRUCTIONS.md och @ARCHITECTURE.md. Jag vill att du följer dessa regler strikt för att undvika byggfel med Next.js 16 och Genkit. Bekräfta att du läst bägge dokument och förstår hela artikekturen.
