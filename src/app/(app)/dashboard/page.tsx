@@ -1,4 +1,4 @@
-'''// src/app/(app)/dashboard/page.tsx
+// src/app/(app)/dashboard/page.tsx
 import { DashboardWidget } from '@/widgets/DashboardWidget';
 
 /**
@@ -9,4 +9,3 @@ import { DashboardWidget } from '@/widgets/DashboardWidget';
 export default function DashboardPage() {
   return <DashboardWidget />;
 }
-'''

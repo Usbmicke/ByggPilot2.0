@@ -1,30 +1,32 @@
 
-import Image from 'next/image';
-import { AuthForm } from '@/app/_components/auth/AuthForm';
+import { LoginButton } from "@/features/auth/LoginButton";
 
-/**
- * Landningssidan för ByggPilot.
- * Denna sida är nu en ren presentationskomponent som endast visar inloggningsformuläret.
- * All omdirigeringslogik för redan inloggade användare hanteras nu exklusivt
- * av server-sidan via middleware, vilket är säkrare och effektivare.
- */
+// This is the main public landing page.
+// Its primary purpose is to present the login option to the user.
+
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#111113] flex flex-col items-center justify-center text-white">
-      <div className="flex flex-col items-center gap-8 p-4 w-full max-w-sm">
-        <Image
-          src="/images/byggpilotlogga1.png"
-          alt="ByggPilot Logotyp"
-          width={120}
-          height={120}
-          className="rounded-2xl shadow-lg"
-          priority
-        />
-        <div className="text-center">
-          <h1 className="text-4xl font-bold">ByggPilot</h1>
-          <p className="text-neutral-400 mt-2">Logga in för att fortsätta</p>
-        </div>
-        <AuthForm />
+    <div className="min-h-screen bg-grid-gray-800/[0.2] relative flex items-center justify-center bg-gray-900">
+      {/* Radial gradient for the container to give a faded look */}
+      <div className="absolute pointer-events-none inset-0 flex items-center justify-center bg-gray-900 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]"></div>
+      
+      <div className="relative z-10 flex flex-col items-center space-y-8">
+        <header className="text-center">
+          <h1 className="text-5xl md:text-7xl font-bold text-white leading-tight tracking-tighter">
+            Välkommen till ByggPilot
+          </h1>
+          <p className="mt-4 text-lg text-gray-400 max-w-2xl">
+            Din digitala kollega i byggbranschen. Automatisera administration, från offert till faktura, och fokusera på det du gör bäst.
+          </p>
+        </header>
+
+        <main>
+          <LoginButton />
+        </main>
+
+        <footer className="text-center text-gray-500">
+            <p>Genom att logga in godkänner du våra <a href="/anvandarvillkor" className="underline hover:text-white">användarvillkor</a> och <a href="/integritetspolicy" className="underline hover:text-white">integritetspolicy</a>.</p>
+        </footer>
       </div>
     </div>
   );

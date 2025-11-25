@@ -1,4 +1,4 @@
-'''// src/app/api/[[...genkit]]/route.ts
+// src/app/api/[[...genkit]]/route.ts
 /**
  * ===================================================================================
  * 🔥 GENKIT PROXY (GOLD STANDARD v2025.11) 🔥
@@ -14,13 +14,15 @@
  * ===================================================================================
  */
 
-const GENKIT_API_HOST = process.env.GENKIT_API_HOST || 'http://127.0.0.1:4001';
+const GENKIT_API_HOST = process.env.GENKIT_API_HOST || 'http://127.0.0.1:3400';
 
 async function handler(
   request: Request,
-  { params }: { params: { genkit: string[] } }
+  // The 'params' object is a Promise in this Next.js version. We must await it.
+  { params }: { params: Promise<{ genkit: string[] }> }
 ) {
-  const targetUrl = `${GENKIT_API_HOST}/${params.genkit.join('/')}`;
+  const resolvedParams = await params;
+  const targetUrl = `${GENKIT_API_HOST}/${resolvedParams.genkit.join('/')}`;
 
   // Forward the request to the Genkit server, including the body for streaming.
   const response = await fetch(targetUrl, {
@@ -44,4 +46,3 @@ export {
   handler as PATCH,
   handler as OPTIONS,
 };
-'''
