@@ -6,7 +6,9 @@
     "node": ">=20.10.0"
   },
   "scripts": {
-    "dev": "concurrently \"next dev\" \"npx genkit start --port 3400\"",
+    "dev": "concurrently -k -n \"NEXT,GENKIT\" -c \"blue,magenta\" \"npm:dev:next\" \"npm:dev:genkit\"",
+    "dev:next": "next dev -p 3000",
+    "dev:genkit": "npx genkit start --port 3400 --host 127.0.0.1 --entrypoint src/genkit/flows/auth.ts",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -33,7 +35,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "autoprefixer": "latest",
-    "concurrently": "latest",
+    "concurrently": "^9.2.1",
     "eslint": "^9.0.0",
     "eslint-config-next": "^16.0.0",
     "genkit": "^1.24.0",
