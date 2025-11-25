@@ -23,10 +23,31 @@
         "name": "next"
       }
     ],
-    "baseUrl": "src",
+    "baseUrl": ".",
     "paths": {
       "@/*": [
-        "*"
+        "src/*"
+      ],
+      "@/entities/*": [
+        "src/entities/*"
+      ],
+      "@/features/*": [
+        "src/features/*"
+      ],
+      "@/genkit/*": [
+        "src/genkit/*"
+      ],
+      "@/lib/*": [
+        "src/lib/*"
+      ],
+      "@/dal/*": [
+        "src/lib/dal/*"
+      ],
+      "@/widgets/*": [
+        "src/widgets/*"
+      ],
+      "@/shared/*": [
+        "src/shared/*"
       ]
     }
   },

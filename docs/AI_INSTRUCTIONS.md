@@ -1,4 +1,4 @@
-# BYGGPILOT AI MASTER INSTRUCTIONS (v2025.11 - Genkit Native)
+'''# BYGGPILOT AI MASTER INSTRUCTIONS (v2025.11 - Genkit Native)
 
 ## 1. KÄRNFILOSOFI (EXIT READY)
 Vi bygger en **"Zero Trust"**-applikation. Next.js (Frontend) är endast ett skal. All intelligens, säkerhet och datahantering äger rum i **Genkit** (Backend).
@@ -31,4 +31,4 @@ Vi bygger en **"Zero Trust"**-applikation. Next.js (Frontend) är endast ett ska
 ## 3. ARBETSFLÖDE FÖR DIG (AGENTEN)
 1.  **Läs Kartan:** Innan du kodar, läs `ARCHITECTURE.md` för att förstå proxy-mönstret.
 2.  **Inga Gissningar:** Hitta inte på filvägar. Om du är osäker på var en fil ligger, fråga eller kör `ls`.
-3.  **Code Quality:** Använd strikt TypeScript och Zod-validering på all data in/ut ur Genkit.
+3.  **Code Quality:** Använd strikt TypeScript och Zod-validering på all data in/ut ur Genkit.'''
