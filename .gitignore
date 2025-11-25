@@ -1,21 +1,48 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Beroenden
+# Dependencies
 /node_modules
+/.pnp
+.pnp.js
 
-# Bygg-output
+# Testing
+/coverage
+
+# Next.js
 /.next/
 /out/
 
-# Loggar
+# Production
+/build
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Miljövariabler (HEMLIGHETER - Ladda ALDRIG upp dessa!)
-.env
+# Local Environment Variables
 .env.local
-.env.production
-.env.development
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Systemfiler
-.DS_Store
+# Firebase
+*.firebase
+*.firebaserc
+firebase.json
+**/functions/node_modules
+
+# Genkit
+.genkit/
+.genkit-cache/
+
+# IDE files
+.vscode/
+.idea/
+
+# Custom old code archive
+/_byggpilotold/
