@@ -1,33 +1,44 @@
 {
   "name": "byggpilot-app",
-  "version": "0.1.0",
+  "version": "2.0.0",
   "private": true,
+  "engines": {
+    "node": ">=20.10.0"
+  },
   "scripts": {
-    "dev": "next dev",
+    "dev": "concurrently \"next dev\" \"npx genkit start --port 3400\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
-    "@ai-sdk/google": "^0.0.12",
-    "@ai-sdk/react": "^3.0.0",
-    "firebase": "^10.12.0",
-    "lucide-react": "^0.378.0",
-    "next": "14.2.3",
-    "react": "^18",
-    "react-dom": "^18",
-    "tailwind-merge": "^2.3.0",
-    "zod": "^3.23.8"
+    "@genkit-ai/firebase": "latest",
+    "@genkit-ai/flow": "latest",
+    "@genkit-ai/google-genai": "latest",
+    "@radix-ui/react-slot": "^1.2.4",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "latest",
+    "firebase": "^11.0.0",
+    "firebase-admin": "^13.0.0",
+    "lucide-react": "latest",
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "latest",
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "autoprefixer": "^10.4.19",
-    "eslint": "^8",
-    "eslint-config-next": "14.2.3",
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "@types/node": "^20.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "latest",
+    "concurrently": "latest",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^16.0.0",
+    "genkit": "^1.24.0",
+    "postcss": "latest",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.7.0"
   }
 }

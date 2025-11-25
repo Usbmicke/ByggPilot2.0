@@ -42,3 +42,49 @@ const createUserProfileFlow = defineFlow({
 }, async (profileData) => {
   return await createUserProfile(profileData);
 });
+
+/**
+ * 🔥 [NEW] Onboarding Flow to create Google Drive structure. 🔥
+ * This flow is called from the client-side after the user logs in
+ * and clicks the "Create Structure" button on the onboarding page.
+ */
+export const onboardingFlow = defineFlow({
+  name: 'onboardingFlow',
+  // The client sends a payload like { companyName: '...' }
+  inputSchema: z.object({
+    companyName: z.string(),
+  }),
+  // This endpoint is protected. The `firebaseAuth` policy validates the
+  // user's ID token from the `Authorization` header.
+  authPolicy: firebaseAuth(async (user) => {}),
+}, async (payload) => {
+  try {
+    // Log receipt of the request, including the authenticated user's UID
+    console.log(`[onboardingFlow] Received request for company: "${payload.companyName}"`);
+
+    // TODO: Implement the actual Google Drive folder creation logic here.
+    // This will involve using the Google Drive API, likely with user credentials
+    // or a service account. For now, we simulate a successful operation.
+
+    const simulatedRootFolderId = '1a2b3c-simulated-folder-id-xyz';
+
+    console.log(`[onboardingFlow] Simulated Google Drive structure creation was successful.`);
+
+    // Return a valid JSON response indicating success.
+    return {
+      success: true,
+      message: `Successfully created folder structure for ${payload.companyName}.`,
+      rootFolderId: simulatedRootFolderId,
+    };
+  } catch (error) {
+    console.error('[onboardingFlow] An error occurred while creating the Google Drive structure:', error);
+    
+    // IMPORTANT: Always return a valid JSON object, even in case of an error.
+    // This prevents the frontend from crashing.
+    return {
+      success: false,
+      message: 'An unexpected error occurred on the server.',
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+});

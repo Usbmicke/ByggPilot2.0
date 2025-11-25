@@ -1,8 +1,8 @@
-'''// src/lib/genkit/flows.ts
+// src/lib/genkit/flows.ts
 'use client';
 
 import { getAuth } from 'firebase/auth';
-import { app } from '@/lib/firebase/client'; // Assuming you have this client config
+import { app } from '@/lib/config/firebase-client'; // Assuming you have this client config
 
 const auth = getAuth(app);
 
@@ -59,4 +59,3 @@ export async function createGoogleDriveStructure(payload: any): Promise<any> {
     throw error;
   }
 }
-'''
