@@ -1,5 +1,6 @@
+
 {
   "projects": {
-    "default": "byggpilot-v2"
+    "default": "byggpilot-test"
   }
 }
