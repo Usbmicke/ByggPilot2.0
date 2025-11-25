@@ -1,6 +1,7 @@
-
 {
   "projects": {
-    "default": "byggpilot-test"
-  }
+    "default": "byggpilot-v2"
+  },
+  "targets": {},
+  "etags": {}
 }

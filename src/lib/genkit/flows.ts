@@ -43,7 +43,8 @@ export async function createGoogleDriveStructure(payload: any): Promise<any> {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${idToken}`,
       },
-      body: JSON.stringify({ data: payload }), // Ensure payload is nested under 'data'
+      // The payload is now sent directly, matching the server's expected schema.
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
