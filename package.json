@@ -6,9 +6,9 @@
     "node": ">=20.10.0"
   },
   "scripts": {
-    "dev": "concurrently -k -n \"NEXT,GENKIT\" -c \"blue,magenta\" \"npm:dev:next\" \"npm:dev:genkit\"",
+    "dev": "concurrently \"next dev\" \"genkit start --port 3400\"",
     "dev:next": "next dev -p 3000",
-    "dev:genkit": "npx genkit start --port 3400 --host 127.0.0.1 --entrypoint src/genkit/flows/auth.ts",
+    "dev:genkit": "genkit start",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

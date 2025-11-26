@@ -12,6 +12,14 @@ const nextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/genkit/:path*',
+        destination: 'http://localhost:3400/:path*',
+      },
+    ]
+  }
 };
 
 export default nextConfig;
