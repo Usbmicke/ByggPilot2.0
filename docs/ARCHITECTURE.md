@@ -12,28 +12,50 @@ This structure is based on Feature-Sliced Design (FSD) principles, adapted for a
 
 ```plaintext
 ByggPilot-v2/
-├── .github/                    # CI/CD workflows (Automated testing, linting, deployment)
-├── .vscode/                    # Shared editor settings for consistent formatting
-├── docs/                       # "Deal Room" documentation (Architecture, API, Onboarding)
-├── infra/                      # Infrastructure as Code (Terraform/Scripts for GCP setup)
-├── public/                     # Static assets (Images, fonts, robots.txt)
-├── scripts/                    # Maintenance scripts (Database seeding, local dev setup)
-├── src/                        # Application Source Code (The Core)
-│   ├── app/                    # Next.js App Router (Routing & Layouts ONLY)
-│   ├── entities/               # Business entities (Project, User, Invoice models/types)
-│   ├── features/               # Complex, user-facing features (Quote Engine, Receipt Scanner)
-│   ├── genkit/                 # The AI Brain (Flows, Prompts, Tools) - Server-side only
-│   ├── lib/                    # Core Libraries & Adapters (DAL, Logger, API Clients)
-│   ├── shared/                 # Reusable, non-business logic (UI components, utils)
-│   └── widgets/                # Composed UI blocks (DashboardWidget, ProjectListWidget)
-├── tests/                      # End-to-End tests (Playwright)
-├── .env.example                # Environment variable template (No secrets!)
-├── .firebaserc                 # Firebase project aliases
-├── firebase.json               # Firebase configuration (Hosting, Functions, Firestore)
-├── genkit.config.ts            # Genkit AI configuration
-├── next.config.mjs             # Next.js configuration
-├── package.json                # Dependencies and scripts
-└── tsconfig.json               # TypeScript configuration (Strict mode enabled)
+├── .firebaserc                 # Firebase projekt-alias
+├── .github/                    # CI/CD-arbetsflöden (ska skapas)
+├── .vscode/                    # Delade editor-inställningar
+├── docs/                       # "Deal Room" dokumentation
+│   ├── AI_INSTRUCTIONS.md      # Instruktioner för AI-samarbete
+│   ├── ARCHITECTURE.md         # Denna arkitektoniska ritning
+│   ├── WORKFLOW_GUIDE.md       # Guide för utvecklingsflöde
+│   └── viktigt.md              # Tidigare viktiga anteckningar
+├── infra/                      # Infrastructure as Code (ska skapas)
+├── public/                     # Statiska tillgångar (Bilder, typsnitt)
+│   ├── favicon.ico
+│   └── images/
+│       ├── byggpilotlogga1.png
+│       └── micke.jpg
+├── src/                        # Applikationens Källkod (Kärnan)
+│   ├── app/                    # Next.js App Router (ENBART Routing & Layouter)
+│   │   ├── (auth)/             # Ruttgrupp för Autentiseringsflöden
+│   │   │   ├── onboarding/
+│   │   │   │   └── page.tsx    # Sida för att hantera skapande av Drive-mappar etc.
+│   │   │   └── layout.tsx      # Layout för auth-sidor (t.ex. centrerad, ingen sidebar)
+│   │   ├── (main)/             # Ruttgrupp för Huvudapplikationen (Skyddad)
+│   │   │   ├── dashboard/
+│   │   │   │   └── page.tsx    # Komponerar widgets som <DashboardWidget />
+│   │   │   └── layout.tsx      # Huvudlayout med sidebar, header etc.
+│   │   ├── (public)/           # Ruttgrupp för publika sidor
+│   │   │   └── page.tsx        # Landnings- & Inloggningssida
+│   │   ├── api/                # Next.js API-rutter (Bron till Hjärnan)
+│   │   │   ├── [[...genkit]]/  # Genkit reflektions-API
+│   │   │   │   └── route.ts
+│   │   │   └── chat/           # Framtida endpoint för chatt-streaming
+│   │   │       └── route.ts
+│   │   ├── globals.css         # Globala CSS-stilar
+│   │   └── layout.tsx          # Rot-layout (Providers: Theme, AuthContext)
+│   ├── entities/               # Affärsentiteter (Modeller & grundläggande UI)
+│   │   ├── project/
+│   │   │   └── model/          # Typer och Zod-scheman för Projekt
+│   │   └── user/
+│   │       └── model/          # Typer och Zod-scheman för Användare
+│   ├── features/               # Komplexa, användar-interaktiva funktioner
+│   │   ├── ProjectList.tsx     # Feature för att lista projekt (används i DashboardWidget)
+│   │   └── auth/
+│   │       └── LoginButton.tsx # UI och logik för inloggningsknappen
+│   ├── genkit/                 # AI-Hjärnan (Endast server-sida)
+│   │   ├── flows/              # "Tänkande" Processer
 ```
 
 ## 3. "The Holy Flows" (Approved Data Flows)

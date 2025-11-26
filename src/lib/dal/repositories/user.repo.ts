@@ -1,17 +1,20 @@
 
-import { firestoreDb } from "@/lib/config/firebase-admin";
-
-// This is the production-ready Data Access Layer (DAL) for users.
-// It interacts directly with Firestore via the initialized admin SDK.
+import { firestore } from "@/lib/config/firebase-admin";
 
 const USERS_COLLECTION = 'users';
 
-interface User {
+// Main User interface representing the document in Firestore
+export interface User {
   uid: string;
   email: string;
   name?: string;
   avatarUrl?: string;
-  createdAt: FirebaseFirestore.FieldValue;
+  createdAt: FirebaseFirestore.Timestamp;
+  
+  // Onboarding specific fields
+  hasOnboarded: boolean;
+  companyName?: string;
+  logoUrl?: string;
 }
 
 /**
@@ -19,45 +22,44 @@ interface User {
  * @param uid The user's unique ID.
  * @returns The user data object if found, otherwise null.
  */
-export async function getUserById(uid: string): Promise<any | null> {
-  console.log(`[DAL] Searching for user with UID: ${uid} in Firestore.`);
-  try {
-    const userRef = firestoreDb.collection(USERS_COLLECTION).doc(uid);
-    const doc = await userRef.get();
-
-    if (doc.exists) {
-      console.log(`[DAL] User found in Firestore:`, doc.data());
-      return doc.data();
-    }
-
-    console.log(`[DAL] User not found in Firestore.`);
+export async function getUserById(uid: string): Promise<User | null> {
+  const doc = await firestore.collection(USERS_COLLECTION).doc(uid).get();
+  if (!doc.exists) {
     return null;
-  } catch (error) {
-    console.error(`[DAL] Error fetching user by ID: ${uid}`, error);
-    throw new Error('Failed to get user from database.');
   }
+  return doc.data() as User;
 }
 
 /**
- * Creates a new user profile in the Firestore database.
- * @param profileData The data for the new user profile.
+ * Creates a new user profile during initial sign-up.
+ * Sets `hasOnboarded` to `false` by default.
+ * @param profileData The essential data for the new user.
  * @returns The newly created user object.
  */
-export async function createUserProfile(profileData: { uid: string; email: string; name?: string; avatarUrl?: string; }): Promise<any> {
-  console.log(`[DAL] Creating new user in Firestore with data:`, profileData);
-  try {
-    const userRef = firestoreDb.collection(USERS_COLLECTION).doc(profileData.uid);
-    
-    const newUser = {
-      ...profileData,
-      createdAt: new Date(),
-    };
+export async function createUserProfile(profileData: { uid: string; email: string; name?: string; avatarUrl?: string; }): Promise<User> {
+  const userRef = firestore.collection(USERS_COLLECTION).doc(profileData.uid);
+  
+  const newUser: User = {
+    ...profileData,
+    hasOnboarded: false, // Default value for new users
+    createdAt: new Date(),
+  };
 
-    await userRef.set(newUser);
-    console.log(`[DAL] User created successfully in Firestore.`);
-    return newUser;
-  } catch (error) {
-    console.error(`[DAL] Error creating user profile:`, error);
-    throw new Error('Failed to create user profile in database.');
-  }
+  await userRef.set(newUser);
+  return newUser;
+}
+
+/**
+ * Updates a user's profile, typically after completing the onboarding process.
+ * @param uid The user's unique ID.
+ * @param dataToUpdate The onboarding data to update.
+ * @returns A promise that resolves when the update is complete.
+ */
+export async function completeOnboarding(uid: string, dataToUpdate: { companyName: string; logoUrl: string; }) {
+  const userRef = firestore.collection(USERS_COLLECTION).doc(uid);
+  
+  await userRef.update({
+    ...dataToUpdate,
+    hasOnboarded: true,
+  });
 }

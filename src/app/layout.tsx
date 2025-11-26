@@ -1,24 +1,23 @@
-// src/app/layout.tsx
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
+import { Providers } from "@/app/providers";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import AuthHandler from "./AuthHandler"; // Import the new handler
 
-export const metadata: Metadata = {
-  title: 'ByggPilot',
-  description: 'Din digitala kollega i byggbranschen',
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata = {
+  title: "ByggPilot",
+  description: "AI-driven development assistant",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="sv">
+    <html lang="en">
       <body className={inter.className}>
-        {children}
+        <Providers>
+          <AuthHandler>{children}</AuthHandler>
+        </Providers>
       </body>
     </html>
   );

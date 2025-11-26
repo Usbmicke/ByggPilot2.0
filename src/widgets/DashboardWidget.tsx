@@ -1,4 +1,4 @@
-''''use client';
+'use client';
 
 import { ProjectList } from '@/features/ProjectList';
 import { Button } from '@/shared/ui/button';
@@ -23,4 +23,3 @@ export function DashboardWidget() {
     </div>
   );
 }
-'''

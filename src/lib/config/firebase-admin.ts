@@ -29,5 +29,5 @@ if (!admin.apps.length) {
 }
 
 // Export the initialized services to be used throughout the backend (DAL, Genkit tools, etc.).
-export const firestoreDb = admin.firestore();
-export const firebaseAuthAdmin = admin.auth();
+export const firestore = admin.firestore();
+export const auth = admin.auth();

@@ -1,1 +1,1 @@
-Läs @AI_INSTRUCTIONS.md och @ARCHITECTURE.md, de ligger i rot mappen "docs". Jag vill att du följer dessa regler strikt för att undvika byggfel med Next.js 16 och Genkit. Bekräfta att du läst bägge dokument och förstår hela artikekturen.
+Läs @AI_INSTRUCTIONS.md och @ARCHITECTURE.md, de ligger i rot mappen "docs". Jag vill att du följer dessa regler strikt för att undvika byggfel med Next.js 16 och Genkit. Bekräfta att du läst bägge dokument och förstår hela artikekturen. Du skapar ALDRIG en ny fil utan att ha stenkoll på mapp och filstrukturen först.

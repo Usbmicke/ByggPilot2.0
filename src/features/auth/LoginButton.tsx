@@ -1,14 +1,25 @@
-
-'use client';
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { auth } from '@/lib/config/firebase-client';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { auth } from '@/lib/firebase/client'; 
+import { runFlow } from '@genkit-ai/flow/client';
+import { onboardingFlow } from '@/genkit/flows/onboardingFlow';
 import { Button } from '@/shared/ui/button';
 
-// This component handles the entire client-side login flow.
-export function LoginButton() {
+// Definiera alla nödvändiga scopes
+const GOOGLE_SCOPES = [
+  'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/gmail.compose',
+  'https://www.googleapis.com/auth/gmail.send',
+  'https://www.googleapis.com/auth/spreadsheets',
+  'https://www.googleapis.com/auth/documents',
+  'https://www.googleapis.com/auth/contacts.readonly',
+  'https://www.googleapis.com/auth/drive.file', // För att skapa mappar/filer
+  'https://www.googleapis.com/auth/tasks', 
+];
+
+export default function LoginButton() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,60 +28,42 @@ export function LoginButton() {
     setIsLoading(true);
     setError(null);
 
+    const provider = new GoogleAuthProvider();
+    // Lägg till alla scopes till providern
+    GOOGLE_SCOPES.forEach(scope => provider.addScope(scope));
+
     try {
-      // 1. Trigger Google Sign-in Popup
-      const provider = new GoogleAuthProvider();
-      // Add all the required scopes for Google Workspace APIs
-      provider.addScope('https://www.googleapis.com/auth/calendar');
-      provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
-      provider.addScope('https://www.googleapis.com/auth/gmail.compose');
-      provider.addScope('https://www.googleapis.com/auth/gmail.send');
-      provider.addScope('https://www.googleapis.com/auth/drive');
-      provider.addScope('https://www.googleapis.com/auth/spreadsheets');
-      provider.addScope('https://www.googleapis.com/auth/documents');
-      provider.addScope('https://www.googleapis.com/auth/contacts.readonly');
-      provider.addScope('https://www.googleapis.com/auth/tasks');
-      
+      // 1. Logga in med Google
       const result = await signInWithPopup(auth, provider);
-      const user = result.user;
+      const idToken = await result.user.getIdToken();
 
-      if (user) {
-        // 2. Get the Firebase ID token
-        const idToken = await user.getIdToken(true);
+      // 2. Kör onboardingFlow för att se om användaren är ny
+      const { isNew } = await runFlow(onboardingFlow, { idToken });
 
-        // 3. Send the token to our Genkit backend to create a session
-        const response = await fetch('/api/genkit/flows/userSessionLogin', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${idToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({}), // Genkit expects a body
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to create session.');
-        }
-
-        // 4. On success, redirect to the onboarding page
+      // 3. Omdirigera baserat på svar
+      if (isNew) {
         router.push('/onboarding');
       } else {
-        throw new Error('Google sign-in failed. Please try again.');
+        router.push('/dashboard');
       }
+
     } catch (err: any) {
-      console.error("Login failed:", err);
-      setError(err.message || 'An unknown error occurred.');
+      console.error("Login Error:", err);
+      setError('Inloggningen misslyckades. Försök igen.');
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <Button onClick={handleLogin} disabled={isLoading} size="lg">
+    <div className="flex flex-col items-center">
+      <Button 
+        onClick={handleLogin} 
+        disabled={isLoading}
+        className="w-full bg-brand hover:bg-brand-light text-white font-bold py-3 px-4 rounded-lg shadow-lg transition duration-300 ease-in-out transform hover:scale-105"
+      >
         {isLoading ? 'Loggar in...' : 'Logga in med Google'}
       </Button>
-      {error && <p className="text-red-500 text-sm">{error}</p>}
+      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
     </div>
   );
 }
