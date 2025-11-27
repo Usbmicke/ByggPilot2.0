@@ -1,0 +1,64 @@
+{
+  "extends": "next/core-web-vitals",
+  "rules": {
+    // Detta är regeln som förhindrar server-kod från att läcka in i klienten.
+    "no-restricted-imports": [
+      "error",
+      {
+        // Vi definierar vilka sökvägar (patterns) denna regel ska gälla för.
+        "patterns": [
+          {
+            "group": [
+              // Förbjud dessa två moduler...
+              "firebase-admin",
+              "server-only"
+            ],
+            // ...i alla filer inom dessa klient-specifika kataloger.
+            "message": "Server-side modules (firebase-admin, server-only) are not allowed in client-side code.",
+            "allowTypeImports": false
+          }
+        ],
+        // Regler gäller för specifika mappar
+        "paths": [
+          {
+            "name": "firebase-admin",
+            "message": "Please use the client-side Firebase SDK ('firebase/app') instead.",
+            "allowTypeImports": false
+          },
+          {
+            "name": "server-only",
+            "message": "This module should only be used in server-side files (e.g., Genkit flows, API routes).",
+            "allowTypeImports": false
+          }
+        ]
+      }
+    ]
+  },
+  // Applicera reglerna på specifika fil-typer
+  "overrides": [
+    {
+      "files": ["src/app/**/*.ts", "src/app/**/*.tsx", "src/components/**/*.ts", "src/components/**/*.tsx", "src/lib/hooks/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["firebase-admin", "server-only"],
+                "message": "Server-side modules are not allowed in this client directory."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      // I server-kod (genkit flöden) är det OK att använda server-only
+      "files": ["src/genkit/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ]
+}
+
