@@ -1,9 +1,8 @@
 
 import { defineFlow } from '@genkit-ai/flow';
 import { z } from 'zod';
-import { userRepo } from '@/genkit/dal/user.repo';
-// KORREKT IMPORT FRÅN DET NYA PAKETET
-import { firebaseAuth } from '@genkit-ai/firebase/auth'; 
+import { userRepo } from '@/genkit-dal/user.repo';
+import { firebaseAuth } from '@genkit-ai/firebase/auth';
 
 // ===================================================================
 // GET USER PROFILE FLOW (Read Operation)
@@ -11,7 +10,7 @@ import { firebaseAuth } from '@genkit-ai/firebase/auth';
 
 export const getUserProfile = defineFlow(
   {
-    name: 'getUserProfile', // Detta namn används som `flowId` i klienten
+    name: 'getUserProfile',
     inputSchema: z.object({ userId: z.string() }),
     outputSchema: z.object({
       uid: z.string(),
@@ -24,44 +23,37 @@ export const getUserProfile = defineFlow(
     }),
   },
   async ({ userId }) => {
-    console.log(`Fetching profile for user: ${userId}`);
     return await userRepo.get(userId);
   }
 );
 
 // ===================================================================
-// ONBOARDING FLOW (Write Operation)
+// ONBOARDING FLOW (Write/Update Operation)
 // ===================================================================
 
 export const onboardingFlow = defineFlow(
   {
-    name: 'onboardingFlow', // Detta namn används som `flowId` i klienten
+    name: 'onboardingFlow',
     inputSchema: z.object({ displayName: z.string().min(2) }),
-    outputSchema: z.object({
-      success: z.boolean(),
-      userId: z.string(),
-    }),
+    outputSchema: z.object({ success: z.boolean() }),
     authPolicy: firebaseAuth((user) => {
-      if (!user?.uid || !user.email) {
+      if (!user?.uid) {
         throw new Error("A fully authenticated user is required.");
       }
     }),
   },
   async (input, { auth }) => {
-    console.log(`Starting onboarding for user: ${auth.uid}`);
+    const userId = auth.uid!;
+    console.log(`Starting onboarding for user: ${userId}`);
 
-    await userRepo.create({
-      uid: auth.uid!,
-      email: auth.email!,
+    // KORREKT LOGIK: Uppdatera den befintliga användaren, skapa inte en ny.
+    await userRepo.update(userId, {
       displayName: input.displayName,
-      onboardingCompleted: true,
+      onboardingCompleted: true, // Sätt flaggan till true!
     });
 
-    console.log(`Successfully created profile for user: ${auth.uid}`);
+    console.log(`Successfully completed onboarding for user: ${userId}`);
 
-    return {
-      success: true,
-      userId: auth.uid!,
-    };
+    return { success: true };
   }
 );
