@@ -1,54 +1,49 @@
 
 import 'server-only';
 import { defineFlow, run } from '@genkit-ai/flow';
-import { firebaseAuth, AuthContext } from '@genkit-ai/firebase/auth';
 import { z } from 'zod';
-import { userRepo, UserProfile } from '../dal/user.repo';
-import { auth } from '../firebase';
+import { userRepo } from '../dal/user.repo';
+import { verifyIdToken } from '../auth/firebaseAdmin';
 
 // ===================================================================
 // Zod Schema for User Profile Output
 // ===================================================================
 const UserProfileSchema = z.object({
   uid: z.string(),
-  email: z.string(),
+  email: z.string().optional(), // Email might not always be present
   displayName: z.string().optional(),
   onboardingCompleted: z.boolean(),
-  createdAt: z.string(), // Skickas som ISO-sträng
+  createdAt: z.string(), // Sent as ISO string
 });
 
 // ===================================================================
-// Security Policy (Auth Policy)
+// Get User Profile Flow
 // ===================================================================
-// Denna policy säkerställer att ENDAST en autentiserad användare kan
-// anropa detta flöde. Ingen input behövs.
+// Hämtar profilen för den autentiserade användaren.
+// Använder en auth-policy för att verifiera Firebase ID-token.
 // ===================================================================
-const authPolicy = async (context: AuthContext) => {
-  if (!context.auth) {
-    throw new Error('Authentication required to fetch user profile.');
-  }
-};
-
-// ===================================================================
-// Get User Profile Flow (FIXED)
-// ===================================================================
-// Hämtar profilen för den **autentiserade** användaren.
-// Input-schemat är z.void() eftersom flödet alltid agerar på den
-// inloggade användaren som identifieras via Bearer Token.
-// ===================================================================
-export const getUserProfileFlow = defineFlow(
+export const getUserProfile = defineFlow(
   {
-    name: 'getUserProfileFlow',
-    inputSchema: z.void(), // Inget input behövs från klienten
+    name: 'getUserProfile',
+    inputSchema: z.void(), // No input needed from the client
     outputSchema: UserProfileSchema.nullable(),
-    middleware: [firebaseAuth(auth, authPolicy)],
+    auth: {
+      policy: async (auth, input) => {
+        // Verify the token using our centralized admin utility
+        const user = await verifyIdToken(auth.idToken!);
+        // Pass the UID to the flow's context
+        return {
+          uid: user.uid
+        };
+      },
+    },
   },
   async (_, context) => {
-    // UID hämtas säkert från kontexten efter att middleware har validerat token.
-    const userId = context.auth!.uid; 
+    // UID is now securely available from the auth context
+    const userId = context.auth.uid;
     console.log(`[Get User Profile] Fetching profile for authenticated user: ${userId}`);
 
-    const userProfile = await run('fetch-user-profile', () =>
+    const userProfile = await run('fetch-user-profile-from-repo', () =>
       userRepo.get(userId)
     );
 
@@ -57,9 +52,12 @@ export const getUserProfileFlow = defineFlow(
       return null;
     }
 
-    // Mappa till DTO
+    // Map to the output schema (DTO)
     return {
-      ...userProfile,
+      uid: userProfile.uid,
+      email: userProfile.email,
+      displayName: userProfile.displayName,
+      onboardingCompleted: userProfile.onboardingCompleted,
       createdAt: userProfile.createdAt.toISOString(),
     };
   }

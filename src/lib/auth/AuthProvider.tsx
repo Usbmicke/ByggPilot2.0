@@ -1,7 +1,7 @@
 import 'client-only';
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '@/lib/firebase/client'; // Importera klient-SDK
+import { auth } from '@/lib/auth/firebase'; // KORRIGERAD SÖKVÄG
 
 interface AuthContextType {
   user: User | null;

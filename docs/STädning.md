@@ -1,7 +1,8 @@
-Du ska nu städa projektet. Du bockar av varje punkt och visar upp dina resultat till mig.
+Du ska nu städa projektet. Du bockar av varje punkt och visar upp dina resultat till mig. du tar inte bort nått, utan samlar alla filer efter tre färger för varje fas. grön= ok, gul= redigera, röd = ta bort!
 
 BYGGPILOT 2.0 - MASTER CHECKLIST (GOLD STANDARD)
-Status: November 2025 Arkitektur: Next.js 16 | Genkit (Gemini 3) | Firestore | Zero Trust Auth
+Status: November 2025 Arkitektur: Next.js 16 | Genkit (Gemini 3) | Firestore | Zero Trust Auth.
+
 
 🧱 FAS 1: FUNDAMENT & MILJÖ (The Bedrock)
 Mål: En steril, kraschsäker miljö där server och klient är fysiskt separerade.
@@ -235,3 +236,99 @@ Kopiera en Fas i taget (t.ex. "FAS 2") och ge till din AI-agent med instruktione
 "Vi implementerar nu FAS 2. Utför punkt 2.1. Bekräfta när klart."
 
 Kör hårt! Det här blir en grym app.
+
+kortare prompt: # MISSION: TOTAL PROJECT SANITATION (EXTREME DEEP CLEAN)
+
+**Roll:** Du är en Elitkodgranskare och Systemarkitekt.
+**Uppdrag:** Genomsök HELA projektet (roten, alla mappar, alla filer). Identifiera ALLT som inte följer vår "Guldstandard" (Next.js 16 + Genkit + Zero Trust). Vi ska rensa bort allt gammalt skräp, duplicerade filer och felaktiga konfigurationer.
+
+**⚠️ VIKTIGT:** Du ska INTE radera några filer själv än. Du ska generera en **DÖDSLISTA** så att jag kan radera dem manuellt.
+
+---
+
+## 1. OMFATTNING (SCOPE)
+Du ska söka igenom **ALLA** dessa mappar och filer (och deras undermappar):
+* `/` (Roten - konfigurationsfiler)
+* `src/` (Hela källkoden)
+* `public/` (Bilder och statiska filer)
+* `scripts/` (Om det finns)
+* `functions/` (Om det finns gamla Cloud Functions)
+* `.github/` (Workflows)
+
+*(Ignorera endast: `node_modules`, `.next`, `.git`, `.firebase`, `.ds_store`, `.env`, `.env.local`)*
+
+---
+
+## 2. REGLER FÖR "GULDSTANDARD" (LAGBOKEN)
+
+Allt som bryter mot detta ska flaggas för borttagning eller fix:
+
+1.  **Tech Stack:**
+    * **JA:** Next.js 16 (App Router), Genkit (@genkit-ai/google-genai), Firebase Client SDK, SWR, Tailwind CSS.
+    * **NEJ (DÖDA):** `next-auth` (ALLA spår), `pages/api` (Pages router), `axios` (om vi kör fetch/swr), `@auth/firebase-adapter`, `googleapis` (om vi kör Genkit).
+
+2.  **Arkitektur:**
+    * **JA:** `src/app/api/[[...genkit]]/route.ts` är den ENDA API-rutten.
+    * **JA:** `src/lib/dal` är ENDA platsen för `firebase-admin` och databaskod.
+    * **JA:** `src/genkit/flows` är ENDA platsen för affärslogik.
+    * **NEJ (DÖDA):** Manuella API-rutter (`src/app/api/auth`, `src/app/api/users`...), Service-lager (`src/services`), Utils som duplicerar DAL (`src/utils/db.ts`).
+
+3.  **Säkerhet (Zero Trust):**
+    * **JA:** Token-baserad auth (Bearer) via Genkit.
+    * **NEJ (DÖDA):** Sessions-cookies, `getServerSession` (från next-auth), `middleware.ts` som kollar cookies.
+
+---
+
+## 3. DIN ANALYS-PROCESS (STEG FÖR STEG)
+
+1.  **Rot-analys:** Kolla `package.json`, `tsconfig.json`, `next.config.mjs`, `firebase.json`. Leta efter onödiga paket eller fel inställningar.
+2.  **SRC-analys:** Gå igenom `src` mapp för mapp. Leta efter:
+    * Gamla mappar (`src/hooks/useOldAuth.ts`, `src/components/Legacy...`).
+    * Duplicerade filer (`src/lib/firebase.ts` OCH `src/utils/firebase.ts`? Behåll bara en).
+    * Felaktiga importer (importerar server-kod i klient-filer?).
+3.  **Public-analys:** Ligger det gamla bilder eller skräp här?
+
+---
+
+## 4. RAPPORTEN (OUTPUT FORMAT)
+
+Leverera din analys i exakt detta format. Var extremt specifik.
+
+### 🔴 THE KILL LIST (Filer/Mappar att radera)
+*(Lista med fullständig sökväg och motivering. Gruppera gärna.)*
+
+**Konfiguration & Rot:**
+* `next-auth.d.ts` - [NextAuth används inte längre]
+* ...
+
+**API & Backend:**
+* `src/app/api/auth/...` (Hela mappen) - [Legacy Auth]
+* `src/app/api/create-user.ts` - [Ska vara ett Genkit Flow]
+* ...
+
+**Frontend & Komponenter:**
+* `src/components/LoginButtonOld.tsx` - [Ersatt av ny Login]
+* ...
+
+**Gamla Services/Utils:**
+* `src/services/userService.ts` - [Ersatt av DAL]
+* ...
+
+### 🟡 THE FIX LIST (Filer att laga/städa)
+*(Filer vi ska behålla men som innehåller felaktig kod)*
+
+* `package.json` - [Ta bort: `next-auth`, `@auth/firebase-adapter`]
+* `src/app/page.tsx` - [Rensa bort gamla importer]
+* `src/lib/dal/user.repo.ts` - [Saknar `import 'server-only'`]
+
+### 🟢 THE SAFE LIST (Verifierat korrekta)
+*(Filer som följer Guldstandarden till 100%)*
+* `src/app/api/[[...genkit]]/route.ts`
+* ...
+
+---
+
+**BEKRÄFTELSE:**
+Innan du börjar, sök igenom filsystemet på riktigt (`ls -R` eller liknande). Gissa inte filnamn.
+
+**KÖR ANALYSEN NU.**
