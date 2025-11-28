@@ -9,60 +9,58 @@ import { auth } from '../firebase';
 // ===================================================================
 // Zod Schema for User Profile Output
 // ===================================================================
-
 const UserProfileSchema = z.object({
   uid: z.string(),
   email: z.string(),
   displayName: z.string().optional(),
   onboardingCompleted: z.boolean(),
-  createdAt: z.string().transform((str) => new Date(str).toISOString()),
+  createdAt: z.string(), // Skickas som ISO-sträng
 });
 
 // ===================================================================
 // Security Policy (Auth Policy)
 // ===================================================================
-
-const authPolicy = async (context: AuthContext, input: z.infer<typeof UserProfileSchema>) => {
+// Denna policy säkerställer att ENDAST en autentiserad användare kan
+// anropa detta flöde. Ingen input behövs.
+// ===================================================================
+const authPolicy = async (context: AuthContext) => {
   if (!context.auth) {
-    throw new Error('Authentication required.');
-  }
-  // En användare ska bara kunna hämta sin egen profil
-  if (context.auth.uid !== input.uid) {
-    throw new Error('You are not authorized to view this profile.');
+    throw new Error('Authentication required to fetch user profile.');
   }
 };
 
 // ===================================================================
-// Get User Profile Flow
+// Get User Profile Flow (FIXED)
 // ===================================================================
-// Hämtar profilen för den autentiserade användaren.
+// Hämtar profilen för den **autentiserade** användaren.
+// Input-schemat är z.void() eftersom flödet alltid agerar på den
+// inloggade användaren som identifieras via Bearer Token.
 // ===================================================================
-
 export const getUserProfileFlow = defineFlow(
   {
     name: 'getUserProfileFlow',
-    inputSchema: z.object({ uid: z.string() }), // Kräver UID som input för säkerhetskontroll
+    inputSchema: z.void(), // Inget input behövs från klienten
     outputSchema: UserProfileSchema.nullable(),
     middleware: [firebaseAuth(auth, authPolicy)],
   },
-  async (input, context) => {
-    console.log(`[Get User Profile] Fetching profile for user: ${input.uid}`);
+  async (_, context) => {
+    // UID hämtas säkert från kontexten efter att middleware har validerat token.
+    const userId = context.auth!.uid; 
+    console.log(`[Get User Profile] Fetching profile for authenticated user: ${userId}`);
 
     const userProfile = await run('fetch-user-profile', () =>
-      userRepo.get(input.uid)
+      userRepo.get(userId)
     );
 
     if (!userProfile) {
-      console.log(`[Get User Profile] Profile not found for user: ${input.uid}`);
+      console.log(`[Get User Profile] Profile not found for user: ${userId}`);
       return null;
     }
 
     // Mappa till DTO
-    const userProfileDto = {
+    return {
       ...userProfile,
       createdAt: userProfile.createdAt.toISOString(),
     };
-
-    return userProfileDto;
   }
 );

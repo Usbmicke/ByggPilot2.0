@@ -19,7 +19,7 @@ Vi bygger en **"Zero Trust"**-applikation. Next.js är endast skalet. Genkit är
 ## 3. TEKNISK STACK
 - Node.js v20+
 - Next.js 16 (App Router)
-- Firebase Genkit (@genkit-ai/google-genai)
+- Firebase Genkit (@genkit-ai/google-genai) gemini 3 flash och 3 pro.
 - SWR
 ## 0. META-INSTRUKTIONER FÖR AGENTEN (LÄS DETTA FÖRST)
 
