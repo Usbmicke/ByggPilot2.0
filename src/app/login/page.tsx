@@ -1,42 +1,49 @@
+
 'use client';
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/hooks/useAuth';
-import { auth } from '@/lib/firebase/client';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, getAuth } from 'firebase/auth';
+import { useAuth } from '@/lib/auth/AuthProvider';
+import { firebaseApp } from '@/lib/firebase/client';
 
 export default function LoginPage() {
-  const { user, loading } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
 
+  // Omdirigera användaren om de redan är inloggade och klara med auth-processen
   useEffect(() => {
-    // Om användaren redan är inloggad, omdirigera till startsidan
-    if (!loading && user) {
+    if (!isLoading && user) {
       router.push('/');
     }
-  }, [user, loading, router]);
+  }, [user, isLoading, router]);
 
   const handleLogin = async () => {
+    const auth = getAuth(firebaseApp);
     const provider = new GoogleAuthProvider();
+
     try {
       await signInWithPopup(auth, provider);
-      // Omdirigering hanteras av useEffect
+      // onIdTokenChanged i AuthProvider kommer automatiskt att upptäcka 
+      // inloggningen och uppdatera kontexten. Omdirigering hanteras 
+      // av useEffect-hooken.
+      console.log('Successfully signed in!');
     } catch (error) {
-      console.error("Error during sign-in:", error);
+      console.error('Login failed:', error);
+      // Här kan du visa ett felmeddelande för användaren
     }
   };
 
-  if (loading || user) {
-    // Visa en laddningssida medan vi verifierar status eller omdirigerar
+  // Visa en laddningsindikator medan vi väntar på auth-status
+  if (isLoading || user) {
     return <div>Loading...</div>;
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-      <h1>Welcome to ByggPilot</h1>
-      <p>Please log in to continue</p>
-      <button onClick={handleLogin}>Log In with Google</button>
+    <div>
+      <h1>Login</h1>
+      <p>Please log in to continue.</p>
+      <button onClick={handleLogin}>Log in with Google</button>
     </div>
   );
 }

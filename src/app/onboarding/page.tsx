@@ -1,65 +1,75 @@
+
 'use client';
+
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/hooks/useAuth';
-import { useGenkitMutation } from '@/lib/hooks/useGenkitMutation'; // Rätt hook för mutationer
+import { useAuth } from '@/lib/auth/AuthProvider';
+import { useGenkitMutation } from '@/lib/hooks/useGenkitMutation';
+import { onboardingFlow } from '@/genkit/flows/onboarding';
 
 export default function OnboardingPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isLoading: isAuthLoading, idToken } = useAuth();
   const router = useRouter();
   const [displayName, setDisplayName] = useState('');
-  
-  // Anropa mutation-hooken med flödets NAMN (en sträng), inte en direkt import
-  const { trigger: completeProfile, isMutating, error } = useGenkitMutation('onboardingFlow');
 
-  // Omdirigera om användaren inte är inloggad
+  // Använd vår custom hook för mutationer
+  const { mutate, isPending, error } = useGenkitMutation(onboardingFlow);
+
+  // Skydda sidan: om användaren inte är inloggad, skicka till login.
+  // Om användaren redan har slutfört onboarding, skicka till startsidan.
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!isAuthLoading && !user) {
       router.push('/login');
     }
-  }, [user, authLoading, router]);
+    // Antag att user-objektet från din DAL/flow innehåller onboardingCompleted
+    // Detta behöver hämtas via ett separat `getUserProfile` flow.
+    // För nu omdirigerar vi bara om de är inloggade.
+  }, [user, isAuthLoading, router]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!displayName.trim()) {
-      alert('Please enter a name.');
+    if (!idToken) {
+      alert('Authentication token not found. Please log in again.');
       return;
     }
 
-    try {
-      // Anropa flödet via hooken
-      await completeProfile({ displayName });
-      alert("Profile completed successfully!");
-      router.push('/'); // Skicka användaren till startsidan
-    } catch (err) {
-      // Felmeddelande visas redan av hooken, men vi kan logga här
-      console.error("Onboarding submission failed", err);
-    }
+    await mutate({ displayName }, {
+      onSuccess: () => {
+        console.log('Onboarding successful!');
+        router.push('/'); // Skicka användaren till startsidan efter lyckad onboarding
+        router.refresh(); // Tvinga en uppdatering av server-komponenter om det behövs
+      },
+      onError: (err) => {
+        console.error('Onboarding failed:', err);
+        // Visa felmeddelande för användaren
+      }
+    });
   };
 
-  // Visa en laddningssida medan vi verifierar sessionen
-  if (authLoading || !user) {
-    return <div>Loading session...</div>;
+  if (isAuthLoading || !user) {
+    return <div>Loading...</div>;
   }
 
   return (
-    <div style={{ maxWidth: '400px', margin: '50px auto' }}>
-      <h1>Complete Your Profile</h1>
-      <p>Welcome! Please enter your name to finish setting up your account.</p>
+    <div>
+      <h1>Welcome!</h1>
+      <p>Let's get your profile set up.</p>
       <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          placeholder="Your Name"
-          required
-          style={{ width: '100%', padding: '8px', marginBottom: '10px' }}
-        />
-        <button type="submit" disabled={isMutating} style={{ width: '100%', padding: '10px' }}>
-          {isMutating ? 'Saving...' : 'Complete Profile'}
+        <label>
+          Display Name:
+          <input
+            type="text"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            minLength={2}
+            required
+          />
+        </label>
+        <button type="submit" disabled={isPending}>
+          {isPending ? 'Saving...' : 'Complete Profile'}
         </button>
-        {error && <p style={{ color: 'red' }}>Error: {error.message}</p>}
       </form>
+      {error && <p style={{ color: 'red' }}>{error.message}</p>}
     </div>
   );
 }

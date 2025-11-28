@@ -1,45 +1,41 @@
-import { defineFlow } from '@genkit-ai/flow';
+
+import 'server-only';
+import { defineFlow, run } from '@genkit-ai/flow';
+import { firebaseAuth } from '@genkit-ai/firebase/auth';
 import { z } from 'zod';
-import { projectRepo } from '@/lib/dal/project.repo';
-import { FlowAuth } from '@genkit-ai/core/lib/auth';
+// import { projectRepo } from '../dal/project.repo'; // INAKTIVERAD TILLS VIDARE
 
-// Inget input-schema behövs för detta flöde
-const GetProjectsInputSchema = z.undefined();
-
-// Definiera output-schemat, en array av projekt
+// Placeholder-schema för projekt
 const ProjectSchema = z.object({
   id: z.string(),
   name: z.string(),
-  description: z.string(),
+  ownerId: z.string(),
 });
-const GetProjectsOutputSchema = z.array(ProjectSchema);
 
-// Definiera flödet
 export const getProjectsFlow = defineFlow(
   {
     name: 'getProjectsFlow',
-    inputSchema: GetProjectsInputSchema,
-    outputSchema: GetProjectsOutputSchema,
+    inputSchema: z.void(), // Inget input behövs för att hämta alla projekt
+    outputSchema: z.array(ProjectSchema),
+    middleware: [firebaseAuth()], // Använd middleware för auth-skydd
   },
-  async (_, { auth }) => { // Vi behöver inte `input` men vi behöver `auth`
+  async (_, context) => {
+    const userId = context.auth!.uid;
+    console.log(`Fetching projects for user: ${userId}`);
 
-    if (!auth?.uid) {
-      throw new Error('403 Forbidden: An authenticated user is required.');
-    }
+    // const projects = await run('fetch-user-projects', () => 
+    //   projectRepo.findAllByOwner(userId)
+    // );
 
-    console.log(`Fetching projects for user: ${auth.uid}`);
+    // return projects;
 
-    try {
-      // Här skulle du normalt hämta projekt som är associerade med auth.uid
-      // För detta exempel använder vi den simulerade `findAll` metoden
-      const projects = await projectRepo.findAll();
-
-      console.log(`Found ${projects.length} projects for user: ${auth.uid}`);
-
-      return projects;
-    } catch (error) {
-      console.error("Error fetching projects:", error);
-      throw new Error('Failed to fetch projects.');
-    }
+    // ---- Temporär Placeholder-data ----
+    // Denna kod ska tas bort när project.repo.ts har skapats korrekt.
+    console.warn('Using placeholder data for getProjectsFlow!');
+    return [
+      { id: 'proj_1', name: 'Placeholder Project 1', ownerId: userId },
+      { id: 'proj_2', name: 'Placeholder Project 2', ownerId: userId },
+    ];
+    // -------------------------------------
   }
 );
