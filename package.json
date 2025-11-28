@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx",
     "firebase": "firebase emulators:start --only auth,firestore",
-    "genkit": "genkit start",
+    "genkit": "npx genkit start",
     "dev:all": "concurrently \"npm:firebase\" \"npm:genkit\" \"npm:dev\""
   },
   "dependencies": {

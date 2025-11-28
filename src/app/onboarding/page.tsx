@@ -5,43 +5,37 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { useGenkitMutation } from '@/lib/hooks/useGenkitMutation';
-import { onboardingFlow } from '@/genkit/flows/onboarding';
+// Importen behövs inte längre när vi använder flowId som en sträng
+// import { onboardingFlow } from '@/genkit/flows/onboarding';
 
 export default function OnboardingPage() {
-  const { user, isLoading: isAuthLoading, idToken } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const router = useRouter();
   const [displayName, setDisplayName] = useState('');
 
-  // Använd vår custom hook för mutationer
-  const { mutate, isPending, error } = useGenkitMutation(onboardingFlow);
+  // Korrekt användning: Skicka flowId som en sträng.
+  const { mutate, isPending, error } = useGenkitMutation('onboardingFlow');
 
   // Skydda sidan: om användaren inte är inloggad, skicka till login.
-  // Om användaren redan har slutfört onboarding, skicka till startsidan.
   useEffect(() => {
     if (!isAuthLoading && !user) {
       router.push('/login');
     }
-    // Antag att user-objektet från din DAL/flow innehåller onboardingCompleted
-    // Detta behöver hämtas via ett separat `getUserProfile` flow.
-    // För nu omdirigerar vi bara om de är inloggade.
   }, [user, isAuthLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!idToken) {
-      alert('Authentication token not found. Please log in again.');
-      return;
-    }
 
     await mutate({ displayName }, {
       onSuccess: () => {
-        console.log('Onboarding successful!');
-        router.push('/'); // Skicka användaren till startsidan efter lyckad onboarding
-        router.refresh(); // Tvinga en uppdatering av server-komponenter om det behövs
+        console.log('Onboarding successful! Redirecting to dashboard...');
+        // Använd replace istället för push för att förhindra att användaren
+        // kan gå tillbaka till onboarding-sidan med webbläsarens "bakåt"-knapp.
+        router.replace('/');
       },
       onError: (err) => {
         console.error('Onboarding failed:', err);
-        // Visa felmeddelande för användaren
+        // Här kan du implementera mer användarvänlig felhantering, t.ex. en toast/notification.
       }
     });
   };
@@ -63,13 +57,14 @@ export default function OnboardingPage() {
             onChange={(e) => setDisplayName(e.target.value)}
             minLength={2}
             required
+            disabled={isPending} // Inaktivera input medan mutationen körs
           />
         </label>
         <button type="submit" disabled={isPending}>
           {isPending ? 'Saving...' : 'Complete Profile'}
         </button>
       </form>
-      {error && <p style={{ color: 'red' }}>{error.message}</p>}
+      {error && <p style={{ color: 'red' }}>Error: {error.message}</p>}
     </div>
   );
 }
