@@ -2,10 +2,7 @@
 
 import { useAuth } from '@/lib/auth/AuthProvider';
 import { useGenkit } from '@/lib/hooks/useGenkit';
-import { getUserProfile } from '@/genkit/flows/getUserProfile';
-import { listProjects } from '@/genkit/flows/listProjects'; // Antagande att denna flow finns
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 
 // Komponent för att visa när inga projekt finns (Zero State)
 const ZeroState = () => (
@@ -36,17 +33,16 @@ export default function DashboardPage() {
     const router = useRouter();
 
     // Hook för att hämta användarprofil
-    const { data: userProfile, loading: profileLoading } = useGenkit(getUserProfile, undefined, { enabled: !!user });
+    const { data: userProfile, loading: profileLoading } = useGenkit('getUserProfile', undefined, { enabled: !!user });
 
     // Hook för att hämta projekt
-    const { data: projects, loading: projectsLoading, error: projectsError } = useGenkit(listProjects, undefined, { enabled: !!userProfile });
+    const { data: projects, loading: projectsLoading, error: projectsError } = useGenkit('getProjectsFlow', undefined, { enabled: !!userProfile });
 
-    useEffect(() => {
-        // Om autentisering inte laddar och ingen användare finns, skicka till login
-        if (!authLoading && !user) {
-            router.push('/login');
-        }
-    }, [user, authLoading, router]);
+    // Om autentisering inte laddar och ingen användare finns, skicka till login
+    if (!authLoading && !user) {
+        router.push('/login');
+        return null; // Returnera null medan omdirigering sker
+    }
 
     // Global laddningsstatus
     const isLoading = authLoading || profileLoading || projectsLoading;
@@ -68,7 +64,7 @@ export default function DashboardPage() {
                 projects && projects.length > 0 
                 ? (
                     <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-                        {projects.map(p => <ProjectCard key={p.id} project={p} />)}
+                        {projects.map((p: any) => <ProjectCard key={p.id} project={p} />)}
                     </div>
                 ) 
                 : <ZeroState />

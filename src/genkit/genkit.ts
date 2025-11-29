@@ -6,6 +6,8 @@ import { firebase } from '@genkit-ai/firebase';
 // Importera alla flöden här så att Genkit känner till dem.
 // Detta är ett KRITISKT steg.
 import './flows/onboarding';
+import './flows/getProjectsFlow';
+import './flows/getUserProfile';
 
 export const genkit = configureGenkit({
   plugins: [

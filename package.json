@@ -7,9 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx",
-    "firebase": "firebase emulators:start --only auth,firestore",
-    "genkit": "npx genkit start",
-    "dev:all": "concurrently \"npm:firebase\" \"npm:genkit\" \"npm:dev\""
+    "firebase": "firebase emulators:start --config=firebase.json --only auth,firestore",
+    "genkit": "genkit start",
+    "dev:all": "concurrently --kill-others-on-fail \"npm:firebase\" \"sleep 2 && npm:genkit\" \"sleep 4 && npm:dev\""
   },
   "dependencies": {
     "@genkit-ai/dotprompt": "^0.9.12",
@@ -32,6 +32,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
+    "baseline-browser-mapping": "^2.8.32",
     "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.0.5",

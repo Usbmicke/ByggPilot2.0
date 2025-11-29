@@ -8,6 +8,7 @@
     pkgs.nodejs_20
     pkgs.firebase-tools
     pkgs.genkit
+    pkgs.next
   ];
   # Preload the Genkit & Firebase CLIs and login to Firebase.
   preloads = {
