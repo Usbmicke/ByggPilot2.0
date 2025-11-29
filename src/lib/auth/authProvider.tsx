@@ -1,7 +1,8 @@
-import 'client-only';
+'use client';
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '@/lib/auth/firebase'; // KORRIGERAD SÖKVÄG
+import { onIdTokenChanged, User } from 'firebase/auth';
+import { clientAuth } from '@/genkit/firebase'; // Korrekt, centraliserad sökväg
 
 interface AuthContextType {
   user: User | null;
@@ -15,7 +16,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    // Kontrollera att clientAuth är definierad (dvs. vi är på klientsidan)
+    if (!clientAuth) {
+      setLoading(false);
+      return;
+    }
+
+    const unsubscribe = onIdTokenChanged(clientAuth, (user) => {
       setUser(user);
       setLoading(false);
     });
