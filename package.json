@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "start": "next start",
+    "dev": "next dev",
     "build": "next build",
-    "lint": "eslint . --ext .ts,.tsx",
+    "start": "next start",
+    "lint": "next lint",
     "firebase": "firebase emulators:start --config=firebase.json --only auth,firestore",
-    "genkit": "npx genkit start",
+    "genkit": "genkit start",
     "predev:all": "npx kill-port 3000 4000 4001 8081 9099 4401 || true",
-    "dev:all": "concurrently --kill-others-on-fail \"npm:firebase\" \"npm:genkit\" \"next dev\""
+    "dev:all": "concurrently --kill-others-on-fail \"npm:firebase\" \"npm:genkit\" \"npm:dev\""
   },
   "dependencies": {
     "@genkit-ai/dotprompt": "^0.9.12",

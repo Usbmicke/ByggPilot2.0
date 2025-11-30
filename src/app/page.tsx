@@ -1,78 +1,82 @@
+
 'use client';
 
-import { useState } from 'react';
-import {- `clientAuth` is not defined in this file. You must import it from `@/genkit/firebase` to use it.- The `signInWithEmailAndPassword` function requires the `auth` object, an email, and a password as arguments. You have only provided the email and password.- You should use the `clientAuth` object that you import from `@/genkit/firebase` as the first argument to the `signInWithEmailAndPassword` function.- You have not defined the `helloFlow` that you are trying to use in the `useGenkit` hook. You must define this flow in your Genkit code before you can use it.- The `useGenkit` hook is not defined in this file. You must import it from `@/hooks/useGenkit` to use it.} from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-// INCORRECT IMPORT - This violates the architecture rules.
-// import { clientAuth } from '@/genkit/firebase';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { useAuth, auth } from '@/components/AuthProvider';
 
-// CORRECT (PLACEHOLDER) - This is how you should fetch data.
-// import { useGenkit } from '@/hooks/useGenkit';
-// import { helloFlow } from '@/genkit/flows';
+const googleProvider = new GoogleAuthProvider();
 
-export default function Home() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+export default function LandingPage() {
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
-  // PLACEHOLDER: Correct data fetching with useGenkit
-  // const { data, isLoading } = useGenkit(helloFlow, {});
+  // Om användaren är inloggad, omdirigera direkt till onboarding.
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.replace('/onboarding');
+    }
+  }, [user, isLoading, router]);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGoogleSignIn = async () => {
+    setIsSigningIn(true);
     setError(null);
     try {
-      // This is just an example of client-side auth.
-      // You would replace this with your actual authentication logic.
-      // IMPORTANT: clientAuth should be imported from the corrected firebase config.
-      // await signInWithEmailAndPassword(clientAuth, email, password);
-      console.log('User signed in');
+      await signInWithPopup(auth, googleProvider);
+      // Omdirigering sköts av useEffect ovan.
     } catch (err: any) {
-      setError(err.message);
+      console.error("Google Sign-In Error:", err);
+      setError(err.code === 'auth/popup-closed-by-user' 
+        ? 'Inloggningen avbröts.' 
+        : 'Ett fel uppstod vid inloggning.');
+    } finally {
+      setIsSigningIn(false);
     }
   };
 
+  // Visa en enkel laddningsskärm för att undvika flimmer under omdirigering.
+  if (isLoading || user) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-800 text-white">
+        <p>Laddar...</p>
+      </div>
+    );
+  }
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <div className="w-full max-w-xs">
-        <form className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4" onSubmit={handleLogin}>
-          <h1 className="text-2xl font-bold mb-6 text-center text-black">Login</h1>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
-              Email
-            </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              id="email"
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
-              Password
-            </label>
-            <input
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
-              id="password"
-              type="password"
-              placeholder="******************"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-          {error && <p className="text-red-500 text-xs italic mb-4">{error}</p>}
-          <div className="flex items-center justify-between">
-            <button
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-              type="submit"
-            >
-              Sign In
-            </button>
-          </div>
-        </form>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-gray-800 text-white">
+      <div className="flex flex-col items-center justify-center text-center">
+        
+        <Image 
+          src="/Byggpilotlogga.PNG" 
+          alt="Byggpilot Logotyp"
+          width={150} 
+          height={150}
+          className='rounded-full mb-6'
+          loading="eager"
+        />
+        
+        <h1 className="text-6xl font-bold mb-4 text-gray-100 font-sans">
+          ByggPilot
+        </h1>
+
+        <p className="text-gray-400 mb-8">Logga in för att påbörja din resa.</p>
+
+        <button 
+          onClick={handleGoogleSignIn} 
+          disabled={isSigningIn}
+          className="flex items-center justify-center bg-white text-gray-800 font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-gray-200 transition-colors duration-300 disabled:bg-gray-400"
+        >
+           <svg className="w-6 h-6 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+          {isSigningIn ? 'Loggar in...' : 'Logga in med Google'}
+        </button>
+
+        {error && <p className="text-red-400 mt-4">{error}</p>}
+
       </div>
     </main>
   );
