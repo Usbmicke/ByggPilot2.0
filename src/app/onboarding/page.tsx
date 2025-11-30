@@ -1,36 +1,41 @@
-
 'use client';
 
 import { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { runFlow } from '@genkit-ai/flow/client';
+import { useGenkitMutation } from '@/hooks/useGenkitMutation'; // Importera den nya hooken
 
 // Firebase & Google Auth
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, User, OAuthCredential } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, User } from 'firebase/auth';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { firebaseApp } from '@/lib/firebase/client';
 
-// Ikoner
+// Ikoner (behålls som tidigare)
 const BuildingOfficeIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 mr-2 text-gray-400"><path fillRule="evenodd" d="M4.5 2.25a.75.75 0 0 0-.75.75v12.75a.75.75 0 0 0 .75.75h.75v-2.25a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V18h.75a.75.75 0 0 0 .75-.75V3a.75.75 0 0 0-.75-.75h-6ZM9.75 18a.75.75 0 0 0 .75.75h.008a.75.75 0 0 0 .742-.75v-2.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 0 .75.75h.75a.75.75 0 0 0 .75-.75V9.313a2.25 2.25 0 0 0-1.23-2.043l-4.5-2.25a2.25 2.25 0 0 0-2.04 0l-4.5 2.25A2.25 2.25 0 0 0 6 9.313V18a.75.75 0 0 0 .75.75h3Z" clipRule="evenodd" /></svg>);
 const ArrowUpTrayIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" /></svg>);
 const GoogleIcon = () => ( <svg className="w-6 h-6 mr-3" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C43.021 36.251 46.944 30.861 46.944 24c0-1.341-.138-2.65-.389-3.917z"/></svg>);
 
-
 export default function OnboardingPage() {
   const [companyName, setCompanyName] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
 
   const router = useRouter();
   const auth = getAuth(firebaseApp);
   const storage = getStorage(firebaseApp);
+  
+  // Använd vår nya, robusta hook för mutationer
+  const { trigger: runOnboardingFlow, isMutating, error: flowError } = useGenkitMutation('onboardingFlow');
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    // Lyssna på ändringar i autentiseringsstatus
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       setUser(currentUser);
+      // Om användaren loggar ut, rensa token
+      if (!currentUser) {
+        setGoogleAccessToken(null);
+      }
     });
     return () => unsubscribe();
   }, [auth]);
@@ -43,7 +48,6 @@ export default function OnboardingPage() {
 
   const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
-    // Detta är det kritiska steget: begär tillgång till Google Drive.
     provider.addScope('https://www.googleapis.com/auth/drive.file');
     try {
       const result = await signInWithPopup(auth, provider);
@@ -51,13 +55,13 @@ export default function OnboardingPage() {
       if (credential?.accessToken) {
         setGoogleAccessToken(credential.accessToken);
         setUser(result.user);
-        setError(null);
+        setAuthError(null);
       } else {
         throw new Error("Kunde inte hämta åtkomsttoken från Google.");
       }
     } catch (error) {
       console.error("Google-inloggning misslyckades", error);
-      setError("Inloggningen med Google misslyckades. Vänligen försök igen.");
+      setAuthError("Inloggningen med Google misslyckades. Vänligen försök igen.");
     }
   }
 
@@ -71,16 +75,15 @@ export default function OnboardingPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!companyName) {
-      setError('Företagsnamn är obligatoriskt.');
+      setAuthError('Företagsnamn är obligatoriskt.');
       return;
     }
     if (!user || !googleAccessToken) {
-      setError("Du måste vara inloggad med Google för att fortsätta.");
+      setAuthError("Du måste vara inloggad med Google för att fortsätta.");
       return;
     }
 
-    setIsSubmitting(true);
-    setError(null);
+    setAuthError(null);
 
     try {
       let logoUrl: string | undefined = undefined;
@@ -88,23 +91,25 @@ export default function OnboardingPage() {
         logoUrl = await uploadLogo(logoFile, user.uid);
       }
 
-      const result = await runFlow('onboardingFlow', {
-        companyName,
-        logoUrl,
-        userAccessToken: googleAccessToken,
+      // Anropa flödet via hooken
+      const result = await runOnboardingFlow({ 
+        companyName, 
+        logoUrl, 
+        userAccessToken 
       });
 
       if (result.success) {
-        router.push('/dashboard');
+        router.push('/dashboard'); // Omdirigera till en framtida dashboard
       } else {
-        throw new Error(result.message || 'Ett okänt fel uppstod i Genkit-flödet.');
+        // Felmeddelande hanteras nu av hookens 'error'-state
       }
-    } catch (err: any) {
-      console.error(err);
-      setError(`Onboardingen misslyckades: ${err.message}`);
-      setIsSubmitting(false);
+    } catch (err) {
+      // Fel hanteras redan av hooken och kommer att finnas i 'flowError'
+      console.error("Ett fel inträffade under anrop av onboarding-flödet", err);
     }
   };
+  
+  const displayError = authError || flowError?.message;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
@@ -119,7 +124,7 @@ export default function OnboardingPage() {
                 <GoogleIcon />
                 Logga in med Google & Ge åtkomst
             </button>
-            {error && <p className="text-red-500 text-sm text-center mt-4">{error}</p>}
+            {displayError && <p className="text-red-500 text-sm text-center mt-4">{displayError}</p>}
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -147,9 +152,9 @@ export default function OnboardingPage() {
                   </div>
               </div>
             </div>
-            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-            <button type="submit" disabled={isSubmitting || !companyName} className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105">
-              {isSubmitting ? 'Skapar arbetsyta...' : 'Slutför & Skapa Mappar'}
+            {displayError && <p className="text-red-500 text-sm text-center">{displayError}</p>}
+            <button type="submit" disabled={isMutating || !companyName} className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out transform hover:scale-105">
+              {isMutating ? 'Skapar arbetsyta...' : 'Slutför & Skapa Mappar'}
             </button>
           </form>
         )}

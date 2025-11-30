@@ -18,20 +18,14 @@ export default function LandingPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
 
-  // Omdirigering till onboarding om användaren redan är inloggad
-  useEffect(() => {
-    if (!isLoading && user) {
-      router.replace('/onboarding');
-    }
-  }, [user, isLoading, router]);
+  // Omdirigering sköts nu centralt av AuthProvider
 
-  // Befintlig, fungerande inloggningslogik
   const handleGoogleSignIn = async () => {
     setIsSigningIn(true);
     setError(null);
     try {
       await signInWithPopup(auth, googleProvider);
-      // Omdirigering sköts av useEffect
+      // AuthProvider kommer att hantera omdirigeringen
     } catch (err: any) {
       console.error("Google Sign-In Error:", err);
       setError(err.code === 'auth/popup-closed-by-user' 
@@ -42,7 +36,7 @@ export default function LandingPage() {
     }
   };
 
-  // Modern laddningsskärm
+  // Laddningsskärm medan AuthProvider jobbar
   if (isLoading || user) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">
@@ -51,7 +45,7 @@ export default function LandingPage() {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          <span className="text-lg">Omdirigerar...</span>
+          <span className="text-lg">Autentiserar...</span>
         </div>
       </div>
     );
@@ -61,14 +55,14 @@ export default function LandingPage() {
     <main className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md bg-gray-800 rounded-2xl shadow-2xl p-8 text-center">
         
-        {/* Korrekt sökväg och styling för logotypen */}
-        <div className="mx-auto w-24 h-24 mb-6 relative">
+        <div className="mx-auto w-24 h-24 mb-6 relative"> {/* FIX: Lade till 'relative' för fill-attributet */}
              <Image 
-              src="/logo.png" // Korrigerad sökväg
+              src="/logo.png"
               alt="Byggpilot Logotyp"
               fill
+              priority={true} /* FIX: Lade till priority för LCP */
               style={{ objectFit: 'contain' }}
-              className='drop-shadow-lg' // Lägger till en subtil skugga
+              className='drop-shadow-lg'
             />
         </div>
         
@@ -80,7 +74,6 @@ export default function LandingPage() {
           Din digitala co-pilot för en enklare och mer lönsam byggvardag.
         </p>
 
-        {/* Ny, moderniserad knapp som återanvänder befintlig funktion */}
         <button 
           onClick={handleGoogleSignIn} 
           disabled={isSigningIn}

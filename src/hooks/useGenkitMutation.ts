@@ -1,74 +1,70 @@
+'use client';
 
-import useSWRMutation from 'swr/mutation';
-import { useAuth } from '@/components/AuthProvider';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useAuth } from '@/components/AuthProvider'; // Importera för att hämta token
 
-// Argument-typen för vår nya trigger-funktion
-interface MutationArg<Input> {
-  arg: Input;
-}
-
-// Vår muterare som använder fetch för POST-anrop
-async function mutationFetcher<Input>(
-  url: string,
-  { arg }: MutationArg<Input>,
-  idToken: string | null
-) {
-
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-
-  if (!idToken) {
-      throw new Error('User is not authenticated.');
-  }
-
-  headers['Authorization'] = `Bearer ${idToken}`;
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ data: arg }), // Genkit förväntar sig { "data": ... }
-  });
-
-  if (!res.ok) {
-    let errorJson;
-    try {
-        errorJson = await res.json();
-    } catch (e) {
-        throw new Error(res.statusText);
-    }
-    throw new Error(errorJson.message || 'Mutation failed');
-  }
-
-  return res.json();
+// Definiera en mer robust feltyp
+interface MutationError extends Error {
+  details?: any; 
 }
 
 /**
- * Hook för att köra Genkit-mutationer (POST-requests).
- *
- * @param flowName Namnet på Genkit-flödet att anropa.
+ * En ren och korrekt hook för att anropa Genkit-flöden som modifierar data (mutationer).
+ * Denna hook är helt oberoende och orsakar inga cirkulära beroenden.
  */
-export function useGenkitMutation<Output = any, Input = any>(flowName: string) {
-  const { user, isLoading: isAuthLoading } = useAuth();
-  const [idToken, setIdToken] = useState<string | null>(null);
+export function useGenkitMutation<Output = any, Input = any>(
+  flowName: string
+) {
+  const [isMutating, setIsMutating] = useState(false);
+  const [error, setError] = useState<MutationError | null>(null);
+  const [data, setData] = useState<Output | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      user.getIdToken().then(setIdToken);
+  // Använd useAuth för att få tillgång till den aktuella användarens ID-token.
+  const { idToken } = useAuth(); 
+
+  const trigger = async (input: Input): Promise<Output> => {
+    setIsMutating(true);
+    setError(null);
+    setData(null);
+
+    if (!idToken) {
+      const authError = new Error('Autentisering krävs. Användaren är inte inloggad.') as MutationError;
+      setError(authError);
+      setIsMutating(false);
+      throw authError;
     }
-  }, [user]);
-  
-  const { trigger, isMutating, error, data, reset } = useSWRMutation<Output, any, string, Input>(
-    `/api/genkit/flows/${flowName}`,
-    (url, { arg }) => mutationFetcher(url, { arg }, idToken),
-  );
 
-  return {
-    isPending: isMutating || (!!flowName && !idToken && !isAuthLoading),
-    mutate: trigger,
-    error,
-    data,
-    reset,
+    try {
+      const response = await fetch(`/api/genkit/flows/${flowName}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({ input }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        const err = new Error(result.message || 'Ett okänt fel inträffade under mutationen.') as MutationError;
+        err.details = result.details;
+        throw err;
+      }
+
+      setData(result);
+      setIsMutating(false);
+      return result;
+
+    } catch (err: any) {
+      setError(err);
+      setIsMutating(false);
+      // Kasta om felet så att anropande kod kan hantera det med try/catch om så önskas
+      throw err;
+    }
   };
+
+  return { isMutating, error, data, trigger };
 }
