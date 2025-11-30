@@ -1,31 +1,23 @@
+
 # Dependencies
 /node_modules
 
-# Next.js build output
+# Production build
 /.next/
 /out/
 
-# Production build files
-/build
-
-# Local environment variables
-# Never commit secrets!
+# Env files
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# Log files from this project and others
-*.log
-dataconnect-debug.log
-firebase-debug.log
-firestore-debug.log
+# Log files
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Genkit cache
-.genkit/cache/
-
-# Misc
-.DS_Store
+# Sensitive configuration files
+# Added by AI to prevent secrets from being committed
+src/genkit/firebase.ts
+src/genkit/genkit.ts

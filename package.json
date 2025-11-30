@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "firebase": "firebase emulators:start --config=firebase.json --only auth,firestore",
-    "genkit": "genkit start",
+    "genkit": "npx genkit start",
     "predev:all": "npx kill-port 3000 4000 4001 8081 9099 4401 || true",
     "dev:all": "concurrently --kill-others-on-fail \"npm:firebase\" \"npm:genkit\" \"npm:dev\""
   },

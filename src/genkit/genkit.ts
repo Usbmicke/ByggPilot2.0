@@ -5,16 +5,18 @@ import { firebase } from '@genkit-ai/firebase';
 
 // Importera alla flöden här så att Genkit känner till dem.
 // Detta är ett KRITISKT steg.
-import './flows/onboarding';
-import './flows/getProjectsFlow';
-import './flows/getUserProfile';
+import './flows/onboardingFlow'; // Korrigerat importnamn
+// Fler flödesimporter kan läggas till här
 
-export const genkit = configureGenkit({
+export default configureGenkit({
   plugins: [
     // Initiera Firebase-plugin för att möjliggöra auth-policies.
     firebase(),
-    // Initiera Google AI-plugin (om du använder Gemini-modeller, etc).
-    googleAI(),
+    
+    // Initiera Google AI-plugin med den angivna API-nyckeln.
+    googleAI({
+      apiKey: "AIzaSyCACnFr5ekLaynGy_ekQg_fwBWmyYp5z5Y",
+    }),
   ],
   // Aktivera loggning i utvecklingsmiljö för enklare felsökning.
   logLevel: 'debug',
