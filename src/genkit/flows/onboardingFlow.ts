@@ -1,7 +1,7 @@
 
 import { defineFlow } from '@genkit-ai/flow';
 import { z } from 'zod';
-import { firebaseAuth } from '@genkit-ai/firebase/auth';
+import { firebaseAuth } from '@genkit-ai/firebase';
 import { updateUserCompany } from '../dal/user.repo';
 import { googleDriveService } from '../services/googleDrive.service';
 

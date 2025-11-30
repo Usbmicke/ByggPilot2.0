@@ -4,7 +4,6 @@
 import { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { runFlow } from '@genkit-ai/flow/client';
-import { onboardingFlow } from '@/genkit/flows/onboardingFlow';
 
 // Firebase & Google Auth
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, User, OAuthCredential } from 'firebase/auth';
@@ -89,7 +88,7 @@ export default function OnboardingPage() {
         logoUrl = await uploadLogo(logoFile, user.uid);
       }
 
-      const result = await runFlow(onboardingFlow, {
+      const result = await runFlow('onboardingFlow', {
         companyName,
         logoUrl,
         userAccessToken: googleAccessToken,
