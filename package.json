@@ -13,10 +13,12 @@
     "dev:all": "concurrently --kill-others-on-fail \"npm:firebase\" \"npm:genkit\" \"npm:dev\""
   },
   "dependencies": {
+    "@genkit-ai/core": "^1.24.0",
     "@genkit-ai/dotprompt": "^0.9.12",
     "@genkit-ai/firebase": "^1.24.0",
     "@genkit-ai/flow": "^0.5.17",
     "@genkit-ai/google-genai": "^1.24.0",
+    "@genkit-ai/next": "^1.24.0",
     "firebase": "^12.6.0",
     "firebase-admin": "^13.6.0",
     "genkit": "^1.24.0",

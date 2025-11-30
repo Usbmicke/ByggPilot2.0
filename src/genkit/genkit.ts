@@ -1,22 +1,25 @@
 
 import { configureGenkit } from '@genkit-ai/core';
-import { googleAI } from '@genkit-ai/google-ai';
+import { googleAI } from '@genkit-ai/google-genai'; // KORRIGERAT PAKETNAMN
 import { firebase } from '@genkit-ai/firebase';
+import { dotprompt } from '@genkit-ai/dotprompt';
 
 // Importera alla flöden här så att Genkit känner till dem.
-// Detta är ett KRITISKT steg.
-import './flows/onboardingFlow'; // Korrigerat importnamn
-// Fler flödesimporter kan läggas till här
+import './flows/onboardingFlow';
+import './flows/getUserProfileFlow';
+import './flows/createCompanyFolderFlow';
 
 export default configureGenkit({
   plugins: [
     // Initiera Firebase-plugin för att möjliggöra auth-policies.
     firebase(),
     
-    // Initiera Google AI-plugin med den angivna API-nyckeln.
-    googleAI({
-      apiKey: "AIzaSyCACnFr5ekLaynGy_ekQg_fwBWmyYp5z5Y",
-    }),
+    // Initiera Google AI-plugin (Gemini).
+    // API-nyckeln hämtas automatiskt från GOOGLE_API_KEY miljövariabeln.
+    googleAI(),
+
+    // Initiera Dotprompt för att hantera prompts.
+    dotprompt(),
   ],
   // Aktivera loggning i utvecklingsmiljö för enklare felsökning.
   logLevel: 'debug',

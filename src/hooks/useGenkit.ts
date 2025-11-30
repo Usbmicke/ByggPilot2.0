@@ -1,60 +1,33 @@
-'use client';
 
 import useSWR from 'swr';
-import { useAuth } from '@/components/AuthProvider'; // Denna hook kommer att ANVÄNDAS för att hämta token
-import { useState, useEffect } from 'react';
+import { Flow } from '@genkit-ai/flow';
+import { runFlow } from '@genkit-ai/next/client';
 
-// Generisk fetcher som kan hantera POST-anrop med body för mer komplexa GET-liknande flöden
-const genkitFetcher = async ([url, token, input]: [string, string, any]) => {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`,
-  };
-
-  const response = await fetch(url, {
-    method: 'POST', // Använder POST för att kunna skicka med en body
-    headers,
-    body: JSON.stringify({ input: input || {} }), // Skicka alltid ett input-objekt
-  });
-
-  if (!response.ok) {
-    let errorJson;
-    try {
-      errorJson = await response.json();
-    } catch (e) {
-      throw new Error(response.statusText);
-    }
-    throw new Error(errorJson.message || 'An unknown error occurred');
-  }
-
-  return response.json();
+// Denna fetcher-funktion är en wrapper runt runFlow.
+const genkitFetcher = <I, O>(flow: Flow<I, O>, input: I) => {
+  return runFlow(flow, input);
 };
 
 /**
- * Korrekt useGenkit-hook som INTE skapar en cirkulär referens.
- * Den är beroende av AuthProvider, men AuthProvider är INTE beroende av denna, vilket är korrekt.
+ * Custom SWR-hook för att anropa Genkit-flöden från klientsidan.
+ * Hanterar datahämtning, state (loading, error) och cachning.
+ * @param flow Flödesobjektet som ska köras (importerat från @/genkit/client).
+ * @param input Input-data till flödet.
  */
-export function useGenkit<Output = any, Input = any>(
-  flowName: string | null,
-  input?: Input
-) {
-  const { idToken, isAuthLoading } = useAuth(); // Få token och laddningsstatus från kontexten
+export function useGenkit<I, O>(flow: Flow<I, O> | null, input: I) {
+  // Skapa en unik nyckel för SWR baserat på flödets namn och input.
+  // Om flödet är null (t.ex. vid villkorlig hämtning) blir nyckeln null, och SWR anropas inte.
+  const key = flow ? [flow.name, JSON.stringify(input)] : null;
 
-  // Skapa en stabil nyckel för SWR. Anropet pausas om flowName eller token saknas.
-  // Inkludera input i nyckeln för att SWR ska hämta om datan när input ändras.
-  const key = flowName && idToken ? [ `/api/genkit/flows/${flowName}`, idToken, input] : null;
-  
-  const { data, error, isLoading, mutate } = useSWR<Output>(
-    key, 
-    genkitFetcher, // Använd den uppdaterade fetchern
-    { shouldRetryOnError: false } // Förhindra oändliga försök vid auth-fel
+  const { data, error, isLoading, mutate } = useSWR<O>(
+    key,
+    () => genkitFetcher(flow!, input),
+    {
+      // Standard SWR-options för att undvika onödiga re-validations.
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    }
   );
 
-  return {
-    data,
-    error,
-    // Den totala laddningsstatusen är en kombination av auth-laddning och SWR-laddning
-    isLoading: isAuthLoading || isLoading,
-    mutate,
-  };
+  return { data, error, isLoading, mutate };
 }

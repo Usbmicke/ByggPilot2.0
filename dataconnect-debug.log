@@ -1,5 +1,5 @@
-E1130 09:43:06.665419   74382 dev.go:82] Failed to load initial config from "/home/user/byggpilot4/dataconnect": could not find dataconnect.yaml in `/home/user/byggpilot4/dataconnect`
-E1130 09:43:06.669858   74382 watch.go:102] watchAllDir unable to walk dir `/home/user/byggpilot4/dataconnect`: lstat /home/user/byggpilot4/dataconnect: no such file or directory
-I1130 09:43:06.721237   74382 dev.go:105] Listening on address (HTTP + gRPC): 127.0.0.1:50001
-E1130 09:43:16.671997   74382 watch.go:31] Failed to load config from "/home/user/byggpilot4/dataconnect": could not find dataconnect.yaml in `/home/user/byggpilot4/dataconnect`
-E1130 09:43:26.677792   74382 watch.go:31] Failed to load config from "/home/user/byggpilot4/dataconnect": could not find dataconnect.yaml in `/home/user/byggpilot4/dataconnect`
+E1130 12:47:43.407518   97854 dev.go:82] Failed to load initial config from "/home/user/byggpilot4/dataconnect": could not find dataconnect.yaml in `/home/user/byggpilot4/dataconnect`
+E1130 12:47:43.416224   97854 watch.go:102] watchAllDir unable to walk dir `/home/user/byggpilot4/dataconnect`: lstat /home/user/byggpilot4/dataconnect: no such file or directory
+I1130 12:47:43.529326   97854 dev.go:105] Listening on address (HTTP + gRPC): 127.0.0.1:50001
+E1130 12:47:53.419764   97854 watch.go:31] Failed to load config from "/home/user/byggpilot4/dataconnect": could not find dataconnect.yaml in `/home/user/byggpilot4/dataconnect`
+E1130 12:48:03.426779   97854 watch.go:31] Failed to load config from "/home/user/byggpilot4/dataconnect": could not find dataconnect.yaml in `/home/user/byggpilot4/dataconnect`
