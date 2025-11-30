@@ -1,9 +1,13 @@
 
-// Detta är en "barrel"-fil som exporterar flöden specifikt för klient-användning.
-// Den ser till att endast flödesdefinitionerna, och inte deras server-side implementation,
-// blir en del av klientens kod-bundle.
-// Detta är avgörande för att undvika "server-only"-paket i klient-koden.
+// Denna fil är avsedd för klient-sidan och ska ENDAST exportera typer och flödesdefinitioner.
+// Den ska INTE innehålla någon server-kod eller importera filer som innehåller server-kod.
 
-export { onboardingFlow } from './flows/onboardingFlow';
-export { getUserProfileFlow } from './flows/getUserProfileFlow';
-export { createCompanyFolderFlow } from './flows/createCompanyFolderFlow';
+import { onboardingFlow } from './flows/onboardingFlow';
+import { getUserProfileFlow } from './flows/getUserProfileFlow';
+
+// Exportera flödesobjekten så att de kan användas av useGenkit-hooks på klientsidan.
+// Detta exponerar bara flödets "schema" (namn, input/output-typer), inte dess implementation.
+export {
+    onboardingFlow,
+    getUserProfileFlow,
+};

@@ -1,26 +1,24 @@
 
+import 'server-only';
 import { google } from 'googleapis';
-import { GoogleAuth } from 'google-auth-library';
+import { auth as googleAuth } from '@googleapis/drive';
 
-// Funktion för att skapa en autentiserad Google Drive-klient.
-// Använder ADC (Application Default Credentials) för server-till-server-autentisering.
-async function getDriveClient() {
-  const auth = new GoogleAuth({
-    scopes: ['https://www.googleapis.com/auth/drive'],
-  });
-  const authClient = await auth.getClient();
-  return google.drive({ version: 'v3', auth: authClient });
-}
+// Konfigurera Google Drive API-klient
+// Detta kommer att använda de miljövariabler du ställer in i .env.local
+const auth = new googleAuth.GoogleAuth({
+  scopes: ['https://www.googleapis.com/auth/drive.file'],
+});
+
+const drive = google.drive({ version: 'v3', auth });
 
 /**
- * Skapar en mapp i Google Drive.
- * @param name Namnet på mappen som ska skapas.
+ * Skapar en ny mapp i Google Drive.
+ * @param companyName - Namnet på företaget, som också blir namnet på mappen.
  * @returns ID för den nyskapade mappen.
  */
-export async function createFolder(name: string): Promise<string> {
-  const drive = await getDriveClient();
+export async function createFolder(companyName: string): Promise<string> {
   const fileMetadata = {
-    name: name,
+    name: companyName,
     mimeType: 'application/vnd.google-apps.folder',
   };
   try {
@@ -29,13 +27,12 @@ export async function createFolder(name: string): Promise<string> {
       fields: 'id',
     });
     if (!file.data.id) {
-      throw new Error('Misslyckades med att skapa mappen, fick inget ID tillbaka.');
+      throw new Error('Folder creation did not return an ID.');
     }
-    console.log(`Mapp skapad med ID: ${file.data.id}`);
     return file.data.id;
-  } catch (error) {
-    console.error("Fel vid skapande av mapp i Google Drive:", error);
-    // Kasta ett mer specifikt fel för bättre felhantering uppströms
-    throw new Error(`Kunde inte skapa mapp i Drive: ${error.message}`);
+  } catch (err) {
+    // Logga felet för felsökning
+    console.error('Error creating Google Drive folder:', err);
+    throw new Error('Could not create Google Drive folder.');
   }
 }

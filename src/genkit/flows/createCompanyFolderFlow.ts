@@ -1,7 +1,7 @@
 
 import { defineFlow } from '@genkit-ai/flow';
 import { z } from 'zod';
-import { firebaseAuth } from '@genkit-ai/firebase';
+import { firebaseAuth } from '@genkit-ai/firebase/auth'; // Korrigerad import
 import { createFolder } from '../dal/googleDrive.repo';
 
 export const createCompanyFolderFlow = defineFlow(
@@ -9,14 +9,12 @@ export const createCompanyFolderFlow = defineFlow(
     name: 'createCompanyFolderFlow',
     inputSchema: z.object({ companyName: z.string() }),
     outputSchema: z.object({ folderId: z.string() }),
-    authPolicy: firebaseAuth((user) => {
-      if (!user) {
-        throw new Error('Åtkomst nekad. Användaren måste vara inloggad.');
-      }
+    auth: firebaseAuth((user) => {
+      if (!user) throw new Error('Authentication is required.');
     }),
   },
-  async (input) => {
-    const folderId = await createFolder(input.companyName);
+  async ({ companyName }) => {
+    const folderId = await createFolder(companyName);
     return { folderId };
   }
 );

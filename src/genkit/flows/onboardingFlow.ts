@@ -1,7 +1,7 @@
 
 import { defineFlow, run } from '@genkit-ai/flow';
 import { z } from 'zod';
-import { firebaseAuth } from '@genkit-ai/firebase';
+import { firebaseAuth } from '@genkit-ai/firebase/auth'; // Korrigerad import
 import { updateUserCompany } from '../dal/user.repo';
 import { createCompanyFolderFlow } from './createCompanyFolderFlow';
 
@@ -16,34 +16,27 @@ export const onboardingFlow = defineFlow(
       success: z.boolean(),
       driveRootFolderId: z.string().optional(),
     }),
-    authPolicy: firebaseAuth((user) => {
+    auth: firebaseAuth((user) => {
       if (!user) {
-        throw new Error('Authentication is required.');
+        throw new Error('Authentication is required to run this flow.');
       }
+      // Du kan lägga till ytterligare logik här, t.ex. rollkontroller
     }),
   },
   async (input, { auth }) => {
-    if (!auth) {
-      throw new Error('Authentication context is missing.');
-    }
+    // 'auth' är nu tillgänglig här tack vare auth-policyn
+    const uid = auth.uid;
 
-    const folderResult = await run('create-company-folder', () =>
-      createCompanyFolderFlow.run({ companyName: input.companyName })
-    );
-
-    if (!folderResult.folderId) {
-      throw new Error('Failed to create company folder in Google Drive.');
-    }
-
-    await updateUserCompany(auth.uid, {
+    const folderResult = await run(createCompanyFolderFlow, {
       companyName: input.companyName,
-      driveRootFolderId: folderResult.folderId,
-      logoUrl: input.logoUrl, 
     });
 
-    return {
-      success: true,
+    await updateUserCompany(uid, {
+      companyName: input.companyName,
+      logoUrl: input.logoUrl,
       driveRootFolderId: folderResult.folderId,
-    };
+    });
+
+    return { success: true, driveRootFolderId: folderResult.folderId };
   }
 );
