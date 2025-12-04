@@ -1,23 +1,55 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # Dependencies
 /node_modules
+/.pnp
+.pnp.js
 
-# Production build
-/.next/
-/out/
+# Testing
+/coverage
 
-# Env files
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Next.js build output
+/.next
+/out
+
+# Production build files
+/build
+
+# Static exports
+/dist
+
+# Miscellaneous
+.DS_Store
+*.pem
+
+# Org files
+*.org
+**/*.org
 
 # Log files
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Sensitive configuration files
-# Added by AI to prevent secrets from being committed
-src/genkit/firebase.ts
-src/genkit/genkit.ts
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.development
+.env.production
+.env.test
+
+# Firebase
+.firebase
+firebase.json
+firestore.rules
+database.rules
+storage.rules
+.firebaserc
+
+# Other
+*.log
+dataconnect-debug.log
+firestore-debug.log

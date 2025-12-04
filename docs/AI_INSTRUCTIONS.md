@@ -52,14 +52,14 @@ TypeScript
 
 import 'server-only';
 import { genkit } from 'genkit';
-import { googleAI, gemini15Flash } from '@genkit-ai/google-genai';
+import { googleAI, gemini3Flash } from '@genkit-ai/google-genai';
 import { enableFirebaseTelemetry } from '@genkit-ai/firebase';
 
 enableFirebaseTelemetry(); // Måste köras först
 
 export const ai = genkit({
   plugins: [googleAI()],
-  model: gemini15Flash, // Sätt default-modell här
+  model: gemini3Flash, // Sätt default-modell här
 });
 B. Flöden & Auth (src/genkit/flows/myFlow.ts)
 Vi importerar auth-hjälpare från rätt sub-path.

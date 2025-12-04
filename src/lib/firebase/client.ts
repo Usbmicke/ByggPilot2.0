@@ -5,7 +5,7 @@ import { getAuth } from 'firebase/auth';
 
 // Korrekt klient-konfiguration från dina instruktioner
 export const firebaseConfig = {
-  apiKey: "AIzaSyCZSTGIjL3r5AA3RfqCBCAgGdM8pu-hGNg",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
   authDomain: "byggpilot-v2.firebaseapp.com",
   projectId: "byggpilot-v2",
   storageBucket: "byggpilot-v2.appspot.com",
