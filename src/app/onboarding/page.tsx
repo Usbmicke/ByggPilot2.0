@@ -1,17 +1,14 @@
+
 'use client';
 
 import { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
-import { useGenkit } from '@/hooks/useGenkit';
-import { useGenkitMutation } from '@/hooks/useGenkitMutation';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { firebaseApp } from '@/lib/firebase/client';
+import { runOnboardingAction, getUserProfileAction } from '@/app/actions'; // Importera Server Actions
 
-// Importera flödesobjekten från den säkra "klient"-filen
-import { getUserProfileFlow, onboardingFlow } from '@/genkit/client';
-
-// --- Ikoner ---
+// --- Ikoner (oförändrade) ---
 const BuildingOfficeIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 mr-2 text-muted-foreground"><path fillRule="evenodd" d="M4.5 2.25a.75.75 0 0 0-.75.75v12.75a.75.75 0 0 0 .75.75h.75v-2.25a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V18h.75a.75.75 0 0 0 .75-.75V3a.75.75 0 0 0-.75-.75h-6ZM9.75 18a.75.75 0 0 0 .75.75h.008a.75.75 0 0 0 .742-.75v-2.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 .75.75v2.25a.75.75 0 0 0 .75.75h.75a.75.75 0 0 0 .75-.75V9.313a2.25 2.25 0 0 0-1.23-2.043l-4.5-2.25a2.25 2.25 0 0 0-2.04 0l-4.5 2.25A2.25 2.25 0 0 0 6 9.313V18a.75.75 0 0 0 .75.75h3Z" clipRule="evenodd" /></svg>);
 const ArrowUpTrayIcon = () => ( <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" /></svg>);
 
@@ -24,24 +21,39 @@ const FullPageLoader = ({ text }: { text: string }) => (
 export default function OnboardingPage() {
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
+  
   const [companyName, setCompanyName] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
-
-  // Använd det importerade flödesobjektet direkt.
-  const { data: profile, isLoading: isProfileLoading } = useGenkit(
-    user ? getUserProfileFlow : null, // Kör bara om användaren är inloggad
-    undefined
-  );
   
-  // Använd det importerade flödesobjektet direkt.
-  const { mutate: runOnboarding, isLoading: isMutating, error: flowError } = useGenkitMutation(onboardingFlow);
+  // State för att hantera laddning och fel från Server Actions
+  const [isProfileLoading, setProfileLoading] = useState(true);
+  const [isSubmitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isAuthLoading || isProfileLoading) return;
-    if (!user) router.push('/');
-    // Om profilen finns och har ett företagsnamn, omdirigera till dashboard.
-    if (profile?.companyName) router.push('/dashboard');
-  }, [user, profile, isAuthLoading, isProfileLoading, router]);
+    if (isAuthLoading) return;
+    if (!user) {
+      router.push('/');
+      return;
+    }
+
+    async function fetchProfile() {
+      setProfileLoading(true);
+      try {
+        const profile = await getUserProfileAction();
+        if (profile?.companyName) {
+          router.push('/dashboard');
+        }
+      } catch (e) {
+        console.error("Kunde inte hämta profil:", e);
+        setError('Kunde inte ladda din profil.');
+      } finally {
+        setProfileLoading(false);
+      }
+    }
+
+    fetchProfile();
+  }, [user, isAuthLoading, router]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) setLogoFile(e.target.files[0]);
@@ -57,22 +69,33 @@ export default function OnboardingPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !companyName) return;
 
-    let logoUrl: string | undefined = undefined;
-    if (logoFile) logoUrl = await uploadLogo(logoFile, user.uid);
+    setSubmitting(true);
+    setError(null);
 
     try {
-      const result = await runOnboarding({ companyName, logoUrl });
-      if (result?.success) {
-        router.push('/dashboard');
+      let logoUrl: string | undefined = undefined;
+      if (logoFile) {
+        logoUrl = await uploadLogo(logoFile, user.uid);
       }
-    } catch (err) {
-      console.error("Onboarding misslyckades", err);
+
+      const result = await runOnboardingAction({ companyName, logoUrl });
+      
+      if (result.success) {
+        router.push('/dashboard');
+      } else {
+        throw new Error(result.error || 'Ett okänt fel uppstod.');
+      }
+    } catch (err: any) {
+      console.error("Onboarding misslyckades:", err);
+      setError(err.message || 'Kunde inte slutföra registreringen.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  if (isAuthLoading || isProfileLoading || (user && profile?.companyName)) {
+  if (isAuthLoading || isProfileLoading) {
     return <FullPageLoader text="Laddar användardata..." />;
   }
   
@@ -109,10 +132,10 @@ export default function OnboardingPage() {
               </div>
             </div>
 
-            {flowError && <p className="text-red-500 text-sm text-center">Fel: {flowError.message}</p>}
+            {error && <p className="text-red-500 text-sm text-center">Fel: {error}</p>}
 
-            <button type="submit" disabled={isMutating || !companyName} className="w-full bg-primary hover:bg-primary-hover disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition">
-              {isMutating ? 'Skapar arbetsyta...' : 'Slutför & Skapa Mappar'}
+            <button type="submit" disabled={isSubmitting || !companyName} className="w-full bg-primary hover:bg-primary-hover disabled:bg-gray-500 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition">
+              {isSubmitting ? 'Skapar arbetsyta...' : 'Slutför & Skapa Mappar'}
             </button>
         </form>
       </div>
